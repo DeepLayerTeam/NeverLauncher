@@ -26,7 +26,7 @@ func TestLockedWindowsExecutablePreservesOldRelease02313(t *testing.T) {
     // GENERIC_READ | GENERIC_WRITE, dwShareMode = 0: удаление и переименование запрещены.
     h, _, callErr := create.Call(uintptr(unsafe.Pointer(name)), 0xC0000000, 0, 0, 3, 0x80, 0)
     if h == ^uintptr(0) {
-        t.Fatalf("CreateFileW exclusive handle failed: %v", callErr)
+        t.Fatalf("Не удалось создать эксклюзивный дескриптор CreateFileW: %v", callErr)
     }
     closer := kernel.NewProc("CloseHandle")
     updater, err := newTransactionalUpdater0156(dir)
@@ -34,9 +34,9 @@ func TestLockedWindowsExecutablePreservesOldRelease02313(t *testing.T) {
     _, err = updater.apply(updaterRequest0156{Root:dir, Namespace:"cert-win-lock",
         Files: []updaterFileSpec0156{updaterTestSpec0156(t, "guard.exe", src, true)}})
     closer.Call(h)
-    if err == nil { t.Fatal("updater committed despite exclusive lock on live executable") }
+    if err == nil { t.Fatal("Обновление применено несмотря на исключительную блокировку запущенного файла") }
     raw, err := os.ReadFile(dst)
-    if err != nil || string(raw) != "old-guard" { t.Fatalf("locked original must remain: %q %v", raw, err) }
+    if err != nil || string(raw) != "old-guard" { t.Fatalf("Заблокированный исходный файл должен сохраниться: %q, %v", raw, err) }
     save, err := os.ReadFile(userFile)
-    if err != nil || string(save) != "player-save" { t.Fatalf("player data modified: %q %v", save, err) }
+    if err != nil || string(save) != "player-save" { t.Fatalf("Данные игрока изменены: %q, %v", save, err) }
 }

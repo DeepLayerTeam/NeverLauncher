@@ -64,32 +64,32 @@ public final class IdentitySpi0485Tests {
             try(var lifecycle=new ExtensionLifecycle(ext,M,services);
                 var callback=new RuntimeCallbackServer("callback-secret",services,()->lifecycle.state().name())) {
                 lifecycle.start(Duration.ofSeconds(2));
-                ok(started.get()==1,"provider started by real lifecycle");
+                ok(started.get()==1,"Провайдер запущен реальным механизмом жизненного цикла");
                 var http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build();
                 Map<String,Object> info=rpc(http,callback,"callback-secret","auth.health",Map.of());
-                ok(Boolean.TRUE.equals(Json.object(info.get("result")).get("available")),"real RPC health selected provider");
+                ok(Boolean.TRUE.equals(Json.object(info.get("result")).get("available")),"Проверка состояния RPC использует выбранного провайдера");
                 var good=rpc(http,callback,"callback-secret","auth.password",Map.of("identifier","member","secret","correct"));
                 var result=Json.object(Json.object(good.get("result")).get("authentication"));
-                ok(Json.object(result.get("identity")).get("subject").equals(ID.subject()),"real password proof immutable subject");
-                ok(result.get("providerToken").equals("session-1"),"external provider session token returned");
+                ok(Json.object(result.get("identity")).get("subject").equals(ID.subject()),"Проверка пароля сохраняет неизменный идентификатор субъекта");
+                ok(result.get("providerToken").equals("session-1"),"Возвращён токен сеанса внешнего провайдера");
                 var bad=rpc(http,callback,"callback-secret","auth.password",Map.of("identifier","member","secret","bad"));
-                ok(Json.object(bad.get("result")).get("errorCode").equals("invalid_credentials"),"invalid password stable error");
+                ok(Json.object(bad.get("result")).get("errorCode").equals("invalid_credentials"),"При неверном пароле возвращается стабильная ошибка");
                 var lookup=rpc(http,callback,"callback-secret","auth.resolve",Map.of("subject",ID.subject()));
                 ok(Json.object(Json.object(lookup.get("result")).get("identity")).get("subject").equals(ID.subject()),"resolve linked subject");
                 var invalid=rpc(http,callback,"callback-secret","auth.resolve",Map.of("subject","different"));
-                ok(Json.object(invalid.get("result")).get("errorCode").equals("identity_not_found"),"unknown subject denied");
+                ok(Json.object(invalid.get("result")).get("errorCode").equals("identity_not_found"),"Доступ неизвестному субъекту запрещён");
                 var session=rpc(http,callback,"callback-secret","auth.session.verify",Map.of("providerToken","session-1"));
-                ok(Json.object(session.get("result")).containsKey("authentication"),"real provider session introspection");
+                ok(Json.object(session.get("result")).containsKey("authentication"),"Реальная проверка сеанса провайдера");
                 var revoked=rpc(http,callback,"callback-secret","auth.session.revoke",Map.of("providerToken","session-1","subject",ID.subject()));
                 ok(Boolean.TRUE.equals(Json.object(revoked.get("result")).get("revoked")),"provider revocation confirmed");
                 var after=rpc(http,callback,"callback-secret","auth.session.verify",Map.of("providerToken","session-1"));
-                ok(Json.object(after.get("result")).get("errorCode").equals("invalid_credentials"),"revoked provider token rejected");
+                ok(Json.object(after.get("result")).get("errorCode").equals("invalid_credentials"),"Отозванный токен провайдера отклоняется");
                 rpc(http,callback,"bad-token","auth.password",Map.of("identifier","member","secret","correct"));
                 lifecycle.stop(Duration.ofSeconds(2));
-                ok(stopped.get()==1,"provider stopped at lifecycle shutdown");
+                ok(stopped.get()==1,"Провайдер остановлен при завершении жизненного цикла");
                 fail(IdentityFailure.class,()->services.identity().authenticatePassword("member","correct"));
             }
         }
-        System.out.println("PASS: "+checks+" JVM identity SPI lifecycle, authenticated callback, identity and session checks");
+        System.out.println("PASS: "+checks+" Проверены жизненный цикл SPI идентификации JVM, аутентифицированный обратный вызов, идентичность и сеанс");
     }
 }

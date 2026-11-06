@@ -57,15 +57,15 @@ func TestPublicProductionDeliveryMatrix0159CoversSixTargets(t *testing.T) {
 	}
 	for _, target := range matrix.Targets {
 		if target.CLI == "" || target.Desktop == "" || target.Guard == "" || target.Runtime == "" || target.Package == "" || target.ManagedJRE == "" {
-			t.Fatalf("incomplete target: %+v", target)
+			t.Fatalf("Неполная целевая система: %+v", target)
 		}
 		if target.Platform == "linux" && target.API == "" {
-			t.Fatalf("linux target missing API: %+v", target)
+			t.Fatalf("В целевой сборке Linux отсутствует API: %+v", target)
 		}
 	}
 	matrix.Assets[0].URL = "https://evil.example/replace"
 	if err := validatePublicProductionDeliveryMatrix0159(dir, matrix, ver, false); err == nil {
-		t.Fatal("tampered asset URL must fail")
+		t.Fatal("Изменённый URL ресурса должен приводить к отказу")
 	}
 }
 
@@ -80,7 +80,7 @@ func TestPublicProductionDeliveryMatrix0159RejectsMissingRuntime(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/v0.15.9", false); err == nil || !strings.Contains(err.Error(), "runtime-windows-arm64.exe") {
-		t.Fatalf("expected missing runtime failure, got %v", err)
+		t.Fatalf("Ожидался отказ из-за отсутствия Runtime, получено: %v", err)
 	}
 }
 
@@ -104,7 +104,7 @@ func TestFetchPublicMatrix0159LoopbackHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	if n <= 0 || got.BaseURL != server.URL || got.Version != ver {
-		t.Fatalf("unexpected fetched matrix: bytes=%d matrix=%+v", n, got)
+		t.Fatalf("Неожиданная загруженная матрица: байт=%d, матрица=%+v", n, got)
 	}
 }
 

@@ -63,5 +63,5 @@ func main() {
 	if err = os.WriteFile(out, append(bytes, '\n'), 0600); err != nil {
 		panic(err)
 	}
-	fmt.Printf("signed policy: %s\npublic-key-hex: %x\n", out, key.Public().(ed25519.PublicKey))
+	fmt.Printf("Подписанная политика: %s\nоткрытый ключ (hex): %x\n", out, key.Public().(ed25519.PublicKey))
 }

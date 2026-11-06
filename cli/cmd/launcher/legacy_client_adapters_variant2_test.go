@@ -36,13 +36,13 @@ func TestLegacy0406ChildOptionsOverrideWithoutDroppingParent(t *testing.T) {
 		}
 	}
 	if count := strings.Count(strings.Join(combined, " "), "--username"); count != 1 {
-		t.Fatalf("duplicate username flag %v", combined)
+		t.Fatalf("Повторяется флаг имени пользователя: %v", combined)
 	}
 	if !strings.Contains(strings.Join(combined, " "), "--demo") {
-		t.Fatalf("lost valueless legacy flag: %v", combined)
+		t.Fatalf("Потерян устаревший флаг без значения: %v", combined)
 	}
 	if same := mergeLegacyArgumentTokens0278(parent, parent); strings.Join(same, "|") != strings.Join(parent, "|") {
-		t.Fatalf("unexpected repeated options: %v", same)
+		t.Fatalf("Неожиданные повторяющиеся параметры: %v", same)
 	}
 }
 
@@ -177,12 +177,12 @@ public class Launch {
 	}
 	expected := "child|User With Spaces|1.12.2|net.minecraftforge.fml.common.launcher.FMLTweaker|fixture-token"
 	if string(output) != expected {
-		t.Fatalf("legacy JVM classpath or argv mismatch: got %q, expected %q", output, expected)
+		t.Fatalf("Не совпадают Classpath или аргументы JVM старого формата: получено %q, ожидалось %q", output, expected)
 	}
 	if err := os.WriteFile(childJar, []byte("tampered"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err := runLegacyClient0278(context.Background(), root, shim, "User", "fixture-uuid"); err == nil {
-		t.Fatal("tampered classpath JAR executed")
+		t.Fatal("Выполнен изменённый JAR из Classpath")
 	}
 }

@@ -226,7 +226,7 @@ func run() error {
 	if e = os.Rename(tmp.Name(), reportPath); e != nil {
 		return e
 	}
-	fmt.Printf("Gravit texture migration: %d rows; results=%v; report=%s\n", len(report.Rows), report.Counts, reportPath)
+	fmt.Printf("Миграция текстур Gravit: %d строк; результаты=%v; отчёт=%s\n", len(report.Rows), report.Counts, reportPath)
 	if runErr != nil {
 		return runErr
 	}

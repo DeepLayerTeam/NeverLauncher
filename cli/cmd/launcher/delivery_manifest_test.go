@@ -24,14 +24,14 @@ func TestDeliveryTargetNormalization0151(t *testing.T) {
 			t.Fatalf("%s/%s: %v", tc.platform, tc.arch, err)
 		}
 		if target.Platform != tc.wantP || target.Architecture != tc.wantA {
-			t.Fatalf("%s/%s normalized to %+v", tc.platform, tc.arch, target)
+			t.Fatalf("%s/%s нормализовано в %+v", tc.platform, tc.arch, target)
 		}
 	}
 	if _, err := canonicalDeliveryTarget("linux", "universal"); err == nil {
-		t.Fatal("universal architecture must be macOS-only")
+		t.Fatal("Универсальная архитектура допустима только для macOS")
 	}
 	if _, err := canonicalDeliveryTarget("linux", "386"); err == nil {
-		t.Fatal("unsupported 32-bit architecture must be rejected")
+		t.Fatal("Неподдерживаемая 32-битная архитектура должна отклоняться")
 	}
 }
 
@@ -54,14 +54,14 @@ func TestDeliveryManifestBuildVerifyAndResolve0151(t *testing.T) {
 		t.Fatalf("Ошибка записи манифеста поставки: %v", err)
 	}
 	if err := verifyDeliveryManifest0151(dir, "0.15.1"); err != nil {
-		t.Fatalf("verify delivery manifest: %v", err)
+		t.Fatalf("Ошибка проверки манифеста поставки: %v", err)
 	}
 	manifest, err := readDeliveryManifest0151(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(manifest.PublishedTargets) != 3 {
-		t.Fatalf("expected linux x64, windows arm64 and macOS universal targets, got %+v", manifest.PublishedTargets)
+		t.Fatalf("Ожидались Linux x64, Windows ARM64 и универсальная macOS; получено: %+v", manifest.PublishedTargets)
 	}
 	macArm, err := canonicalDeliveryTarget("darwin", "arm64")
 	if err != nil {
@@ -69,12 +69,12 @@ func TestDeliveryManifestBuildVerifyAndResolve0151(t *testing.T) {
 	}
 	matches := resolveDeliveryArtifacts0151(manifest, macArm, "desktop-launcher", "")
 	if len(matches) != 1 || matches[0].Name != "launcher-desktop-macos-universal" {
-		t.Fatalf("macOS universal resolution failed: %+v", matches)
+		t.Fatalf("Не удалось определить универсальный пакет macOS: %+v", matches)
 	}
 	linux, _ := canonicalDeliveryTarget("linux", "amd64")
 	matches = resolveDeliveryArtifacts0151(manifest, linux, "guard", "")
 	if len(matches) != 1 || matches[0].Architecture != "x64" {
-		t.Fatalf("linux x64 guard resolution failed: %+v", matches)
+		t.Fatalf("Не удалось определить Guard для Linux x64: %+v", matches)
 	}
 }
 
@@ -91,17 +91,17 @@ func TestDeliveryManifestTamperFailsClosed0151(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyDeliveryManifest0151(dir, "0.15.1"); err == nil {
-		t.Fatal("tampered delivery artifact must fail verification")
+		t.Fatal("Изменённый артефакт поставки должен отклоняться при проверке")
 	}
 }
 
 func TestDeliveryManifestRequiredFrom0151(t *testing.T) {
 	if deliveryManifestRequired0151("0.15.0") {
-		t.Fatal("0.15.0 must not require delivery manifest")
+		t.Fatal("Версия 0.15.0 не должна требовать манифест поставки")
 	}
 	for _, ver := range []string{"0.15.1", "0.15.2", "0.16.0", "1.0.0"} {
 		if !deliveryManifestRequired0151(ver) {
-			t.Fatalf("%s must require delivery manifest", ver)
+			t.Fatalf("%s должен требовать манифест поставки", ver)
 		}
 	}
 }
@@ -122,10 +122,10 @@ func TestReleaseBuildEmbedsDeliveryManifest0151(t *testing.T) {
 		}
 	}
 	if err := buildReleaseBundle("0.15.1", out, root, "", "compatibility/targets.json", "", "device-trust/targets.json", "", "guard-ci/targets.json", "", ""); err != nil {
-		t.Fatalf("release build 0.15.1: %v", err)
+		t.Fatalf("Ошибка релизной сборки 0.15.1: %v", err)
 	}
 	if err := verifyDeliveryManifest0151(out, "0.15.1"); err != nil {
-		t.Fatalf("embedded delivery manifest: %v", err)
+		t.Fatalf("Встроенный манифест поставки: %v", err)
 	}
 	manifest, err := readDeliveryManifest0151(out)
 	if err != nil {
@@ -138,7 +138,7 @@ func TestReleaseBuildEmbedsDeliveryManifest0151(t *testing.T) {
 		}
 	}
 	if !foundLinuxCLI {
-		t.Fatal("release delivery manifest does not contain canonical linux/x64 CLI metadata")
+		t.Fatal("В релизном манифесте поставки отсутствуют канонические метаданные CLI Linux x64")
 	}
 }
 

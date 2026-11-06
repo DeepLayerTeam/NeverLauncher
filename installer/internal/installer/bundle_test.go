@@ -55,13 +55,13 @@ func TestSignedBundleInstallAndTamper(t *testing.T) {
 	}
 	data, err := os.ReadFile(filepath.Join(dest, "app"))
 	if err != nil || string(data) != "executable" {
-		t.Fatalf("bad install %s %v", data, err)
+		t.Fatalf("Некорректная установка %s: %v", data, err)
 	}
 	if stat, err := os.Stat(filepath.Join(dest, "app")); err != nil || stat.Mode().Perm() != 0755 {
-		t.Fatalf("bad permissions %v %v", stat, err)
+		t.Fatalf("Некорректные права доступа: %v, %v", stat, err)
 	}
 	if err := v.Install(dest); err == nil {
-		t.Fatal("existing installation overwritten")
+		t.Fatal("Перезаписана существующая установка")
 	}
 	// Измените байты, сохранив первоначальный подписанный манифест. Проверка SHA-256 должна завершиться ошибкой.
 	z, err := zip.OpenReader(bundle)
@@ -110,7 +110,7 @@ func TestManifestUnsignedEntryAndBadTrustRoot(t *testing.T) {
 	otherKey := filepath.Join(dir, "other.key")
 	put(t, otherKey, hex.EncodeToString(otherPub), 0600)
 	if _, err := Verify(bundle, otherKey); err == nil {
-		t.Fatal("wrong trust key accepted")
+		t.Fatal("Принят неверный ключ доверия")
 	}
 	z, err := zip.OpenReader(bundle)
 	if err != nil {
@@ -139,7 +139,7 @@ func TestManifestUnsignedEntryAndBadTrustRoot(t *testing.T) {
 	file.Close()
 	z.Close()
 	if _, err := Verify(extra, pub); err == nil {
-		t.Fatal("unsigned extra entry accepted")
+		t.Fatal("Принята дополнительная запись без подписи")
 	}
 }
 func TestInitSecretsAndNoOverwrite(t *testing.T) {
@@ -150,7 +150,7 @@ func TestInitSecretsAndNoOverwrite(t *testing.T) {
 	}
 	st, err := os.Stat(dest)
 	if err != nil || st.Mode().Perm() != 0600 {
-		t.Fatalf("secret permissions %v %v", st, err)
+		t.Fatalf("Некорректные права доступа к секрету: %v, %v", st, err)
 	}
 	b, err := os.ReadFile(dest)
 	if err != nil {
@@ -160,13 +160,13 @@ func TestInitSecretsAndNoOverwrite(t *testing.T) {
 		t.Fatal("Отсутствуют поля конфигурации")
 	}
 	if err := Init(dest, "https://launcher.example", "postgres://localhost/db", filepath.Join(dir, "storage")); err == nil {
-		t.Fatal("init overwrote existing credentials")
+		t.Fatal("Инициализация перезаписала существующие учётные данные")
 	}
 	if err := Init(filepath.Join(dir, "bad.env"), "http://evil.example", "postgres://localhost/db", filepath.Join(dir, "storage")); err == nil {
-		t.Fatal("allowed insecure non-loopback HTTP")
+		t.Fatal("Разрешён небезопасный HTTP за пределами локального интерфейса")
 	}
 	if err := Init(filepath.Join(dir, "newline.env"), "https://launcher.example", "postgres://host/db\nINJECTED=true", filepath.Join(dir, "storage")); err == nil {
-		t.Fatal("accepted env injection")
+		t.Fatal("Принято внедрение переменной окружения")
 	}
 }
 func TestOwnerBootstrapUsesFilesAndSingleRequest(t *testing.T) {
@@ -193,7 +193,7 @@ func TestOwnerBootstrapUsesFilesAndSingleRequest(t *testing.T) {
 	}
 	os.Chmod(pass, 0644)
 	if err := BootstrapOwner(srv.URL, "owner@example.com", "Owner", pass, token); err == nil {
-		t.Fatal("insecure password file accepted")
+		t.Fatal("Принят файл паролей с небезопасными правами доступа")
 	}
 }
 
@@ -219,7 +219,7 @@ func TestConcurrentAtomicInstall(t *testing.T) {
 	}
 	b, err := os.ReadFile(filepath.Join(target, "app"))
 	if err != nil || string(b) != "executable" {
-		t.Fatalf("partially published install: %v", err)
+		t.Fatalf("Обнаружена частично опубликованная установка: %v", err)
 	}
 }
 func TestBootstrapFromGeneratedEnv(t *testing.T) {
@@ -256,11 +256,11 @@ func TestBootstrapFromGeneratedEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 	if count != 1 {
-		t.Fatal("incorrect bootstrap request count")
+		t.Fatal("Некорректное число запросов инициализации")
 	}
 	os.Chmod(envFile, 0644)
 	if err := BootstrapOwnerFromEnv(srv.URL, "owner@example.com", "Owner", pass, envFile); err == nil {
-		t.Fatal("accepted world-readable bootstrap token")
+		t.Fatal("Принят токен инициализации, доступный всем пользователям")
 	}
 }
 
@@ -284,10 +284,10 @@ func TestSystemdUnitHardening(t *testing.T) {
 		}
 	}
 	if err := WriteSystemdUnit(unit, app, secret); err == nil {
-		t.Fatal("overwrote existing service")
+		t.Fatal("Перезаписана существующая служба")
 	}
 	os.Chmod(secret, 0644)
 	if err := WriteSystemdUnit(filepath.Join(dir, "bad.service"), app, secret); err == nil {
-		t.Fatal("insecure environment accepted")
+		t.Fatal("Принято небезопасное окружение")
 	}
 }

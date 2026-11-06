@@ -40,7 +40,7 @@ public final class HostStability0481Tests {
                 check(lifecycle.state()==ExtensionLifecycle.State.STARTING,"состояние доступно при выполнении пользовательского кода");
                 lifecycle.stop(Duration.ofMillis(250));
                 long milliseconds=TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-beginning);
-                check(milliseconds<500,"stop must not wait for blocked startup callback: "+milliseconds+"ms");
+                check(milliseconds<500,"Остановка не должна ожидать заблокированный обратный вызов запуска: "+milliseconds+"ms");
                 check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"остановка опережает запуск при конкурентном выполнении");
                 check(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"состояние остаётся стабильным после отмены");
             }finally{released.countDown();worker.join(1500);}

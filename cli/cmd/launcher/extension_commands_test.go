@@ -28,7 +28,7 @@ func TestCanonicalExtensionManifestValidate0201(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resolved != path || got.ID != manifest.ID || len(digest) != 64 {
-		t.Fatalf("unexpected canonical manifest result: %#v %s %s", got, resolved, digest)
+		t.Fatalf("Неожиданный результат канонического манифеста: %#v, %s, %s", got, resolved, digest)
 	}
 }
 
@@ -55,9 +55,9 @@ func TestImportLegacyPluginManifest0201(t *testing.T) {
 		t.Fatal(err)
 	}
 	if source != legacyPath || manifest.SchemaVersion != "2.0" || manifest.Publisher != "Legacy Publisher" || len(manifest.Targets) != 1 || manifest.Targets[0].Kind != "admin" {
-		t.Fatalf("legacy import mismatch: %#v source=%s", manifest, source)
+		t.Fatalf("Несовпадение импорта старого формата: %#v, источник=%s", manifest, source)
 	}
 	if manifest.Metadata["importedFrom"] != "launcher-plugin.json" || manifest.Metadata["custom"] != "value" {
-		t.Fatalf("legacy metadata not preserved: %#v", manifest.Metadata)
+		t.Fatalf("Метаданные старого формата не сохранены: %#v", manifest.Metadata)
 	}
 }

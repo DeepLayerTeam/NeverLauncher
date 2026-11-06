@@ -17,14 +17,14 @@ func TestExtension0430RealPackagesRequiredInRelease(t *testing.T) {
 		}
 		for _, name := range mandatory {
 			if !set[name] {
-				t.Fatalf("%s can ship without mandatory extension artifact %s", version, name)
+				t.Fatalf("%s допускает поставку без обязательного артефакта расширения %s", version, name)
 			}
 		}
 	}
 	for _, name := range releaseArtifacts("0.42.12") {
 		for _, future := range mandatory {
 			if name == future {
-				t.Fatalf("historical release unexpectedly changed: %s", name)
+				t.Fatalf("Исторический релиз неожиданно изменён: %s", name)
 			}
 		}
 	}

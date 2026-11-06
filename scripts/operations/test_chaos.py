@@ -95,7 +95,7 @@ class Chaos0456(unittest.TestCase):
 
     def test_worker_network_reconnect_even_if_checks_fail(self):
         with patch.object(ch, "container_id", return_value="1"*64), patch.object(ch, "lab_network", return_value="nl-dr-test_launcher"), \
-             patch.object(dr, "run") as run, patch.object(ch, "poll", side_effect=dr.DrillError("worker not fenced")):
+             patch.object(dr, "run") as run, patch.object(ch, "poll", side_effect=dr.DrillError("Рабочий процесс не изолирован")):
             with self.assertRaises(dr.DrillError):
                 ch.network_fault("nl-dr-test", Path("/env"), "https://127.0.0.1:18443/ready", 20)
             self.assertEqual(run.call_count, 2)

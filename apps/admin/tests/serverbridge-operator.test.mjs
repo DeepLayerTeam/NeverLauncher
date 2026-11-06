@@ -57,7 +57,7 @@ test("0.28.12 project wildcard does not authorize settings:manage on the Backend
   assert.equal(can(projectOnly, "project:read", "project-a"), true);
 });
 
-test("0.28.12 enrollment POST transmits public key and scope, private material", async () => {
+test("0.28.12: POST регистрации передаёт открытый ключ и область, но не закрытый ключ", async () => {
   const oldFetch = globalThis.fetch;
   let captured;
   globalThis.fetch = async (url, init) => {

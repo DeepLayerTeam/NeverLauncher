@@ -29,7 +29,7 @@ func TestMigrationContent0337(t *testing.T) {
 	var gotConfirm, gotPlanSHA string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Gravit-Profile-Path") != "profiles/demo.json" || r.Header.Get("X-Profile-ID") != "demo" {
-			t.Error("missing profile mapping headers")
+			t.Error("Отсутствуют заголовки сопоставления профилей")
 		}
 		gotConfirm = r.Header.Get("X-Migration-Content-Confirm")
 		gotPlanSHA = r.Header.Get("X-Migration-Plan-SHA256")
@@ -43,12 +43,12 @@ func TestMigrationContent0337(t *testing.T) {
 		t.Fatal(err)
 	}
 	if gotPlanSHA != strings.Repeat("a", 64) {
-		t.Fatalf("plan SHA missing: %q", gotPlanSHA)
+		t.Fatalf("Отсутствует SHA плана: %q", gotPlanSHA)
 	}
 	if gotConfirm != "run-123" {
-		t.Fatalf("confirmation lost: %q", gotConfirm)
+		t.Fatalf("Потеряно подтверждение: %q", gotConfirm)
 	}
 	if e := postMigrationContent0337("http://example.org/api", "token", file, "run", "profiles/demo.json", "demo", "", "vanilla", "stable", "1.0", "", true, strings.Repeat("a", 64), ""); e == nil || !strings.Contains(e.Error(), "HTTPS") {
-		t.Fatal("non-TLS credential transfer accepted")
+		t.Fatal("Принята передача учётных данных без TLS")
 	}
 }

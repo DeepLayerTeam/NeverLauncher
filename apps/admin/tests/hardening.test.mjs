@@ -24,7 +24,7 @@ async function withBackend(handler, run) {
   }
 }
 
-test("lost POST response is indeterminate, automatically replayed", async () => {
+test("Потерянный ответ POST считается неопределённым и не воспроизводится автоматически", async () => {
   const effects = new Set();
   let calls = 0;
   await withBackend(
@@ -67,7 +67,7 @@ test("lost POST response is indeterminate, automatically replayed", async () => 
   );
 });
 
-test("structured 401, 403, 409 and 503 remain distinguishable", async () => {
+test("Структурированные ошибки 401, 403, 409 и 503 различимы", async () => {
   await withBackend(
     (req, res) => {
       const status = Number(req.url.slice(1));
@@ -97,7 +97,7 @@ test("structured 401, 403, 409 and 503 remain distinguishable", async () => {
   );
 });
 
-test("broken successful JSON silently confirms a mutation", async () => {
+test("Некорректный успешный JSON не должен скрытно подтверждать изменение", async () => {
   await withBackend(
     (req, res) => {
       res.writeHead(200, { "content-type": "text/html" });
@@ -121,7 +121,7 @@ test("broken successful JSON silently confirms a mutation", async () => {
   );
 });
 
-test("aborted GET is not confused with an unavailable Backend", async () => {
+test("Прерванный GET не считается недоступностью Backend", async () => {
   const signal = new AbortController();
   signal.abort();
   await withBackend(
@@ -138,7 +138,7 @@ test("aborted GET is not confused with an unavailable Backend", async () => {
   );
 });
 
-test("RBAC display denies privileged screens to project-only operator", () => {
+test("RBAC скрывает привилегированные экраны от оператора с правами только на проект", () => {
   const operator = {
     user: { id: "operator", roleId: "player" },
     permissions: [],

@@ -174,10 +174,10 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 
 	for _, file := range result.Files {
 		if file.Path == "libraries/org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1.jar" {
-			t.Fatalf("classifier-only legacy library leaked into classpath materialization: %+v", file)
+			t.Fatalf("Библиотека старого формата только с классификатором ошибочно добавлена в Classpath: %+v", file)
 		}
 		if file.Path == "libraries/org/lwjgl/lwjgl-glfw/3.4.1/lwjgl-glfw-3.4.1-"+classifier+".jar" && file.Kind != "native-archive" {
-			t.Fatalf("modern Mojang native artifact was not marked as native archive: %+v", file)
+			t.Fatalf("Современный нативный артефакт Mojang не отмечен как нативный архив: %+v", file)
 		}
 	}
 
@@ -195,10 +195,10 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		t.Fatal(err)
 	}
 	if second.Cached == 0 {
-		t.Fatalf("expected cache hits on second install: %+v", second)
+		t.Fatalf("Ожидалось использование кэша при повторной установке: %+v", second)
 	}
 	if _, err := os.Stat(staleNative); !os.IsNotExist(err) {
-		t.Fatalf("stale native survived rematerialization: %v", err)
+		t.Fatalf("Устаревший нативный файл остался после повторной подготовки: %v", err)
 	}
 
 	packagePath := filepath.Join(t.TempDir(), "client-package.json")
@@ -215,25 +215,25 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		"--version", "1.0.0",
 		"--output", packagePath,
 	}); err != nil {
-		t.Fatalf("vanilla-package failed: %v", err)
+		t.Fatalf("Ошибка подготовки пакета Vanilla: %v", err)
 	}
 	packageManifest, err := readClientPackageManifest(packagePath)
 	if err != nil {
-		t.Fatalf("generated package is not consumable: %v", err)
+		t.Fatalf("Созданный пакет невозможно использовать: %v", err)
 	}
 	if packageManifest.ProjectID != "test-project" || packageManifest.Version != "1.0.0" {
-		t.Fatalf("unexpected generated package: %+v", packageManifest)
+		t.Fatalf("Неожиданный состав созданного пакета: %+v", packageManifest)
 	}
 	seenLogging, seenNative := false, false
 	for _, file := range packageManifest.Files {
 		if strings.HasPrefix(file.Path, ".launcher/") {
-			t.Fatalf("local Vanilla state leaked into client package: %s", file.Path)
+			t.Fatalf("Локальное состояние Vanilla попало в клиентский пакет: %s", file.Path)
 		}
 		seenLogging = seenLogging || file.Path == "assets/log_configs/client-test.xml"
 		seenNative = seenNative || file.Path == "natives/"+target.OS+"/"+target.Arch+"/libtest-native.bin"
 	}
 	if !seenLogging || !seenNative {
-		t.Fatalf("generated package missing runtime artifacts: logging=%v native=%v", seenLogging, seenNative)
+		t.Fatalf("В созданном пакете отсутствуют артефакты Runtime: журналирование=%v, нативные=%v", seenLogging, seenNative)
 	}
 	raw, err := os.ReadFile(packagePath)
 	if err != nil {
@@ -244,7 +244,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, ok := wrapper["manifestSettings"]; !ok {
-		t.Fatal("vanilla-package does not include manifestSettings")
+		t.Fatal("Пакет Vanilla не содержит manifestSettings")
 	}
 }
 
@@ -315,14 +315,14 @@ func TestInstallVanillaPre16AliasAndVirtualAssets(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.MinecraftVersion != "1.0" || result.JavaMajorVersion != 8 {
-		t.Fatalf("unexpected canonical legacy result: %+v", result)
+		t.Fatalf("Неожиданный канонический результат для устаревшего клиента: %+v", result)
 	}
 	virtualAsset := filepath.Join(dir, "assets", "virtual", "pre-1.6", "sound", "random", "click.ogg")
 	if got, err := os.ReadFile(virtualAsset); err != nil || !bytes.Equal(got, asset) {
-		t.Fatalf("pre-1.6 virtual asset missing/corrupt: %v %q", err, got)
+		t.Fatalf("Виртуальный ресурс версии до 1.6 отсутствует или повреждён: %v, %q", err, got)
 	}
 	if _, err := os.Stat(stale); !os.IsNotExist(err) {
-		t.Fatalf("stale pre-1.6 virtual asset survived rebuild: %v", err)
+		t.Fatalf("Устаревший виртуальный ресурс до версии 1.6 остался после пересборки: %v", err)
 	}
 	found := false
 	for _, file := range result.Files {
@@ -331,7 +331,7 @@ func TestInstallVanillaPre16AliasAndVirtualAssets(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("virtual asset not bound into install evidence: %+v", result.Files)
+		t.Fatalf("Виртуальный ресурс не привязан к подтверждению установки: %+v", result.Files)
 	}
 }
 
@@ -351,7 +351,7 @@ func TestExtractNativeJarRejectsTraversal(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := extractNativeJar(archive, filepath.Join(t.TempDir(), "natives"), nil); err == nil {
-		t.Fatal("traversal archive accepted")
+		t.Fatal("Принят архив с обходом каталогов")
 	}
 }
 
@@ -360,10 +360,10 @@ func TestValidateRemoteURLRejectsPlainHTTPExceptLoopback(t *testing.T) {
 		t.Fatal("plain HTTP accepted")
 	}
 	if err := validateRemoteURL("http://127.0.0.1:8080/file.jar"); err != nil {
-		t.Fatalf("loopback HTTP rejected: %v", err)
+		t.Fatalf("Локальный HTTP ошибочно отклонён: %v", err)
 	}
 	if err := validateRemoteURL("https://example.com/file.jar"); err != nil {
-		t.Fatalf("HTTPS rejected: %v", err)
+		t.Fatalf("Отклонён HTTPS: %v", err)
 	}
 }
 
@@ -386,10 +386,10 @@ func TestJavaMajorFromVersionEnforcesJava16And17VanillaRange(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got != tc.major {
-				t.Fatalf("Minecraft %s Java=%d, want %d", tc.version, got, tc.major)
+				t.Fatalf("Minecraft %s: Java=%d, ожидалось %d", tc.version, got, tc.major)
 			}
 			if _, err := javaMajorFromVersion(tc.version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(tc.major + 1)}}); err == nil {
-				t.Fatalf("Minecraft %s accepted wrong Java major", tc.version)
+				t.Fatalf("Minecraft %s принял неподходящую основную версию Java", tc.version)
 			}
 			if _, err := javaMajorFromVersion(tc.version, MojangVersionFile{}); err == nil {
 				t.Fatalf("Minecraft %s принят без javaVersion.majorVersion", tc.version)
@@ -399,7 +399,7 @@ func TestJavaMajorFromVersionEnforcesJava16And17VanillaRange(t *testing.T) {
 
 	legacy, err := javaMajorFromVersion("1.16.5", MojangVersionFile{})
 	if err != nil || legacy != 8 {
-		t.Fatalf("legacy Java fallback changed: major=%d err=%v", legacy, err)
+		t.Fatalf("Изменён резервный выбор Java для старого клиента: версия=%d, ошибка=%v", legacy, err)
 	}
 }
 
@@ -411,12 +411,12 @@ func TestJavaMajorFromVersionEnforces0170v2Grid(t *testing.T) {
 		"1.20": 17, "1.20.3": 17,
 	}
 	if len(java16_17Vanilla0170v2Releases) != len(want) {
-		t.Fatalf("0.17.0v2 Java 16/17 release grid=%d, want %d", len(java16_17Vanilla0170v2Releases), len(want))
+		t.Fatalf("Список релизов Java 16/17 для 0.17.0v2 содержит %d записей вместо %d", len(java16_17Vanilla0170v2Releases), len(want))
 	}
 	for version, major := range want {
 		expected, ok := expectedJavaMajorForVanilla0170v2(version)
 		if !ok || expected != major {
-			t.Fatalf("Minecraft %s 0.17.0v2 expected Java=%d ok=%v, want %d/true", version, expected, ok, major)
+			t.Fatalf("Minecraft %s 0.17.0v2: Java=%d, доступность=%v; ожидалось %d/true", version, expected, ok, major)
 		}
 		got, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(major)}})
 		if err != nil || got != major {
@@ -435,7 +435,7 @@ func TestJavaMajorFromVersionEnforces0170v2Grid(t *testing.T) {
 	}
 	for _, outside := range []string{"1.17.1", "1.18.2", "1.19.4", "1.20.1", "1.20.2", "1.20.4", "1.20.5"} {
 		if _, ok := expectedJavaMajorForVanilla0170v2(outside); ok {
-			t.Fatalf("%s unexpectedly classified as newly added 0.17.0v2 release", outside)
+			t.Fatalf("%s ошибочно отнесён к новым релизам 0.17.0v2", outside)
 		}
 	}
 }
@@ -443,12 +443,12 @@ func TestJavaMajorFromVersionEnforces0170v2Grid(t *testing.T) {
 func TestJavaMajorFromVersionEnforces0170v3Grid(t *testing.T) {
 	want := map[string]int{"1.21.11": 21, "26.2": 25}
 	if len(java21_25Vanilla0170v3Releases) != len(want) {
-		t.Fatalf("0.17.0v3 Java 21/25 release grid=%d, want %d", len(java21_25Vanilla0170v3Releases), len(want))
+		t.Fatalf("Список релизов Java 21/25 для 0.17.0v3 содержит %d записей вместо %d", len(java21_25Vanilla0170v3Releases), len(want))
 	}
 	for version, major := range want {
 		expected, ok := expectedJavaMajorForVanilla0170v3(version)
 		if !ok || expected != major {
-			t.Fatalf("Minecraft %s 0.17.0v3 expected Java=%d ok=%v, want %d/true", version, expected, ok, major)
+			t.Fatalf("Minecraft %s 0.17.0v3: Java=%d, доступность=%v; ожидалось %d/true", version, expected, ok, major)
 		}
 		got, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(major)}})
 		if err != nil || got != major {
@@ -467,36 +467,36 @@ func TestJavaMajorFromVersionEnforces0170v3Grid(t *testing.T) {
 	}
 	for _, outside := range []string{"1.21.10", "26.1.2", "26.3"} {
 		if _, ok := expectedJavaMajorForVanilla0170v3(outside); ok {
-			t.Fatalf("%s unexpectedly classified as newly added 0.17.0v3 release", outside)
+			t.Fatalf("%s ошибочно отнесён к новым релизам 0.17.0v3", outside)
 		}
 	}
 }
 
 func TestLegacyVanilla0170v1GridIsExactJava8(t *testing.T) {
 	if len(legacyVanilla0170v1Releases) != 53 {
-		t.Fatalf("legacy 0.17.0v1 release grid=%d, want 53", len(legacyVanilla0170v1Releases))
+		t.Fatalf("Для старых релизов 0.17.0v1 получено %d записей вместо 53", len(legacyVanilla0170v1Releases))
 	}
 	for _, minecraftVersion := range legacyVanilla0170v1Releases {
 		t.Run(minecraftVersion, func(t *testing.T) {
 			if !isLegacyVanilla0170v1Release(minecraftVersion) {
-				t.Fatalf("%s missing from exact 0.17.0v1 release set", minecraftVersion)
+				t.Fatalf("%s отсутствует в точном наборе релизов 0.17.0v1", minecraftVersion)
 			}
 			got, err := javaMajorFromVersion(minecraftVersion, MojangVersionFile{})
 			if err != nil || got != 8 {
-				t.Fatalf("Minecraft %s Java=%d err=%v, want exact Java 8 fallback", minecraftVersion, got, err)
+				t.Fatalf("Minecraft %s: Java=%d, ошибка=%v; требуется точный резервный выбор Java 8", minecraftVersion, got, err)
 			}
 			got, err = javaMajorFromVersion(minecraftVersion, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(8)}})
 			if err != nil || got != 8 {
-				t.Fatalf("Minecraft %s explicit Java 8 rejected: major=%d err=%v", minecraftVersion, got, err)
+				t.Fatalf("Minecraft %s отклонил явно указанную Java 8: версия=%d, ошибка=%v", minecraftVersion, got, err)
 			}
 			if _, err := javaMajorFromVersion(minecraftVersion, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(17)}}); err == nil {
-				t.Fatalf("Minecraft %s accepted tampered Java 17 metadata", minecraftVersion)
+				t.Fatalf("Minecraft %s принял изменённые метаданные Java 17", minecraftVersion)
 			}
 		})
 	}
 	for _, outside := range []string{"1.2.5", "1.3.2", "1.4.7", "1.5.2", "1.6.4", "1.7.10", "1.8.9", "1.9.4", "1.10.2", "1.11.2", "1.12.2", "1.13.2", "1.14.4", "1.15.2", "1.16.5"} {
 		if isLegacyVanilla0170v1Release(outside) {
-			t.Fatalf("anchor %s unexpectedly classified as newly added 0.17.0v1 release", outside)
+			t.Fatalf("Контрольная версия %s ошибочно классифицирована как новый релиз 0.17.0v1", outside)
 		}
 	}
 }
@@ -551,7 +551,7 @@ func TestInstallVanilla0170v1MaterializesLegacyReleaseWithoutJavaVersion(t *test
 		t.Fatal(err)
 	}
 	if result.MinecraftVersion != "1.2.1" || result.JavaMajorVersion != 8 {
-		t.Fatalf("unexpected 0.17.0v1 legacy result: %+v", result)
+		t.Fatalf("Неожиданный результат для старого клиента 0.17.0v1: %+v", result)
 	}
 	for _, rel := range []string{"versions/1.2.1/1.2.1.json", "versions/1.2.1/1.2.1.jar", "assets/indexes/pre-1.6.json"} {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
@@ -600,7 +600,7 @@ func TestInstallVanilla0170v2MaterializesModernJavaTransition(t *testing.T) {
 				t.Fatal(err)
 			}
 			if result.MinecraftVersion != tc.version || result.JavaMajorVersion != tc.javaMajor || result.Status != "installed-and-verified" {
-				t.Fatalf("unexpected 0.17.0v2 result: %+v", result)
+				t.Fatalf("Неожиданный результат 0.17.0v2: %+v", result)
 			}
 			for _, rel := range []string{"versions/" + tc.version + "/" + tc.version + ".json", "versions/" + tc.version + "/" + tc.version + ".jar", "assets/indexes/" + tc.version + ".json"} {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
@@ -651,7 +651,7 @@ func TestInstallVanilla0170v3MaterializesJava21And25Releases(t *testing.T) {
 				t.Fatal(err)
 			}
 			if result.MinecraftVersion != tc.version || result.JavaMajorVersion != tc.javaMajor || result.Status != "installed-and-verified" {
-				t.Fatalf("unexpected 0.17.0v3 result: %+v", result)
+				t.Fatalf("Неожиданный результат 0.17.0v3: %+v", result)
 			}
 			for _, rel := range []string{"versions/" + tc.version + "/" + tc.version + ".json", "versions/" + tc.version + "/" + tc.version + ".jar", "assets/indexes/" + tc.version + ".json"} {
 				if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
@@ -689,22 +689,22 @@ func TestInstallVanillaServer0170v3RejectsWrongJavaBeforeArtifactDownload(t *tes
 
 	_, err := installVanillaServer(context.Background(), "26.2", t.TempDir(), httpServer.URL+"/manifest.json", httpServer.Client())
 	if err == nil || !strings.Contains(err.Error(), "0.17.0v3") {
-		t.Fatalf("expected 0.17.0v3 exact-Java rejection, got %v", err)
+		t.Fatalf("Ожидалось отклонение несоответствующей Java в 0.17.0v3, получено: %v", err)
 	}
 	if serverRequested {
-		t.Fatal("26.2 server artifact was downloaded before 0.17.0v3 exact-Java metadata validation")
+		t.Fatal("Артефакт сервера 26.2 загружен до проверки метаданных точной версии Java для 0.17.0v3")
 	}
 }
 
 func TestValidateVanillaLaunchMetadataRejectsNonExecutableProfile(t *testing.T) {
 	if err := validateVanillaLaunchMetadata(vanillaVersionMetadata{MojangVersionFile: MojangVersionFile{ID: "1.8.8"}}); err == nil {
-		t.Fatal("legacy metadata without minecraftArguments/arguments.game was accepted")
+		t.Fatal("Приняты устаревшие метаданные без minecraftArguments/arguments.game")
 	}
 	if err := validateVanillaLaunchMetadata(vanillaVersionMetadata{MojangVersionFile: MojangVersionFile{ID: "1.8.8", MinecraftArgs: "--username ${auth_player_name}"}}); err != nil {
-		t.Fatalf("legacy minecraftArguments rejected: %v", err)
+		t.Fatalf("Отклонены аргументы старого клиента minecraftArguments: %v", err)
 	}
 	if err := validateVanillaLaunchMetadata(vanillaVersionMetadata{MojangVersionFile: MojangVersionFile{ID: "1.16.4", Arguments: MojangArguments{Game: []any{"--username", "${auth_player_name}"}}}}); err != nil {
-		t.Fatalf("modern arguments.game rejected: %v", err)
+		t.Fatalf("Отклонены современные аргументы arguments.game: %v", err)
 	}
 }
 
@@ -717,10 +717,10 @@ func TestJavaMajorFromVersionEnforcesJava21VanillaRange(t *testing.T) {
 		t.Run(version, func(t *testing.T) {
 			got, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(21)}})
 			if err != nil || got != 21 {
-				t.Fatalf("Minecraft %s Java=%d err=%v, want 21", version, got, err)
+				t.Fatalf("Minecraft %s: Java=%d, ошибка=%v; ожидалась Java 21", version, got, err)
 			}
 			if _, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(17)}}); err == nil {
-				t.Fatalf("Minecraft %s accepted Java 17", version)
+				t.Fatalf("Minecraft %s принял Java 17", version)
 			}
 			if _, err := javaMajorFromVersion(version, MojangVersionFile{}); err == nil {
 				t.Fatalf("Minecraft %s принят без javaVersion.majorVersion", version)
@@ -729,7 +729,7 @@ func TestJavaMajorFromVersionEnforcesJava21VanillaRange(t *testing.T) {
 	}
 	for _, version := range []string{"1.20.4", "1.21.11", "1.22"} {
 		if _, enforced := expectedJavaMajorForVanilla0167(version); enforced {
-			t.Fatalf("Minecraft %s unexpectedly covered by 0.16.7 Java 21 policy", version)
+			t.Fatalf("Minecraft %s ошибочно подпадает под политику Java 21 версии 0.16.7", version)
 		}
 	}
 }
@@ -740,10 +740,10 @@ func TestJavaMajorFromVersionEnforcesJava25VanillaRange(t *testing.T) {
 		t.Run(version, func(t *testing.T) {
 			got, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(25)}})
 			if err != nil || got != 25 {
-				t.Fatalf("Minecraft %s Java=%d err=%v, want 25", version, got, err)
+				t.Fatalf("Minecraft %s: Java=%d, ошибка=%v; ожидалась Java 25", version, got, err)
 			}
 			if _, err := javaMajorFromVersion(version, MojangVersionFile{JavaVersion: map[string]any{"majorVersion": float64(21)}}); err == nil {
-				t.Fatalf("Minecraft %s accepted Java 21", version)
+				t.Fatalf("Minecraft %s принял Java 21", version)
 			}
 			if _, err := javaMajorFromVersion(version, MojangVersionFile{}); err == nil {
 				t.Fatalf("Minecraft %s принят без javaVersion.majorVersion", version)
@@ -752,7 +752,7 @@ func TestJavaMajorFromVersionEnforcesJava25VanillaRange(t *testing.T) {
 	}
 	for _, version := range []string{"1.21.10", "26.2", "26.3.1", "26.4"} {
 		if _, enforced := expectedJavaMajorForVanilla0168(version); enforced {
-			t.Fatalf("Minecraft %s unexpectedly covered by 0.16.8 Java 25 policy", version)
+			t.Fatalf("Minecraft %s ошибочно подпадает под политику Java 25 версии 0.16.8", version)
 		}
 	}
 }
@@ -791,10 +791,10 @@ func TestInstallVanillaRejectsWrongJavaBeforeArtifactDownload(t *testing.T) {
 		HTTPClient:       server.Client(),
 	})
 	if err == nil || !strings.Contains(err.Error(), "Java mismatch") {
-		t.Fatalf("expected exact-Java rejection, got %v", err)
+		t.Fatalf("Ожидалось отклонение неподходящей версии Java, получено: %v", err)
 	}
 	if clientRequested {
-		t.Fatal("client artifact was downloaded before exact-Java metadata validation")
+		t.Fatal("Клиентский артефакт загружен до проверки метаданных версии Java")
 	}
 }
 
@@ -832,10 +832,10 @@ func TestInstallVanilla0168RejectsWrongJavaBeforeArtifactDownload(t *testing.T) 
 		HTTPClient:       server.Client(),
 	})
 	if err == nil || !strings.Contains(err.Error(), "Java mismatch") {
-		t.Fatalf("expected 0.16.8 exact-Java rejection, got %v", err)
+		t.Fatalf("Ожидалось отклонение неподходящей Java в 0.16.8, получено: %v", err)
 	}
 	if clientRequested {
-		t.Fatal("26.3 client artifact was downloaded before exact-Java metadata validation")
+		t.Fatal("Клиентский артефакт 26.3 загружен до проверки метаданных точной Java")
 	}
 }
 
@@ -873,10 +873,10 @@ func TestInstallVanilla0167RejectsWrongJavaBeforeArtifactDownload(t *testing.T) 
 		HTTPClient:       server.Client(),
 	})
 	if err == nil || !strings.Contains(err.Error(), "Java mismatch") {
-		t.Fatalf("expected 0.16.7 exact-Java rejection, got %v", err)
+		t.Fatalf("Ожидалось отклонение неподходящей Java в 0.16.7, получено: %v", err)
 	}
 	if clientRequested {
-		t.Fatal("1.21.10 client artifact was downloaded before exact-Java metadata validation")
+		t.Fatal("Клиентский артефакт 1.21.10 загружен до проверки метаданных точной Java")
 	}
 }
 
@@ -886,34 +886,34 @@ func TestVanillaRuleAndNativeClassifierMatchTargetArchitecture(t *testing.T) {
 
 	rules := []map[string]any{{"action": "allow", "os": map[string]any{"name": "windows-arm64", "arch": "aarch64|arm64"}}}
 	if !rulesAllowTarget(rules, arm) {
-		t.Fatal("windows ARM64 target did not match composite Mojang OS/arch rule")
+		t.Fatal("Цель Windows ARM64 не соответствует составному правилу Mojang для ОС и архитектуры")
 	}
 	if rulesAllowTarget(rules, x64) {
-		t.Fatal("windows x64 target incorrectly matched ARM64 Mojang rule")
+		t.Fatal("Для Windows x64 ошибочно применено правило Mojang для ARM64")
 	}
 	if !libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64", arm) {
-		t.Fatal("ARM64 native classifier was rejected for Windows ARM64")
+		t.Fatal("Нативный классификатор ARM64 отклонён для Windows ARM64")
 	}
 	if libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64", x64) {
-		t.Fatal("ARM64 native classifier leaked into Windows x64")
+		t.Fatal("Нативный классификатор ARM64 попал в сборку Windows x64")
 	}
 	if !libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows", x64) {
-		t.Fatal("legacy Windows native classifier was rejected for x64")
+		t.Fatal("Устаревший нативный классификатор Windows отклонён для x64")
 	}
 	if libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows", arm) {
-		t.Fatal("legacy x64 Windows native classifier leaked into ARM64")
+		t.Fatal("Устаревший классификатор Windows x64 попал в сборку ARM64")
 	}
 	if !libraryArtifactAppliesToTarget("com.example:plain-library:1.0.0", arm) {
-		t.Fatal("non-native library must be architecture-neutral")
+		t.Fatal("Библиотека без нативного кода не должна зависеть от архитектуры")
 	}
 	if libraryArtifactAppliesToTarget("org.lwjgl:lwjgl-glfw:3.4.1:natives-linux", arm) {
-		t.Fatal("Linux native classifier must never materialize on Windows")
+		t.Fatal("Нативный классификатор Linux не должен попадать в Windows")
 	}
 	if !isClassifiedNativeLibrary("org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64") {
-		t.Fatal("modern artifact-based native classifier was not recognized")
+		t.Fatal("Не распознан современный классификатор нативного артефакта")
 	}
 	if isClassifiedNativeLibrary("org.lwjgl:lwjgl-glfw:3.4.1") {
-		t.Fatal("ordinary library must not be extracted as native archive")
+		t.Fatal("Обычную библиотеку нельзя распаковывать как нативный архив")
 	}
 }
 
@@ -950,21 +950,21 @@ func TestInstallVanillaServerMaterializesVerifiedMatchingServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Status != "installed-and-verified" || result.MinecraftVersion != "1.20.4" || result.JavaMajorVersion != 17 {
-		t.Fatalf("unexpected server result: %+v", result)
+		t.Fatalf("Неожиданный результат сервера: %+v", result)
 	}
 	got, err := os.ReadFile(filepath.Join(dir, "server.jar"))
 	if err != nil || !bytes.Equal(got, serverJar) {
-		t.Fatalf("matching server jar missing/corrupt: %v %q", err, got)
+		t.Fatalf("Подходящий серверный JAR отсутствует или повреждён: %v, %q", err, got)
 	}
 	if result.SHA1 != sha1hex(serverJar) || len(result.SHA256) != 64 || result.Size != int64(len(serverJar)) {
-		t.Fatalf("server integrity evidence invalid: %+v", result)
+		t.Fatalf("Некорректное подтверждение целостности сервера: %+v", result)
 	}
 	second, err := installVanillaServer(context.Background(), "1.20.4", dir, base+"/manifest.json", httpServer.Client())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !second.Cached || second.SHA256 != result.SHA256 {
-		t.Fatalf("verified server cache not reused: first=%+v second=%+v", result, second)
+		t.Fatalf("Проверенный кэш сервера не использован повторно: первый=%+v, второй=%+v", result, second)
 	}
 }
 
@@ -985,7 +985,7 @@ func TestInstallVanillaServerRejectsMissingServerDownload(t *testing.T) {
 
 	_, err := installVanillaServer(context.Background(), "test-no-server", t.TempDir(), httpServer.URL+"/manifest.json", httpServer.Client())
 	if err == nil || !strings.Contains(err.Error(), "downloads.server") {
-		t.Fatalf("missing verified server artifact must fail closed, got %v", err)
+		t.Fatalf("Отсутствие проверенного серверного артефакта должно блокировать операцию, получено: %v", err)
 	}
 }
 
@@ -995,11 +995,11 @@ func TestLWJGLLinuxARM64Fallback(t *testing.T) {
 	arm := vanillaTarget{OS: "linux", Arch: "aarch64"}
 	want := "org/lwjgl/lwjgl-sdl/3.4.3/lwjgl-sdl-3.4.3-natives-linux-arm64.jar"
 	if got, ok := lwjglLinuxARM64Fallback("org.lwjgl:lwjgl-sdl:3.4.3", arm); !ok || got != want {
-		t.Fatalf("ARM64 SDL path = %q, %v; want %q", got, ok, want)
+		t.Fatalf("Путь SDL для ARM64 = %q, %v; ожидалось %q", got, ok, want)
 	}
 	core := "org/lwjgl/lwjgl/3.4.1/lwjgl-3.4.1-natives-linux-arm64.jar"
 	if got, ok := lwjglLinuxARM64Fallback("org.lwjgl:lwjgl:3.4.1:unsafe", arm); !ok || got != core {
-		t.Fatalf("NeoForge ARM64 unsafe core = %q, %v; want %q", got, ok, core)
+		t.Fatalf("Небезопасное ядро NeoForge ARM64 = %q, %v; ожидалось %q", got, ok, core)
 	}
 	for _, tc := range []struct {
 		name   string
@@ -1014,7 +1014,7 @@ func TestLWJGLLinuxARM64Fallback(t *testing.T) {
 		{"evil:lwjgl-sdl:3.4.3", arm},
 	} {
 		if got, ok := lwjglLinuxARM64Fallback(tc.name, tc.target); ok || got != "" {
-			t.Fatalf("unexpected fallback for %s/%+v: %q", tc.name, tc.target, got)
+			t.Fatalf("Неожиданный резервный выбор для %s/%+v: %q", tc.name, tc.target, got)
 		}
 	}
 }
@@ -1023,10 +1023,10 @@ func TestPreferMojangARM64Natives(t *testing.T) {
 	java := MojangLibrary{Name: "org.lwjgl:lwjgl:3.4.3"}
 	arm := MojangLibrary{Name: "org.lwjgl:lwjgl:3.4.3:natives-linux-arm64"}
 	if mojangHasARM64Native(java, []MojangLibrary{java}) {
-		t.Fatal("unexpected native classifier")
+		t.Fatal("Неожиданный нативный классификатор")
 	}
 	if !mojangHasARM64Native(java, []MojangLibrary{java, arm}) {
-		t.Fatal("Mojang ARM64 classifier must suppress fallback")
+		t.Fatal("Классификатор Mojang ARM64 должен запрещать резервный выбор")
 	}
 }
 
@@ -1045,14 +1045,14 @@ func TestFlattenLWJGLARM64Natives(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(aliases) != 1 || aliases[0] != "liblwjgl.so" {
-		t.Fatalf("invalid aliases: %#v", aliases)
+		t.Fatalf("Некорректные псевдонимы: %#v", aliases)
 	}
 	data, err := os.ReadFile(filepath.Join(root, "liblwjgl.so"))
 	if err != nil || string(data) != "native-content" {
-		t.Fatalf("invalid alias: %q / %v", data, err)
+		t.Fatalf("Некорректный псевдоним: %q / %v", data, err)
 	}
 	if _, err := flattenLWJGLARM64Natives(root, []string{nested}); err == nil {
-		t.Fatal("collision should fail closed")
+		t.Fatal("Конфликт имён должен блокировать операцию")
 	}
 }
 
@@ -1078,15 +1078,15 @@ func TestFlattenLWJGLWindowsNativesFromVerifiedClassifier(t *testing.T) {
 				t.Fatal(err)
 			}
 			if len(aliases) != 1 || aliases[0] != "lwjgl.dll" {
-				t.Fatalf("unexpected aliases: %v", aliases)
+				t.Fatalf("Неожиданные псевдонимы: %v", aliases)
 			}
 			flat, err := os.ReadFile(filepath.Join(root, "lwjgl.dll"))
 			if err != nil || !bytes.Equal(flat, data) {
-				t.Fatalf("alias content mismatch: %v", err)
+				t.Fatalf("Несовпадение содержимого псевдонима: %v", err)
 			}
 			original, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
 			if err != nil || !bytes.Equal(original, flat) {
-				t.Fatalf("classifier content mismatch: %v", err)
+				t.Fatalf("Несовпадение содержимого классификатора: %v", err)
 			}
 		})
 	}
@@ -1104,17 +1104,17 @@ func TestFlattenLWJGLWindowsNativesRejectsCollisionsAndForeignPaths(t *testing.T
 	}
 	aliases, err := flattenLWJGLWindowsNatives(root, []string{"windows/arm64/org/lwjgl/lwjgl.dll"}, "x86_64")
 	if err != nil || len(aliases) != 0 {
-		t.Fatalf("foreign architecture should be ignored: %v, %v", aliases, err)
+		t.Fatalf("Чужая архитектура должна игнорироваться: %v, %v", aliases, err)
 	}
 	aliases, err = flattenLWJGLWindowsNatives(root, []string{"other/path/lwjgl.dll"}, "x86_64")
 	if err != nil || len(aliases) != 0 {
-		t.Fatalf("foreign path should be ignored: %v, %v", aliases, err)
+		t.Fatalf("Путь сторонней архитектуры должен игнорироваться: %v, %v", aliases, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "lwjgl.dll"), []byte("existing"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "x86_64"); err == nil || !strings.Contains(err.Error(), "collision") {
-		t.Fatalf("expected strict native collision failure, got %v", err)
+		t.Fatalf("Ожидалось строгое отклонение конфликта нативных файлов, получено: %v", err)
 	}
 	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "unknown"); err == nil {
 		t.Fatal("Принята неподдерживаемая архитектура")
@@ -1132,6 +1132,6 @@ func TestFlattenLWJGLWindowsNativesRejectsSymlinkSource(t *testing.T) {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "x86_64"); err == nil {
-		t.Fatal("symlink native source accepted")
+		t.Fatal("Принят нативный исходный файл через символическую ссылку")
 	}
 }

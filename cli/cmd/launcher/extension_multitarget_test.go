@@ -72,26 +72,26 @@ func TestExtensionPackageFourTargets0209(t *testing.T) {
 	joined := strings.Join(kinds, ",")
 	for _, want := range []string{"admin", "backend", "cli", "desktop"} {
 		if !strings.Contains(joined, want) {
-			t.Fatalf("target %s missing: %s", want, joined)
+			t.Fatalf("Отсутствует целевая система %s: %s", want, joined)
 		}
 	}
 	if analysis.Manifest.Admin == nil || analysis.Manifest.Desktop == nil || analysis.Manifest.CLI == nil {
-		t.Fatalf("multi-target contributions missing: %#v", analysis.Manifest)
+		t.Fatalf("Отсутствуют компоненты для нескольких целевых систем: %#v", analysis.Manifest)
 	}
 }
 
 func TestSDKTemplatesDesktopAndCLI0209(t *testing.T) {
 	desktop := sdkTemplate("desktop")
 	if !strings.Contains(desktop, "extensions.desktop-rpc.v1") || !strings.Contains(desktop, "tauri.platform") || !strings.Contains(desktop, "parent.postMessage") {
-		t.Fatalf("desktop scaffold is not a runnable sandbox client: %s", desktop)
+		t.Fatalf("Шаблон Desktop не является запускаемым клиентом в песочнице: %s", desktop)
 	}
 	cli := sdkTemplate("cli")
 	for _, want := range []string{"LAUNCHER_EXTENSION_HOST_URL", "LAUNCHER_EXTENSION_HOST_TOKEN", "/v1/hello", "status"} {
 		if !strings.Contains(cli, want) {
-			t.Fatalf("CLI scaffold missing %q", want)
+			t.Fatalf("Отсутствует шаблон CLI %q", want)
 		}
 	}
 	if sdkEntrypoint("desktop") != "desktop/index.html" || sdkEntrypoint("cli") != "cli/bin/extension-cli" {
-		t.Fatalf("unexpected SDK entrypoints")
+		t.Fatalf("Неожиданные точки входа SDK")
 	}
 }

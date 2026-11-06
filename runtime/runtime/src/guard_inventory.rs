@@ -140,7 +140,7 @@ pub async fn collect_guard_inventory_0501(
                 format!("PID Guard {}; авторизован={}, политика процесса={}, усиленная защита={}, привязка к родителю={}",
                     status.pid, status.authenticated, status.process_policy_enforced, status.hardening_enforced, status.lifetime_job_enforced)));
             checks.push(check("guard.release-package", if status.package_manifest_verified { "PASS" } else { "BLOCKED" },
-                if status.package_manifest_verified { "Release package manifest verified" } else { "Проверка релизного пакета не подтверждена (отладочный или непроверенный пакет)" }));
+                if status.package_manifest_verified { "Манифест релизного пакета успешно проверен" } else { "Проверка релизного пакета не подтверждена (отладочный или непроверенный пакет)" }));
             match supervisor.process_policy().await {
                 Ok(policy) if policy.enforced && policy.pid == status.pid =>
                     checks.push(check("guard.process-policy", "PASS", format!("Guard применил {} к PID {}", policy.schema, policy.pid))),

@@ -41,7 +41,7 @@ func TestExtensionRegistrySearchCLI0203(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !seen {
-		t.Fatal("registry search request was not received")
+		t.Fatal("Не получен запрос поиска в реестре")
 	}
 	raw, err := os.ReadFile(out)
 	if err != nil {
@@ -52,7 +52,7 @@ func TestExtensionRegistrySearchCLI0203(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, ok := payload["data"]; !ok {
-		t.Fatalf("unexpected payload: %s", raw)
+		t.Fatalf("Неожиданное содержимое запроса: %s", raw)
 	}
 }
 
@@ -92,9 +92,9 @@ func TestExtensionRegistryPullRejectsBadSHA0203(t *testing.T) {
 	dest := filepath.Join(t.TempDir(), "artifact.nlext")
 	err := extensionRegistryPullCLI0203(server.URL, "registry-token", "example.registry-extension", "1.2.3", dest)
 	if err == nil || !strings.Contains(err.Error(), "SHA-256") {
-		t.Fatalf("error=%v, want SHA-256 failure", err)
+		t.Fatalf("Ошибка=%v, ожидался отказ проверки SHA-256", err)
 	}
 	if _, statErr := os.Stat(dest); !os.IsNotExist(statErr) {
-		t.Fatalf("destination should not exist after failed verification: %v", statErr)
+		t.Fatalf("После неудачной проверки целевой файл не должен существовать: %v", statErr)
 	}
 }

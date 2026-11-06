@@ -38,12 +38,12 @@ func f(){
 	for _, item := range f.Findings {
 		categories[item.Category] = true
 		if item.Line < 1 || item.Evidence == "" {
-			t.Fatalf("invalid source position: %+v", item)
+			t.Fatalf("Некорректная позиция в исходнике: %+v", item)
 		}
 	}
 	for _, kind := range []string{"postgres-driver-import", "database-sql-handle", "direct-sql-open", "postgresql-sql-dialect", "postgresql-config-or-literal"} {
 		if !categories[kind] {
-			t.Errorf("missing dependency %s: %+v", kind, f.Findings)
+			t.Errorf("Отсутствует зависимость %s: %+v", kind, f.Findings)
 		}
 	}
 }
@@ -65,7 +65,7 @@ func plain(){ _ = "SELECT id FROM projects WHERE id=?" }
 		t.Fatal(err)
 	}
 	if len(f.Findings) != 0 {
-		t.Fatalf("comment or dialect-independent query incorrectly classified: %+v", f.Findings)
+		t.Fatalf("Неверно классифицирован комментарий или запрос без привязки к диалекту: %+v", f.Findings)
 	}
 }
 func TestReportIsDeterministicAndMethodCoverageNotSemantic0371(t *testing.T) {
@@ -90,15 +90,15 @@ func TestReportIsDeterministicAndMethodCoverageNotSemantic0371(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(first, second) {
-		t.Fatal("inventory is not reproducible")
+		t.Fatal("Инвентаризация не воспроизводится")
 	}
 	if len(a.MethodSurface.Interface) < 100 {
-		t.Fatalf("HTTP Repository interface incompletely scanned (%d)", len(a.MethodSurface.Interface))
+		t.Fatalf("Интерфейс HTTP Repository просканирован не полностью (%d)", len(a.MethodSurface.Interface))
 	}
 	if len(a.MethodSurface.Missing) == 0 {
-		t.Fatal("misreported complete SQLite HTTP parity")
+		t.Fatal("Ошибочно подтверждено полное соответствие HTTP и SQLite")
 	}
 	if !strings.Contains(string(first), "sqliteSameNameOnlyNotParity") {
-		t.Fatal("same-name methods must not be treated as proven parity")
+		t.Fatal("Совпадение имён методов не доказывает совместимость")
 	}
 }

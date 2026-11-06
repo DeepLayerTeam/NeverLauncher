@@ -92,13 +92,13 @@ class NativeRunnerTests(unittest.TestCase):
         )
         self.assertEqual(pass_native(good)["status"], "ready")
         with self.assertRaises(RCBlocked):
-            reject_native(good, "a real ready result cannot be a rejection")
+            reject_native(good, "Реальный результат готовности не может быть отказом")
         bad = process(
             Path(sys.executable),
             "-c",
             'import json,sys; print(json.dumps({"status":"invalid"}));sys.exit(0)',
         )
-        reject_native(bad, "a native structured rejection must be accepted")
+        reject_native(bad, "Нативный структурированный отказ должен быть принят")
         with self.assertRaises(RCBlocked):
             pass_native(bad)
 

@@ -64,7 +64,7 @@ class Backup0518Tests(unittest.TestCase):
             directory = Path(d)
             with patch.object(cb.multi, "resolved_compose", return_value={"nodeId": "node-a", "machineIdentity": "machine-a", "sharedEndpoints": {"bucket": "test-bucket"}}), \
                  patch.object(cb, "local_services", return_value={"api": "running", "worker": "running"}), \
-                 patch.object(cb, "execute", side_effect=cb.BackupError("stop failed")):
+                 patch.object(cb, "execute", side_effect=cb.BackupError("Остановка не удалась")):
                 with self.assertRaises(cb.BackupError):
                     cb.freeze(directory, "launcher", "d" * 32)
             self.assertEqual(cb.frozen_record(directory, "launcher", "d" * 32)["phase"], "stopping")

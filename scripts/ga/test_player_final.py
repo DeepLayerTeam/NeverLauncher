@@ -160,7 +160,7 @@ class FinalPlayerReleaseTests(unittest.TestCase):
         path = (
             self.evidence / "targets/linux-x64/player-0400/officialOnlineModeJoin.log"
         )
-        path.write_text("someone replaced the real network log")
+        path.write_text("Кто-то подменил фактический сетевой журнал")
         with self.assertRaises(Blocked):
             self.check()
 

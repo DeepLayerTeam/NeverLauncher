@@ -59,7 +59,7 @@ public final class RuntimeCallbacks0490Tests {
                 callback.close();
                 release.countDown();
                 pending.get(4,TimeUnit.SECONDS);
-                require(interrupted.get(),"close interrupted in-flight callback");
+                require(interrupted.get(),"Закрытие прервало выполняемый обратный вызов");
                 require(calls.get()==0,"отменённое задание не изменило состояние расширения");
             }finally{release.countDown();pool.shutdownNow();}
         }
@@ -73,6 +73,6 @@ public final class RuntimeCallbacks0490Tests {
             require(status(http,restarted.url(),"ga-token","ui.action.invoke")==401,"устаревший токен отклонён после перезапуска");
             require(status(http,restarted.url(),"fresh-token","ui.action.invoke")==200,"новый экземпляр принимает разрешённое действие");
         }
-        System.out.println("PASS: "+checks+" Java 0.49.0 callback drain, stale lifecycle, token rotation and restart assertions");
+        System.out.println("PASS: "+checks+" Java 0.49.0: проверены завершение обратных вызовов, устаревший жизненный цикл, ротация токена и перезапуск");
     }
 }

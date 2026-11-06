@@ -234,7 +234,7 @@ func TestMacOSProductionEvidenceAdhocAndNotarized0154(t *testing.T) {
 			nativeCalls := 0
 			fixtureNativeVerifier := func(packagePath, teamID string) error {
 				if teamID != tc.team || !strings.HasSuffix(packagePath, ".zip") {
-					return fmt.Errorf("unexpected native package verification: %q %q", packagePath, teamID)
+					return fmt.Errorf("Неожиданный результат проверки нативного пакета: %q, %q", packagePath, teamID)
 				}
 				nativeCalls++
 				return nil

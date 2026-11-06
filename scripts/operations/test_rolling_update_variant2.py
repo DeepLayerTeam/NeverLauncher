@@ -279,7 +279,7 @@ class ClusterControllerTest(unittest.TestCase):
             self.versions[name] = ru.SOURCE
             return {"schema": ru.SCHEMA, "ready": True, "nodeId": name,
                     "phase": "rolled-back"}
-        raise AssertionError("Unexpected operation: " + mode)
+        raise AssertionError("Неожиданная операция: " + mode)
 
     class Lock:
         def __init__(self, *args):

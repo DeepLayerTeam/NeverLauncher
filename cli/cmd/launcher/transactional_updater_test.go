@@ -60,7 +60,7 @@ func TestTransactionalUpdaterCommitAndDelete0156(t *testing.T) {
 		t.Fatalf("extra.bin=%q", raw)
 	}
 	if _, err := os.Stat(filepath.Join(root, "obsolete.bin")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("obsolete file still exists: %v", err)
+		t.Fatalf("Устаревший файл продолжает существовать: %v", err)
 	}
 	status, err := updater.status()
 	if err != nil {
@@ -94,13 +94,13 @@ func TestTransactionalUpdaterPostVerifyFailureRollsBack0156(t *testing.T) {
 		Verify: func() error { return errors.New("synthetic verification failure") },
 	})
 	if err == nil || !strings.Contains(err.Error(), "rolled back") {
-		t.Fatalf("expected rollback error, got %v", err)
+		t.Fatalf("Ожидалась ошибка отката, получено: %v", err)
 	}
 	if raw, _ := os.ReadFile(filepath.Join(root, "app.bin")); string(raw) != "old" {
-		t.Fatalf("rollback did not restore app.bin: %q", raw)
+		t.Fatalf("Откат не восстановил app.bin: %q", raw)
 	}
 	if _, err := os.Stat(filepath.Join(root, "created.bin")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("rollback did not remove newly-created file: %v", err)
+		t.Fatalf("Откат не удалил вновь созданный файл: %v", err)
 	}
 }
 
@@ -141,7 +141,7 @@ func TestTransactionalUpdaterCrashRecovery0156(t *testing.T) {
 	updater.releaseLock() // Имитируем завершение процесса после переключения рабочего дерева, но до фиксации.
 
 	if raw, _ := os.ReadFile(dst); string(raw) != "new" {
-		t.Fatalf("crash simulation did not switch file: %q", raw)
+		t.Fatalf("Имитация сбоя не заменила файл: %q", raw)
 	}
 	report, err := updater.recover(false)
 	if err != nil {
@@ -152,7 +152,7 @@ func TestTransactionalUpdaterCrashRecovery0156(t *testing.T) {
 		t.Fatalf("recovery report=%v", report)
 	}
 	if raw, _ := os.ReadFile(dst); string(raw) != "old" {
-		t.Fatalf("crash recovery did not restore original: %q", raw)
+		t.Fatalf("Восстановление после сбоя не вернуло исходный файл: %q", raw)
 	}
 }
 
@@ -218,7 +218,7 @@ func TestManifestUpdaterApply0156(t *testing.T) {
 		t.Fatalf("add.txt=%q", raw)
 	}
 	if _, err := os.Stat(filepath.Join(live, "delete.txt")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("delete.txt still exists: %v", err)
+		t.Fatalf("Файл delete.txt продолжает существовать: %v", err)
 	}
 }
 

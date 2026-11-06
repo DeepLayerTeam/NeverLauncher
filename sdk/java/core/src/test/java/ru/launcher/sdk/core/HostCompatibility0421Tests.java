@@ -28,7 +28,7 @@ public final class HostCompatibility0421Tests {
                     if(path.equals("/v1/hello")){
                         hellos.incrementAndGet();
                         Map<String,Object> body=Json.object(Json.parse(new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8)));
-                        check(body.keySet().equals(Set.of("protocolVersion","extensionApiVersion","instanceId","extensionId","pid")),"SDK 0.42.0 hello fields unchanged");
+                        check(body.keySet().equals(Set.of("protocolVersion","extensionApiVersion","instanceId","extensionId","pid")),"Поля hello в SDK 0.42.0 остались без изменений");
                         send(exchange,helloStatus,hello);return;
                     }
                     if(path.equals("/v1/ready")){
@@ -61,7 +61,7 @@ public final class HostCompatibility0421Tests {
     private static void successOldHost()throws Exception {
         try(var server=new FakeHost();var client=server.session()){
             client.connect("",Set.of("runtime.config.get"));
-            check(client.capabilities().contains("runtime.config.get"),"0.42.0 host capabilities accepted");
+            check(client.capabilities().contains("runtime.config.get"),"Возможности хоста версии 0.42.0 приняты");
             check(client.capability("runtime.config.get",Map.of("key","a")).get("value").equals(3L),"реальный удалённый вызов разрешения доставлен");
             client.ready();check(server.ready.get()==1,"подтверждение готовности доставлено");
             check(server.hellos.get()==1,"приветствие отправлено один раз");
@@ -77,7 +77,7 @@ public final class HostCompatibility0421Tests {
         try(var server=new FakeHost();var client=server.session()){
             try{client.connect("",Set.of("runtime.storage.delete"));throw new AssertionError("принят запрос без требуемой возможности");}
             catch(HostSession.CompatibilityError ex){check(ex.code().equals("HOST_CAPABILITY_UNAVAILABLE"),"машинный код недоступной возможности");}
-            check(server.capabilities.get()==0&&server.ready.get()==0,"required-feature mismatch before host side effects");
+            check(server.capabilities.get()==0&&server.ready.get()==0,"Несовпадение обязательных функций выявлено до побочных действий хоста");
         }
     }
     private static void rejectionAndMalformedHello()throws Exception {

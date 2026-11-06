@@ -12,7 +12,7 @@ const basic = {
   deviceEnabled: true,
   issuer: "consumers",
 };
-test("validate real public client ID, personal issuer and at least one allowed flow", () => {
+test("Проверяются публичный ID клиента, персональный издатель и хотя бы один разрешённый поток", () => {
   assert.equal(validProviderPolicy02611(basic), true);
   assert.equal(validProviderPolicy02611({ ...basic, clientId: "123" }), false);
   assert.equal(validProviderPolicy02611({ ...basic, issuer: "common" }), false);
@@ -41,7 +41,7 @@ test("validate real public client ID, personal issuer and at least one allowed f
     false,
   );
 });
-test("provider workspace is restricted to settings administrators", () => {
+test("Экран провайдера доступен только администраторам настроек", () => {
   const manager = {
     user: { id: "admin", email: "a@b.test", roleId: "admin" },
     permissions: ["settings:manage"],
@@ -59,7 +59,7 @@ test("provider workspace is restricted to settings administrators", () => {
     "/api/v1/admin/official-provider",
   );
 });
-test("provider update is authenticated and cannot silently overwrite CAS revision", async () => {
+test("Обновление провайдера требует авторизации и не перезаписывает ревизию CAS незаметно", async () => {
   const orig = globalThis.fetch;
   try {
     globalThis.fetch = async (url, init) => {

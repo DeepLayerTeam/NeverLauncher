@@ -55,15 +55,15 @@ func TestManifestUpdaterPreservesUserData0224(t *testing.T) {
 	for p, b := range keep {
 		got, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(p)))
 		if err != nil || string(got) != string(b) {
-			t.Fatalf("data lost %s: %v %q", p, err, got)
+			t.Fatalf("Потеряны данные %s: %v, %q", p, err, got)
 		}
 	}
 	if _, err := os.Stat(filepath.Join(root, "mods/old.jar")); !os.IsNotExist(err) {
-		t.Fatalf("managed obsolete file survived or unexpected error: %v", err)
+		t.Fatalf("Устаревший управляемый файл не удалён или получена неожиданная ошибка: %v", err)
 	}
 	got, err := os.ReadFile(filepath.Join(root, "mods/new.jar"))
 	if err != nil || string(got) != "published" {
-		t.Fatalf("managed file not installed: %v %q", err, got)
+		t.Fatalf("Управляемый файл не установлен: %v, %q", err, got)
 	}
 }
 

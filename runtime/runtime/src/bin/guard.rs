@@ -65,17 +65,17 @@ async fn run(args: Vec<String>) -> Result<(), String> {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         #[cfg(windows)]
         println!(
-            "Guard {}\nUsage: guard --pipe <local named pipe> --parent-pid <pid> [--protection-profile audit|compat|aggressive]\nBootstrap secret: exactly 32 raw bytes on stdin.",
+            "Guard {}\nИспользование: guard --pipe <локальный именованный канал> --parent-pid <pid> [--protection-profile audit|compat|aggressive]\nСекрет инициализации: ровно 32 байта исходных данных в стандартном вводе.",
             env!("CARGO_PKG_VERSION")
         );
         #[cfg(target_os = "linux")]
         println!(
-            "Guard {}\nUsage: guard --socket <private unix socket> --parent-pid <pid>\nBootstrap secret: exactly 32 raw bytes on stdin.",
+            "Guard {}\nИспользование: guard --socket <приватный сокет Unix> --parent-pid <pid>\nСекрет инициализации: ровно 32 байта исходных данных в стандартном вводе.",
             env!("CARGO_PKG_VERSION")
         );
         #[cfg(target_os = "macos")]
         println!(
-            "Guard {}\nUsage: guard --socket <private unix socket> --parent-pid <pid>\nBootstrap secret: exactly 32 raw bytes on stdin.",
+            "Guard {}\nИспользование: guard --socket <приватный сокет Unix> --parent-pid <pid>\nСекрет инициализации: ровно 32 байта исходных данных в стандартном вводе.",
             env!("CARGO_PKG_VERSION")
         );
         return Ok(());

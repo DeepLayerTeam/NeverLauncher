@@ -291,7 +291,7 @@ def main() -> int:
         )
         if unsafe_stage.returncode == 0:
             raise SystemExit(
-                "non-canonical certified artifact name unexpectedly staged"
+                "Неожиданно добавлен артефакт сертификации с неканоническим именем"
             )
 
         bad = root / "guard-windows-amd64" / "guard-ci-result.json"

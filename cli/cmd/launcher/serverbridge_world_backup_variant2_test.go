@@ -15,13 +15,13 @@ func TestWorldBackupGateBlocksStartAndSecondBackup04110(t *testing.T) {
 	}
 	defer release()
 	if _, err := worldBackupHostGateAcquire04110(root, "start"); err == nil {
-		t.Fatal("JVM start entered backup gate")
+		t.Fatal("Запуск JVM прошёл через блокировку резервного копирования")
 	}
 	if _, err := worldBackupHostGateAcquire04110(root, "backup"); err == nil {
-		t.Fatal("second backup entered gate")
+		t.Fatal("Второе резервное копирование прошло через блокировку")
 	}
 	if err := worldBackupHostGateRecover04110(root); err == nil {
-		t.Fatal("live owner gate recovered")
+		t.Fatal("Блокировка действующего владельца была восстановлена")
 	}
 	release()
 	releaseStart, err := worldBackupHostGateAcquire04110(root, "start")
@@ -38,10 +38,10 @@ func TestWorldBackupGateFailsClosedAndRecoversOffline04110(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := worldBackupHostGateAcquire04110(root, "start"); err == nil {
-		t.Fatal("unreadable gate admitted a start")
+		t.Fatal("Нечитаемая блокировка допустила запуск")
 	}
 	if err := worldBackupHostGateRecover04110(root); err == nil {
-		t.Fatal("unreadable gate was automatically reclaimed")
+		t.Fatal("Нечитаемая блокировка была автоматически освобождена")
 	}
 	owner := worldHostGate04110{PID: 999999999, ProcessIdentity: "definitely-stale", Purpose: "backup", CreatedAt: "2026-01-01T00:00:00Z"}
 	raw, _ := json.Marshal(owner)
@@ -55,7 +55,7 @@ func TestWorldBackupGateFailsClosedAndRecoversOffline04110(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := worldBackupHostGateRecover04110(root); err == nil {
-		t.Fatal("recovered gate despite live JVM")
+		t.Fatal("Блокировка восстановлена несмотря на работающую JVM")
 	}
 	if err := os.Remove(paths["runtime"]); err != nil {
 		t.Fatal(err)

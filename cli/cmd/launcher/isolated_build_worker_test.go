@@ -38,24 +38,24 @@ printf 'logged output\n'
 	}
 	got, err := os.ReadFile(filepath.Join(dir, "generated.jar"))
 	if err != nil || string(got) != "ok" {
-		t.Fatalf("missing executed output: %s %v", got, err)
+		t.Fatalf("Отсутствует результат исполнения: %s, %v", got, err)
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(raw), "logged output") || !strings.Contains(string(raw), "success=true") {
-		t.Fatalf("missing log evidence: %s", raw)
+		t.Fatalf("Отсутствует запись в журнале подтверждений: %s", raw)
 	}
 	if strings.Contains(string(raw), "should-not-be-in-child") {
-		t.Fatal("secret leaked into worker log")
+		t.Fatal("Секрет попал в журнал рабочего процесса")
 	}
 	raw, err = os.ReadFile(filepath.Join(dir, "worker-parent.pid"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if strings.TrimSpace(string(raw)) == "" {
-		t.Fatal("Java was not started")
+		t.Fatal("Java не запустилась")
 	}
 }
 
@@ -74,14 +74,14 @@ func TestProcessorWorker0273TimeoutKillsProcessGroup(t *testing.T) {
 	start := time.Now()
 	path, err := runIsolatedProcessor0273(ctx, forgeProcessorContext{ClientDir: dir, JavaExecutable: java, Timeout: 20 * time.Second}, 0, []string{"-cp", "a", "Main"})
 	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("expected deadline, got %v", err)
+		t.Fatalf("Ожидалось превышение времени ожидания, получено: %v", err)
 	}
 	if time.Since(start) > 4*time.Second {
-		t.Fatalf("worker process tree failed to exit promptly: %s", time.Since(start))
+		t.Fatalf("Дерево рабочих процессов не завершилось вовремя: %s", time.Since(start))
 	}
 	data, readErr := os.ReadFile(path)
 	if readErr != nil || !strings.Contains(string(data), "success=false") {
-		t.Fatalf("failure log missing: %s %v", data, readErr)
+		t.Fatalf("Отсутствует журнал сбоя: %s, %v", data, readErr)
 	}
 }
 
@@ -94,7 +94,7 @@ func TestProcessorWorker0273RefusesOversizedOrUntrustedRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(raw) > workerRequestLimit0273 {
-		t.Log("oversized request is rejected at transport")
+		t.Log("Слишком большой запрос отклоняется на уровне транспорта")
 	}
 	if len(tooBig.Args) <= 4096 {
 		t.Fatal("invalid fixture")
@@ -128,13 +128,13 @@ func TestForgeProcessorInputFingerprint0273RejectsModifiedClasspath(t *testing.T
 		t.Fatal(err)
 	}
 	if a == b {
-		t.Fatal("modified processor jar must invalidate journal identity")
+		t.Fatal("Изменение JAR обработчика должно отменять идентичность журнала")
 	}
 	if err := os.Remove(jar); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := fingerprintForgeProcessor0273(pc, processor); err == nil {
-		t.Fatal("missing processor inputs must be fatal")
+		t.Fatal("Отсутствие входных данных обработчика должно вызывать критическую ошибку")
 	}
 }
 
@@ -171,44 +171,44 @@ func TestForgeProcessorRecovery0273QuarantinesCorruptOutputAndChangedInputs(t *t
 	}
 	first, err := runForgeProcessors(context.Background(), pc)
 	if err != nil || first.Ran != 1 {
-		t.Fatalf("first run %+v: %v", first, err)
+		t.Fatalf("Первый запуск %+v: %v", first, err)
 	}
 	second, err := runForgeProcessors(context.Background(), pc)
 	if err != nil || second.Skipped != 1 {
-		t.Fatalf("second run %+v: %v", second, err)
+		t.Fatalf("Второй запуск %+v: %v", second, err)
 	}
 	if err := os.WriteFile(output, []byte("corrupt"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	third, err := runForgeProcessors(context.Background(), pc)
 	if err != nil || third.Ran != 1 || third.Skipped != 0 {
-		t.Fatalf("corrupt output accepted %+v: %v", third, err)
+		t.Fatalf("Принят повреждённый результат %+v: %v", third, err)
 	}
 	if got, err := os.ReadFile(output); err != nil || string(got) != "verified-processor-output" {
-		t.Fatalf("unrecovered file: %s %v", got, err)
+		t.Fatalf("Невосстановленный файл: %s, %v", got, err)
 	}
 	if err := os.WriteFile(processorJar, testProcessorJar(t), 0o600); err != nil {
 		t.Fatal(err)
 	} // same bytes
 	fourth, err := runForgeProcessors(context.Background(), pc)
 	if err != nil || fourth.Skipped != 1 {
-		t.Fatalf("identical JAR bytes changed fingerprint: %+v %v", fourth, err)
+		t.Fatalf("Одинаковые байты JAR изменили отпечаток: %+v, %v", fourth, err)
 	}
 	if err := os.WriteFile(processorJar, append(testProcessorJar(t), 0), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	fifth, err := runForgeProcessors(context.Background(), pc)
 	if err != nil || fifth.Ran != 1 {
-		t.Fatalf("modified input did not invalidate processor result %+v: %v", fifth, err)
+		t.Fatalf("Изменённый ввод не аннулировал результат обработчика: %+v, %v", fifth, err)
 	}
 	journal, _, err := loadForgeProcessorJournal(pc)
 	if err != nil || journal.Entries["0"].WorkerLogPath == "" || !isSHA256Hex0271(journal.Entries["0"].InputSHA256) {
-		t.Fatalf("journal evidence missing: %+v %v", journal, err)
+		t.Fatalf("Отсутствует подтверждение в журнале: %+v, %v", journal, err)
 	}
 	qdir := filepath.Join(root, ".launcher", "quarantine")
 	found, err := os.ReadDir(qdir)
 	if err != nil || len(found) < 2 {
-		t.Fatalf("corrupt and stale outputs not quarantined: %v %v", found, err)
+		t.Fatalf("Повреждённые и устаревшие результаты не помещены в карантин: %v, %v", found, err)
 	}
 }
 
@@ -228,7 +228,7 @@ func TestForgeProcessorRecovery0273RejectsSymlinkOutput(t *testing.T) {
 	pc := forgeProcessorContext{ClientDir: root}
 	_, err := processorOutputsMatch(pc, forgeProcessor{Outputs: map[string]string{"{ROOT}/output.jar": sha1HexLocal([]byte("outside"))}})
 	if err == nil {
-		t.Fatal("symlink output was accepted as a trusted processor result")
+		t.Fatal("Результат обработчика через символическую ссылку принят как доверенный")
 	}
 }
 
@@ -247,12 +247,12 @@ func TestProcessorWorker0273StrictSandboxFailsClosedWhenUnsupported(t *testing.T
 	pc := forgeProcessorContext{ClientDir: root, JavaExecutable: java, StrictSandbox: true, Timeout: 5 * time.Second}
 	log, err := runIsolatedProcessor0273(context.Background(), pc, 0, []string{"-cp", "a", "Main"})
 	if err == nil || !strings.Contains(err.Error(), "bubblewrap") {
-		t.Fatalf("strict worker fallback is unsafe: %v", err)
+		t.Fatalf("Резервный запуск строгого рабочего процесса небезопасен: %v", err)
 	}
 	if _, statErr := os.Stat(filepath.Join(root, "generated.jar")); !os.IsNotExist(statErr) {
-		t.Fatalf("processor ran outside strict sandbox: %v", statErr)
+		t.Fatalf("Обработчик работал вне строгой песочницы: %v", statErr)
 	}
 	if _, err := os.Stat(log); err != nil {
-		t.Fatalf("worker failure log unavailable: %v", err)
+		t.Fatalf("Журнал ошибки рабочего процесса недоступен: %v", err)
 	}
 }

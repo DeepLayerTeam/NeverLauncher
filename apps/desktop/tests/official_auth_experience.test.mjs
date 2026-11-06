@@ -115,7 +115,7 @@ const waitFor = async (predicate) => {
   throw Error("condition not reached");
 };
 
-test("restores verified native profile and directory without revealing credentials", async () => {
+test("Восстанавливает проверенный нативный профиль и каталог без раскрытия учётных данных", async () => {
   const f = fixture();
   await f.experience.initialize();
   assert.equal(f.experience.snapshot.initialized, true);
@@ -132,7 +132,7 @@ test("restores verified native profile and directory without revealing credentia
   assert.equal(f.experience.snapshot.activity, null);
 });
 
-test("switch, refresh, Never linking, unlinking and selective logout update UI and parent", async () => {
+test("Переключение, обновление, привязка и отвязка Never и выборочный выход обновляют интерфейс и родителя", async () => {
   const f = fixture();
   await f.experience.initialize();
   await f.experience.select(bravo.id);
@@ -152,7 +152,7 @@ test("switch, refresh, Never linking, unlinking and selective logout update UI a
   assert.equal(f.experience.snapshot.accounts.length, 0);
 });
 
-test("revoked refresh immediately invalidates launch readiness, but retains local directory", async () => {
+test("Отозванное обновление немедленно запрещает запуск, сохраняя локальный каталог", async () => {
   const f = fixture();
   await f.experience.initialize();
   f.overrides.set("official_identity_refresh_0267", () => {
@@ -166,7 +166,7 @@ test("revoked refresh immediately invalidates launch readiness, but retains loca
   assert.doesNotMatch(JSON.stringify(f.experience.snapshot), /supersecret/);
 });
 
-test("never trusts a provider profile that mismatches the active vault UUID", async () => {
+test("Не доверяет профилю провайдера при несовпадении UUID активного хранилища", async () => {
   const f = fixture();
   f.overrides.set("official_identity_status_0262", () => bravo);
   await f.experience.initialize();
@@ -174,7 +174,7 @@ test("never trusts a provider profile that mismatches the active vault UUID", as
   assert.equal(f.events.at(-1), null);
 });
 
-test("browser login returns verified account, supports re-login and keeps accounts", async () => {
+test("Вход через браузер возвращает проверенную учётную запись, допускает повторный вход и сохраняет аккаунты", async () => {
   const f = fixture();
   await f.experience.initialize();
   await f.experience.browserLogin();
@@ -187,7 +187,7 @@ test("browser login returns verified account, supports re-login and keeps accoun
   );
 });
 
-test("cancel of slow browser flow discards stale success and allows subsequent login", async () => {
+test("Отмена медленного входа отбрасывает запоздалый успех и разрешает новый вход", async () => {
   const f = fixture();
   await f.experience.initialize();
   const pending = defer();
@@ -208,7 +208,7 @@ test("cancel of slow browser flow discards stale success and allows subsequent l
   assert.equal(f.experience.snapshot.profile.id, bravo.id);
 });
 
-test("Device Code automatically waits in Rust, publishes deadline, cancel fences late response", async () => {
+test("Код устройства обрабатывается в Rust с предельным сроком; отмена блокирует поздний ответ", async () => {
   const f = fixture();
   await f.experience.initialize();
   const pending = defer();
@@ -227,7 +227,7 @@ test("Device Code automatically waits in Rust, publishes deadline, cancel fences
   assert.equal(f.experience.snapshot.activity, null);
 });
 
-test("blocks concurrent selection while one native request is running", async () => {
+test("Блокирует параллельный выбор во время нативного запроса", async () => {
   const f = fixture();
   await f.experience.initialize();
   const pending = defer();
@@ -244,7 +244,7 @@ test("blocks concurrent selection while one native request is running", async ()
   assert.equal(f.experience.snapshot.activity, null);
 });
 
-test("link service outage does not hide a verified gameplay profile", async () => {
+test("Недоступность сервиса привязки не скрывает проверенный игровой профиль", async () => {
   const f = fixture();
   f.overrides.set("official_identity_links_0268", () => {
     throw Error("HTTP 503");
@@ -255,7 +255,7 @@ test("link service outage does not hide a verified gameplay profile", async () =
   assert.match(f.experience.snapshot.linksIssue, /недоступна/);
 });
 
-test("disposing during slow login prevents any parent or view mutation", async () => {
+test("Завершение во время медленного входа исключает изменение родителя и представления", async () => {
   const f = fixture();
   await f.experience.initialize();
   const pending = defer();
@@ -272,7 +272,7 @@ test("disposing during slow login prevents any parent or view mutation", async (
   assert.equal(f.events.length, prior);
 });
 
-test("error display uses allowlisted categories, never secrets or provider URL", () => {
+test("Ошибки отображаются только из разрешённых категорий, без секретов и URL провайдера", () => {
   assert.match(
     describeAuthenticationFailure02610("403 Invalid app registration"),
     /не допущено/,
@@ -290,7 +290,7 @@ test("error display uses allowlisted categories, never secrets or provider URL",
   );
 });
 
-test("browser cancel during preliminary native cancel cannot start a new flow after cancellation", async () => {
+test("Отмена входа через браузер не запускает новый процесс при незавершённой нативной отмене", async () => {
   const gate = defer();
   const calls = [];
   const client = new OfficialMinecraftClient0257(
@@ -316,7 +316,7 @@ test("browser cancel during preliminary native cancel cannot start a new flow af
   assert.equal(calls.includes("official_identity_browser_login_0263"), false);
 });
 
-test("Device Code cancel during initial request cannot create stale pending flow", async () => {
+test("Отмена кода устройства во время первого запроса не оставляет устаревший процесс", async () => {
   const gate = defer();
   const calls = [];
   const client = new OfficialMinecraftClient0257(
@@ -342,7 +342,7 @@ test("Device Code cancel during initial request cannot create stale pending flow
   assert.equal(calls.includes("official_identity_begin_0262"), false);
 });
 
-test("native cancellation locks the UI until completion; cannot race a fresh browser login", async () => {
+test("Нативная отмена блокирует интерфейс до завершения и исключает гонку с новым входом", async () => {
   const f = fixture();
   await f.experience.initialize();
   const browser = defer(),

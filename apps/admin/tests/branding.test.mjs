@@ -228,7 +228,7 @@ test("delegated signed v2 -> root policy -> modified signed bootstrap remains v2
     /подпись/,
   );
 });
-test("unsafe colors, Javascript links, SVG and oversized images refused before signing", () => {
+test("Небезопасные цвета, ссылки JavaScript, SVG и слишком большие изображения отклоняются до подписи", () => {
   assert.throws(
     () =>
       validateBrand0355({ ...brand, accentColor: "red; url(javascript:evil)" }),

@@ -14,12 +14,12 @@ const viewer = {
   permissions: [],
   projectPermissions: {},
 };
-test("only settings managers can open Auth Provider Wizard", () => {
+test("Мастер провайдеров авторизации доступен только управляющим настройками", () => {
   assert.equal(canSeeSection(admin, "auth-provider-wizard", "default"), true);
   assert.equal(canSeeSection(viewer, "auth-provider-wizard", "default"), false);
   assert.equal(endpointForSection("auth-provider-wizard", "default"), base);
 });
-test("draft API requires authenticated request and does not include raw DSN in payload", async () => {
+test("API черновика требует авторизацию и не передаёт исходную строку подключения к БД", async () => {
   const original = globalThis.fetch;
   try {
     globalThis.fetch = async (url, init) => {
@@ -54,7 +54,7 @@ test("draft API requires authenticated request and does not include raw DSN in p
     globalThis.fetch = original;
   }
 });
-test("conflicting activation retries silently", async () => {
+test("Конфликт активации не вызывает скрытый повтор", async () => {
   const original = globalThis.fetch;
   let calls = 0;
   try {

@@ -76,7 +76,7 @@ test("official flow uses ONLY the native boundary; no tickets or game credential
   }
 });
 
-test("restoring native profile does not return a session ticket", async () => {
+test("Восстановление нативного профиля не возвращает билет сеанса", async () => {
   const commands = [];
   const c = new OfficialMinecraftClient0257(
     "https://backend.example",
@@ -93,7 +93,7 @@ test("restoring native profile does not return a session ticket", async () => {
   assert.deepEqual(commands, ["official_identity_status_0262"]);
 });
 
-test("rejects early polling before native Device Code call", async () => {
+test("Отклоняет преждевременный опрос до нативного запроса кода устройства", async () => {
   const commands = [];
   const c = new OfficialMinecraftClient0257(
     "https://backend.example",
@@ -183,7 +183,7 @@ test("browser PKCE is a native-only command and returns profile metadata", async
   );
 });
 
-test("cancelled browser flow cannot attach a late response to renderer", async () => {
+test("Отменённый вход через браузер не передаёт запоздалый ответ процессу отображения", async () => {
   let complete;
   const pending = new Promise((resolve) => {
     complete = resolve;
@@ -206,7 +206,7 @@ test("cancelled browser flow cannot attach a late response to renderer", async (
   assert.equal(client.linked, false);
 });
 
-test("native Device Code waiter returns only verified profile and is automatic", async () => {
+test("Нативное ожидание кода устройства автоматически возвращает только проверенный профиль", async () => {
   const calls = [];
   const c = new OfficialMinecraftClient0257(
     "https://backend.example",
@@ -247,7 +247,7 @@ test("native Device Code waiter returns only verified profile and is automatic",
   );
 });
 
-test("cancelled Device Code waiter cannot attach late native result", async () => {
+test("Отменённое ожидание кода устройства не принимает запоздалый нативный результат", async () => {
   let release;
   const delayed = new Promise((resolve) => {
     release = resolve;
@@ -277,7 +277,7 @@ test("cancelled Device Code waiter cannot attach late native result", async () =
   assert.equal(c.linked, false);
 });
 
-test("replacing Device Code invalidates previous native waiter", async () => {
+test("Замена кода устройства отменяет предыдущее нативное ожидание", async () => {
   let finish;
   const waitingNative = new Promise((resolve) => {
     finish = resolve;
@@ -308,7 +308,7 @@ test("replacing Device Code invalidates previous native waiter", async () => {
   assert.equal(c.linked, false);
 });
 
-test("native string rejection after cancel is sanitized before next Device Code flow", async () => {
+test("Текст нативной ошибки после отмены очищается перед следующим запросом кода устройства", async () => {
   let rejectOld;
   let started = 0;
   const native = new Promise((_, reject) => {
@@ -339,7 +339,7 @@ test("native string rejection after cancel is sanitized before next Device Code 
   assert.equal(c.linked, false);
 });
 
-test("0.26.7 multi-account directory, selection, forced refresh, and logout use metadata-only native calls", async () => {
+test("0.26.7: список аккаунтов, выбор, принудительное обновление и выход используют нативные вызовы без секретов", async () => {
   const a = {
     ...profile,
     id: "0123456789abcdef0123456789abcdef",
@@ -398,7 +398,7 @@ test("0.26.7 multi-account directory, selection, forced refresh, and logout use 
   assert.ok(commandLog.some((r) => r.cmd === "official_identity_refresh_0267"));
 });
 
-test("0.26.7 rejected switch does not adopt a different UUID", async () => {
+test("0.26.7: отклонённое переключение не подменяет UUID", async () => {
   const p = { ...profile, id: "0123456789abcdef0123456789abcdef" };
   const client = new OfficialMinecraftClient0257(
     "https://backend.example",
@@ -419,7 +419,7 @@ test("0.26.7 rejected switch does not adopt a different UUID", async () => {
   assert.equal(client.linked, true);
 });
 
-test("0.26.7 cancellation while adding does not disconnect previously restored account", async () => {
+test("0.26.7: отмена добавления не отключает ранее восстановленный аккаунт", async () => {
   const client = new OfficialMinecraftClient0257(
     "https://backend.example",
     "access",
@@ -435,7 +435,7 @@ test("0.26.7 cancellation while adding does not disconnect previously restored a
   assert.equal(client.linked, true);
 });
 
-test("0.26.7 a stale account switch is rejected after local clear", async () => {
+test("0.26.7: устаревшее переключение аккаунта отклоняется после локального сброса", async () => {
   let resolve;
   const pending = new Promise((r) => (resolve = r));
   const client = new OfficialMinecraftClient0257(
@@ -454,7 +454,7 @@ test("0.26.7 a stale account switch is rejected after local clear", async () => 
   assert.equal(client.linked, false);
 });
 
-test("0.26.8 Never identity linking uses native commands and exposes no Minecraft bearer", async () => {
+test("0.26.8: привязка Never использует нативные команды и не раскрывает токен Minecraft", async () => {
   const calls = [];
   const client = new OfficialMinecraftClient0257(
     "https://backend.example",
@@ -508,7 +508,7 @@ test("0.26.8 Never identity linking uses native commands and exposes no Minecraf
   );
 });
 
-test("0.39.5 only owned capes reach native write, and confirmed active cape is required", async () => {
+test("0.39.5: нативная запись разрешена только для своих плащей, требуется подтверждённый активный плащ", async () => {
   const owned = {
     ...profile,
     capes: [

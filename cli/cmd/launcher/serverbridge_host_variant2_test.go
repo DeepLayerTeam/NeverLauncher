@@ -45,7 +45,7 @@ done`)
 		time.Sleep(20 * time.Millisecond)
 	}
 	if state.Status != "running" {
-		t.Fatalf("not running: %+v", state)
+		t.Fatalf("Процесс не выполняется: %+v", state)
 	}
 	// Отложенный запрос устаревшего сеанса не должен остановить эту JVM.
 	forged := hostStopRequest0282{SessionID: "previous-session", ProcessPID: state.ProcessPID}
@@ -54,14 +54,14 @@ done`)
 	}
 	time.Sleep(120 * time.Millisecond)
 	if !hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
-		t.Fatal("stale request unexpectedly stopped JVM")
+		t.Fatal("Устаревший запрос неожиданно остановил JVM")
 	}
 	started := time.Now()
 	if err := stopServerBridgeHost01910([]string{"--server-root", root}); err != nil {
 		t.Fatal(err)
 	}
 	if time.Since(started) > 1500*time.Millisecond {
-		t.Fatal("console stop did not shut down before OS signal fallback")
+		t.Fatal("Команда остановки через консоль не завершила процесс до отправки системного сигнала")
 	}
 	select {
 	case err := <-finished:
@@ -69,15 +69,15 @@ done`)
 			t.Fatal(err)
 		}
 	case <-time.After(3 * time.Second):
-		t.Fatal("run did not finish")
+		t.Fatal("Выполнение не завершилось")
 	}
 	state, _ = readServerBridgeHostRuntime01910(paths["runtime"])
 	if state.Status != "stopped" || state.StopMethod != "console-stop" || state.ProcessIdentity != "" {
-		t.Fatalf("stopped runtime: %+v", state)
+		t.Fatalf("Остановленный Runtime: %+v", state)
 	}
 	log, _ := os.ReadFile(paths["stdout"])
 	if !strings.Contains(string(log), "WORLD-SAVED") {
-		t.Fatalf("missing save proof: %q", log)
+		t.Fatalf("Отсутствует подтверждение сохранения: %q", log)
 	}
 }
 
@@ -101,20 +101,20 @@ exit 0`)
 	}
 	masked, _ := json.Marshal(hostRedactedConfig0282(config))
 	if strings.Contains(string(masked), "token-fixture") {
-		t.Fatal("status config leaks environment secrets")
+		t.Fatal("Конфигурация статуса раскрывает секреты окружения")
 	}
 	if err := runServerBridgeHost01910(root, false); err != nil {
 		t.Fatal(err)
 	}
 	output, _ := os.ReadFile(hostPaths01910(root)["stdout"])
 	if !strings.Contains(string(output), "pwd="+work) || !strings.Contains(string(output), "allowed=token-fixture") || !strings.Contains(string(output), "denied=MISSING") {
-		t.Fatalf("unexpected subprocess environment: %q", output)
+		t.Fatalf("Неожиданное окружение дочернего процесса: %q", output)
 	}
 	if err := configureServerBridgeHost01910([]string{"--server-root", root, "--platform", "paper", "--server-jar", "paper.jar", "--java", java, "--env", "SECRET=oops"}); err == nil {
-		t.Fatal("variable outside allowlist was accepted")
+		t.Fatal("Принята переменная вне списка разрешённых")
 	}
 	if err := configureServerBridgeHost01910([]string{"--server-root", root, "--platform", "paper", "--server-jar", "paper.jar", "--java", java, "--working-directory", ".."}); err == nil {
-		t.Fatal("working directory traversal was accepted")
+		t.Fatal("Принят обход рабочего каталога")
 	}
 }
 
@@ -130,7 +130,7 @@ func TestHost0282IdentityRecoveryAndStalePID(t *testing.T) {
 		t.Fatal(err)
 	}
 	if hostIdentityMatches0282(fake.ProcessPID, fake.ProcessIdentity) {
-		t.Fatal("reused PID accepted")
+		t.Fatal("Принят повторно использованный PID")
 	}
 	if err := runServerBridgeHost01910(root, false); err != nil {
 		t.Fatal(err)
@@ -140,7 +140,7 @@ func TestHost0282IdentityRecoveryAndStalePID(t *testing.T) {
 		t.Fatal(err)
 	}
 	if recovered.RecoveredFrom != "previous-session" || recovered.Status != "exited" {
-		t.Fatalf("stale runtime recovery failed: %+v", recovered)
+		t.Fatalf("Не удалось восстановить устаревший Runtime: %+v", recovered)
 	}
 	// Новый супервизор не должен принимать под управление всё ещё работающий процесс с подтверждённой идентичностью.
 	fake.ProcessIdentity = hostOwnIdentity0282()
@@ -148,11 +148,11 @@ func TestHost0282IdentityRecoveryAndStalePID(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := runServerBridgeHost01910(root, false); err == nil {
-		t.Fatal("live orphan was accepted")
+		t.Fatal("Принят осиротевший работающий процесс")
 	}
 	// Устаревшие незаблокированные запросы не должны случайно адресоваться другому супервизору.
 	if hostTakeStopRequest0282(paths["stop"], "new-session", os.Getpid()) {
-		t.Fatal("nonexistent stop request accepted")
+		t.Fatal("Принята команда остановки несуществующего процесса")
 	}
 }
 
@@ -164,7 +164,7 @@ exit 8`)
 	}
 	err := runServerBridgeHost01910(root, false)
 	if err == nil {
-		t.Fatal("crash should return error")
+		t.Fatal("Сбой должен возвращать ошибку")
 	}
 	paths := hostPaths01910(root)
 	state, err := readServerBridgeHostRuntime01910(paths["runtime"])
@@ -172,10 +172,10 @@ exit 8`)
 		t.Fatal(err)
 	}
 	if state.CrashCount != 3 || state.RestartCount != 2 || !strings.Contains(state.LastError, "crash-loop") {
-		t.Fatalf("unexpected crash state: %+v", state)
+		t.Fatalf("Неожиданное состояние после сбоя: %+v", state)
 	}
 	if delay := hostRestartDelay0282(2000, 4); delay != 16*time.Second {
-		t.Fatalf("unexpected backoff %v", delay)
+		t.Fatalf("Неожиданная задержка повторного запуска: %v", delay)
 	}
 	writer, err := newHostRollingWriter0282(filepath.Join(root, "rolling.log"), 1024, 2)
 	if err != nil {
@@ -196,6 +196,6 @@ exit 8`)
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(root, "rolling.log.3")); !os.IsNotExist(err) {
-		t.Fatal("rotation exceeded retention")
+		t.Fatal("Ротация превысила допустимый срок хранения")
 	}
 }

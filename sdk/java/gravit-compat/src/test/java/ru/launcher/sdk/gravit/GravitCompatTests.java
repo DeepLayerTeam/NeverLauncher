@@ -29,6 +29,6 @@ public final class GravitCompatTests {
         cmd.childCommands.put("sub",cmd);
         cmd.invokeSubcommands("sub","value");
         rejected(()->{try{cmd.invokeSubcommands("missing");}catch(Exception e){throw new IllegalArgumentException(e);}});
-        System.out.println("PASS: "+passed+" Gravit compatibility API checks");
+        System.out.println("PASS: "+passed+" Проверки совместимости API Gravit");
     }
 }

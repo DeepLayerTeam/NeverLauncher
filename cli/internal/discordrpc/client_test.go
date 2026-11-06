@@ -84,7 +84,7 @@ func TestLocalDiscordSession(t *testing.T) {
 			Activity Activity `json:"activity"`
 		}
 		if err := json.Unmarshal(msg["args"], &args); err != nil || args.PID <= 0 || args.Activity.State != "Playing Minecraft" {
-			errCh <- fmt.Errorf("bad payload: %#v %v", args, err)
+			errCh <- fmt.Errorf("Некорректное содержимое запроса: %#v, %v", args, err)
 			return
 		}
 		nonce := msg["nonce"]

@@ -17,7 +17,7 @@ func TestMigrationIdentityCLI0334(t *testing.T) {
 		path = r.URL.Path
 		contentType = r.Header.Get("Content-Type")
 		if r.Header.Get("Authorization") != "Bearer token334" {
-			t.Error("missing auth token")
+			t.Error("Отсутствует токен авторизации")
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"format": "launcher.gravit-identity-map.v1", "ready": false}})
@@ -29,7 +29,7 @@ func TestMigrationIdentityCLI0334(t *testing.T) {
 		t.Fatal(e)
 	}
 	if method != "GET" || path != "/api/v1/admin/migration-runs/run334/identities" {
-		t.Fatalf("wrong GET: %s %s", method, path)
+		t.Fatalf("Некорректный GET: %s, %s", method, path)
 	}
 	source := filepath.Join(t.TempDir(), "gravit.zip")
 	if e := os.WriteFile(source, []byte("zip identity source"), 0600); e != nil {
@@ -39,12 +39,12 @@ func TestMigrationIdentityCLI0334(t *testing.T) {
 		t.Fatal(e)
 	}
 	if method != "POST" || contentType != "application/zip" {
-		t.Fatalf("wrong upload: %s %s", method, contentType)
+		t.Fatalf("Некорректная загрузка: %s, %s", method, contentType)
 	}
 	if e := handleMigrationWorkflow0331(append([]string{"verify-identities"}, base...)); e != nil {
 		t.Fatal(e)
 	}
 	if method != "POST" || !strings.HasSuffix(path, "/identities/verify") {
-		t.Fatalf("wrong verify %s %s", method, path)
+		t.Fatalf("Некорректная проверка: %s, %s", method, path)
 	}
 }

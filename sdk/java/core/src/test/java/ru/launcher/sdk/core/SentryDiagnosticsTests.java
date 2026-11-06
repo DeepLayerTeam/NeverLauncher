@@ -29,7 +29,7 @@ public final class SentryDiagnosticsTests {
       SentryDiagnostics.report(e,Map.of("LAUNCHER_SENTRY_JVM_DSN",dsn));
       if(received.poll(100,TimeUnit.MILLISECONDS)!=null)throw new AssertionError("отказ от отправки данных проигнорирован");
       try{SentryDiagnostics.installFromEnvironment(Map.of("LAUNCHER_SENTRY_JVM_ENABLED","true","LAUNCHER_SENTRY_JVM_DSN","http://abc@example.com/42"));throw new AssertionError("небезопасный адрес подключения ошибочно принят");}catch(IllegalArgumentException expected){}
-      System.out.println("Sentry JVM HTTP transport, redaction and opt-out passed");
+      System.out.println("Проверены HTTP-транспорт Sentry для JVM, скрытие чувствительных данных и отказ от отправки");
     }finally{server.stop(0);}
   }
 }

@@ -32,7 +32,7 @@ public final class BridgeFailoverRecovery0515Test {
         catch (IOException expected) { blocked = true; }
         check(blocked, "сервер без потока событий не должен разрешать подтверждение");
         check(events.ackSequence() == 0 && events.nextBatch(64).size() == 1,
-            "a reduced-capability endpoint must leave the signed event on disk");
+            "Узел с ограниченными возможностями должен сохранять подписанное событие на диске");
         // Имитируйте перезагрузку JVM/плагина и повторное подключение Backend без серверного ACK.
         BridgeEventJournal recovered = new BridgeEventJournal(journal, "server", runtime, node);
         check(recovered.nextBatch(64).size() == 1, "потеря HTTP-ответа не должна удалять событие после перезапуска");

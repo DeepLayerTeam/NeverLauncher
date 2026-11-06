@@ -72,6 +72,6 @@ public final class StateMigrations04810Tests {
                 check(((Number)Json.object(docs.get("storage:counter")).get("value")).intValue()==8,"неуспешная миграция не повредила документ");
             }
         } finally{broker.stop(0);}
-        System.out.println("PASS: "+checks+" state migration chain and authenticated runtime persistence assertions");
+        System.out.println("PASS: "+checks+" Проверены цепочка миграций состояния и аутентифицированное сохранение Runtime");
     }
 }

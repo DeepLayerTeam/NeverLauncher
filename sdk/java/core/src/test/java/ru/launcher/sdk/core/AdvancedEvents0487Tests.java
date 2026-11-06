@@ -83,7 +83,7 @@ public final class AdvancedEvents0487Tests {
                 check(dead.body().contains("EVENT_REJECTED"),"постоянная ошибка имеет стабильный код");
                 HttpResponse<String> ack=call(http,base+"/v1/events",task,"callback-secret");
                 check(ack.statusCode()==200 && Json.object(Json.parse(ack.body())).get("accepted").equals(Boolean.TRUE),"успешное задание имеет явное подтверждение");
-                check(executions.get()==3,"three actual task attempts");
+                check(executions.get()==3,"Три фактические попытки выполнения задания");
                 var hook=envelope("release.before-publish","sync","evt-hook",Map.of("signed",false));
                 check(call(http,base+"/v1/hooks",hook,"callback-secret").statusCode()==422,"запрет обработчика блокирует публикацию");
                 check(call(http,base+"/v1/hooks",hook,"callback-secret").statusCode()==422,"отсутствие политики блокирует публикацию");

@@ -44,7 +44,7 @@ public final class CoreTests {
         var lib15=dep("org.lib","1.5.0","[]");var lib2=dep("org.lib","2.0.0","[]");
         var app=dep("org.app","1.0.0","[{\"id\":\"org.lib\",\"version\":\"^1.0.0\"},{\"id\":\"org.absent\",\"version\":\"*\",\"optional\":true}]");
         var resolved=DependencyResolver.resolve(List.of(lib15,lib2,app),List.of(new ExtensionManifest.Dependency("org.app","*",false)));
-        ok(resolved.size()==2&&resolved.get(0).id().equals("org.lib")&&resolved.get(1).id().equals("org.app"),"transitive selection and order");
+        ok(resolved.size()==2&&resolved.get(0).id().equals("org.lib")&&resolved.get(1).id().equals("org.app"),"Транзитивный выбор и порядок сохранены");
         var cycA=dep("org.aaa","1.0.0","[{\"id\":\"org.bbb\",\"version\":\"*\"}]");
         var cycB=dep("org.bbb","1.0.0","[{\"id\":\"org.aaa\",\"version\":\"*\"}]");
         throwsType(IllegalArgumentException.class,()->DependencyResolver.resolve(List.of(cycA,cycB),List.of(new ExtensionManifest.Dependency("org.aaa","*",false))));
@@ -52,7 +52,7 @@ public final class CoreTests {
         var conflicts=ExtensionManifest.parse(sample("org.bad","1.0.0","[]","[{\"id\":\"org.lib\",\"version\":\"^1.0.0\"}]"));
         throwsType(IllegalArgumentException.class,()->DependencyResolver.resolve(List.of(conflicts,lib15),List.of(new ExtensionManifest.Dependency("org.bad","*",false),new ExtensionManifest.Dependency("org.lib","*",false))));
         var optional=DependencyResolver.resolve(List.of(lib15),List.of(new ExtensionManifest.Dependency("org.lib","^1.0.0",false),new ExtensionManifest.Dependency("org.lib","^2.0.0",true)));
-        ok(optional.size()==1&&optional.get(0).version().equals(lib15.version()),"optional version conflict skipped");
+        ok(optional.size()==1&&optional.get(0).version().equals(lib15.version()),"Необязательный конфликт версий пропущен");
     }
     static void cancellationAndDeadline() throws Exception {
         var token=new Cancellation();AtomicInteger count=new AtomicInteger();token.onCancel(count::incrementAndGet);var child=token.child();

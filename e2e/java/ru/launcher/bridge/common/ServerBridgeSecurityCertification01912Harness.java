@@ -18,7 +18,7 @@ public final class ServerBridgeSecurityCertification01912Harness {
 
     public static void main(String[] args) throws Exception {
         String target = args.length == 0 ? "paper" : args[0].trim().toLowerCase();
-        require(!target.isBlank(), "target required");
+        require(!target.isBlank(), "Необходимо указать целевую систему");
         String serverId = target + "-security-01912";
         Path root = Files.createTempDirectory("nl-sb-security-01912-" + target + "-");
         Path cfgPath = root.resolve("serverbridge.yml");
@@ -133,7 +133,7 @@ public final class ServerBridgeSecurityCertification01912Harness {
         BridgeEventRecord replayEventAgain = eventJournal.nextBatch(1).get(0);
         require(journalEvent.sequence() == replayEvent.sequence() && replayEvent.sequence() == replayEventAgain.sequence()
             && journalEvent.signature().equals(replayEvent.signature()) && replayEvent.signature().equals(replayEventAgain.signature()),
-            "replayed event preserves original signed sequence");
+            "Повторно полученное событие сохраняет исходную подписанную последовательность");
 
         BridgeEventRecord event = BridgeEventRecord.signed(1, serverId, runtime, "server.ready", System.currentTimeMillis(), Map.of("platform", target), node);
         String eventCanonical = BridgeProtocolSecurity.eventCanonical(serverId, event.eventId(), event.runtimeId(), event.nodeKeyFingerprint(), event.capabilityDigest(), event.sequence(), event.type(), event.occurredAtUnixMillis(), event.payloadSha256());

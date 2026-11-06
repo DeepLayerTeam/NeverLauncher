@@ -122,7 +122,7 @@ func prepareLinuxBundleFixture0153(t *testing.T, ver string) string {
 	writeLinuxTargetFixture0153(t, dir, ver, "x64")
 	writeLinuxTargetFixture0153(t, dir, ver, "arm64")
 	if err := writeLinuxProductionEvidence0153(dir, ver); err != nil {
-		t.Fatalf("write evidence: %v", err)
+		t.Fatalf("Ошибка записи подтверждения: %v", err)
 	}
 	if err := writeDeliveryManifest0151(dir, ver); err != nil {
 		t.Fatalf("Ошибка записи манифеста поставки: %v", err)
@@ -134,10 +134,10 @@ func TestLinuxProductionEvidence0153VerifiesBothArchitectures(t *testing.T) {
 	ver := "0.15.3"
 	dir := prepareLinuxBundleFixture0153(t, ver)
 	if err := verifyDeliveryManifest0151(dir, ver); err != nil {
-		t.Fatalf("delivery verify: %v", err)
+		t.Fatalf("Ошибка проверки поставки: %v", err)
 	}
 	if err := verifyLinuxProductionEvidence0153(dir, ver, true); err != nil {
-		t.Fatalf("linux production verify: %v", err)
+		t.Fatalf("Ошибка проверки промышленной сборки Linux: %v", err)
 	}
 	manifest, err := readDeliveryManifest0151(dir)
 	if err != nil {
@@ -148,7 +148,7 @@ func TestLinuxProductionEvidence0153VerifiesBothArchitectures(t *testing.T) {
 		seen[target.Platform+"/"+target.Architecture] = true
 	}
 	if !seen["linux/x64"] || !seen["linux/arm64"] {
-		t.Fatalf("delivery targets missing Linux x64/arm64: %#v", manifest.PublishedTargets)
+		t.Fatalf("В поставке отсутствуют цели Linux x64/ARM64: %#v", manifest.PublishedTargets)
 	}
 }
 
@@ -160,7 +160,7 @@ func TestLinuxProductionEvidence0153RejectsTamperedArtifact(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyLinuxProductionEvidence0153(dir, ver, true); err == nil {
-		t.Fatal("tampered Linux artifact must be rejected")
+		t.Fatal("Изменённый артефакт Linux должен быть отклонён")
 	}
 }
 
@@ -173,17 +173,17 @@ func TestLinuxProductionEvidence0153RejectsWrongELFArchitecture(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := writeLinuxProductionEvidence0153(dir, ver); err == nil {
-		t.Fatal("wrong ARM64 ELF machine must be rejected")
+		t.Fatal("Неверный тип машины ELF ARM64 должен быть отклонён")
 	}
 }
 
 func TestLinuxProductionRequired0153VersionBoundary(t *testing.T) {
 	if linuxProductionRequired0153("0.15.2") {
-		t.Fatal("0.15.2 must not require Linux dual-arch production packages")
+		t.Fatal("Версия 0.15.2 не должна требовать промышленные пакеты Linux двух архитектур")
 	}
 	for _, ver := range []string{"0.15.3", "0.16.0", "1.0.0"} {
 		if !linuxProductionRequired0153(ver) {
-			t.Fatalf("%s must require Linux dual-arch production packages", ver)
+			t.Fatalf("%s должен требовать промышленные пакеты Linux двух архитектур", ver)
 		}
 	}
 }

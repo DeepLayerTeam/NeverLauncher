@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { can, canSeeSection } from "../src/admin/permissions.ts";
 import { endpointForSection } from "../src/admin/sections.ts";
 
-test("0.28.9 backend operations require a global permission, not a project wildcard", () => {
+test("0.28.9: для операций Backend нужно глобальное разрешение, а не шаблон роли проекта", () => {
   const scoped = {
     user: { id: "u", email: "test", roleId: "player" },
     permissions: [],

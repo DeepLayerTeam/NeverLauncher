@@ -44,13 +44,13 @@ func TestLegacyAdapters0278ForgeInheritanceClasspathAndIntegrity(t *testing.T) {
 				t.Fatal(err)
 			}
 			if recipe.MainClass != "net.minecraft.launchwrapper.Launch" || recipe.Tweaker != tc.tweaker {
-				t.Fatalf("wrong launch details: %+v", recipe)
+				t.Fatalf("Некорректные параметры запуска: %+v", recipe)
 			}
 			if len(recipe.Targets) != 1 || len(recipe.Targets[0].Classpath) != 4 {
-				t.Fatalf("classpath did not inherit parent and override versions: %+v", recipe.Targets)
+				t.Fatalf("Classpath не унаследовал родителя и переопределённые версии: %+v", recipe.Targets)
 			}
 			if !strings.Contains(strings.Join(recipe.GameArguments, " "), "--username ${auth_player_name}") {
-				t.Fatal("parent game args were discarded")
+				t.Fatal("Аргументы запуска родительского игрового процесса потеряны")
 			}
 			if err := writeLegacyLaunch0278(root, recipe); err != nil {
 				t.Fatal(err)
@@ -63,7 +63,7 @@ func TestLegacyAdapters0278ForgeInheritanceClasspathAndIntegrity(t *testing.T) {
 				t.Fatal(err)
 			}
 			if err := verifyLegacyLaunch0278(root, plan); err == nil {
-				t.Fatal("tampered library passed legacy verification")
+				t.Fatal("Изменённая библиотека прошла проверку старого формата")
 			}
 		})
 	}
@@ -77,15 +77,15 @@ func TestLegacyAdapters0278RejectUnknownTweakerAndUnpinnedLibrary(t *testing.T) 
 	putLegacyTestFile0278(t, root, child, []byte(`{"id":"forge","inheritsFrom":"1.12.2","mainClass":"net.minecraft.launchwrapper.Launch","minecraftArguments":"--tweakClass unknown.Tweaker"}`))
 	_, err := resolveLegacyLaunch0278(root, "forge", mc, child, 8, []vanillaTarget{currentVanillaTarget()})
 	if err == nil || !strings.Contains(err.Error(), "tweaker") {
-		t.Fatalf("unknown tweaker accepted: %v", err)
+		t.Fatalf("Принят неизвестный Tweaker: %v", err)
 	}
 	putLegacyTestFile0278(t, root, child, []byte(`{"id":"forge","inheritsFrom":"1.12.2","mainClass":"net.minecraft.launchwrapper.Launch","minecraftArguments":"--tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker","libraries":[{"name":"unknown:missing:1"}]}`))
 	_, err = resolveLegacyLaunch0278(root, "forge", mc, child, 8, []vanillaTarget{currentVanillaTarget()})
 	if err == nil || !strings.Contains(err.Error(), "missing classpath") {
-		t.Fatalf("missing library accepted: %v", err)
+		t.Fatalf("Принята отсутствующая библиотека: %v", err)
 	}
 	if _, err = resolveLegacyLaunch0278(root, "forge", mc, child, 17, []vanillaTarget{currentVanillaTarget()}); err == nil {
-		t.Fatal("unverified Java 17 bridge accepted for classic Forge")
+		t.Fatal("Принят непроверенный мост Java 17 для классического Forge")
 	}
 }
 func TestLegacyAdapters0278ArgumentsAndSecrets(t *testing.T) {
@@ -94,14 +94,14 @@ func TestLegacyAdapters0278ArgumentsAndSecrets(t *testing.T) {
 		t.Fatalf("split %v %v", args, err)
 	}
 	if _, err = splitLegacyArguments0278(`--username "broken`); err == nil {
-		t.Fatal("unterminated quote accepted")
+		t.Fatal("Принята незакрытая кавычка")
 	}
 	expanded, err := expandLegacyArgs0278([]string{"--username", "${auth_player_name}", "${game_directory}"}, map[string]string{"auth_player_name": "Player One", "game_directory": "/tmp/directory with spaces"})
 	if err != nil || expanded[1] != "Player One" || expanded[2] != "/tmp/directory with spaces" {
-		t.Fatalf("safe argv replacement %v %v", expanded, err)
+		t.Fatalf("Безопасная замена аргументов запуска: %v, %v", expanded, err)
 	}
 	if _, err = expandLegacyArgs0278([]string{"${unknown_secret}"}, map[string]string{}); err == nil {
-		t.Fatal("unknown placeholder accepted")
+		t.Fatal("Принята неизвестная подстановка")
 	}
 }
 func TestLegacyAdapters0278VanillaFactoryEndToEnd(t *testing.T) {
@@ -140,7 +140,7 @@ func TestLegacyAdapters0278VanillaFactoryEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	if a.Legacy == nil || a.Legacy.JavaMajor != 8 || len(a.Legacy.Targets[0].Classpath) != 1 {
-		t.Fatalf("legacy factory recipe missing: %+v", a.Legacy)
+		t.Fatalf("Отсутствует рецепт фабрики старого формата: %+v", a.Legacy)
 	}
 	if err = verifyFactoryPlan0271(root, a); err != nil {
 		t.Fatal(err)
@@ -150,7 +150,7 @@ func TestLegacyAdapters0278VanillaFactoryEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	if a.ReproducibilitySHA256 != b.ReproducibilitySHA256 {
-		t.Fatal("legacy lockfile is not reproducible")
+		t.Fatal("Файл фиксации версий старого формата не воспроизводится")
 	}
 	raw, err := os.ReadFile(legacyLaunchFile0278(root))
 	if err != nil {
@@ -166,7 +166,7 @@ func TestLegacyAdapters0278VanillaFactoryEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = verifyFactoryPlan0271(root, b); err == nil {
-		t.Fatal("invalid legacy recipe passed verification")
+		t.Fatal("Некорректный рецепт старого формата прошёл проверку")
 	}
 	if runtime.GOOS == "linux" {
 		_ = runtime.GOARCH
@@ -226,17 +226,17 @@ printf '%s\n' "$@" > "$LEGACY_CAPTURE_ARGV"
 	}
 	for _, part := range []string{"-cp", "net.minecraft.client.main.Main", "Legacy User", "test-token", root, "1.12.2.jar"} {
 		if !strings.Contains(string(argv), part) {
-			t.Fatalf("missing argument %q in %s", part, argv)
+			t.Fatalf("Отсутствует аргумент %q в %s", part, argv)
 		}
 	}
 	if err := runLegacyClient0278(context.Background(), root, java, "Legacy User", ""); err == nil {
-		t.Fatal("missing uuid accepted for authenticated launch")
+		t.Fatal("Принят запуск с авторизацией без UUID")
 	}
 	if err := os.WriteFile(java, []byte("#!/bin/sh\necho 'openjdk version \"21.0.1\"' >&2\n"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	if err := runLegacyClient0278(context.Background(), root, java, "Legacy User", "uuid-test"); err == nil {
-		t.Fatal("Java 21 used for classic Java 8 target")
+		t.Fatal("Для классического клиента Java 8 использована Java 21")
 	}
 	// Существующие неизменяемые планы 0.27.7 не содержат нового рецепта.
 	old := plan
@@ -248,7 +248,7 @@ printf '%s\n' "$@" > "$LEGACY_CAPTURE_ARGV"
 	olderRaw, _ := json.Marshal(old)
 	putLegacyTestFile0278(t, root, ".launcher/install-plan.json", olderRaw)
 	if err := verifyFactoryPlan0271(root, old); err != nil {
-		t.Fatalf("historical lock rejected: %v", err)
+		t.Fatalf("Отклонён исторический файл блокировки: %v", err)
 	}
 }
 
@@ -322,7 +322,7 @@ func TestLegacyAdapters0278ForgeFactoryRealMaterializer(t *testing.T) {
 				t.Fatal(err)
 			}
 			if first.Legacy == nil || first.Legacy.Tweaker != tc.tweaker || len(first.Legacy.Targets[0].Classpath) < 2 {
-				t.Fatalf("factory did not generate Forge launch classpath: %+v", first.Legacy)
+				t.Fatalf("Фабрика не создала Classpath запуска Forge: %+v", first.Legacy)
 			}
 			if err = verifyFactoryPlan0271(installDir, first); err != nil {
 				t.Fatal(err)
@@ -332,7 +332,7 @@ func TestLegacyAdapters0278ForgeFactoryRealMaterializer(t *testing.T) {
 				t.Fatal(err)
 			}
 			if second.ReproducibilitySHA256 != first.ReproducibilitySHA256 {
-				t.Fatal("Forge legacy replay changed identity")
+				t.Fatal("Повторный запуск старого Forge изменил идентичность")
 			}
 		})
 	}
@@ -340,6 +340,6 @@ func TestLegacyAdapters0278ForgeFactoryRealMaterializer(t *testing.T) {
 
 func TestLegacyAdapters0278ModernJava8NotMisclassified(t *testing.T) {
 	if legacyFamily0278("vanilla", "1.16.5") || legacyFamily0278("fabric", "1.12.2") {
-		t.Fatal("modern Java8 profile incorrectly treated as legacy LaunchWrapper")
+		t.Fatal("Современный профиль Java 8 ошибочно распознан как старый LaunchWrapper")
 	}
 }

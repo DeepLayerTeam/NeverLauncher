@@ -77,10 +77,10 @@ func TestExtensionPackageDeterministicPack0202(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(firstBytes, secondBytes) {
-		t.Fatal("deterministic packaging produced different bytes")
+		t.Fatal("Детерминированная упаковка создала разные байты")
 	}
 	if one["packageIdentity"] != two["packageIdentity"] || one["sha256"] != two["sha256"] {
-		t.Fatalf("deterministic identities mismatch: %#v %#v", one, two)
+		t.Fatalf("Несовпадают детерминированные идентификаторы: %#v, %#v", one, two)
 	}
 	analysis, err := analyzeExtensionPackage0202(first)
 	if err != nil {
@@ -88,7 +88,7 @@ func TestExtensionPackageDeterministicPack0202(t *testing.T) {
 	}
 	defer analysis.Close()
 	if analysis.Descriptor.Payload.FileCount != 3 || analysis.Signature != nil {
-		t.Fatalf("unexpected package analysis: %#v", analysis.Descriptor)
+		t.Fatalf("Неожиданный анализ пакета: %#v", analysis.Descriptor)
 	}
 	if _, ok := analysis.Entries[extensionPackageSBOMName0202]; !ok {
 		t.Fatal("SBOM missing")
@@ -131,17 +131,17 @@ func TestExtensionPackageSignVerifyInspect0202(t *testing.T) {
 		t.Fatal(err)
 	}
 	if signed["packageIdentity"] != packed["packageIdentity"] {
-		t.Fatal("signing changed immutable package identity")
+		t.Fatal("Подпись изменила неизменяемый идентификатор пакета")
 	}
 	if signed["sha256"] == unsignedDigest {
-		t.Fatal("signed archive digest must differ from unsigned archive digest")
+		t.Fatal("Хеш подписанного архива должен отличаться от хеша неподписанного")
 	}
 	verified, err := verifyExtensionPackage0202(pkg, publicPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if verified["status"] != "signature-verified" || verified["packageIdentity"] != packed["packageIdentity"] {
-		t.Fatalf("unexpected verify result: %#v", verified)
+		t.Fatalf("Неожиданный результат проверки: %#v", verified)
 	}
 	wrongPub, _, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -152,17 +152,17 @@ func TestExtensionPackageSignVerifyInspect0202(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := verifyExtensionPackage0202(pkg, wrongPublicPath, false); err == nil || !strings.Contains(err.Error(), "key mismatch") {
-		t.Fatalf("expected trusted-key mismatch, got %v", err)
+		t.Fatalf("Ожидалось несовпадение доверенного ключа, получено: %v", err)
 	}
 	inspected, err := inspectExtensionPackage0202(pkg, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if inspected["signed"] != true || inspected["files"] == nil {
-		t.Fatalf("unexpected inspect result: %#v", inspected)
+		t.Fatalf("Неожиданный результат просмотра: %#v", inspected)
 	}
 	if _, err := signExtensionPackage0202(pkg, pkg, privatePath, false); err == nil || !strings.Contains(err.Error(), "уже подписан") {
-		t.Fatalf("expected existing-signature protection, got %v", err)
+		t.Fatalf("Ожидалась защита существующей подписи, получено: %v", err)
 	}
 	firstSignedBytes, err := os.ReadFile(pkg)
 	if err != nil {
@@ -176,7 +176,7 @@ func TestExtensionPackageSignVerifyInspect0202(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(firstSignedBytes, secondSignedBytes) {
-		t.Fatal("re-signing the same package with the same key is not deterministic")
+		t.Fatal("Повторная подпись того же пакета тем же ключом не детерминирована")
 	}
 }
 
@@ -198,7 +198,7 @@ func TestExtensionPackageRejectsMissingEntrypoint0202(t *testing.T) {
 	}
 	_, err := packExtensionPackage0202(source, filepath.Join(base, "missing.nlext"))
 	if err == nil || !strings.Contains(err.Error(), "entrypoint") {
-		t.Fatalf("expected missing entrypoint rejection, got %v", err)
+		t.Fatalf("Ожидалось отклонение отсутствующей точки входа, получено: %v", err)
 	}
 }
 
@@ -230,7 +230,7 @@ func TestExtensionPackageRejectsSourceSymlink0202(t *testing.T) {
 	}
 	_, err := packExtensionPackage0202(source, filepath.Join(base, "symlink.nlext"))
 	if err == nil || !strings.Contains(strings.ToLower(err.Error()), "symlink") {
-		t.Fatalf("expected symlink rejection, got %v", err)
+		t.Fatalf("Ожидалось отклонение символической ссылки, получено: %v", err)
 	}
 }
 
@@ -284,7 +284,7 @@ func TestExtensionPackageRejectsTraversalDuplicateAndSymlinkArchive0202(t *testi
 			}
 			_, err = analyzeExtensionPackage0202(pkg)
 			if err == nil || !strings.Contains(strings.ToLower(err.Error()), tc.want) {
-				t.Fatalf("expected %q rejection, got %v", tc.want, err)
+				t.Fatalf("Ожидалось отклонение %q, получено: %v", tc.want, err)
 			}
 		})
 	}
@@ -307,7 +307,7 @@ func TestExtensionPackageTamperBreaksImmutableIdentity0202(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := analyzeExtensionPackage0202(tampered); err == nil {
-		t.Fatal("tampered payload unexpectedly preserved package validity")
+		t.Fatal("Изменённые данные неожиданно не нарушили действительность пакета")
 	}
 }
 

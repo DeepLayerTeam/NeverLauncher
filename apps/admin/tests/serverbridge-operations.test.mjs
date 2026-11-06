@@ -53,7 +53,7 @@ test("project-scoped overview path and rights do not grant global access", () =>
   assert.equal(can(actor, "serverbridge:console", "one"), false);
 });
 
-test("control lifecycle preserves dispatch, delivery and execution distinctions", () => {
+test("Жизненный цикл управления различает отправку, доставку и исполнение", () => {
   assert.deepEqual(
     [
       "pending",
@@ -87,7 +87,7 @@ test("control lifecycle preserves dispatch, delivery and execution distinctions"
   assert.equal(commandLifecycle("unknown").terminal, false);
 });
 
-test("telemetry is withheld for unknown, stale and wrong runtime samples", () => {
+test("Телеметрия скрывается для неизвестных, устаревших или ошибочных данных Runtime", () => {
   assert.equal(telemetryState(node, now).state, "fresh");
   assert.equal(
     telemetryState({ ...node, telemetry: undefined }, now).state,
@@ -164,7 +164,7 @@ test("0.41.9 displays a missing physical process or stale host/players as health
   );
 });
 
-test("form builds only allowlisted payload without shell or unknown fields", () => {
+test("Форма формирует только разрешённые поля без shell-команд и неизвестных параметров", () => {
   const form = {
     username: "Notch",
     reason: "Reason",
@@ -192,7 +192,7 @@ test("form builds only allowlisted payload without shell or unknown fields", () 
   );
 });
 
-test("real API uses command endpoint, scoped overview and unchanged idempotency across retry", async () => {
+test("Реальный API использует endpoint команд, обзор области и неизменный ключ идемпотентности при повторе", async () => {
   const previous = globalThis.fetch;
   const calls = [];
   try {
@@ -260,7 +260,7 @@ test("real API uses command endpoint, scoped overview and unchanged idempotency 
   }
 });
 
-test("0.28.1 control domain permissions are independent and fail closed", () => {
+test("0.28.1: разрешения доменов управления независимы и запрещают действия при неопределённости", () => {
   const actor = {
     user: { id: "broadcaster", roleId: "player" },
     permissions: [],
@@ -287,7 +287,7 @@ test("0.28.1 control domain permissions are independent and fail closed", () => 
   assert.equal(Object.keys(gameCommandPermissions).length, 13);
 });
 
-test("project role wildcard cannot grant host or backend in admin view", () => {
+test("Групповое разрешение роли проекта не открывает управление хостом или Backend", () => {
   const role = {
     user: { id: "u", roleId: "player" },
     permissions: [],
@@ -341,7 +341,7 @@ test("0.28.6 capability filtering is signed-runtime-fresh and fail closed", () =
   );
 });
 
-test("0.28.8 signed routing freshness is independent from browser overview", () => {
+test("0.28.8: актуальность подписанной маршрутизации не зависит от обзора в браузере", () => {
   const state = {
     nodeId: "paper-one",
     runtimeId: "a".repeat(64),
@@ -369,7 +369,7 @@ test("0.28.8 capacity policy differentiates clear, deny and bounded values", () 
   for (const value of ["-1", "1.5", "1e3", "001", "1000001", "Infinity"])
     assert.throws(() => parseCapacityDraft(value));
 });
-test("0.28.8 capacity writes use exact runtime and optimistic revision", async () => {
+test("0.28.8: обновление ёмкости требует точный Runtime и оптимистическую ревизию", async () => {
   const previous = globalThis.fetch;
   let captured;
   try {

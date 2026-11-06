@@ -53,7 +53,7 @@ public final class ContentSpi0486Tests {
             .header("Authorization","Bearer "+key).header("Content-Type","application/json")
             .POST(HttpRequest.BodyPublishers.ofString(Json.encode(msg))).timeout(Duration.ofSeconds(2)).build();
         var resp=client.send(req,HttpResponse.BodyHandlers.ofString());
-        ok(resp.statusCode()==(key.equals("callback-token")?200:401),"authenticated Java callback HTTP status");
+        ok(resp.statusCode()==(key.equals("callback-token")?200:401),"HTTP-статус аутентифицированного обратного вызова Java");
         return Json.object(Json.parse(resp.body()));
     }
     public static void main(String[] args)throws Exception {
@@ -95,36 +95,36 @@ public final class ContentSpi0486Tests {
                 try(var lifecycle=new ExtensionLifecycle(extension,manifest,services);
                     var callback=new RuntimeCallbackServer("callback-token",services,()->lifecycle.state().name())) {
                     lifecycle.start(Duration.ofSeconds(2));
-                    ok(STARTED.get()==1,"provider starts in real JVM lifecycle");
+                    ok(STARTED.get()==1,"Провайдер запускается в реальном жизненном цикле JVM");
                     var content=services.content();
                     var source=content.source("p1","file.bin");
                     ok(source.sha256().equals(HASH),"source pins digest");
-                    ok(Arrays.equals(content.readChecked(source),DATA),"real authenticated host storage read verified");
-                    ok(Arrays.equals(content.readChecked(content.delivery("p1","file.bin")),DATA),"HTTPS delivery uses Host fetch and checksum");
-                    ok(Arrays.equals(content.readChecked(content.texture("p1","profile-a","skin")),DATA),"texture source through verified host storage");
+                    ok(Arrays.equals(content.readChecked(source),DATA),"Проверено чтение из хранилища Host с аутентификацией");
+                    ok(Arrays.equals(content.readChecked(content.delivery("p1","file.bin")),DATA),"Загрузка по HTTPS использует Host и проверяет контрольную сумму");
+                    ok(Arrays.equals(content.readChecked(content.texture("p1","profile-a","skin")),DATA),"Источник текстуры получен из проверенного хранилища Host");
                     reject(IllegalArgumentException.class,()->content.texture("p1","profile-a","model"));
                     var signed=Map.<String,Object>of("projectId","p1","version","1.0.0","signature",Map.of("algorithm","Ed25519"),"files",List.of(Map.of("sha256",HASH)));
-                    ok(content.metadata("p1","rel1",signed).get("x-content-label").equals("sample-rendering-metadata"),"metadata enrichment preserves signed content");
+                    ok(content.metadata("p1","rel1",signed).get("x-content-label").equals("sample-rendering-metadata"),"Расширение метаданных не меняет подписанные данные");
                     MALICIOUS.set(true);
                     reject(SecurityException.class,()->content.metadata("p1","rel1",signed));
                     MALICIOUS.set(false);
-                    ok(Json.object(signed.get("signature")).get("algorithm").equals("Ed25519"),"provider could not mutate original nested signature");
+                    ok(Json.object(signed.get("signature")).get("algorithm").equals("Ed25519"),"Провайдер не смог изменить исходную вложенную подпись");
                     var prepared=content.preparePackage("p1","mod.jar","jar-bytes".getBytes(StandardCharsets.UTF_8));
-                    ok(prepared.requiresSigning()&&prepared.sha256().equals(ContentServices.sha(prepared.bytes())),"package processed as unsigned prepublication bytes");
-                    ok(new String(prepared.bytes(),StandardCharsets.UTF_8).equals("jar-bytes-processed"),"real package transformer bytes");
+                    ok(prepared.requiresSigning()&&prepared.sha256().equals(ContentServices.sha(prepared.bytes())),"Пакет обработан до публикации как неподписанные байты");
+                    ok(new String(prepared.bytes(),StandardCharsets.UTF_8).equals("jar-bytes-processed"),"Преобразователь выдаёт реальные байты пакета");
                     var client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build();
                     var health=rpc(client,callback,"callback-token","content.health",Map.of());
-                    ok(Boolean.TRUE.equals(Json.object(health.get("result")).get("available")),"real JVM RPC selected SPI provider");
+                    ok(Boolean.TRUE.equals(Json.object(health.get("result")).get("available")),"Реальный JVM RPC выбирает провайдера SPI");
                     var remote=rpc(client,callback,"callback-token","content.source.resolve",Map.of("projectId","p1","path","mod.jar"));
-                    ok(Json.object(Json.object(remote.get("result")).get("asset")).get("sha256").equals(HASH),"real JVM RPC source resolution");
+                    ok(Json.object(Json.object(remote.get("result")).get("asset")).get("sha256").equals(HASH),"Реальное разрешение источника через JVM RPC");
                     var skin=rpc(client,callback,"callback-token","content.texture.resolve",Map.of("projectId","p1","profileId","profile-a","kind","skin"));
-                    ok(Json.object(skin.get("result")).containsKey("asset"),"real JVM RPC texture");
+                    ok(Json.object(skin.get("result")).containsKey("asset"),"Реальная обработка текстуры через JVM RPC");
                     var meta=rpc(client,callback,"callback-token","content.metadata.enrich",Map.of("projectId","p1","releaseId","rel1","metadata",signed));
-                    ok(Json.object(meta.get("result")).containsKey("metadata"),"real JVM RPC metadata");
+                    ok(Json.object(meta.get("result")).containsKey("metadata"),"Реальная обработка метаданных через JVM RPC");
                     var pkg=rpc(client,callback,"callback-token","content.package.prepare",Map.of("projectId","p1","name","mod.jar","dataBase64",Base64.getEncoder().encodeToString("small".getBytes(StandardCharsets.UTF_8))));
-                    ok(Boolean.TRUE.equals(Json.object(pkg.get("result")).get("requiresSigning")),"RPC transform never impersonates a signed package");
+                    ok(Boolean.TRUE.equals(Json.object(pkg.get("result")).get("requiresSigning")),"RPC-преобразование не выдаёт себя за подписанный пакет");
                     var wrong=rpc(client,callback,"callback-token","content.delivery.resolve",Map.of("projectId","p2","path","test.bin"));
-                    ok(Json.object(wrong.get("result")).get("errorCode").equals("content_unavailable") || Json.object(wrong.get("result")).get("errorCode").equals("content_denied"),"invalid project is rejected");
+                    ok(Json.object(wrong.get("result")).get("errorCode").equals("content_unavailable") || Json.object(wrong.get("result")).get("errorCode").equals("content_denied"),"Некорректный проект отклоняется");
                     rpc(client,callback,"bad-secret","content.source.resolve",Map.of("projectId","p1","path","test.bin"));
                     CORRUPTED.set(true);
                     reject(SecurityException.class,()->content.readChecked(source));
@@ -133,11 +133,11 @@ public final class ContentSpi0486Tests {
                     reject(HostSession.HostError.class,()->content.readChecked(source));
                     REVOKED.set(false);
                     lifecycle.stop(Duration.ofSeconds(2));
-                    ok(STOPPED.get()==1,"content provider graceful shutdown");
+                    ok(STOPPED.get()==1,"Провайдер контента корректно завершил работу");
                     reject(IllegalStateException.class,()->content.source("p1","abc"));
                 }
             }
         } finally {broker.stop(0);}
-        System.out.println("PASS: "+checks+" content SPI, real broker IO, RPC, integrity, permissions and lifecycle checks");
+        System.out.println("PASS: "+checks+" Проверены SPI контента, реальный ввод-вывод брокера, RPC, целостность, права и жизненный цикл");
     }
 }

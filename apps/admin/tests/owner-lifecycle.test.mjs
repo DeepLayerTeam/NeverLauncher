@@ -129,7 +129,7 @@ test("owner validates a real channel head and Backend preview before allowing ex
     },
   );
 });
-test("rejects mismatched channel head, invalid input and invalid validation", async () => {
+test("Отклоняет несовпадение версии канала, некорректный ввод и недействительную проверку", async () => {
   await scripted(
     {
       "/api/v1/projects/owner/profiles/fabric/channels/stable/head": {
@@ -371,7 +371,7 @@ test("API retry reuses exact intent and authenticated endpoint", async () => {
   );
 });
 
-test("stable staged rollback resumes actual signed package in server-owned draft, a synthetic release", async () => {
+test("Поэтапный откат восстанавливает настоящий подписанный пакет в серверном черновике, а не синтетический релиз", async () => {
   const { openStagedRollback } =
     await import("../src/admin/owner-lifecycle-03513.ts");
   const rollback = {
@@ -425,7 +425,7 @@ test("stable staged rollback resumes actual signed package in server-owned draft
     },
   );
 });
-test("staged rollback refuses mismatched backend package without creating a draft", async () => {
+test("Поэтапный откат отклоняет несовпадающий пакет Backend без создания черновика", async () => {
   const { openStagedRollback } =
     await import("../src/admin/owner-lifecycle-03513.ts");
   const rollback = {

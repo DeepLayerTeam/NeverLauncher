@@ -169,15 +169,15 @@ public final class Control0415Harness {
   BukkitFamilyBridgePlugin plugin=newPlugin(brand);
   try {
    status(call(plugin,"whitelist.add",Map.of("username","Steve")),"succeeded");
-   check(Bukkit.getOfflinePlayer("Steve").isWhitelisted(),"whitelist was not applied");
+   check(Bukkit.getOfflinePlayer("Steve").isWhitelisted(),"Белый список не был применён");
    status(call(plugin,"whitelist.remove",Map.of("username","Steve")),"succeeded");
    status(call(plugin,"whitelist.enable",Map.of()),"succeeded");
-   check(Bukkit.hasWhitelist(),"whitelist not enabled");
+   check(Bukkit.hasWhitelist(),"Белый список не включён");
    status(call(plugin,"whitelist.disable",Map.of()),"succeeded");
    status(call(plugin,"ban.add",Map.of("username","Steve")),"succeeded");
-   check(Bukkit.getOfflinePlayer("Steve").isBanned(),"ban not applied");
+   check(Bukkit.getOfflinePlayer("Steve").isBanned(),"Блокировка не применена");
    status(call(plugin,"ban.remove",Map.of("username","Steve")),"succeeded");
-   check(!Bukkit.getOfflinePlayer("Steve").isBanned(),"ban not removed");
+   check(!Bukkit.getOfflinePlayer("Steve").isBanned(),"Блокировка не снята");
    Bukkit.commandHasEffect=false;
    status(call(plugin,"ban.add",Map.of("username","Steve")),"indeterminate");
    status(call(plugin,"whitelist.add",Map.of("username","Steve")),"indeterminate");
@@ -194,7 +194,7 @@ public final class Control0415Harness {
    Player steve=new Player("Steve"); Bukkit.players.add(steve);
    BridgeControlResult kicked=call(plugin,"player.kick",Map.of("username","Steve"));
    status(kicked,"succeeded");
-   check(kicked.result().get("verification").equals("player-quit-event"),"missing quit evidence");
+   check(kicked.result().get("verification").equals("player-quit-event"),"Отсутствует подтверждение выхода");
    check(steve.kicks==1,"kick invoked twice");
    if (brand.equals("Folia")) {
     Player alex=new Player("Alex"); Player bob=new Player("Bob");
@@ -207,7 +207,7 @@ public final class Control0415Harness {
     status(call(plugin,"message.broadcast",Map.of("message","retired")),"indeterminate");
     Player retired=new Player("Retired"); Bukkit.players.add(retired);
     status(call(plugin,"player.kick",Map.of("username","Retired")),"indeterminate");
-    check(retired.kicks==0,"retired entity was kicked");
+    check(retired.kicks==0,"Удалённый объект был принудительно отключён");
     org.bukkit.scheduler.EntityScheduler.retire=false;
    } else {
     status(call(plugin,"message.broadcast",Map.of("message","hi")),"executed");
@@ -220,9 +220,9 @@ public final class Control0415Harness {
      catch(Exception e){throw new RuntimeException(e);}
    });
    for(int i=0;i<100 && ghost.kicks==0;i++) Thread.sleep(5L);
-   check(ghost.kicks==1,"first kick not scheduled");
+   check(ghost.kicks==1,"Первое принудительное отключение не запланировано");
    status(call(plugin,"player.kick",Map.of("username","Ghost")),"failed");
-   check(ghost.kicks==1,"duplicate kick was physically repeated");
+   check(ghost.kicks==1,"Дублирующее принудительное отключение было выполнено повторно");
    plugin.onDisable();
    status(waiting.get(2,java.util.concurrent.TimeUnit.SECONDS),"indeterminate");
   } finally {plugin.onDisable();}

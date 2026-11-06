@@ -35,7 +35,7 @@ func TestSessionRecoversDisconnectedDesktopIPC(t *testing.T) {
 			_ = connection.SetDeadline(time.Now().Add(3 * time.Second))
 			op, fields, err := readFrame(connection)
 			if err != nil || op != 0 || string(fields["client_id"]) != `"123456789012345678"` {
-				completed <- fmt.Errorf("invalid IPC handshake %d %v %v", op, fields, err)
+				completed <- fmt.Errorf("Некорректное IPC-рукопожатие: %d, %v, %v", op, fields, err)
 				connection.Close()
 				return
 			}
@@ -46,7 +46,7 @@ func TestSessionRecoversDisconnectedDesktopIPC(t *testing.T) {
 			}
 			op, fields, err = readFrame(connection)
 			if err != nil || op != 1 || string(fields["cmd"]) != `"SET_ACTIVITY"` {
-				completed <- fmt.Errorf("invalid activity %d %v %v", op, fields, err)
+				completed <- fmt.Errorf("Некорректная активность: %d, %v, %v", op, fields, err)
 				connection.Close()
 				return
 			}

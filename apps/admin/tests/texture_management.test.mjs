@@ -6,7 +6,7 @@ import { requestJSON, ApiError } from "../src/api/client.ts";
 import { canSeeSection } from "../src/admin/permissions.ts";
 import { routeIds } from "../src/admin/route-links-0381.ts";
 
-test("Admin textures are hidden from operators without global settings:manage", () => {
+test("Управление текстурами скрыто от операторов без глобального разрешения settings:manage", () => {
   assert.ok(routeIds.includes("texture-management"));
   const operator = {
     permissions: [],
@@ -23,7 +23,7 @@ test("Admin textures are hidden from operators without global settings:manage", 
   );
 });
 
-test("Policy CAS and individual decisions preserve payload, MFA token and project scope", async () => {
+test("Изменения политики и отдельные решения сохраняют данные, токен MFA и область проекта", async () => {
   const calls = [];
   const server = createServer((req, res) => {
     let body = "";
@@ -94,7 +94,7 @@ test("Policy CAS and individual decisions preserve payload, MFA token and projec
   }
 });
 
-test("Policy conflict is exposed to Admin, silently replayed", async () => {
+test("Конфликт политики отображается в панели администратора без скрытого воспроизведения", async () => {
   const server = createServer((req, res) => {
     res.writeHead(409, { "content-type": "application/json" });
     res.end(

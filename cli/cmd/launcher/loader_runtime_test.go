@@ -102,10 +102,10 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 				t.Fatalf("Неожиданный результат: %+v", result)
 			}
 			if result.ResolutionPinned || !compatibilitySHA256RE.MatchString(result.ResolutionLockSHA256) || !compatibilitySHA256RE.MatchString(result.ReproducibilitySHA256) {
-				t.Fatalf("first materialization did not create a valid resolution lock: %+v", result)
+				t.Fatalf("Первая подготовка не создала корректный файл фиксации версий: %+v", result)
 			}
 			if got := metadataRequests.Load(); got != 1 {
-				t.Fatalf("metadata requests after first materialization=%d, want 1", got)
+				t.Fatalf("После первой подготовки выполнено %d запросов метаданных вместо одного", got)
 			}
 			for _, rel := range []string{
 				"versions/test-vanilla/test-vanilla.json",
@@ -122,7 +122,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 				t.Fatal(err)
 			}
 			if strings.Contains(string(profileDisk), `: null`) {
-				t.Fatalf("materialized loader profile contains null collection fields: %s", profileDisk)
+				t.Fatalf("В подготовленном профиле загрузчика коллекции имеют значение null: %s", profileDisk)
 			}
 			var resolved loaderVersionProfile
 			if err := json.Unmarshal(profileDisk, &resolved); err != nil {
@@ -130,7 +130,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			}
 			artifact := resolved.Libraries[0].Downloads.Artifact
 			if artifact.SHA1 != loaderSHA1 || artifact.Size != int64(len(loaderJar)) || artifact.URL == "" {
-				t.Fatalf("loader artifact was not pinned into profile: %+v", artifact)
+				t.Fatalf("Артефакт загрузчика не закреплён в профиле: %+v", artifact)
 			}
 
 			packageManifest := filepath.Join(t.TempDir(), "package.json")
@@ -144,26 +144,26 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 				t.Fatalf("Ошибка пакета %s: %v", tc.loader, err)
 			}
 			if got := metadataRequests.Load(); got != 1 {
-				t.Fatalf("pinned replay re-resolved mutable metadata: requests=%d, want 1", got)
+				t.Fatalf("Повторный запуск с закреплённой версией повторно запросил изменяемые метаданные: запросов=%d, ожидался 1", got)
 			}
 			var wrapperRaw map[string]json.RawMessage
 			rawPackage, err := os.ReadFile(packageManifest)
 			if err != nil || json.Unmarshal(rawPackage, &wrapperRaw) != nil {
-				t.Fatalf("read package wrapper: %v", err)
+				t.Fatalf("Ошибка чтения оболочки пакета: %v", err)
 			}
 			var replay loaderMaterializeResult
 			if err := json.Unmarshal(wrapperRaw[tc.loader], &replay); err != nil {
-				t.Fatalf("decode replay result: %v", err)
+				t.Fatalf("Ошибка декодирования повторного запуска: %v", err)
 			}
 			if !replay.ResolutionPinned || replay.ResolutionLockSHA256 != result.ResolutionLockSHA256 || replay.ReproducibilitySHA256 != result.ReproducibilitySHA256 {
-				t.Fatalf("pinned replay identity drift: first=%+v replay=%+v", result, replay)
+				t.Fatalf("Изменение идентичности при повторном запуске: первый=%+v, повтор=%+v", result, replay)
 			}
 			if !replay.PayloadCacheHit {
-				t.Fatalf("pinned replay did not use content-addressed loader profile cache: %+v", replay)
+				t.Fatalf("Повторный запуск не использовал адресуемый по содержимому кэш профиля загрузчика: %+v", replay)
 			}
 			profileUp.Store(false)
 			if err := os.Remove(filepath.Join(dir, filepath.FromSlash(result.ProfilePath))); err != nil {
-				t.Fatalf("remove generated runtime profile before recovery: %v", err)
+				t.Fatalf("Ошибка удаления созданного профиля Runtime перед восстановлением: %v", err)
 			}
 			recovered, err := installMetaLoader(context.Background(), loaderMaterializeOptions{
 				Loader: tc.loader, MinecraftVersion: "test-vanilla", LoaderVersion: "latest-stable", ClientDir: dir,
@@ -171,13 +171,13 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 				Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true, LoaderCacheOnly: true, HTTPClient: server.Client(),
 			})
 			if err != nil {
-				t.Fatalf("cache-only loader recovery failed: %v", err)
+				t.Fatalf("Не удалось восстановить загрузчик только из кэша: %v", err)
 			}
 			if !recovered.ResolutionPinned || !recovered.LoaderCacheOnly || !recovered.PayloadCacheHit || !recovered.UpstreamRecoveryUsed || recovered.ReproducibilitySHA256 != result.ReproducibilitySHA256 {
-				t.Fatalf("invalid cache-only recovery evidence: %+v", recovered)
+				t.Fatalf("Некорректное подтверждение восстановления из кэша: %+v", recovered)
 			}
 			if got := profileRequests.Load(); got != 1 {
-				t.Fatalf("pinned/cache-only replay contacted profile upstream: requests=%d, want 1", got)
+				t.Fatalf("Повторный запуск из кэша обратился к источнику профиля: запросов=%d, ожидался 1", got)
 			}
 			pkg, err := readClientPackageManifest(packageManifest)
 			if err != nil {
@@ -186,13 +186,13 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			seenProfile, seenLoaderJar := false, false
 			for _, file := range pkg.Files {
 				if strings.HasPrefix(file.Path, ".launcher/") {
-					t.Fatalf("local loader state leaked into package: %s", file.Path)
+					t.Fatalf("Локальное состояние загрузчика попало в пакет: %s", file.Path)
 				}
 				seenProfile = seenProfile || file.Path == result.ProfilePath
 				seenLoaderJar = seenLoaderJar || file.Path == "libraries/"+mavenPath
 			}
 			if !seenProfile || !seenLoaderJar {
-				t.Fatalf("package missing loader runtime artifacts: profile=%v loaderJar=%v", seenProfile, seenLoaderJar)
+				t.Fatalf("В пакете отсутствуют артефакты загрузчика: профиль=%v, loaderJar=%v", seenProfile, seenLoaderJar)
 			}
 			raw, err := os.ReadFile(packageManifest)
 			if err != nil {
@@ -205,7 +205,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			settings := wrapper["manifestSettings"].(map[string]any)
 			minecraft := settings["minecraft"].(map[string]any)
 			if minecraft["loader"] != tc.loader || minecraft["loaderVersion"] != tc.loaderVersion {
-				t.Fatalf("incorrect manifest settings: %+v", minecraft)
+				t.Fatalf("Некорректные настройки манифеста: %+v", minecraft)
 			}
 		})
 	}
@@ -225,22 +225,22 @@ func TestMojangMetadataJSONOmitsAbsentCollectionsInsteadOfNull(t *testing.T) {
 		t.Fatal(err)
 	}
 	if strings.Contains(string(raw), `:null`) || strings.Contains(string(raw), `: null`) {
-		t.Fatalf("Mojang metadata serialized absent collection as null: %s", raw)
+		t.Fatalf("Отсутствующая коллекция метаданных Mojang записана как null: %s", raw)
 	}
 }
 
 func TestLoaderVersionSelectionAndMavenValidation(t *testing.T) {
 	if _, err := strictMavenPath("broken"); err == nil {
-		t.Fatal("invalid Maven coordinate accepted")
+		t.Fatal("Приняты некорректные координаты Maven")
 	}
 	if got, err := strictMavenPath("net.fabricmc:fabric-loader:0.16.10"); err != nil || got != "net/fabricmc/fabric-loader/0.16.10/fabric-loader-0.16.10.jar" {
-		t.Fatalf("unexpected maven path: %q %v", got, err)
+		t.Fatalf("Неожиданный путь Maven: %q, %v", got, err)
 	}
 	if parseSHA1Sidecar("not-a-sha") != "" {
-		t.Fatal("invalid sidecar accepted")
+		t.Fatal("Принят некорректный сопроводительный файл")
 	}
 	if parseSHA1Sidecar(strings.Repeat("a", 40)+"  file.jar") != strings.Repeat("a", 40) {
-		t.Fatal("valid sidecar was not parsed")
+		t.Fatal("Корректный сопроводительный файл не разобран")
 	}
 }
 
@@ -271,7 +271,7 @@ func TestQuiltLatestStableSelectionUsesStableSemVerWhenMetaOmitsStableFlag(t *te
 		t.Fatal(err)
 	}
 	if entry.Loader.Version != "0.31.0" {
-		t.Fatalf("latest-stable selected %q, want 0.31.0", entry.Loader.Version)
+		t.Fatalf("Последняя стабильная версия выбрана как %q, ожидалась 0.31.0", entry.Loader.Version)
 	}
 }
 
@@ -290,10 +290,10 @@ func TestForgeLegacyUniversalMissingSidecarRequiresVerifiedEmbeddedInstaller(t *
 	ctx := context.Background()
 	const rel = "net/minecraftforge/forge/1.7.10-10.13.4.1614/forge-1.7.10-10.13.4.1614-universal.jar"
 	if err := verifyForgeLegacyUniversal(ctx, server.Client(), coordinate, rel, strings.Repeat("a", 40), bundle, true, true); err != nil {
-		t.Fatalf("verified embedded universal should inherit verified installer integrity: %v", err)
+		t.Fatalf("Проверенный встроенный универсальный пакет должен наследовать целостность установщика: %v", err)
 	}
 	if err := verifyForgeLegacyUniversal(ctx, server.Client(), coordinate, rel, strings.Repeat("a", 40), bundle, true, false); err == nil {
-		t.Fatal("missing sidecar accepted without authenticated installer")
+		t.Fatal("Отсутствие сопроводительного файла принято без проверки подлинности установщика")
 	}
 	server.Close()
 }
@@ -314,7 +314,7 @@ func TestQuiltLatestStableSelectionHandlesUnsortedMetaAndJava25(t *testing.T) {
 		t.Fatal(err)
 	}
 	if entry.Loader.Version != "0.30.0" {
-		t.Fatalf("oldest-first Quilt metadata returned %q, want newest stable loader", entry.Loader.Version)
+		t.Fatalf("Метаданные Quilt от старых версий вернули %q вместо новейшего стабильного загрузчика", entry.Loader.Version)
 	}
 }
 
@@ -329,14 +329,14 @@ func TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases(t *testing.
 	})
 
 	if _, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "latest-stable"); err == nil || !strings.Contains(err.Error(), "no compatible latest-stable loader") {
-		t.Fatalf("latest-stable must reject prerelease-only Quilt metadata, got %v", err)
+		t.Fatalf("Последняя стабильная версия должна отклонять метаданные Quilt только с предварительными релизами; получено: %v", err)
 	}
 	entry, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "0.32.0-beta.3")
 	if err != nil {
-		t.Fatalf("exact Quilt prerelease selector should remain supported: %v", err)
+		t.Fatalf("Выбор точного предварительного релиза Quilt должен поддерживаться: %v", err)
 	}
 	if entry.Loader.Version != "0.32.0-beta.3" {
-		t.Fatalf("exact Quilt loader mismatch: %s", entry.Loader.Version)
+		t.Fatalf("Несовпадение точной версии загрузчика Quilt: %s", entry.Loader.Version)
 	}
 }
 
@@ -347,6 +347,6 @@ func TestQuiltUnsupportedMinecraftVersion404StaysFailClosed(t *testing.T) {
 	defer server.Close()
 	_, _, _, err := resolveMetaLoaderVersionWithEvidence(context.Background(), server.Client(), "quilt", server.URL, "1.14.3", "latest-stable")
 	if err == nil || !strings.Contains(err.Error(), "1.14.3") || !strings.Contains(err.Error(), "HTTP 404") || !strings.Contains(err.Error(), "compatibility index") {
-		t.Fatalf("missing Quilt release must fail with an actionable upstream error: %v", err)
+		t.Fatalf("Отсутствующий релиз Quilt должен давать понятную ошибку источника: %v", err)
 	}
 }

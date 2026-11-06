@@ -73,12 +73,12 @@ public final class ServerBridge0488Tests {
                 host.connect();
                 try(var services=new RuntimeServices(host,Set.of())) {
                     var bridge=services.serverBridge();
-                    ok(bridge.server("p1","server1").runtimeActive(),"actual typed status over HTTP");
+                    ok(bridge.server("p1","server1").runtimeActive(),"Через HTTP получен фактический типизированный статус");
                     ok(bridge.servers("p1",0,10).items().get(0).playersOnline()==5,"player count typed");
                     ok(bridge.servers("p1",0,10).nextOffset()==1,"cursor");
-                    ok(bridge.command("p1","server1","message.broadcast",Map.of("message","Hello"),"dedupe-123",120).command().status().equals("pending"),"command enqueued, not executed");
+                    ok(bridge.command("p1","server1","message.broadcast",Map.of("message","Hello"),"dedupe-123",120).command().status().equals("pending"),"Команда поставлена в очередь, но ещё не исполнена");
                     ok(bridge.commandStatus("p1","server1","ext-c1").id().equals("ext-c1"),"durable command query");
-                    ok(bridge.pendingJoinTicket("p1","server1","Player_1"),"pending ticket, not admission permission");
+                    ok(bridge.pendingJoinTicket("p1","server1","Player_1"),"Ожидающий талон не предоставляет право допуска");
                     fails(IllegalArgumentException.class,()->bridge.pendingJoinTicket("p1","server1","../bad"));
                     fails(IllegalArgumentException.class,()->bridge.command("p1","server1","server.console",Map.of("command","op"),"dedupe-123",120));
                     fails(IllegalArgumentException.class,()->bridge.command("p1","server1","server.shutdown",Map.of(),"dedupe-123",120));
@@ -88,13 +88,13 @@ public final class ServerBridge0488Tests {
                     fails(SecurityException.class,()->bridge.server("p1","server1"));
                     fails(SecurityException.class,()->bridge.servers("p1",0,10));
                     wrongProject.set(false);
-                    ok(bridge.subscribeEvents(value->ok(value.event().type().equals("serverbridge.event.received"),"decoded event"))==45,"event subscription via broker");
+                    ok(bridge.subscribeEvents(value->ok(value.event().type().equals("serverbridge.event.received"),"decoded event"))==45,"Подписка на события работает через брокер");
                     revoked.set(true);
                     fails(HostSession.HostError.class,()->bridge.commandStatus("p1","server1","ext-c1"));
                     fails(HostSession.HostError.class,()->bridge.command("p1","server1","message.broadcast",Map.of("message","Hello"),"dedupe-124",120));
                 }
             }
         } finally {server.stop(0);}
-        System.out.println("PASS: "+checks+" Java ServerBridge authenticated API and revocation assertions");
+        System.out.println("PASS: "+checks+" Проверены аутентификация API Java ServerBridge и отзыв доступа");
     }
 }

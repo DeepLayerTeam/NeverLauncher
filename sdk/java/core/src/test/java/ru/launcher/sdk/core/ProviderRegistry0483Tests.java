@@ -22,8 +22,8 @@ public final class ProviderRegistry0483Tests {
         final String prefix; final AtomicInteger starts, stops;
         TestProvider(String prefix, AtomicInteger starts, AtomicInteger stops) { this.prefix=prefix; this.starts=starts; this.stops=stops; }
         public void start(ProviderContext context) throws Exception {
-            ok(context.manifest().id().equals(MANIFEST.id()), "provider gets authenticated extension identity");
-            ok(context.serviceId().equals(GREETING.id()), "provider gets service identity");
+            ok(context.manifest().id().equals(MANIFEST.id()), "Провайдер получает подтверждённую идентичность расширения");
+            ok(context.serviceId().equals(GREETING.id()), "Провайдер получает идентификатор службы");
             context.checkActive(); starts.incrementAndGet();
         }
         public void stop(ProviderContext context) { stops.incrementAndGet(); }
@@ -37,21 +37,21 @@ public final class ProviderRegistry0483Tests {
         try(var registry=new ProviderRegistry(MANIFEST,null,new Cancellation())) {
             registry.register(desc("first",">=1.0.0 <2.0.0","^1.0.0",()->{constructors.incrementAndGet();return new TestProvider("one-",starts,stops);}));
             registry.register(desc("second","^1.0.0","1.0.0",()->{constructors.incrementAndGet();return new TestProvider("two-",starts,stops);}));
-            ok(registry.candidates(GREETING.id()).equals(List.of("first","second")),"registration keeps stable ordered choices");
+            ok(registry.candidates(GREETING.id()).equals(List.of("first","second")),"Порядок выбора провайдеров остаётся стабильным после регистрации");
             fails(ProviderRegistry.CompatibilityException.class,()->registry.register(desc("wrong-spi","^2.0.0","*",()->{constructors.incrementAndGet();return null;})));
             fails(ProviderRegistry.CompatibilityException.class,()->registry.register(desc("wrong-api","*","^3.7.0",()->{constructors.incrementAndGet();return null;})));
-            ok(constructors.get()==0,"incompatible providers refused before construction");
+            ok(constructors.get()==0,"Несовместимые провайдеры отклоняются до создания экземпляра");
             fails(IllegalArgumentException.class,()->registry.register(desc("first","*","*",()->null)));
             fails(IllegalArgumentException.class,()->registry.register(new ProviderDescriptor<>(new ProviderService<>("example.greeting",Greeting.class,SemVer.parse("2.0.0")),"other",SemVer.parse("1.0.0"),"*","*",()->null)));
             fails(IllegalStateException.class,()->registry.call(GREETING,p->p.greet("Ada")));
             ok(registry.select(GREETING.id(),"first",Duration.ofSeconds(2)).providerId().equals("first"),"first provider selected");
-            ok(registry.call(GREETING,p->p.greet("Ada")).equals("one-Ada"),"real typed provider invocation");
+            ok(registry.call(GREETING,p->p.greet("Ada")).equals("one-Ada"),"Проверен реальный типизированный вызов провайдера");
             registry.select(GREETING.id(),"second",Duration.ofSeconds(2));
-            ok(registry.call(GREETING,p->p.greet("Ada")).equals("two-Ada"),"new provider used after selection");
-            ok(starts.get()==2&&stops.get()==1,"old provider gracefully stopped exactly once");
+            ok(registry.call(GREETING,p->p.greet("Ada")).equals("two-Ada"),"После выбора используется новый провайдер");
+            ok(starts.get()==2&&stops.get()==1,"Старый провайдер корректно остановлен ровно один раз");
             ok(registry.selected(GREETING.id()).orElseThrow().providerId().equals("second"),"active provider visible");
             registry.shutdown(Duration.ofSeconds(2));
-            ok(stops.get()==2,"active provider stopped on registry shutdown");
+            ok(stops.get()==2,"Активный провайдер остановлен при закрытии реестра");
             fails(IllegalStateException.class,()->registry.call(GREETING,p->p.greet("Ada")));
         }
     }
@@ -100,28 +100,28 @@ public final class ProviderRegistry0483Tests {
             }));
             long begin=System.nanoTime();
             fails(TimeoutException.class,()->registry.select(GREETING.id(),"stuck",Duration.ofMillis(110)));
-            ok(TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-begin)<750,"uncooperative startup has bounded wait");
-            ok(entered.getCount()==0&&registry.selected(GREETING.id()).isEmpty(),"timeout never publishes provider");
+            ok(TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-begin)<750,"Время ожидания зависшего запуска ограничено");
+            ok(entered.getCount()==0&&registry.selected(GREETING.id()).isEmpty(),"По истечении времени ожидания провайдер не публикуется");
         } finally {release.countDown();}
     }
     static void lifecycleIntegration() throws Exception {
         AtomicInteger starts=new AtomicInteger(),stops=new AtomicInteger();
         Extension extension=new Extension(){
             public void start(ExtensionContext ctx) throws Exception {
-                ok(ctx.providers()!=null,"real ExtensionLifecycle supplies SPI registry");
+                ok(ctx.providers()!=null,"Реальный жизненный цикл расширения предоставляет реестр SPI");
                 ctx.providers().register(desc("life","*","*",()->new TestProvider("hello-",starts,stops)));
                 ctx.providers().select(GREETING.id(),"life",Duration.ofSeconds(1));
-                ok(ctx.providers().call(GREETING,p->p.greet("a")).equals("hello-a"),"provider active during extension start");
+                ok(ctx.providers().call(GREETING,p->p.greet("a")).equals("hello-a"),"Провайдер активен при запуске расширения");
             }
-            public void stop(ExtensionContext ctx){ok(ctx.providers().selected(GREETING.id()).isPresent(),"provider remains available during extension stop");}
+            public void stop(ExtensionContext ctx){ok(ctx.providers().selected(GREETING.id()).isPresent(),"Провайдер остаётся доступным при остановке расширения");}
         };
         try(var lifecycle=new ExtensionLifecycle(extension,MANIFEST)) {
             lifecycle.start(Duration.ofSeconds(2));
-            ok(lifecycle.state()==ExtensionLifecycle.State.RUNNING,"SPI extension reaches RUNNING");
+            ok(lifecycle.state()==ExtensionLifecycle.State.RUNNING,"Расширение SPI переходит в состояние RUNNING");
             lifecycle.stop(Duration.ofSeconds(2));
-            ok(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"SPI extension reaches STOPPED");
+            ok(lifecycle.state()==ExtensionLifecycle.State.STOPPED,"Расширение SPI переходит в состояние STOPPED");
         }
-        ok(starts.get()==1&&stops.get()==1,"provider automatically closed on extension stop");
+        ok(starts.get()==1&&stops.get()==1,"При остановке расширения провайдер закрывается автоматически");
     }
     static void recursiveSwitchRejected() throws Exception {
         try(var registry=new ProviderRegistry(MANIFEST,null,new Cancellation())) {

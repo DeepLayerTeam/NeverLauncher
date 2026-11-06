@@ -132,7 +132,7 @@ test("API request endpoints, CAS, and never forwards official session / foreign 
     delete globalThis.fetch;
   });
 });
-test("concurrent CAS conflict returns 409 and never silently retries", async (t) => {
+test("Конфликт параллельных изменений возвращает 409 без скрытого повтора", async (t) => {
   let n = 0;
   globalThis.fetch = async () => {
     n++;
@@ -148,7 +148,7 @@ test("concurrent CAS conflict returns 409 and never silently retries", async (t)
     delete globalThis.fetch;
   });
 });
-test("owner-only preview sends Bearer, rejects JSON and revokes invalid digests", async (t) => {
+test("Предпросмотр владельца отправляет токен Bearer, отклоняет JSON и некорректные хеши", async (t) => {
   const seen = [];
   const oldURL = globalThis.URL.createObjectURL;
   globalThis.URL.createObjectURL = () => "blob:test";
@@ -168,7 +168,7 @@ test("owner-only preview sends Bearer, rejects JSON and revokes invalid digests"
     delete globalThis.fetch;
   });
 });
-test("multipart upload uses real XHR progress, Authorization and expectedRevision", async (t) => {
+test("Загрузка multipart отслеживает прогресс XHR и передаёт авторизацию и ожидаемую ревизию", async (t) => {
   const events = [];
   class FakeXHR {
     constructor() {
@@ -301,7 +301,7 @@ test("official skin upload crosses only native IPC; no browser bearer or game to
   }
 });
 
-test("0.39.4: live Yggdrasil delivery verifies RSA property, UUID and actual PNG SHA-256 without player token", async (t) => {
+test("0.39.4: реальная выдача Yggdrasil проверяет RSA-подпись, UUID и SHA-256 PNG без токена игрока", async (t) => {
   const { webcrypto, createHash } = await import("node:crypto");
   const uuid = "123456781234423492340123456789ab";
   const png = Buffer.from("real-public-png-byte-stream");

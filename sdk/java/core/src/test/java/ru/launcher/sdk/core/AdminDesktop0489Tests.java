@@ -16,7 +16,7 @@ public final class AdminDesktop0489Tests {
         var request=HttpRequest.newBuilder(URI.create(server.url()+"/v1/rpc")).timeout(Duration.ofSeconds(3))
             .header("Authorization","Bearer "+token).POST(HttpRequest.BodyPublishers.ofString(Json.encode(data))).build();
         var answer=client.send(request,HttpResponse.BodyHandlers.ofString());
-        ok(answer.statusCode()==status,"HTTP status for "+method+": "+answer.statusCode());
+        ok(answer.statusCode()==status,"Код HTTP для "+method+": "+answer.statusCode());
         return Json.object(Json.parse(answer.body()));
     }
     public static void main(String[] args)throws Exception{
@@ -68,8 +68,8 @@ public final class AdminDesktop0489Tests {
                 var result=rpc(http,server,"secret","ui.settings.get",Map.of("surface","admin","key","appearance"),200);
                 ok("dark".equals(Json.object(Json.object(result.get("result")).get("value")).get("theme")),"default settings loaded");
                 var saved=rpc(http,server,"secret","ui.settings.put",Map.of("surface","admin","key","appearance","value",Map.of("theme","light")),200);
-                ok(Boolean.TRUE.equals(Json.object(saved.get("result")).get("saved")),"persisted via Host capability");
-                ok("light".equals(Json.object(stored.get("ui.admin.appearance")).get("theme")),"real broker storage write");
+                ok(Boolean.TRUE.equals(Json.object(saved.get("result")).get("saved")),"Данные сохранены через возможность Host");
+                ok("light".equals(Json.object(stored.get("ui.admin.appearance")).get("theme")),"Фактическая запись через брокер хранилища");
                 rpc(http,server,"secret","ui.settings.put",Map.of("surface","admin","key","appearance","value",Map.of("theme","red")),422);
                 rpc(http,server,"secret","ui.settings.get",Map.of("surface","desktop","key","unknown"),422);
                 services.ui().close();

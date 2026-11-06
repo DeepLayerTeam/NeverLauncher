@@ -26,11 +26,11 @@ func TestBatchCLI0492(t *testing.T) {
 	suffix := strings.Repeat("a", 64)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/admin/migration-runs/r1/dry-run-all" || r.Method != "POST" || r.Header.Get("Authorization") != "Bearer secret" {
-			t.Errorf("invalid authorization or route")
+			t.Errorf("Некорректная авторизация или маршрут")
 		}
 		b, e := base64.RawURLEncoding.DecodeString(r.Header.Get("X-Gravit-Profiles"))
 		if e != nil || !strings.Contains(string(b), "profiles/a.json") {
-			t.Errorf("invalid profile mapping")
+			t.Errorf("Некорректное сопоставление профилей")
 		}
 		w.Header().Set("Content-Type", "application/json")
 		batch := gravBatch0492{Format: "launcher.gravit-multi-profile-dry-run.v1", RunID: "r1", ProjectID: "p1", SourceSHA256: suffix, InventorySHA256: suffix, TargetSHA256: suffix, Profiles: []gravProfile0492{{Destination: gravDest0492{ProfilePath: "profiles/a.json", ProfileID: "a", ProfileName: "A", Loader: "vanilla", Channel: "stable", Version: "1"}, Status: "manual", Dependencies: []gravDependency0492{}, Blockers: []string{}}}, ProfileCount: 1, Status: "manual", Blockers: []string{}}
@@ -48,7 +48,7 @@ func TestBatchCLI0492(t *testing.T) {
 	}
 	st, e := os.Stat(output)
 	if e != nil || st.Mode().Perm() != 0600 {
-		t.Fatalf("report permissions %v %v", st, e)
+		t.Fatalf("Права доступа к отчёту: %v, %v", st, e)
 	}
 	verify := []string{"verify-dry-run-all", "--backend", server.URL, "--token", "secret", "--run", "r1", "--source", src, "--mapping", mapping, "--report", output}
 	if e := handleMigrationWorkflow0331(verify); e != nil {
@@ -62,6 +62,6 @@ func TestBatchCLI0492(t *testing.T) {
 	tampered, _ := json.Marshal(edited)
 	_ = os.WriteFile(output, tampered, 0600)
 	if e := handleMigrationWorkflow0331(verify); e == nil {
-		t.Fatal("stale report accepted")
+		t.Fatal("Принят устаревший отчёт")
 	}
 }

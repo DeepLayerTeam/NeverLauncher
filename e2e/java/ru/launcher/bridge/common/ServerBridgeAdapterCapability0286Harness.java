@@ -21,7 +21,7 @@ public final class ServerBridgeAdapterCapability0286Harness {
             for (String kind : List.of("player.kick", "message.broadcast", "whitelist.add", "whitelist.remove",
                 "whitelist.enable", "whitelist.disable", "ban.add", "ban.remove", "server.save", "server.maintenance",
                 "server.drain", "server.shutdown", "server.console")) {
-                require(BridgeAdapterCapability.forControl(kind) != null, "unmapped operation " + kind);
+                require(BridgeAdapterCapability.forControl(kind) != null, "Операция без сопоставления " + kind);
             }
             require(BridgeAdapterCapability.forControl("server.shell") == null, "командная оболочка хоста стала игровой возможностью");
             try {
@@ -40,8 +40,8 @@ public final class ServerBridgeAdapterCapability0286Harness {
         }
         for (String id : List.of("velocity", "bungeecord", "waterfall")) {
             BridgeAdapterProfile profile = BridgeAdapterProfiles.require(id);
-            require(profile.supports(BridgeAdapterCapability.LOGIN_GATE), "proxy login gate absent: " + id);
-            require(!profile.supports(BridgeAdapterCapability.CONTROL_SAVE), "proxy cannot save a world: " + id);
+            require(profile.supports(BridgeAdapterCapability.LOGIN_GATE), "Отсутствует проверка входа на прокси: " + id);
+            require(!profile.supports(BridgeAdapterCapability.CONTROL_SAVE), "Прокси не может сохранить мир: " + id);
         }
         try {
             BridgeAdapterProfiles.rejectUncertifiedHybrid("paper", "Mohist build");

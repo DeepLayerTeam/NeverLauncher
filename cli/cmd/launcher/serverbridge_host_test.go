@@ -32,7 +32,7 @@ exit 0`)
 		t.Fatal(err)
 	}
 	if config.Platform != "paper" || config.LaunchMode != "java-jar" || config.JavaMajor != 21 {
-		t.Fatalf("unexpected config: %+v", config)
+		t.Fatalf("Неожиданная конфигурация: %+v", config)
 	}
 	if got := strings.Join(config.JVMArgs, " "); got != "-Xms128M -Xmx256M" {
 		t.Fatalf("JVM args=%q", got)
@@ -72,7 +72,7 @@ exit 0`)
 		t.Fatal(err)
 	}
 	if err := runServerBridgeHost01910(root, false); err != nil {
-		t.Fatalf("supervisor run: %v", err)
+		t.Fatalf("Ошибка запуска контроллера процессов: %v", err)
 	}
 	paths := hostPaths01910(root)
 	state, err := readServerBridgeHostRuntime01910(paths["runtime"])
@@ -80,7 +80,7 @@ exit 0`)
 		t.Fatal(err)
 	}
 	if state.Status != "exited" || state.RestartCount != 1 || state.CrashCount != 1 || state.ExitCode == nil || *state.ExitCode != 0 {
-		t.Fatalf("unexpected runtime: %+v", state)
+		t.Fatalf("Неожиданный Runtime: %+v", state)
 	}
 	stdout, _ := os.ReadFile(paths["stdout"])
 	stderr, _ := os.ReadFile(paths["stderr"])
@@ -128,7 +128,7 @@ while :; do sleep 1; done`)
 		time.Sleep(25 * time.Millisecond)
 	}
 	if pid == 0 {
-		t.Fatal("Minecraft process did not enter running state")
+		t.Fatal("Процесс Minecraft не перешёл в состояние работы")
 	}
 	// Супервизор публикует PID сразу после старта подпроцесса, хотя
 	// POSIX-оболочке ещё нужно установить обработчик TERM. Остановка до
@@ -144,13 +144,13 @@ while :; do sleep 1; done`)
 		}
 		select {
 		case err := <-done:
-			t.Fatalf("supervised process exited before ready: %v", err)
+			t.Fatalf("Контролируемый процесс завершился до готовности: %v", err)
 		default:
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 	if !ready {
-		t.Fatal("supervised process did not install signal handler before stop")
+		t.Fatal("Контролируемый процесс не установил обработчик сигнала до остановки")
 	}
 	if err := stopServerBridgeHost01910([]string{"--server-root", root}); err != nil {
 		t.Fatal(err)
@@ -158,21 +158,21 @@ while :; do sleep 1; done`)
 	select {
 	case err := <-done:
 		if err != nil {
-			t.Fatalf("run returned after stop: %v", err)
+			t.Fatalf("Запуск завершился после остановки: %v", err)
 		}
 	case <-time.After(5 * time.Second):
-		t.Fatal("supervisor did not finish after stop")
+		t.Fatal("Контроллер процессов не завершился после остановки")
 	}
 	state, err := readServerBridgeHostRuntime01910(paths["runtime"])
 	if err != nil {
 		t.Fatal(err)
 	}
 	if state.Status != "stopped" || state.ProcessPID != 0 || state.Crashed {
-		t.Fatalf("unexpected stopped runtime: %+v", state)
+		t.Fatalf("Неожиданное состояние остановленного Runtime: %+v", state)
 	}
 	stdout, _ := os.ReadFile(paths["stdout"])
 	if !strings.Contains(string(stdout), "graceful-stop") {
-		t.Fatalf("graceful stop missing from stdout: %q", stdout)
+		t.Fatalf("В стандартном выводе отсутствует сообщение о корректной остановке: %q", stdout)
 	}
 }
 
@@ -199,7 +199,7 @@ func TestServerBridgeHostForgeArgsMode01910(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(strings.Join(command, " "), "@"+argsFile) {
-		t.Fatalf("forge args command=%v", command)
+		t.Fatalf("Аргументы запуска Forge: команда=%v", command)
 	}
 }
 

@@ -35,7 +35,7 @@ func TestModernLoader0272SelectorsWithUnsortedUpstream(t *testing.T) {
 				t.Fatal(err)
 			}
 			if selected.Loader.Version != tc.want {
-				t.Fatalf("selected %s want %s", selected.Loader.Version, tc.want)
+				t.Fatalf("Выбрано %s, ожидалось %s", selected.Loader.Version, tc.want)
 			}
 		})
 	}
@@ -46,21 +46,21 @@ func TestModernLoader0272RejectsAmbiguousAndForgedMetadata(t *testing.T) {
 	forged := a
 	forged.Loader.Maven = "net.fabricmc:fabric-loader:0.17.0"
 	if _, err := selectModernMetaEntry0272("fabric", "1.21.1", "0.18.0", []loaderMetaEntry{forged}); err == nil {
-		t.Fatal("mismatched artifact was accepted")
+		t.Fatal("Принят несовпадающий артефакт")
 	}
 	if _, err := selectModernMetaEntry0272("fabric", "1.21.1", "latest", []loaderMetaEntry{a, forged}); err == nil {
-		t.Fatal("conflicting duplicate was accepted")
+		t.Fatal("Принят конфликтующий дубликат")
 	}
 	missing := metaEntry0272("fabric", "0.18.0", false)
 	if _, err := selectModernMetaEntry0272("fabric", "1.21.1", "latest-stable", []loaderMetaEntry{missing}); err == nil {
-		t.Fatal("prerelease was accepted by stable policy")
+		t.Fatal("Политика стабильных релизов приняла предварительную версию")
 	}
 	if _, err := selectModernMetaEntry0272("fabric", "1.21.1", "0.19.0", []loaderMetaEntry{a}); err == nil {
-		t.Fatal("unavailable explicit loader was accepted")
+		t.Fatal("Принят явно указанный недоступный загрузчик")
 	}
 	unsafe := metaEntry0272("quilt", "0.30.0/../../bad", true)
 	if _, err := selectModernMetaEntry0272("quilt", "1.21.1", "0.30.0/../../bad", []loaderMetaEntry{unsafe}); err == nil {
-		t.Fatal("unsafe loader version accepted")
+		t.Fatal("Принята небезопасная версия загрузчика")
 	}
 }
 
@@ -84,28 +84,28 @@ func TestModernLoader0272EscapesSnapshotPathAndPinsSourceHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	if gotPath != path || source != server.URL+path || entry.Loader.Version != ver || len(checksum) != 64 {
-		t.Fatalf("invalid modern adapter resolution %q %+v %q", gotPath, entry, checksum)
+		t.Fatalf("Некорректное определение современного адаптера: %q, %+v, %q", gotPath, entry, checksum)
 	}
 }
 
 func TestModernLoader0272ForgeNeoForgeUnsafeVersionRejected(t *testing.T) {
 	for _, value := range []string{"52.0.1/../../secret", "21.1.5?download=http://evil.invalid", "../bad", "21.1.3#fragment", "21.1.1\\../bad", "21.1.3%2Fother"} {
 		if err := validateForgeLikeVersionToken0272(value); err == nil {
-			t.Errorf("unsafe artifact version accepted: %q", value)
+			t.Errorf("Принята небезопасная версия артефакта: %q", value)
 		}
 	}
 	for _, value := range []string{"1.21.1-52.0.1", "21.1.105", "21.1.105-beta", "26.1.0.1"} {
 		if err := validateForgeLikeVersionToken0272(value); err != nil {
-			t.Errorf("valid artifact version rejected %q: %v", value, err)
+			t.Errorf("Отклонена допустимая версия артефакта %q: %v", value, err)
 		}
 	}
 	_, _, _, _, err := resolveForgeLikeVersionWithEvidence(context.Background(), nil, "forge", "1.21.1", "52.0.1/../../bad", "")
 	if err == nil {
-		t.Fatal("forge accepted unsafe explicit selector")
+		t.Fatal("Forge принял небезопасный явно указанный вариант")
 	}
 	_, _, _, _, err = resolveForgeLikeVersionWithEvidence(context.Background(), nil, "neoforge", "1.21.1", "21.1.1?bad", "")
 	if err == nil {
-		t.Fatal("neoforge accepted unsafe explicit selector")
+		t.Fatal("NeoForge принял небезопасный явно указанный вариант")
 	}
 }
 
@@ -132,22 +132,22 @@ func TestModernLoader0272DuplicateLibrarySourceIsRejectedBeforeJarDownload(t *te
 	}}
 	_, err = materializeLoaderLibraries(context.Background(), server.Client(), t.TempDir(), &profile, 1, true)
 	if err == nil || !strings.Contains(err.Error(), "конфликт") {
-		t.Fatalf("source provenance conflict undetected for %s: %v", rel, err)
+		t.Fatalf("Конфликт происхождения источника %s не обнаружен: %v", rel, err)
 	}
 	if downloads != 0 {
-		t.Fatalf("jar downloaded before conflict check: %d", downloads)
+		t.Fatalf("JAR загружен до проверки конфликта: %d", downloads)
 	}
 }
 
 func TestModernLoader0272MinecraftSnapshotSelectsExactVersion(t *testing.T) {
 	manifest := MojangVersionManifest{Latest: map[string]string{"snapshot": "26w42a", "release": "1.21.1"}}
 	if got := resolveRequestedMinecraftVersion(manifest, "snapshot"); got != "26w42a" {
-		t.Fatalf("snapshot selected %q", got)
+		t.Fatalf("Выбран снимок %q", got)
 	}
 	if got := resolveRequestedMinecraftVersion(manifest, "release"); got != "1.21.1" {
-		t.Fatalf("release alias selected %q", got)
+		t.Fatalf("Выбран псевдоним релиза %q", got)
 	}
 	if _, exact := exactMinecraftVersionForRecovery("release"); exact {
-		t.Fatal("mutable release alias is treated as immutable recovery input")
+		t.Fatal("Изменяемый псевдоним релиза ошибочно принят как неизменяемые данные восстановления")
 	}
 }

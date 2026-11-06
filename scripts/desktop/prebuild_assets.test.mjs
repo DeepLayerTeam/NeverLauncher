@@ -33,7 +33,7 @@ async function fixture(run) {
     await rm(root, { recursive: true, force: true });
   }
 }
-test("real asset prebuild indexes hashed chunks and verifies installed bytes", async () =>
+test("Предварительная сборка ресурсов индексирует хешированные части и проверяет установленные данные", async () =>
   fixture(async (root) => {
     const first = await packDist03011(root);
     assert.equal(first.assets.length, 3);
@@ -48,13 +48,13 @@ test("real asset prebuild indexes hashed chunks and verifies installed bytes", a
       serialized,
     );
   }));
-test("modified or missing cached chunks are rejected", async () =>
+test("Изменённые или отсутствующие части кэша отклоняются", async () =>
   fixture(async (root) => {
     await packDist03011(root);
     await writeFile(join(root, "assets/login-abcdef01.js"), "tampered");
     await assert.rejects(verifyDist03011(root), /corrupted/);
   }));
-test("symlinks, source maps and unhashed JS are rejected before release", async () =>
+test("Символические ссылки, карты исходников и JS без хеша отклоняются перед выпуском", async () =>
   fixture(async (root) => {
     await writeFile(join(root, "assets/private.js.map"), "secret");
     await assert.rejects(packDist03011(root), /source map/);
@@ -68,7 +68,7 @@ test("symlinks, source maps and unhashed JS are rejected before release", async 
     );
     await assert.rejects(packDist03011(root), /symlink/);
   }));
-test("Sentry release can prebuild before protected map upload but verify refuses to ship maps", async () =>
+test("Сборка Sentry выполняется до загрузки защищённых карт, но проверка запрещает включать карты в релиз", async () =>
   fixture(async (root) => {
     await writeFile(join(root, "assets/index-12345678.js.map"), "source map");
     const old = process.env.LAUNCHER_SENTRY_RELEASE_BUILD;

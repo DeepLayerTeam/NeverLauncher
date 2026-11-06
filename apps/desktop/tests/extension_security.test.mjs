@@ -16,7 +16,7 @@ const item = {
   bridgeAllowed: true,
   desktop: { pages: [], actions: [] },
 };
-test("only selected project and valid scoped extensions may render", () => {
+test("Отображаются только выбранный проект и разрешённые расширения нужной области", () => {
   assert.equal(validExtension0356(item, "project-a"), true);
   assert.equal(validExtension0356(item, "project-b"), false);
   assert.equal(
@@ -35,7 +35,7 @@ test("only selected project and valid scoped extensions may render", () => {
     false,
   );
 });
-test("HTML belongs to exact version, generation and extension", () => {
+test("HTML привязан к точной версии, поколению и расширению", () => {
   const data = {
     protocol: "extensions.desktop-rpc.v1",
     extensionApiVersion: "1.0",

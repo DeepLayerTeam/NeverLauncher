@@ -138,7 +138,7 @@ class V09Tests(unittest.TestCase):
     def test_actual_production_updater_install_update_repair_rollback(self):
         cli = os.environ.get("NL349_CLI")
         if not cli or not Path(cli).is_file():
-            self.skipTest("set NL349_CLI to built real Launcher CLI")
+            self.skipTest("Укажите в NL349_CLI путь к собранному настоящему Launcher CLI")
         live = self.root / "client"
         cache = self.root / "cache"
         env = os.environ.copy()

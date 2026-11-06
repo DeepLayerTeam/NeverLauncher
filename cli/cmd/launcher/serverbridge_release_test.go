@@ -14,7 +14,7 @@ func TestServerBridge2CertificationRequired0150(t *testing.T) {
 		want    bool
 	}{{"0.14.10", false}, {"0.15.0", true}, {"0.15.1", true}, {"1.0.0", true}} {
 		if got := serverBridge2CertificationRequired0150(tc.version); got != tc.want {
-			t.Fatalf("required(%s)=%v want %v", tc.version, got, tc.want)
+			t.Fatalf("Обязательное значение (%s)=%v, ожидалось %v", tc.version, got, tc.want)
 		}
 	}
 }
@@ -50,14 +50,14 @@ func TestVerifyServerBridge2CertificationInBundle0150(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err != nil {
-		t.Fatalf("valid ServerBridge 2 release certification rejected: %v", err)
+		t.Fatalf("Отклонена корректная сертификация релиза ServerBridge 2: %v", err)
 	}
 	first := cert.Artifacts[0]
 	if err := os.WriteFile(filepath.Join(dir, first.File), []byte("tampered"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err == nil {
-		t.Fatal("tampered ServerBridge 2 artifact must be rejected")
+		t.Fatal("Изменённый артефакт ServerBridge 2 должен отклоняться")
 	}
 }
 
@@ -92,10 +92,10 @@ func TestVerifyServerBridge3CertificationInBundle0191(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := serverBridgeCertificationReleaseFile(ver); got != serverBridge3CertificationReleaseFile {
-		t.Fatalf("certification file for %s = %s, want %s", ver, got, serverBridge3CertificationReleaseFile)
+		t.Fatalf("Файл сертификации для %s: %s, ожидался %s", ver, got, serverBridge3CertificationReleaseFile)
 	}
 	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err != nil {
-		t.Fatalf("valid ServerBridge 3 release certification rejected: %v", err)
+		t.Fatalf("Отклонена корректная сертификация релиза ServerBridge 3: %v", err)
 	}
 	legacy := filepath.Join(dir, serverBridge2CertificationReleaseFile)
 	if err := os.WriteFile(legacy, certRaw, 0o644); err != nil {
@@ -105,7 +105,7 @@ func TestVerifyServerBridge3CertificationInBundle0191(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err == nil {
-		t.Fatal("0.19.1 must not accept only the legacy ServerBridge 2 certification filename")
+		t.Fatal("Версия 0.19.1 не должна принимать только старое имя файла сертификации ServerBridge 2")
 	}
 }
 
@@ -153,7 +153,7 @@ func TestVerifyServerBridge3GACertification0200(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err != nil {
-		t.Fatalf("valid GA certification rejected: %v", err)
+		t.Fatalf("Отклонена корректная сертификация готовности релиза: %v", err)
 	}
 
 	cert.ProtocolV3Frozen = false
@@ -162,6 +162,6 @@ func TestVerifyServerBridge3GACertification0200(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := verifyServerBridge2CertificationInBundle0150(dir, ver); err == nil {
-		t.Fatal("GA certification without frozen Protocol v3 must fail")
+		t.Fatal("Сертификация релиза без зафиксированного протокола v3 должна завершаться отказом")
 	}
 }

@@ -46,7 +46,7 @@ test("host permissions cannot be inherited from project game-scopes", () => {
     true,
   );
 });
-test("snapshot freshness declares disconnected host or stale bridge healthy", () => {
+test("При проверке актуальности снимка отключённый хост или устаревший мост не объявляется исправным", () => {
   assert.equal(hostSnapshotFresh04111(live, now), true);
   assert.equal(bridgeReady04111(live, now), true);
   assert.equal(
@@ -91,7 +91,7 @@ test("snapshot freshness declares disconnected host or stale bridge healthy", ()
   );
   assert.equal(bridgeReady04111(null, now), false);
 });
-test("indeterminate and accepted are verified outcomes", () => {
+test("Неопределённый и принятый статусы являются проверяемыми результатами", () => {
   for (const status of ["accepted", "indeterminate"]) {
     const result = hostOperationOutcome04111({ status });
     assert.equal(result.verified, false);
@@ -102,7 +102,7 @@ test("indeterminate and accepted are verified outcomes", () => {
     true,
   );
 });
-test("restore input allows only complete, original command identity", () => {
+test("Восстановление принимает только полную исходную идентификацию команды", () => {
   const valid = {
     serverId: "paper-1",
     action: "restart",

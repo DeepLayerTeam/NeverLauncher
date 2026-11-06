@@ -42,21 +42,21 @@ class Capabilities(unittest.TestCase):
             ),
             patch(
                 "runtime_capabilities_03410._linux_gui",
-                return_value=(False, "missing usable renderer", None),
+                return_value=(False, "Нет доступного модуля отображения", None),
             ),
         ):
             result = evaluate("gui", "/java")
         self.assertEqual(result["status"], "blocked")
-        self.assertIn("missing usable renderer", result["blockers"])
+        self.assertIn("Нет доступного модуля отображения", result["blockers"])
 
     def test_missing_java_also_blocks_before_game(self):
         with patch(
             "runtime_capabilities_03410._probe_java",
-            return_value={"available": False, "reason": "invalid Java"},
+            return_value={"available": False, "reason": "Некорректная Java"},
         ):
             result = evaluate("headless", "/java")
         self.assertEqual(result["status"], "blocked")
-        self.assertIn("invalid Java", result["blockers"])
+        self.assertIn("Некорректная Java", result["blockers"])
 
     def test_gui_ready_requires_real_renderer(self):
         with (

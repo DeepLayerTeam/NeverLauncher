@@ -93,10 +93,10 @@ public final class RuntimeApiTests {
                 check(callback(client,callbacks.url()+"/v1/events",malformed,"callback-token")==422,"несоответствие схемы отклонено");
                 check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","status","payload",Map.of("verbose",true))),"callback-token")==200,"обработчик команды вызван");
                 check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","empty","payload",Map.of())),"callback-token")==200,
-                    "JSON null command results succeed");
+                    "Команда успешно обрабатывает результат JSON null");
                 check(callback(client,callbacks.url()+"/v1/rpc",Json.encode(Map.of("protocolVersion","1.0","requestId","abc-123","method","command.invoke","deadlineMs",1500L,
                     "params",Map.of("command","empty","payload",Map.of()))),"callback-token")==200,
-                    "null command results succeed through versioned JVM RPC");
+                    "Результат null успешно передаётся через версионированный JVM RPC");
                 // Настоящий конверт события может превышать 64 КиБ, даже если полезная
                 // нагрузка намного меньше разрешённых сервером 1 МиБ устойчивого события.
                 AtomicInteger largeDelivered=new AtomicInteger();
@@ -126,7 +126,7 @@ public final class RuntimeApiTests {
                 check(callback(client,callbacks.url()+"/v1/hooks",hook,"callback-token")==422,
                     "rejected synchronous hook fails closed");
                 check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","status","payload",Map.of("verbose",true))),"wrong")==401,
-                    "commands cannot be invoked without authenticated callback token");
+                    "Команды недоступны без подтверждённого токена обратного вызова");
                 services.events().unsubscribe("project.saved","async");
                 check(unsubscribed.get()==1,"явная отписка удаляет устойчивую подписку на сервере");
                 services.close();
@@ -136,7 +136,7 @@ public final class RuntimeApiTests {
                     AtomicInteger recovered=new AtomicInteger();
                     restored.events().subscribe("release.published","async",payloadSchema,raw->new Release(Json.string(Json.object(raw),"version",true)),incoming->{recovered.incrementAndGet();});
                     check(callback(client,restoredCallback.url()+"/v1/events",event,"callback-token")==200&&recovered.get()==1,
-                        "new JVM runtime can resume durable subscription after handler shutdown");
+                        "Новый JVM Runtime восстанавливает постоянную подписку после остановки обработчика");
                 }
                 check(unsubscribed.get()==1,"остановка восстановленной среды выполнения сохраняет устойчивую подписку");
             }

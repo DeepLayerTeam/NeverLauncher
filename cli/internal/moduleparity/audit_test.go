@@ -81,7 +81,7 @@ func TestAudit0301RejectsDuplicateAndOverclaim(t *testing.T) {
 	}{
 		{"duplicate", func(m *Matrix) { m.Modules[1].ID = "M01" }},
 		{"forged full parity", func(m *Matrix) { m.Modules[0].Status = "verified" }},
-		{"missing test", func(m *Matrix) { m.Modules[0].TestRefs = nil }},
+		{"Отсутствует тест", func(m *Matrix) { m.Modules[0].TestRefs = nil }},
 		{"wrong revision", func(m *Matrix) { m.Upstream.Commit = strings.Repeat("a", 40) }},
 		{"Выход за пределы допустимого пути", func(m *Matrix) { m.Modules[0].SourceRefs = []string{"../../private"} }},
 	} {
