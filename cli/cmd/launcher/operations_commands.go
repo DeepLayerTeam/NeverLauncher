@@ -91,7 +91,7 @@ func productionE2E990() map[string]any {
 		"status":        "production-e2e-ready",
 		"script":        "e2e/scripts/run-minecraft-e2e.sh",
 		"scenario":      "Desktop → загрузка пакета → запуск → подключение к серверу → отзыв сеанса → запрет следующего подключения",
-		"checks":        []string{"конфигурация Docker Compose присутствует", "первоначальная настройка выполнена", "проверка пакета Desktop", "проверка плана запуска", "server bridge allow/revoke/deny", "диагностика журнала аудита"},
+		"checks":        []string{"конфигурация Docker Compose присутствует", "первоначальная настройка выполнена", "проверка пакета Desktop", "проверка плана запуска", "разрешение, отзыв и запрет доступа через ServerBridge", "диагностика журнала аудита"},
 		"commands":      []string{"bash e2e/scripts/run-minecraft-e2e.sh"},
 	}
 }
@@ -563,7 +563,7 @@ func handleInstall(args []string) error {
 		if email == "" || password == "" {
 			return errors.New("bootstrap-admin требует --email и --password")
 		}
-		body := map[string]any{"email": email, "displayName": flagValue(args, "--display-name", "Administrator"), "password": password, "actor": "nl install bootstrap-admin"}
+		body := map[string]any{"email": email, "displayName": flagValue(args, "--display-name", "Администратор"), "password": password, "actor": "nl install bootstrap-admin"}
 		payload, err := httpJSONWithHeaders("POST", backend+"/api/v1/install/bootstrap-admin", body, map[string]string{"X-Launcher-Bootstrap-Token": token})
 		if err != nil {
 			return err
@@ -606,9 +606,9 @@ func installWizardPayload(args []string) map[string]any {
 		"profile":       profile,
 		"status":        "ready",
 		"steps": []map[string]any{
-			{"id": "environment", "title": "Environment", "command": "nl install env --profile " + profile},
-			{"id": "database", "title": "PostgreSQL", "checks": []string{"LAUNCHER_DATABASE_DSN", "LAUNCHER_SQL_DRIVER=pgx", "migrations"}},
-			{"id": "storage", "title": "Storage", "command": "nl install storage-check --storage local"},
+			{"id": "environment", "title": "Окружение", "command": "nl install env --profile " + profile},
+			{"id": "database", "title": "PostgreSQL", "checks": []string{"LAUNCHER_DATABASE_DSN", "LAUNCHER_SQL_DRIVER=pgx", "миграции"}},
+			{"id": "storage", "title": "Хранилище", "command": "nl install storage-check --storage local"},
 			{"id": "admin", "title": "Первый администратор", "command": "nl install bootstrap-admin --email admin@example.test"},
 			{"id": "project", "title": "Первый проект", "command": "nl install first-project --project demo-project --profile vanilla"},
 			{"id": "verify", "title": "Проверка установки", "command": "nl install verify --backend " + backend + " --profile " + profile},
@@ -811,7 +811,7 @@ func writeFirstRunBundle(outputDir, backend, project, profile, apiImage, adminIm
 		"security":        "Секреты не генерируются и .env не создаётся; образы API/Admin закреплены ссылками на внешний реестр",
 		"images":          map[string]string{"api": apiImage, "admin": adminImage},
 		"standalone":      true,
-		"next":            []string{"cp env.production.example .env", "задать реальные secrets/TLS paths", "docker compose config", "docker compose up -d", "nl install verify --backend " + backend},
+		"next":            []string{"cp env.production.example .env", "указать реальные пути к секретам и сертификатам TLS", "docker compose config", "docker compose up -d", "nl install verify --backend " + backend},
 	}
 	data, _ := json.MarshalIndent(report, "", "  ")
 	if err := os.WriteFile(filepath.Join(outputDir, "first-run-report.json"), data, 0o644); err != nil {

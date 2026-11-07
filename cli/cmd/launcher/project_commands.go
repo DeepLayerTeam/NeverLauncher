@@ -397,9 +397,9 @@ func sdkTemplate(target string) string {
 	case "cli":
 		return cliTemplate02010()
 	case "admin":
-		return uiTemplate02010("admin", "Launcher Admin extension")
+		return uiTemplate02010("admin", "Расширение Launcher для панели администратора")
 	case "desktop":
-		return uiTemplate02010("desktop", "Launcher Desktop extension")
+		return uiTemplate02010("desktop", "Расширение Launcher для настольного клиента")
 	default:
 		return ""
 	}
@@ -407,7 +407,7 @@ func sdkTemplate(target string) string {
 
 func handlePlugin(args []string) error {
 	if len(args) < 1 {
-		return errors.New("plugin — legacy compatibility alias; используйте extension template|validate|import-legacy")
+		return errors.New("plugin — устаревший псевдоним команды; используйте extension template|validate|import-legacy")
 	}
 	switch args[0] {
 	case "list":
@@ -423,7 +423,7 @@ func handlePlugin(args []string) error {
 		return handleExtension0201(append([]string{"template"}, args[1:]...))
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("plugin validate требует путь к manifest")
+			return errors.New("plugin validate требует путь к манифесту")
 		}
 		if filepath.Base(canonicalExtensionManifestPath0201(args[1])) == canonicalExtensionManifestName0201 {
 			return handleExtension0201([]string{"validate", args[1]})

@@ -2703,7 +2703,7 @@ function App() {
     session: AuthSession,
   ): Promise<AuthSession> {
     if (!session.refreshToken)
-      throw new Error("нет refresh token: выполните вход заново");
+      throw new Error("нет токена обновления сессии: выполните вход заново");
     const userId = session.userId || accessTokenSubject(session.accessToken);
     const body: Record<string, unknown> = {
       refreshToken: session.refreshToken,
@@ -3874,7 +3874,7 @@ function App() {
     if (!data?.verified || !data?.launchTicket || !data?.oneTime)
       throw new Error("Сервер не выдал одноразовое разрешение на запуск Guard.");
     log(
-      `Аттестация Guard подтверждена сервером: evidence=${String(data.evidenceSha256 || "").slice(0, 16)}…, ticket до ${data.expiresAt}.`,
+      `Сервер подтвердил аттестацию Guard: хеш свидетельства=${String(data.evidenceSha256 || "").slice(0, 16)}…, разрешение на запуск действует до ${data.expiresAt}.`,
     );
     return data.launchTicket;
   }
@@ -3992,7 +3992,7 @@ function App() {
       );
     }
     log(
-      `Непрерывная аттестация Guard v2: прошла серверная проверка списка разрешённых сред выполнения (user-mode evidence), hash=${String(data.continuousEvidenceSha256 || "").slice(0, 16)}…, cross-checks=${data.crossCheckCount ?? 0}.`,
+      `Непрерывная аттестация Guard v2: прошла серверная проверка списка разрешённых сред выполнения (свидетельства пользовательского режима), хеш=${String(data.continuousEvidenceSha256 || "").slice(0, 16)}…, перекрёстных проверок=${data.crossCheckCount ?? 0}.`,
     );
     return {
       ticket: String(data.continuousGuardTicket),

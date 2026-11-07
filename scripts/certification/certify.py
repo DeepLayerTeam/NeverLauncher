@@ -352,7 +352,7 @@ def main():
         value = os.environ.get(variable)
         if not value:
             suites.append(
-                {"id": case, "status": "missing", "reason": f"{variable} not provided"}
+                {"id": case, "status": "missing", "reason": f"Не задана переменная {variable}"}
             )
             continue
         path = Path(value).resolve()

@@ -102,9 +102,9 @@ def main():
             time.sleep(0.03)
         assert child.poll() is None and Handler.readies == 1 and Handler.hellos == 1, (child.poll(), child.communicate() if child.poll() is not None else "")
         status, response = rpc({"name": "Ada"})
-        assert status == 200 and response["result"]["value"] == {"active": "formal", "message": "Good day, Ada (locked-spi-lib-0483)"}, (status, response)
+        assert status == 200 and response["result"]["value"] == {"active": "formal", "message": "Добрый день, Ada (locked-spi-lib-0483)"}, (status, response)
         status, response = rpc({"operation": "select", "provider": "friendly", "name": "Lin"})
-        assert status == 200 and response["result"]["value"] == {"active": "friendly", "message": "Hello, Lin (locked-spi-lib-0483)"}, (status, response)
+        assert status == 200 and response["result"]["value"] == {"active": "friendly", "message": "Привет, Lin (locked-spi-lib-0483)"}, (status, response)
         status, response = rpc({"operation": "select", "provider": "missing"})
         assert status == 422, (status, response)
         status, response = rpc({"name": "Ada"})
@@ -122,7 +122,7 @@ def main():
         cli = subprocess.run(["java", "-jar", str((ROOT / "build/package/cli/java-spi.jar").resolve()), "greet"],
                              cwd=ROOT / "build/package", env=env(server.server_port, "cli"), text=True, capture_output=True, timeout=12)
         assert cli.returncode == 0, (cli.stdout, cli.stderr)
-        assert '"active":"formal"' in cli.stdout and "Good day, World (locked-spi-lib-0483)" in cli.stdout, cli.stdout
+        assert '"active":"formal"' in cli.stdout and "Добрый день, World (locked-spi-lib-0483)" in cli.stdout, cli.stdout
 
         Handler.selected = "incompatible"
         failed = subprocess.run(["java", "-jar", str(JAR.resolve())], cwd=ROOT / "build/package", env=instance_env,

@@ -58,7 +58,7 @@ export function GravitImportPanel({backendUrl,token,projectId,onChanged}:{backen
    {report.ready&&<>
     <label className="field"><span>Новая версия сборки</span><input value={releaseVersion} onChange={e=>setReleaseVersion(e.target.value)} placeholder="1.0.0"/></label>
     <label className="field"><span>Канал</span><input value={channel} onChange={e=>setChannel(e.target.value)}/></label>
-    <button disabled={busy||!releaseVersion||!channel} onClick={()=>void commit()}>Создать профиль и Build Workspace</button>
+    <button disabled={busy||!releaseVersion||!channel} onClick={()=>void commit()}>Создать профиль и рабочую область сборки</button>
    </>}
   </div>}
   {created&&<p role="status">Профиль <code>{created.profile.id}</code> создан. Рабочая область <code>{created.workspace.id}</code> готова к импорту каталога и проверке реальных SHA-256 перед публикацией.</p>}

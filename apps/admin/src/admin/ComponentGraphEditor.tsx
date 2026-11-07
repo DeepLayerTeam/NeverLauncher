@@ -85,7 +85,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
  async function save(){if(!catalog||!snapshot||!validated||!dirty)return;setSaving(true);setError('');
   try{const result=await api.componentEditorSave(packageId,{expectedRevision:initialRevision,catalog});
    setSnapshot({...snapshot,catalog:result.catalog,status:result.status});setCatalog(initialCatalog(result.catalog));
-   setPreview(null);setPreviewKey('');setNotice(`Каталог r${result.catalog.revision} сохранён. Digest ${result.catalog.digest.slice(0,16)}…`);
+   setPreview(null);setPreviewKey('');setNotice(`Каталог r${result.catalog.revision} сохранён. Хеш ${result.catalog.digest.slice(0,16)}…`);
   }catch(e){setError(errText(e));setPreview(null);setPreviewKey('')}finally{setSaving(false)}
  }
  if(busy&&!snapshot)return <article className="subcard"><h4>Редактор компонентов</h4><p>Загрузка каталога с сервера…</p></article>;
@@ -110,37 +110,37 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
      <button type="button" disabled={!newName.trim()} onClick={addEntry}>Добавить</button>
     </div>
     <div className="componentEditorDetails0248">
-     {!selected&&<p className="muted">Выберите объект слева или добавьте новый. Файлы должны сначала быть загружены с ownership=optional.</p>}
+     {!selected&&<p className="muted">Выберите объект слева или добавьте новый. Файлы должны быть предварительно загружены с признаком ownership=optional.</p>}
      {component&&section==='components'&&<>
       <TextField label="ID компонента (стабильный)" value={component.id} onChange={renameComponent}/>
       <TextField label="Название" value={component.name} onChange={name=>changeComponent({name})}/>
       <MultiField label="Описание" value={component.description||''} onChange={description=>changeComponent({description})} rows={2}/>
       <TextField label="SemVer" value={component.version||''} onChange={version=>changeComponent({version})}/>
-      <div className="componentEditorFlags0248">{(['required','default','visible','limited'] as const).map(flag=><label key={flag}><input type="checkbox" checked={!!component[flag]} onChange={e=>changeComponent({[flag]:e.target.checked})}/>{flag}</label>)}</div>
+      <div className="componentEditorFlags0248">{(['required','default','visible','limited'] as const).map(flag=><label key={flag}><input type="checkbox" checked={!!component[flag]} onChange={e=>changeComponent({[flag]:e.target.checked})}/>{({required:'Обязательный',default:'По умолчанию',visible:'Видимый',limited:'Ограниченный'} as const)[flag]}</label>)}</div>
       <label className="field">Категория<select value={component.categoryId||''} onChange={e=>changeComponent({categoryId:e.target.value||undefined})}><option value="">Без категории</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <label className="field">Группа<select value={component.groupId||''} onChange={e=>changeComponent({groupId:e.target.value||undefined})}><option value="">Без группы</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
       <TextField label="Взаимоисключающая группа" value={component.exclusiveGroup||''} onChange={exclusiveGroup=>changeComponent({exclusiveGroup})}/>
       <h5>Подписанные файлы</h5>
       {availableFiles.map(f=><label key={f.path} className="componentEditorFile0248"><input type="checkbox" checked={component.files.includes(f.path)} onChange={e=>changeComponent({files:e.target.checked?[...component.files,f.path]:component.files.filter(p=>p!==f.path),actions:!e.target.checked?component.actions?.filter(a=>a.path!==f.path):component.actions})}/><code>{f.path}</code> ({f.size} B)</label>)}
-      {!availableFiles.length&&<p className="muted">Свободных optional-файлов нет. Загрузите их в пакет перед назначением.</p>}
+      {!availableFiles.length&&<p className="muted">Нет доступных необязательных файлов. Загрузите их в пакет перед назначением.</p>}
       <MultiField label="Зависимости (ID [диапазон версий SemVer], по одной на строке)" value={formatRelations0248(component.dependencies)} onChange={t=>changeComponent({dependencies:parseRelations0248(t)})}/>
       <MultiField label="Конфликты (ID [диапазон версий SemVer])" value={formatRelations0248(component.conflicts)} onChange={t=>changeComponent({conflicts:parseRelations0248(t)})}/>
-      <h5>Условия (schema 1.0)</h5>
+      <h5>Условия (схема 1.0)</h5>
       <label><input type="checkbox" checked={!!component.conditions} onChange={e=>changeComponent({conditions:e.target.checked?{schemaVersion:'1.0'}:undefined})}/> Ограничить доступность</label>
       {component.conditions&&<>
-       {(['os','arch','minecraftVersions','loaders','permissions'] as const).map(key=><MultiField key={key} label={key+' (список)'} rows={2} value={lines(component.conditions?.[key])} onChange={t=>changeComponent({conditions:{...component.conditions!,[key]:splitLines0248(t)}})}/>)}
-       {(['minecraftVersionRange','loaderVersionRange'] as const).map(key=><TextField key={key} label={key} value={component.conditions?.[key]||''} onChange={v=>changeComponent({conditions:{...component.conditions!,[key]:v}})}/>)}
-       {(['javaMajorMin','javaMajorMax'] as const).map(key=><label className="field" key={key}>{key}<input type="number" min={0} max={99} value={component.conditions?.[key]||0} onChange={e=>changeComponent({conditions:{...component.conditions!,[key]:Number(e.target.value)}})}/></label>)}
+       {(['os','arch','minecraftVersions','loaders','permissions'] as const).map(key=><MultiField key={key} label={({os:'Операционные системы',arch:'Архитектуры',minecraftVersions:'Версии Minecraft',loaders:'Загрузчики',permissions:'Разрешения'} as const)[key]+' (список)'} rows={2} value={lines(component.conditions?.[key])} onChange={t=>changeComponent({conditions:{...component.conditions!,[key]:splitLines0248(t)}})}/>)}
+       {(['minecraftVersionRange','loaderVersionRange'] as const).map(key=><TextField key={key} label={({minecraftVersionRange:'Диапазон версий Minecraft',loaderVersionRange:'Диапазон версий загрузчика'} as const)[key]} value={component.conditions?.[key]||''} onChange={v=>changeComponent({conditions:{...component.conditions!,[key]:v}})}/>)}
+       {(['javaMajorMin','javaMajorMax'] as const).map(key=><label className="field" key={key}>{({javaMajorMin:'Минимальная версия Java',javaMajorMax:'Максимальная версия Java'} as const)[key]}<input type="number" min={0} max={99} value={component.conditions?.[key]||0} onChange={e=>changeComponent({conditions:{...component.conditions!,[key]:Number(e.target.value)}})}/></label>)}
       </>}
-      <h5>Optional Actions (подписываемые)</h5>
+      <h5>Необязательные действия (входят в подпись)</h5>
       {(component.actions||[]).map((a,i)=><div className="componentEditorAction0248" key={i}>
-       <label className="field">Тип<select value={a.type} onChange={e=>changeComponent({actions:(component.actions||[]).map((v,j)=>j===i?{type:e.target.value as typeof a.type}:v)})}>{['File','ClassPath','JvmArgs','ClientArgs'].map(t=><option key={t}>{t}</option>)}</select></label>
+       <label className="field">Тип<select value={a.type} onChange={e=>changeComponent({actions:(component.actions||[]).map((v,j)=>j===i?{type:e.target.value as typeof a.type}:v)})}>{['File','ClassPath','JvmArgs','ClientArgs'].map(t=><option key={t} value={t}>{({File:'Файл',ClassPath:'Путь к классам',JvmArgs:'Аргументы JVM',ClientArgs:'Аргументы клиента'} as const)[t as 'File'|'ClassPath'|'JvmArgs'|'ClientArgs']}</option>)}</select></label>
        {(a.type==='File'||a.type==='ClassPath')?<label className="field">Файл<select value={a.path||''} onChange={e=>changeComponent({actions:component.actions?.map((v,j)=>j===i?{...v,path:e.target.value}:v)})}><option value="">Выберите файл</option>{component.files.filter(p=>a.type!=='ClassPath'||p.toLowerCase().endsWith('.jar')).map(p=><option key={p} value={p}>{p}</option>)}</select></label>
        :<MultiField label="Аргументы (по одному на строке)" rows={2} value={lines(a.args)} onChange={text=>changeComponent({actions:component.actions?.map((v,j)=>j===i?{...v,args:splitLines0248(text)}:v)})}/>}
        <button type="button" onClick={()=>changeComponent({actions:component.actions?.filter((_,j)=>j!==i)})}>Удалить действие</button>
       </div>)}
       <button type="button" onClick={()=>changeComponent({actions:[...(component.actions||[]),{type:'File',path:component.files[0]||''}]})}>Добавить действие</button>
-      <MultiField label="Метаданные (key=value)" value={Object.entries(component.metadata||{}).map(([k,v])=>`${k}=${v}`).join('\n')} onChange={t=>{const metadata:Record<string,string>={};for(const line of t.split('\n')){const i=line.indexOf('=');if(i>0)metadata[line.slice(0,i).trim()]=line.slice(i+1)}changeComponent({metadata})}}/>
+      <MultiField label="Метаданные (ключ=значение)" value={Object.entries(component.metadata||{}).map(([k,v])=>`${k}=${v}`).join('\n')} onChange={t=>{const metadata:Record<string,string>={};for(const line of t.split('\n')){const i=line.indexOf('=');if(i>0)metadata[line.slice(0,i).trim()]=line.slice(i+1)}changeComponent({metadata})}}/>
      </>}
      {catEntry&&section==='categories'&&<>
       <TextField label="Название" value={catEntry.name} onChange={name=>changeCategory({...catEntry,name})}/><MultiField label="Описание" value={catEntry.description||''} onChange={description=>changeCategory({...catEntry,description})} rows={2}/>
@@ -167,7 +167,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
   {preview&&<div className="releaseEffect" role="status"><strong>{preview.valid?'Сервер: проверка пройдена':'Сервер: каталог недопустим'}</strong><p>Ревизия r{preview.revision} · хеш <code>{preview.digest}</code></p>
    {preview.errors.length>0&&<ul>{preview.errors.map((e,i)=><li key={i}>{e}</li>)}</ul>}
    <h5>Проверка всех пресетов</h5><ul>{preview.presets.map((p,i)=><li key={i}>{p.preset||'(по умолчанию)'}: {p.error||p.selected?.join(', ')||'пустой набор'}</li>)}</ul>
-   <p className="muted">Условия OS/Java/loader и permissions повторно проверяются нативной средой выполнения при установке. Серверный предпросмотр графа не является доказательством полномочий пользователя.</p>
+   <p className="muted">Условия ОС/Java/загрузчика и разрешения повторно проверяются нативной средой выполнения при установке. Серверный предпросмотр графа не является доказательством полномочий пользователя.</p>
   </div>}
   <div className="buttonRow"><button disabled={!usable||!!localErrors.length} onClick={()=>void runPreview()}>Проверить на сервере</button>
    <button disabled={!usable||!dirty||!validated||!!localErrors.length} onClick={()=>void save()}>Сохранить проверенный каталог</button></div>

@@ -26,7 +26,7 @@ export function GravitOptionalImport02411({api,packageId,revision,enabled,onCand
  }
  return <section className="subcard" aria-label="Миграция Gravit OptionalView">
   <h5>Импорт Gravit OptionalFile / OptionalView · 0.24.11</h5>
-  <p>Импортируются поддерживаемые действия, зависимости, конфликты и обязательные триггеры из updateOptional. Файлы сначала загружаются как optional в текущий черновик. Миграция не исполняет код и не изменяет подписанные релизы.</p>
+  <p>Импортируются поддерживаемые действия, зависимости, конфликты и обязательные триггеры из updateOptional. Файлы сначала загружаются в текущий черновик как необязательные. Миграция не исполняет код и не изменяет подписанные релизы.</p>
   <label className="field"><span>Gravit ClientProfile или updateOptional JSON</span><input type="file" accept=".json,application/json" disabled={!enabled||busy} onChange={e=>void load(e.target.files?.[0]||null)}/></label>
   <div className="buttonRow"><button disabled={!enabled||busy||!source} onClick={()=>void inspect()}>Проверить перенос Gravit</button>{result&&<button onClick={downloadReport}>Скачать отчёт несовместимостей</button>}</div>
   {result&&<div role="status"><p><strong>{result.canApply?'Конвертация пригодна для предпросмотра':'Обнаружены несовместимости — требуется ручная правка'}</strong> · преобразовано: {result.migration.summary.transformed} · сопоставлено: {result.migration.summary.mapped} · вручную: {result.migration.summary.manual} · заблокировано: {result.migration.summary.blocked}</p>

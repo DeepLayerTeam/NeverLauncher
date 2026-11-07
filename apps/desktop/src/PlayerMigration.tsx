@@ -183,7 +183,7 @@ export default function PlayerMigration0339({
             {preview.channel}; релиз: {preview.releaseVersion}.
           </p>
           <p>
-            Обнаруженные кандидаты optional mods (не выбираются автоматически):{" "}
+            Обнаруженные необязательные модификации (не выбираются автоматически):{" "}
             {preview.optionalComponentCandidates.join(", ") || "нет"}. Выбор
             пресета выполняется через обычный интерфейс компонентов.
           </p>

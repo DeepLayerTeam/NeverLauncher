@@ -108,7 +108,7 @@ func diagnosticsBundleModel(backendURL string) map[string]any {
 		"status":        "bundle-plan",
 		"sections":      []string{"system", "backend-health", "backend-readiness", "desktop-settings", "manifest-status", "java-status", "file-verification", "release-channel", "recent-errors"},
 		"redaction":     diagnosticsPrivacyPolicyModel(),
-		"checks":        map[string]string{"cli": "ok", "backend": "check /health and /ready", "metrics": "Проверяйте /metrics, если метрики включены", "logs": "Предпочтителен структурированный JSON"},
+		"checks":        map[string]string{"cli": "ok", "backend": "проверьте /health и /ready", "metrics": "Проверяйте /metrics, если метрики включены", "logs": "Предпочтителен структурированный JSON"},
 	}
 }
 
@@ -137,7 +137,7 @@ func handleSecurity(args []string) error {
 		}
 		return writeOrPrintJSON(out, report)
 	case "hardening":
-		return writeOrPrintJSON(out, map[string]any{"schemaVersion": "0.10.0", "toolVersion": version, "status": "security-hardened", "implemented": []string{"TOTP enrollment", "Проверка TOTP и кодов восстановления при входе", "Одноразовые коды восстановления", "Сброс пароля с помощью токена", "Подтверждение электронной почты с помощью токена", "Блокировка после неудачных попыток входа", "События аудита безопасности"}, "endpoints": []string{"/api/v1/auth/totp/enroll", "/api/v1/auth/totp/enroll", "/api/v1/auth/totp/verify", "/api/v1/auth/recovery-codes/regenerate", "/api/v1/auth/password-reset/request", "/api/v1/auth/password-reset/confirm", "/api/v1/auth/email-verification/request", "/api/v1/auth/email-verification/confirm"}})
+		return writeOrPrintJSON(out, map[string]any{"schemaVersion": "0.10.0", "toolVersion": version, "status": "security-hardened", "implemented": []string{"Подключение TOTP", "Проверка TOTP и кодов восстановления при входе", "Одноразовые коды восстановления", "Сброс пароля с помощью токена", "Подтверждение электронной почты с помощью токена", "Блокировка после неудачных попыток входа", "События аудита безопасности"}, "endpoints": []string{"/api/v1/auth/totp/enroll", "/api/v1/auth/totp/enroll", "/api/v1/auth/totp/verify", "/api/v1/auth/recovery-codes/regenerate", "/api/v1/auth/password-reset/request", "/api/v1/auth/password-reset/confirm", "/api/v1/auth/email-verification/request", "/api/v1/auth/email-verification/confirm"}})
 	case "supply-chain":
 		return writeOrPrintJSON(out, supplyChainSecurityModel())
 	case "keys":

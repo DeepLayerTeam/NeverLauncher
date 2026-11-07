@@ -79,7 +79,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         stopping.set(false);
         BukkitFamilyPlatform actual = BukkitFamilyPlatform.detect();
         if (actual != expectedPlatform) {
-            getLogger().severe("Launcher " + expectedPlatform.displayName() + " Bridge не может работать на обнаруженной платформе " + actual.displayName() + ". Install launcher-" + actual.id() + "-bridge instead.");
+            getLogger().severe("Launcher " + expectedPlatform.displayName() + " Bridge не может работать на обнаруженной платформе " + actual.displayName() + ". Установите вместо него launcher-" + actual.id() + "-bridge.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }

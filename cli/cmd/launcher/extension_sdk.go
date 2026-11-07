@@ -566,7 +566,7 @@ func (h *localDevHost02010) capabilityHandler(w http.ResponseWriter, r *http.Req
 	case "extension.self":
 		writeJSON02010(w, 200, map[string]any{"extensionId": h.manifest.ID, "version": h.manifest.Version, "scope": "global", "generation": 1, "manifest": h.manifest})
 	case "project.get":
-		writeJSON02010(w, 200, map[string]any{"project": map[string]any{"id": "dev-project", "name": "Local Dev Project"}})
+		writeJSON02010(w, 200, map[string]any{"project": map[string]any{"id": "dev-project", "name": "Локальный проект разработки"}})
 	case "release.list":
 		writeJSON02010(w, 200, map[string]any{"items": []any{}})
 	case "telemetry.emit":
@@ -740,7 +740,7 @@ func serveUIDev02010(ctx context.Context, root string, target CanonicalExtension
 	})
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, `<!doctype html><html><body><iframe id="ext" sandbox="allow-scripts" src="/extension" style="width:100%%;height:90vh;border:0"></iframe><script>const P=%q,F=document.getElementById('ext');F.onload=()=>F.contentWindow.postMessage({protocol:P,type:'host.context',context:{extensionId:%q,version:%q,scope:'global',scopeId:'',pageId:'main',actionId:'',bridgeAllowed:false}},'*');addEventListener('message',e=>{if(e.source!==F.contentWindow||!e.data||e.data.protocol!==P||e.data.type!=='rpc.request')return;let result={};switch(e.data.method){case'context.get':result={extensionId:%q,version:%q,scope:'global',scopeId:'',pageId:'main',actionId:'',bridgeAllowed:false};break;case'projects.list':result=[{id:'dev-project',name:'Local Dev Project'}];break;case'releases.list':result=[];break;case'tauri.platform':result={os:%q,arch:%q};break;default:F.contentWindow.postMessage({protocol:P,type:'rpc.response',id:e.data.id,error:'Метод недоступен в локальном хосте разработки'},'*');return}F.contentWindow.postMessage({protocol:P,type:'rpc.response',id:e.data.id,result},'*')});</script></body></html>`, protocol, manifest.ID, manifest.Version, manifest.ID, manifest.Version, runtime.GOOS, runtime.GOARCH)
+		fmt.Fprintf(w, `<!doctype html><html><body><iframe id="ext" sandbox="allow-scripts" src="/extension" style="width:100%%;height:90vh;border:0"></iframe><script>const P=%q,F=document.getElementById('ext');F.onload=()=>F.contentWindow.postMessage({protocol:P,type:'host.context',context:{extensionId:%q,version:%q,scope:'global',scopeId:'',pageId:'main',actionId:'',bridgeAllowed:false}},'*');addEventListener('message',e=>{if(e.source!==F.contentWindow||!e.data||e.data.protocol!==P||e.data.type!=='rpc.request')return;let result={};switch(e.data.method){case'context.get':result={extensionId:%q,version:%q,scope:'global',scopeId:'',pageId:'main',actionId:'',bridgeAllowed:false};break;case'projects.list':result=[{id:'dev-project',name:'Локальный проект разработки'}];break;case'releases.list':result=[];break;case'tauri.platform':result={os:%q,arch:%q};break;default:F.contentWindow.postMessage({protocol:P,type:'rpc.response',id:e.data.id,error:'Метод недоступен в локальном хосте разработки'},'*');return}F.contentWindow.postMessage({protocol:P,type:'rpc.response',id:e.data.id,result},'*')});</script></body></html>`, protocol, manifest.ID, manifest.Version, manifest.ID, manifest.Version, runtime.GOOS, runtime.GOARCH)
 	})
 	server := &http.Server{Handler: mux, ReadHeaderTimeout: 3 * time.Second}
 	go func() {

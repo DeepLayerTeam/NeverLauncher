@@ -33,7 +33,7 @@ func handleAdmin(args []string) error {
 	case "storage-health":
 		payload, _, err = adminBackendGet(args, "/api/v1/admin/storage/health")
 	case "create-project":
-		body := map[string]any{"id": flagValue(args, "--project", "demo-project"), "name": flagValue(args, "--name", "Demo Project"), "description": flagValue(args, "--description", ""), "homepage": flagValue(args, "--homepage", ""), "repository": flagValue(args, "--repository", ""), "defaultChannel": flagValue(args, "--channel", "stable")}
+		body := map[string]any{"id": flagValue(args, "--project", "demo-project"), "name": flagValue(args, "--name", "Демонстрационный проект"), "description": flagValue(args, "--description", ""), "homepage": flagValue(args, "--homepage", ""), "repository": flagValue(args, "--repository", ""), "defaultChannel": flagValue(args, "--channel", "stable")}
 		payload, _, err = adminBackendPost(args, "/api/v1/admin/projects", body)
 	case "update-project":
 		project := flagValue(args, "--project", "")
@@ -277,7 +277,7 @@ func packaging940ReleaseGates() []map[string]any {
 		{"id": "cli-build", "required": true, "status": "required", "check": "go build ./cmd/launcher"},
 		{"id": "admin-build", "required": true, "status": "required", "check": "npm ci && npm run build --prefix apps/admin"},
 		{"id": "desktop-web-build", "required": true, "status": "required", "check": "npm ci && npm run build --prefix apps/desktop"},
-		{"id": "tauri-native-build", "required": true, "status": "external", "check": "cargo/tauri build on Linux/Windows/macOS runner"},
+		{"id": "tauri-native-build", "required": true, "status": "external", "check": "сборка cargo/tauri в среде Linux, Windows или macOS"},
 		{"id": "checksums", "required": true, "status": "implemented", "check": "контрольные суммы SHA256SUMS сформированы и проверены"},
 		{"id": "sbom", "required": true, "status": "implemented", "check": "файл SBOM.spdx.json присутствует"},
 		{"id": "provenance", "required": true, "status": "implemented", "check": "файл PROVENANCE.json присутствует"},

@@ -546,7 +546,7 @@ func publishTransactionPlan(kind, subject, channel, releaseVersion string) map[s
 		"channel":       channel,
 		"version":       releaseVersion,
 		"status":        "transaction-plan",
-		"transaction":   []string{"BEGIN", "lock project/channel", "Проверьте профиль и манифест", "insert version draft", "привязать объекты хранилища", "записать событие аудита", "перевести указатель канала на новую версию", "COMMIT"},
+		"transaction":   []string{"BEGIN", "заблокировать проект и канал", "Проверьте профиль и манифест", "добавить черновик версии", "привязать объекты хранилища", "записать событие аудита", "перевести указатель канала на новую версию", "COMMIT"},
 		"rollback":      []string{"ОТКАТ при ошибке проверки", "не изменять указатель канала", "оставить предыдущую опубликованную версию неизменной"},
 	}
 }

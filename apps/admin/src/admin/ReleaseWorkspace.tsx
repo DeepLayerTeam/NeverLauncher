@@ -1212,7 +1212,7 @@ export function ReleaseWorkspace({
           </div>
           <p>
             <strong>Целостность:</strong>{" "}
-            {report?.integrity?.result || "не выполнено"} · Manifest:{" "}
+            {report?.integrity?.result || "не выполнено"} · Манифест:{" "}
             <code>{report?.integrity?.manifestDigest || "—"}</code>
           </p>
           <p>
@@ -1224,16 +1224,16 @@ export function ReleaseWorkspace({
             "production-runtime-gate-0.34.11"
               ? "· обязательная доверенная сертификация среды выполнения"
               : policy?.requireServerJoin
-                ? "· требуется Server Join"
+                ? "· требуется подключение к серверу"
                 : ""}
           </p>
           <p>
             <strong>Устаревший Runtime v1:</strong>{" "}
             {report?.runtime?.filter((x) => x.result === "passed").length || 0}{" "}
-            результатов · не являются сертификацией stable
+            результатов · не являются сертификацией стабильного выпуска
           </p>
           <p className="muted">
-            Legacy smoke-test и загружаемый runtime evidence v1 не дают допуска
+            Устаревший проверочный запуск и загружаемые свидетельства среды выполнения v1 не дают допуска
             в stable. Для stable требуется отдельная доверенная
             ValidationEvidence v4 от независимого аттестатора с полным покрытием
             targets.

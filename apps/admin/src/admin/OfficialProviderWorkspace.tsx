@@ -30,7 +30,7 @@ export function OfficialProviderWorkspace02611({ backendUrl, token }: { backendU
   function update(p: Partial<Policy>) { setDraft(old => old ? { ...old, ...p } : null); setNotice(''); }
   async function perform(task: () => Promise<void>) { setBusy(true);setError('');setNotice('');try { await task(); }catch(e){ setError(e instanceof Error ? e.message : String(e));}finally{setBusy(false);} }
   const changed = !!current && !!draft && JSON.stringify(current.settings) !== JSON.stringify(draft);
-  return <section className="card wide"><div className="registryHeading"><div><h2>Провайдер Microsoft / Xbox / Minecraft</h2><p className="muted">Настройки собственного public Microsoft-приложения. Только личные Microsoft accounts; секреты и токены здесь не вводятся.</p></div><button disabled={busy} onClick={() => void perform(refresh)}>Обновить</button></div>
+  return <section className="card wide"><div className="registryHeading"><div><h2>Провайдер Microsoft / Xbox / Minecraft</h2><p className="muted">Настройки собственного общедоступного приложения Microsoft. Поддерживаются только личные учётные записи Microsoft; секреты и токены здесь не вводятся.</p></div><button disabled={busy} onClick={() => void perform(refresh)}>Обновить</button></div>
     {draft && current ? <>
       <p>Ревизия #{current.revision || 0} · {current.revision === 0 ? 'Используются начальные настройки окружения' : `Изменено: ${current.createdAt || '—'}`}</p>
       <div className="configFields">

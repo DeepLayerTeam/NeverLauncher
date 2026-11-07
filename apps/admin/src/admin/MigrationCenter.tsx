@@ -2197,11 +2197,11 @@ export function MigrationCenter0331({
             сервера.
           </p>
           <label className="field">
-            <span>JSON source fence receipt, полученной командой verify-source-fence после остановки Gravit</span>
+            <span>JSON-квитанция фиксации исходного состояния, полученная командой verify-source-fence после остановки Gravit</span>
             <textarea rows={5} value={cutoverReceipt0448} onChange={(e) => setCutoverReceipt0448(e.target.value)} />
           </label>
           <label className="field">
-            <span>Ссылка на доказательство source fence</span>
+            <span>Ссылка на подтверждение фиксации исходного состояния</span>
             <input
               value={cutoverFenceRef03311}
               onChange={(e) => setCutoverFenceRef03311(e.target.value)}

@@ -26,7 +26,7 @@ func (s Server) adminOpsReadiness(w http.ResponseWriter, r *http.Request) {
 func (s Server) adminOpsDiagnostics(w http.ResponseWriter, r *http.Request) {
 	payload := s.adminOps9100Payload("diagnostics")
 	payload["center"] = map[string]any{
-		"cards":     []string{"API", "PostgreSQL", "Storage", "Redis (необязательно)", "Сборка панели администратора", "Сборка настольного клиента", "ServerBridge", "Определение среды выполнения", "Целостность пакетов", "Сквозная проверка промышленного окружения"},
+		"cards":     []string{"API", "PostgreSQL", "Хранилище", "Redis (необязательно)", "Сборка панели администратора", "Сборка настольного клиента", "ServerBridge", "Определение среды выполнения", "Целостность пакетов", "Сквозная проверка промышленного окружения"},
 		"redaction": "privacy-by-default",
 		"export":    "Диагностический пакет с удалёнными конфиденциальными данными",
 	}

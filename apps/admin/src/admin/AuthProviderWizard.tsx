@@ -300,7 +300,7 @@ export function AuthProviderWizard02910({
         <div aria-label="Отчёт о подключении">
           <h3>Проверка соединения</h3>
           <p>
-            Состояние: {test.healthy ? "OK" : "ошибка"} · Учётные данные:{" "}
+            Состояние: {test.healthy ? "исправен" : "ошибка"} · Учётные данные:{" "}
             {test.credentialReferencesVerified
               ? "проверены без раскрытия"
               : "не проверены"}
