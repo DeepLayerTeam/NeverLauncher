@@ -150,7 +150,7 @@ def main() -> None:
                 "server.drain",
                 {"enabled": "false", "reason": "Launcher GA 0.22.0 probe cleanup"},
             )
-    print("[admin-ga-0220] операции Bridge save/drain/undrain и повтор прошли проверку ACK: PASS")
+    print("[admin-ga-0220] операции сохранения, перевода в режим обслуживания, возврата из него и повторного запроса через ServerBridge прошли проверку подтверждений: PASS")
 
 
 if __name__ == "__main__":

@@ -176,7 +176,7 @@ def main() -> int:
                     f"[Launcher] Проверка сенсора Guard 0.18.2: заглушка {forbidden!r} в {path}"
                 )
 
-    print("[Launcher] Guard Sensor 0.18.2: проверка: OK")
+    print("[Launcher] Сенсор Guard 0.18.2: проверка: OK")
     return 0
 
 

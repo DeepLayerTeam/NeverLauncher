@@ -200,7 +200,7 @@ def main() -> int:
                     f"[Launcher] Проверка целостности потоков и процессов 0.18.6: заглушка {forbidden!r} в {path}"
                 )
 
-    print("[Launcher] Thread & Process Integrity 0.18.6: проверка: OK")
+    print("[Launcher] Контроль целостности потоков и процессов 0.18.6: проверка: OK")
     return 0
 
 

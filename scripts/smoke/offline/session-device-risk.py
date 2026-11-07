@@ -143,7 +143,7 @@ if (
     and resource_exists(ROOT, cli_migration)
     and api_migration.read_bytes() != resource_read_bytes(ROOT, cli_migration)
 ):
-    errors.append("0015 migration drift: API и CLI содержат разные SQL")
+    errors.append("расхождение миграции 0015: API и CLI содержат разные SQL-скрипты")
 
 if errors:
     print("проверка привязки сеанса к устройству и интеграции рисков НЕ ПРОЙДЕНА:", file=sys.stderr)

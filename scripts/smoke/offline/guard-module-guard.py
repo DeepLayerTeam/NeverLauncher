@@ -143,7 +143,7 @@ def main() -> int:
                     f"[Launcher] Проверка защиты модулей 0.18.3: заглушка {forbidden!r} в {path}"
                 )
 
-    print("[Launcher] Module Guard 0.18.3: проверка: OK")
+    print("[Launcher] Защита модулей Guard 0.18.3: проверка: OK")
     return 0
 
 

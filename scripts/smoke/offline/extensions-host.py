@@ -152,4 +152,4 @@ for envfile in (
     ):
         require(key in env, f"{envfile} missing {key}")
 
-print("Extensions Host 1 0.20.5: проверка готовности к эксплуатации: OK")
+print("Хост расширений I 0.20.5: проверка готовности к эксплуатации: OK")

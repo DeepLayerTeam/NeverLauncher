@@ -109,4 +109,4 @@ subprocess.run(
 subprocess.run(
     [sys.executable, str(ROOT / "scripts/device_trust/test_matrix.py")], check=True
 )
-print(f"[Launcher] Проверка выпуска Device Trust пройдена: OK ({version})")
+print(f"[Launcher] Проверка выпуска подсистемы доверия к устройствам пройдена: OK ({version})")

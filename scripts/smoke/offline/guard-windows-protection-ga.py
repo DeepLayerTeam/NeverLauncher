@@ -174,4 +174,4 @@ for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
             f"[Launcher] Проверка защиты Windows GA 0.19.0: заглушка {marker!r} в реализации"
         )
 
-print(f"[Launcher] Guard Windows Protection GA 0.19.0: проверка готовности к эксплуатации: OK ({version})")
+print(f"[Launcher] Выпуск защиты Guard для Windows (GA) 0.19.0: проверка готовности к эксплуатации: OK ({version})")

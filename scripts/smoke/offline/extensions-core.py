@@ -77,4 +77,4 @@ if "registry_entries" in read(
 ) or "desktop_packages" in read("cli/cmd/launcher/release_commands.go"):
     raise SystemExit("productionTables по-прежнему содержит несуществующие таблицы устаревшей системы расширений")
 
-print("Extensions Core 0.20.1: проверка готовности к эксплуатации: OK")
+print("Ядро расширений 0.20.1: проверка готовности к эксплуатации: OK")

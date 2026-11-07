@@ -122,4 +122,4 @@ if "guard-integrity-evidence-0132.py" not in preflight:
     raise SystemExit("Guard 0.13.2: проверка целостности не подключена к предварительной проверке выпуска")
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
-print(f"[Launcher] Проверка свидетельств целостности Guard Windows v1: OK; версия={version}")
+print(f"[Launcher] Проверка свидетельств целостности Guard для Windows v1: OK; версия={version}")

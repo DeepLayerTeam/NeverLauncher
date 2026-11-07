@@ -190,7 +190,7 @@ def main() -> int:
                     f"[Launcher] Проверка агрессивного движка перехватов I 0.18.4: заглушка {forbidden!r} в {path}"
                 )
 
-    print("[Launcher] Aggressive Hook Engine I 0.18.4: проверка: OK")
+    print("[Launcher] Усиленный механизм контроля перехватов I 0.18.4: проверка: OK")
     return 0
 
 

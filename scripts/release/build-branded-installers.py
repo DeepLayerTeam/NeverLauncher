@@ -249,7 +249,7 @@ def apply_windows_brand_icon(executable, branding):
 
     png = base64.b64decode(asset, validate=True)
     if len(png) < 24 or png[:8] != b"\x89PNG\r\n\x1a\n":
-        raise ValueError("signed brand icon: требуется PNG")
+        raise ValueError("Значок бренда подписанного установщика: требуется PNG")
     width, height = struct.unpack_from(">II", png, 16)
     if not (1 <= width <= 256 and 1 <= height <= 256):
         raise ValueError("Для нативного значка Windows требуется PNG не более 256×256 пикселей")

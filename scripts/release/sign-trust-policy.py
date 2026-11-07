@@ -30,7 +30,7 @@ def _no_duplicate_keys(items):
 
 def _read_policy(path: Path):
     if path.is_symlink() or not path.is_file():
-        raise ValueError("trust policy source: требуется обычный файл без символических ссылок")
+        raise ValueError("Исходный файл политики доверия: требуется обычный файл без символических ссылок")
     with path.open("rb") as stream:
         payload = stream.read(96 * 1024 + 1)
     if len(payload) > 96 * 1024:

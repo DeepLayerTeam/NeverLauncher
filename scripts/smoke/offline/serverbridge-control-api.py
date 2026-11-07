@@ -177,4 +177,4 @@ for required_sql in (
     if required_sql not in migration:
         raise SystemExit(f"В миграции управления отсутствует {required_sql!r}")
 
-print("ServerBridge 0.19.5: проверка Control API для эксплуатации: PASS")
+print("ServerBridge 0.19.5: проверка API управления для эксплуатации: PASS")

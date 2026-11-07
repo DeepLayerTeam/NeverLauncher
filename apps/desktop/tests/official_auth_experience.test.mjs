@@ -83,7 +83,7 @@ const fixture = () => {
       case "official_identity_texture_0262":
         return selected;
       default:
-        throw Error(`Unexpected command ${command}`);
+        throw Error(`Непредусмотренная команда ${command}`);
     }
   };
   const client = new OfficialMinecraftClient0257(
@@ -112,7 +112,7 @@ const waitFor = async (predicate) => {
     if (predicate()) return;
     await new Promise((resolve) => setImmediate(resolve));
   }
-  throw Error("condition not reached");
+  throw Error("Условие не выполнено за отведённое число проверок");
 };
 
 test("Восстанавливает проверенный нативный профиль и каталог без раскрытия учётных данных", async () => {
@@ -304,7 +304,7 @@ test("Отмена входа через браузер не запускает 
         return;
       }
       if (command === "official_identity_browser_login_0263")
-        throw Error("must not launch");
+        throw Error("Запуск не должен выполняться");
       throw Error(command);
     },
   );
@@ -330,7 +330,7 @@ test("Отмена кода устройства во время первого 
         return;
       }
       if (command === "official_identity_begin_0262")
-        throw Error("must not begin");
+        throw Error("Операция не должна начинаться");
       throw Error(command);
     },
   );

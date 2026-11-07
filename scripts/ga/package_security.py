@@ -32,7 +32,7 @@ def evidence_files(version: str = "0.43.1") -> tuple[str, ...]:
 
 def package(evidence: Path, approval: dict, destination: Path, *, now=None) -> None:
     if not required(approval["version"]):
-        raise ValueError("security evidence bundling: требуется «0.43.1+»")
+        raise ValueError("Формирование пакета свидетельств безопасности: требуется «0.43.1+»")
     verify_all(evidence, approval, now=now)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".tmp")

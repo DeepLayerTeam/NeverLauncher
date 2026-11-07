@@ -170,4 +170,4 @@ for rel, text in [
                 f"[Launcher] Проверка защиты с учётом JVM 0.18.8: заглушка {placeholder!r} в {rel}"
             )
 
-print("[Launcher] JVM-Aware Protection 0.18.8: проверка: OK")
+print("[Launcher] Защита с учётом JVM 0.18.8: проверка: OK")

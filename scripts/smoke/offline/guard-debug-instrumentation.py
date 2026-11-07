@@ -169,4 +169,4 @@ for rel, text in [
                 f"[Launcher] Проверка защиты от отладки и инструментирования 0.18.7: заглушка {placeholder!r} в {rel}"
             )
 
-print("[Launcher] Debug & Instrumentation Guard 0.18.7: проверка: OK")
+print("[Launcher] Защита от отладки и инструментирования 0.18.7: проверка: OK")

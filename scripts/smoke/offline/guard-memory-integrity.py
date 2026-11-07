@@ -172,7 +172,7 @@ def main() -> int:
                     f"[Launcher] Проверка целостности памяти 0.18.5: заглушка {forbidden!r} в {path}"
                 )
 
-    print("[Launcher] Memory Integrity 0.18.5: проверка: OK")
+    print("[Launcher] Контроль целостности памяти 0.18.5: проверка: OK")
     return 0
 
 

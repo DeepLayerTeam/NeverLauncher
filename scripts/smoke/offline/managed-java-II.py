@@ -72,7 +72,7 @@ require(
 )
 
 preflight = read("scripts/release/preflight.sh")
-require(preflight, ["managed-java-II-0165.py"], "Предварительная проверка Managed Java II")
+require(preflight, ["managed-java-II-0165.py"], "Предварительная проверка управляемой среды Java II")
 
 release = read("cli/cmd/launcher/release_commands.go")
 require(release, ["managed-java-II-8-16-17-21-25"], "Обязательная проверка релиза Managed Java II")
@@ -83,4 +83,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"Launcher {VERSION}: проверка Managed Java II: OK")
+print(f"Launcher {VERSION}: проверка управляемой среды Java II: OK")

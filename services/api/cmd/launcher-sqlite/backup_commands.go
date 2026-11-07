@@ -112,7 +112,7 @@ func runBackupAction(args []string) int {
 		}
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "sqlite "+action+" failed closed:", err)
+		fmt.Fprintln(os.Stderr, "sqlite "+action+" завершилась безопасным отказом:", err)
 		return 1
 	}
 	output["status"] = "ok"

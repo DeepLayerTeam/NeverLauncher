@@ -136,4 +136,4 @@ for token in (
         token in openapi_generator, f"В генераторе OpenAPI отсутствует элемент реестра {token}"
     )
 
-print("Extensions Registry 0.20.3: проверка готовности к эксплуатации: OK")
+print("Реестр расширений 0.20.3: проверка готовности к эксплуатации: OK")

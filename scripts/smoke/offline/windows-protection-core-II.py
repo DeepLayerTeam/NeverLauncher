@@ -145,7 +145,7 @@ def main() -> int:
                     f"[Launcher] Проверка ядра защиты Windows II 0.18.1: заглушка {forbidden!r} в {path}"
                 )
 
-    print("[Launcher] Windows Protection Core II 0.18.1: проверка: OK")
+    print("[Launcher] Ядро защиты Windows II 0.18.1: проверка: OK")
     return 0
 
 

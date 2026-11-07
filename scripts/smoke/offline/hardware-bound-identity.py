@@ -71,12 +71,12 @@ need('.github/workflows/ci.yml', [
 # привязку удалённой аттестацией или устойчивой к фишингу аутентификацией.
 server = (ROOT / 'services/api/internal/httpapi/device_trust_0121.go').read_text(encoding='utf-8')
 if 'Assurance:         "hardware"' in server or 'Assurance:         "attested"' in server:
-    errors.append('device trust handler: unattested hardware binding повышает assurance')
+    errors.append('обработчик доверия к устройству: аппаратная привязка без аттестации необоснованно повышает уровень доверия')
 
 migration_api = (ROOT / 'services/api/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql').read_bytes()
 migration_cli = resource_read_bytes(ROOT, 'cli/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql')
 if migration_api != migration_cli:
-    errors.append('migration 0013 differs between API and CLI catalogs')
+    errors.append('SQL-миграция 0013 различается в каталогах API и CLI')
 
 if errors:
     print('проверка идентичности с аппаратной привязкой НЕ ПРОЙДЕНА:', file=sys.stderr)
@@ -84,4 +84,4 @@ if errors:
         print(' - ' + item, file=sys.stderr)
     raise SystemExit(1)
 
-print('проверка идентичности с аппаратной привязкой пройдена: P-256 HSM path is wired, software fallback is explicit, hardware binding alone does not forge remote provenance')
+print('проверка идентичности с аппаратной привязкой пройдена: подключён путь P-256 через аппаратный модуль защиты ключей, программный резервный механизм указан явно, сама по себе аппаратная привязка не подтверждает происхождение ключа удалённой аттестацией')

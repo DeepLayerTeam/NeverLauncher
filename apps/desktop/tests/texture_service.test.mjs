@@ -256,11 +256,11 @@ test("Загрузка официального скина идёт только
     if (command === "official_identity_texture_0262") return updatedProfile;
   };
   globalThis.fetch = () => {
-    throw Error("official renderer fetch is forbidden");
+    throw Error("В интерфейсе запрещены прямые запросы fetch к официальному сервису");
   };
   globalThis.XMLHttpRequest = class {
     constructor() {
-      throw Error("official renderer XHR is forbidden");
+      throw Error("В интерфейсе запрещены прямые запросы XHR к официальному сервису");
     }
   };
   try {
@@ -366,7 +366,7 @@ test("0.39.4: реальная выдача Yggdrasil проверяет RSA-п�
         status: 200,
         headers: { "Content-Type": "image/png" },
       });
-    throw Error("Unexpected URL " + url);
+    throw Error("Непредусмотренный URL " + url);
   };
   const api = new TextureServiceClient0258(
     "https://never.example",

@@ -324,4 +324,4 @@ for text, label in (
         ],
         f"0.14.7 {label} wiring",
     )
-print(f"Launcher 0.14.7: проверка Forge и NeoForge ServerBridge: OK ({version})")
+print(f"Launcher 0.14.7: проверка ServerBridge для Forge и NeoForge: OK ({version})")

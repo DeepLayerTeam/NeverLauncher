@@ -101,4 +101,4 @@ if hybrid.get("productVersion") != version or any(
     x.get("status") != "not-certified" for x in hybrid.get("targets", [])
 ):
     raise SystemExit("Несовпадение: «метаданные гибридной сертификации 0.19.9+»")
-print("ServerBridge Zero-Patch Provisioning 0.19.9+: проверка готовности к эксплуатации: OK")
+print("Развёртывание ServerBridge без модификации сервера 0.19.9+: проверка готовности к эксплуатации: OK")

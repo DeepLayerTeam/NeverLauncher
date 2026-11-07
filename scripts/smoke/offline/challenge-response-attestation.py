@@ -94,7 +94,7 @@ need('services/api/internal/dbmigrate/sql/0014_challenge_response_attestation_01
 api = ROOT / 'services/api/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql'
 cli = 'cli/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql'
 if not api.is_file() or not resource_exists(ROOT, cli) or api.read_bytes() != resource_read_bytes(ROOT, cli):
-    errors.append('migration 0014 differs between API and CLI catalogs')
+    errors.append('SQL-миграция 0014 различается в каталогах API и CLI')
 
 native = (ROOT / 'apps/desktop/src-tauri/src/device_keys.rs').read_text(encoding='utf-8')
 start = native.find('pub fn attest_device_payload')
@@ -103,7 +103,7 @@ if end < 0:
     end = native.find('pub fn bind_device_key', start)
 attest = native[start:end]
 if 'validate_software_record' in attest or 'new_software_record' in attest or 'try_new_hardware_record' in attest:
-    errors.append('native attestation signer contains software/create fallback')
+    errors.append('в нативном модуле подписи аттестации обнаружен резервный путь через программную реализацию или создание ключа')
 
 if errors:
     print('Проверка аттестации запрос–ответ не пройдена:', file=sys.stderr)

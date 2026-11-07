@@ -131,4 +131,4 @@ for rel, text in [
                 f"[Launcher] Проверка Continuous Guard 0.18.9: заглушка {placeholder!r} в {rel}"
             )
 
-print("[Launcher] Continuous Guard 0.18.9: проверка: OK")
+print("[Launcher] Непрерывная защита Guard 0.18.9: проверка: OK")

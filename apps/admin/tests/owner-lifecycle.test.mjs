@@ -50,7 +50,7 @@ async function scripted(handlers, fn) {
       const pathname = new URL(url).pathname;
       visited.push([pathname, options]);
       const handler = handlers[pathname];
-      assert.ok(handler, `unexpected API request ${pathname}`);
+      assert.ok(handler, `Непредусмотренный запрос API: ${pathname}`);
       return json(typeof handler === "function" ? handler(options) : handler);
     };
     return await fn(visited);

@@ -20,7 +20,7 @@ def sign_manifest(raw: bytes) -> bytes:
     seed = os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_SEED", "").strip()
     public = os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", "").strip()
     if len(seed) != 64 or len(public) != 64:
-        raise ValueError("production Linux Guard manifest: требуется «закреплённый закрытый ключ подписи Ed25519 и публичный ключ»")
+        raise ValueError("Манифест производственной сборки Guard для Linux: требуется «закреплённый закрытый ключ подписи Ed25519 и публичный ключ»")
     try:
         key = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(seed))
         expected = bytes.fromhex(public)

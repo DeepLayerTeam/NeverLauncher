@@ -128,7 +128,7 @@ def main() -> None:
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n')
-    print('PASS: независимая проверка публичного SDK 0.48.12 на Java 17, Host, RPC Admin/Desktop, CLI и негативных сценариев безопасности')
+    print('PASS: независимая проверка публичного SDK 0.48.12 на Java 17, хоста, удалённых вызовов панели администратора и настольного приложения, CLI и негативных сценариев безопасности')
 
 
 if __name__ == '__main__':

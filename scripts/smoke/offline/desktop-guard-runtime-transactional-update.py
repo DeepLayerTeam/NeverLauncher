@@ -163,4 +163,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"Launcher {VERSION}: проверка транзакционного обновления Desktop/Guard/Runtime пройдена: OK")
+print(f"Launcher {VERSION}: проверка транзакционного обновления приложения, Guard и среды выполнения пройдена: OK")

@@ -34,7 +34,7 @@ test("Официальный сценарий использует только 
   };
   const originalFetch = globalThis.fetch;
   globalThis.fetch = () => {
-    throw Error("renderer must not call official API");
+    throw Error("Интерфейс не должен напрямую вызывать официальный API");
   };
   const originalDate = Date.now;
   try {
@@ -164,7 +164,7 @@ test("PKCE браузера вызывается только нативной �
       calls.push({ cmd, args });
       if (cmd === "official_identity_browser_login_0263") return profile;
       if (cmd === "official_identity_cancel_0262") return;
-      throw Error("Unexpected command " + cmd);
+      throw Error("Непредусмотренная команда " + cmd);
     },
   );
   assert.deepEqual(await client.browserLogin(), profile);
@@ -195,7 +195,7 @@ test("Отменённый вход через браузер не переда�
     async (cmd) => {
       if (cmd === "official_identity_cancel_0262") return;
       if (cmd === "official_identity_browser_login_0263") return pending;
-      throw Error("Unexpected command " + cmd);
+      throw Error("Непредусмотренная команда " + cmd);
     },
   );
   const login = client.browserLogin();
