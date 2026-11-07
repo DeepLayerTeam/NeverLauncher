@@ -1,6 +1,6 @@
-"""Real subprocess + Unix-socket transport tests against fake Backend/systemd.
+"""Тесты транспорта через реальные подпроцессы и Unix-сокеты с имитацией Backend и systemd.
 
-NOT evidence of running PostgreSQL, actual Gravit worlds or Minecraft join.
+Они НЕ подтверждают работу PostgreSQL, реальных миров Gravit или подключение к Minecraft.
 """
 import hashlib
 import json

@@ -98,7 +98,7 @@ def load_pinned_bundle(args):
 
 
 def serve(args):
-    require(ID.fullmatch(args.target) is not None, 'invalid target ID')
+    require(ID.fullmatch(args.target) is not None, 'некорректный идентификатор целевой платформы')
     require(args.loader in ('vanilla', 'fabric', 'quilt', 'forge', 'neoforge'), 'unknown loader')
     require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]{0,63}', args.minecraft) is not None, 'Некорректная версия Minecraft')
     runtime = Path(args.runtime).resolve(strict=True)

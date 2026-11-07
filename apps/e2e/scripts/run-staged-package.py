@@ -349,7 +349,7 @@ def execute(args):
         )
         report["stages"][stage_name] = {
             "status": "passed",
-            "detail": f"{len(pkg['files'])} staged files fetched and SHA-256 verified",
+            "detail": f"Загружены промежуточные файлы ({len(pkg['files'])}) и проверены по SHA-256",
         }
         stage_name = "materialization"
         install = work / "install.json"

@@ -360,7 +360,7 @@ def main() -> int:
             sums[parts[1].lstrip("*")] = parts[0].lower()
     for item in evidence:
         if sums.get(item["file"]) != item["sha256"]:
-            die(f"{item['id']}: SHA256SUMS mismatch")
+            die(f"{item['id']}: несовпадение контрольной суммы SHA256SUMS")
 
     # Перед сертификацией группы артефактов проверьте настоящую Java-политику
     # bridge-common для того же коммита. Это НЕ тест живого сервера Minecraft.

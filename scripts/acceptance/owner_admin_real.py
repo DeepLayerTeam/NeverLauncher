@@ -310,7 +310,7 @@ def deploy_call(env, action, *, email='', password_file=None):
 def no_existing_project(project):
     require(re.fullmatch(r'nl0523[a-z0-9]{8,20}', project) is not None,
             'Для стандартной приёмки требуется уникальное пространство имён проекта Docker nl0523')
-    require(shutil.which('docker'), 'Docker is required')
+    require(shutil.which('docker'), 'Требуется Docker')
     for cmd in (['docker', 'ps', '-a', '--filter', 'label=com.docker.compose.project='+project, '--format', '{{.ID}}'],
                 ['docker', 'volume', 'ls', '--filter', 'label=com.docker.compose.project='+project, '--quiet'],
                 ['docker', 'network', 'ls', '--filter', 'label=com.docker.compose.project='+project, '--quiet']):

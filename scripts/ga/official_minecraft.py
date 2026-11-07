@@ -208,7 +208,7 @@ def verify_target(
     )
     require(
         att.stat().st_size <= 64 * 1024 and sig.stat().st_size <= 256,
-        "oversized GA attestation/signature",
+        "превышен допустимый размер аттестации или подписи GA",
     )
     raw = att.read_bytes()
     try:

@@ -134,12 +134,12 @@ def run(base, email, password):
         "PATCH",
         path,
         token=token,
-        payload={"description": "real journey acceptance 0351"},
+        payload={"description": "приёмочная проверка реального пользовательского сценария 0351"},
     )
     _, public = api.request("GET", "/api/v1/projects/" + quote(project, safe=""))
     require(
         public.get("id") == project
-        and public.get("description") == "real journey acceptance 0351",
+        and public.get("description") == "приёмочная проверка реального пользовательского сценария 0351",
         "Данные проекта, доступные игроку, не совпадают с ожидаемыми",
     )
     record("owner-create-update-player-read-project")

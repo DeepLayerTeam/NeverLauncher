@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: plan
-        name: Validate and generate immutable CI plan
+        name: Проверить совместимость и сформировать неизменяемый план CI
         shell: bash
         run: |
           set -euo pipefail

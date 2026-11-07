@@ -110,7 +110,7 @@ def metadata() -> dict:
         "cpuModel": platform.processor() or None,
         "totalMemoryBytes": psutil.virtual_memory().total if psutil else None,
         "psutil": psutil.__version__ if psutil else None,
-        "fixtureType": "synthetic signed certification manifest; real native binary and actual bytes",
+        "fixtureType": "синтетический подписанный манифест сертификации; настоящий нативный бинарный файл и фактические байты",
         "disclaimer": "Нет сравнительного теста с другим лаунчером, подтверждения реального запуска Minecraft или заявлений о производительности рабочей среды",
     }
 
@@ -327,7 +327,7 @@ def verify_10k(
         "repetitions": repetitions,
         "elapsedMs": describe([r["elapsedMs"] for r in rows]),
         "runs": rows,
-        "engine": "runtime verify; SHA-256 and signed manifest",
+        "engine": "проверка средствами Runtime; SHA-256 и подписанный манифест",
     }
 
 
@@ -535,7 +535,7 @@ def benchmark_download(
         "warmUpdateElapsedMs": describe([r["warmUpdate"]["elapsedMs"] for r in rows]),
         "throughputMiBPerSec": describe([r["throughputMiBPerSec"] for r in rows]),
         "runs": rows,
-        "source": "actual loopback HTTP Range server, no external CDN",
+        "source": "настоящий HTTP-сервер с поддержкой Range на localhost; без внешней CDN",
     }
 
 
@@ -602,7 +602,7 @@ def benchmark_startup(
                         proc.kill()
                         proc.wait(timeout=5)
     return {
-        "startupDefinition": "process creation to React first double requestAnimationFrame, native marker",
+        "startupDefinition": "от создания процесса до первого двойного requestAnimationFrame в React; нативная метка",
         "note": "Холодный запуск — это первый запуск процесса, а НЕ очистка файлового кеша ОС или запуск компьютера после выключения; последующие запуски используют кеши ОС",
         "firstStart": rows[0],
         "subsequentStartMs": describe([r["elapsedMs"] for r in rows[1:]]),

@@ -1,7 +1,7 @@
-"""Integration-focused tests: real Unix HAProxy protocol and subprocess CLI transport.
+"""Интеграционные тесты реального протокола Unix-сокета HAProxy и вызовов CLI через подпроцессы.
 
-The test HAProxy and CLI are fakes; these tests cannot certify production
-Minecraft, a real PostgreSQL transaction, or a live proxy installation.
+В тестах применяются имитации HAProxy и CLI. Эти проверки не подтверждают работу
+Minecraft в производственной среде, реальную транзакцию PostgreSQL или установку действующего прокси.
 """
 import importlib.util
 import hashlib

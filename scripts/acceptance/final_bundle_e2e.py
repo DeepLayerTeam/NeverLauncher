@@ -129,7 +129,7 @@ def validate_live_report(data: dict, expected: dict) -> None:
             data.get(key) == expected[key]
             for key in ("productVersion", "sourceCommit", "binarySha256")
         ),
-        "live E2E tested a different version/commit/binary",
+        "В реальных сквозных тестах проверялись другая версия, коммит или бинарный файл",
     )
     require(
         data.get("scope") == "minimal-linux-real-process-no-ga-attestation",

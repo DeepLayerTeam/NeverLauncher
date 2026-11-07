@@ -45,7 +45,7 @@ def architecture(content: bytes, target: str) -> None:
             offset >= 0x40
             and offset + 24 <= len(content)
             and content[offset : offset + 4] == b"PE\0\0",
-            "bad PE header",
+            "некорректный заголовок PE",
         )
         actual = struct.unpack_from("<H", content, offset + 4)[0]
         require(
@@ -703,7 +703,7 @@ def dry_run(
             if source.name in expected:
                 require(
                     sha(target) == expected[source.name],
-                    "SHA256SUMS mismatch " + source.name,
+                    "Несовпадение контрольной суммы SHA256SUMS: " + source.name,
                 )
         copied_cli = stage / cli.name
         require(copied_cli.is_file(), "В пробной публикации отсутствует CLI выпуска")

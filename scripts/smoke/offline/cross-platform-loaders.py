@@ -60,7 +60,7 @@ for loader, (minecraft, java) in anchors.items():
             or row.get("loaderVersion") != "latest-stable"
         ):
             raise SystemExit(
-                f"{row.get('id')}: invalid 0.17.9 cross-platform target contract"
+                f"{row.get('id')}: некорректный контракт кроссплатформенных целей версии 0.17.9"
             )
 
 helper = read("e2e/scripts/lib/certification-platform.sh")

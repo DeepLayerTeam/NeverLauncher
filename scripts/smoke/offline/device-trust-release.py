@@ -46,7 +46,7 @@ req(
         "all-required-device-trust-targets-must-pass-exact-commit-evidence",
         "deviceTrustRelease0130",
     ],
-    "CLI Device Trust certification",
+    "Сертификация доверия к устройствам через CLI",
 )
 runtime = read("services/api/internal/httpapi/device_trust_release_0130.go")
 req(
@@ -59,7 +59,7 @@ req(
         "not-remotely-verified",
         "exact-commit-public-device-trust-matrix",
     ],
-    "runtime release contract",
+    "Контракт выпуска Runtime",
 )
 e2e = read("e2e/scripts/run-device-trust-e2e.sh")
 req(
@@ -70,12 +70,12 @@ req(
         "deviceTrustRelease0130:true",
         "deviceTrustRelease:$version",
     ],
-    "protocol E2E release evidence",
+    "Результаты сквозных проверок протокола для выпуска",
 )
 targets = json.loads(read("device-trust/targets.json"))
 if targets.get("productVersion") != version:
     raise SystemExit(
-        f"Device Trust targets version mismatch: {targets.get('productVersion')} != {version}"
+        f"Несовпадение версии целевых платформ доверия к устройствам: {targets.get('productVersion')} != {version}"
     )
 for t in targets["targets"]:
     if "deviceTrustRelease0130" not in t.get("requiredChecks", []):

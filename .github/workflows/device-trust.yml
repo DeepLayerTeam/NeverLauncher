@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: '3.12'
       - id: plan
-        name: Validate target policy and generate immutable plan
+        name: Проверить политику целевых платформ и сформировать неизменяемый план
         shell: bash
         run: |
           set -euo pipefail
