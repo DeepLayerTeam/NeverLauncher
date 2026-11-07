@@ -436,7 +436,7 @@ async fn guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     assert_eq!(
         report.continuous_guard.sensor_heartbeat_count,
         report.continuous_guard.guard_heartbeat_count,
-        "every Sensor heartbeat must receive exactly one Guard ACK"
+        "На каждый сигнал работоспособности датчика должно приходиться ровно одно подтверждение Guard"
     );
     assert_eq!(report.continuous_guard.last_cross_check_sha256.len(), 64);
     assert_eq!(report.continuous_guard.sensor_event_chain_sha256.len(), 64);
@@ -613,7 +613,7 @@ async fn guard_thread_process_integrity_tracks_job_bound_descendant_processes() 
     let module_report = session.report().module_guard;
     assert!(
         status.success(),
-        "Process Tree probe failed: {status}; guard violation: {}; process-tree violation: {}",
+        "Проверка дерева процессов завершилась ошибкой: {status}; нарушение Guard: {}; нарушение дерева процессов: {}",
         module_report.last_violation,
         module_report.thread_process_integrity.last_violation,
     );
@@ -668,7 +668,7 @@ async fn guard_thread_integrity_fail_closed_on_private_executable_thread_start()
     assert!(!report.thread_process_integrity.healthy);
     assert!(
         report.thread_process_integrity.violation_count >= 1,
-        "expected Thread & Process Integrity violation: {report:?}"
+        "Ожидалось нарушение целостности потоков и процессов: {report:?}"
     );
     assert!(
         report.thread_process_integrity.last_violation.contains("non-image executable memory")
@@ -704,7 +704,7 @@ async fn guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_a
         };
         assert!(
             err.contains("Debug & Instrumentation Guard rejected"),
-            "unexpected rejection for {forbidden}: {err}"
+            "Неожиданный отказ для {forbidden}: {err}"
         );
     }
 
@@ -726,7 +726,7 @@ async fn guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_a
         .collect::<Vec<_>>();
     assert!(
         args.iter().any(|arg| arg == "-XX:+DisableAttachMechanism"),
-        "Guard must enforce DisableAttachMechanism: {args:?}"
+        "Guard должен принудительно применять DisableAttachMechanism: {args:?}"
     );
 }
 
@@ -766,16 +766,16 @@ async fn guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach()
     let report = session.report().module_guard;
     assert!(
         debugger_status.success(),
-        "adversarial debugger did not attach/complete (status={debugger_status}); guard report={report:?}"
+        "Проверочный отладчик не смог подключиться или завершить работу (состояние={debugger_status}); отчёт Guard={report:?}"
     );
     assert!(!report.healthy, "защита модулей должна отражать нарушение границ отладки: {report:?}");
     assert!(
         !report.debug_instrumentation.healthy,
-        "live debugger must be detected specifically by Debug & Instrumentation Guard: {report:?}"
+        "Подсистема защиты от отладки и инструментирования должна обнаруживать подключение реального отладчика: {report:?}"
     );
     assert!(
         report.debug_instrumentation.violation_count >= 1,
-        "expected Debug & Instrumentation Guard violation: {report:?}"
+        "Ожидалось нарушение защиты от отладки и инструментирования: {report:?}"
     );
     assert!(
         report.debug_instrumentation.last_violation.contains("debugger")
@@ -824,7 +824,7 @@ async fn guard_jvm_aware_protection_accepts_certified_hotspot_jit() {
     assert!(report.integrity_check_count >= 2);
     assert!(
         report.baseline_private_executable_region_count > 0 || report.jit_transition_count > 0,
-        "expected HotSpot executable private baseline or observed JIT transitions: {report:?}"
+        "Ожидался исходный снимок приватной исполняемой памяти HotSpot либо обнаруженные переходы JIT: {report:?}"
     );
     assert_eq!(report.foreign_executable_transition_count, 0);
     assert_eq!(report.unknown_executable_transition_count, 0);

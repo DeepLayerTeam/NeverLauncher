@@ -103,7 +103,7 @@ class WorldRestore0454Tests(unittest.TestCase):
             with self.assertRaisesRegex(dr.DrillError, 'each captured'):
                 dr.validate_world_destinations(receipts, {}, stage)
 
-    @unittest.skipUnless(os.environ.get('NL_WORLD_CLI'), 'set NL_WORLD_CLI to a real built Go launcher binary')
+    @unittest.skipUnless(os.environ.get('NL_WORLD_CLI'), 'Укажите в NL_WORLD_CLI путь к собранному исполняемому файлу Go-лаунчера')
     def test_native_go_cli_world_backup_is_consumed_and_restored(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)

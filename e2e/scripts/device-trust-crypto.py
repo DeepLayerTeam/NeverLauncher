@@ -18,7 +18,7 @@ def run_bytes(*args: str, input_bytes: bytes | None = None) -> bytes:
     )
     if proc.returncode != 0:
         raise SystemExit(
-            f"command failed ({' '.join(args)}): {proc.stderr.decode(errors='replace').strip()}"
+            f"Команда завершилась ошибкой ({' '.join(args)}): {proc.stderr.decode(errors='replace').strip()}"
         )
     return proc.stdout
 

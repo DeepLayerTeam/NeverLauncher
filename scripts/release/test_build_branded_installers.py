@@ -33,7 +33,7 @@ def tiny_png():
 class NativePackageTests(unittest.TestCase):
     def test_signed_linux_deb_builder(self):
         if sys.platform != "linux":
-            self.skipTest("Debian package test requires Linux")
+            self.skipTest("Для проверки пакета Debian требуется Linux")
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
             pubkey = root / "root.hex"

@@ -58,12 +58,12 @@ def run(cli: Path, args: list[str], out: Path, expected: str) -> dict:
     )
     require(
         result.returncode == 0 and out.is_file(),
-        f"production client {args[0]} failed (exit {result.returncode}); {result.stderr.decode(errors='replace')[-3000:]}",
+        f"рабочий клиент {args[0]} завершился ошибкой (код выхода {result.returncode}); {result.stderr.decode(errors='replace')[-3000:]}",
     )
     obj = read(out)
     require(
         obj.get("status") == expected,
-        f"production client {args[0]} returned {obj.get('status')!r}, expected {expected}",
+        f"рабочий клиент {args[0]} вернул {obj.get('status')!r}, ожидалось {expected}",
     )
     return obj
 
@@ -520,7 +520,7 @@ def main() -> None:
         if args.action == action:
             for attr in required:
                 require(
-                    getattr(args, attr) is not None, f"{action}: --{attr} is required"
+                    getattr(args, attr) is not None, f"{action}: --{attr} обязателен"
                 )
     {"prepare": prepare, "rollback": rollback, "finalize": finalize}[args.action](args)
 

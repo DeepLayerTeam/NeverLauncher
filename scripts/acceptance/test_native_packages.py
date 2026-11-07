@@ -182,7 +182,7 @@ class FetchExecution(unittest.TestCase):
 
 
 @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gpg') and shutil.which('gpgv'),
-                     'requires actual Linux GNU Privacy Guard')
+                     'Требуется установленная в Linux утилита GNU Privacy Guard')
 class RealLinuxSignature(unittest.TestCase):
     def test_actual_detached_gpgv_signature_and_modified_package(self):
         with tempfile.TemporaryDirectory() as d:

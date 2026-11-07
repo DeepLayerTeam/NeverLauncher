@@ -178,6 +178,6 @@ for envfile in (
         "LAUNCHER_EXTENSION_EVENTS_MAX_RETRY_SECONDS=",
         "LAUNCHER_EXTENSION_EVENTS_BATCH_SIZE=",
     ):
-        require(key in env, f"{envfile} missing {key}")
+        require(key in env, f"{envfile} не найдено: {key}")
 
 print("Extensions 0.20.6: проверка событий и хуков: OK")

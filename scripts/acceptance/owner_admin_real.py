@@ -124,7 +124,7 @@ class HTTPS:
         except (URLError, OSError, TimeoutError) as exc:
             raise Blocked('Ошибка соединения или сертификата HTTPS: ' + type(exc).__name__) from None
         require(len(raw) <= 1024 * 1024 and code in expected,
-                f'{method} {route.split("?")[0]}: HTTP {code}, expected {expected}')
+                f'{method} {route.split("?")[0]}: HTTP {code}, ожидался код {expected}')
         try:
             parsed = json.loads(raw)
         except (ValueError, UnicodeError):
@@ -157,7 +157,7 @@ def verify_project(api, project, profile, channel, description, email, password)
     profiles = api.request('GET', '/api/v1/projects/' + project + '/profiles')
     channels = api.request('GET', '/api/v1/projects/' + project + '/channels')
     require(any(row.get('id') == profile for row in profiles.get('items', [])), 'profile lost')
-    require(any(row.get('id') == channel for row in channels.get('items', [])), 'channel lost')
+    require(any(row.get('id') == channel for row in channels.get('items', [])), 'Соединение с каналом потеряно')
     api.request('GET', '/api/v1/admin/audit', token=token)
     api.request('GET', '/api/v1/admin/audit', expected=(401, 403))
     return token

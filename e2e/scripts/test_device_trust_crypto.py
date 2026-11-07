@@ -48,7 +48,7 @@ def p1363_to_der(raw: bytes) -> bytes:
         ["sh", "-c", "command -v openssl >/dev/null"], check=False
     ).returncode
     == 0,
-    "OpenSSL is required",
+    "Требуется OpenSSL",
 )
 class DeviceTrustCryptoTests(unittest.TestCase):
     def test_ed25519_public_and_signature_are_backend_wire_format(self) -> None:

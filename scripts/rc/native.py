@@ -79,7 +79,7 @@ def pass_native(result: tuple[int, dict | None], status: str = "ready"):
     code, response = result
     require(
         code == 0 and isinstance(response, dict) and response.get("status") == status,
-        f"native operation did not return {status}",
+        f"Нативная операция не вернула состояние {status}",
     )
     return response
 

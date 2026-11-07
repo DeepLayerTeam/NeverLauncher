@@ -40,7 +40,7 @@ for token in (
     "MaxMemoryBytes",
     "MaxProcesses",
 ):
-    require(token in host, f"CLI Extension Host missing {token}")
+    require(token in host, f"В CLI отсутствует хост расширений {token}")
 handler = read("services/api/internal/httpapi/extension_desktop_cli_0209.go")
 for token in (
     "extensions.desktop-rpc.v1",
@@ -91,7 +91,7 @@ for token in (
     "/invoke",
     "namespace",
 ):
-    require(token in cli, f"CLI namespace runtime missing {token}")
+    require(token in cli, f"В CLI отсутствует пространство команд среды исполнения {token}")
 scaffold = read("cli/cmd/launcher/project_commands.go") + read(
     "cli/cmd/launcher/extension_sdk_02010.go"
 )

@@ -38,7 +38,7 @@ for row in rows:
         "guardRelease0139",
     }:
         if required not in checks:
-            raise SystemExit(f"{row.get('id')}: missing {required}")
+            raise SystemExit(f"{row.get('id')}: отсутствует {required}")
 
 matrix = read("scripts/guard_ci/matrix.py")
 require(

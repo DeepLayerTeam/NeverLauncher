@@ -70,7 +70,7 @@ for token in (
     "restoreExtensionHostAfterLifecycleFailure0205",
     "enable was compensated to disabled",
 ):
-    require(token in lifecycle, f"lifecycle/host integration missing {token}")
+    require(token in lifecycle, f"Отсутствует интеграция жизненного цикла и хоста {token}")
 updates = (
     read("services/api/internal/extensionupdates/updates_02011.go")
     if (ROOT / "services/api/internal/extensionupdates/updates_02011.go").is_file()

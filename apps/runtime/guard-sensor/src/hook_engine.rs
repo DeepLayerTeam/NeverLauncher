@@ -1225,7 +1225,7 @@ mod self_process_handle_tests {
         assert!(is_current_process_handle(pseudo));
         // Для GetProcessId достаточно PROCESS_QUERY_LIMITED_INFORMATION.
         let opened = unsafe { OpenProcess(0x1000, 0, GetCurrentProcessId()) };
-        assert!(!opened.is_null(), "OpenProcess(self) must succeed");
+        assert!(!opened.is_null(), "Открытие собственного процесса через OpenProcess должно завершаться успешно");
         assert!(is_current_process_handle(opened));
         assert_ne!(opened, pseudo);
         unsafe { CloseHandle(opened); }

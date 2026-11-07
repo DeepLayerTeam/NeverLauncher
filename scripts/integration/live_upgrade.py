@@ -144,7 +144,7 @@ def capture(a):
     rows = snapshot_api(a.base_url, token, a.project, a.profile, a.channel)
     sources = {}
     for kind, path in [('core',a.core_db),('http',a.http_db),('coordinator',a.coordinator_db)]:
-        require(path is not None, f'{kind} SQLite source required for GA')
+        require(path is not None, f'{kind}: для приёмки GA требуется источник SQLite')
         sources[kind] = fingerprint_sqlite(path, a.output.parent, kind)
     storage_sha, n, size = storage_fingerprint(a.storage)
     require(n > 0, 'Тестовый проект для финальной приёмки должен содержать реальные сохранённые объекты')

@@ -84,7 +84,7 @@ for token in (
     "extension_update_transactions",
     "in_flight",
 ):
-    require(token in migration, f"migration 0047 missing {token}")
+    require(token in migration, f"Отсутствует миграция 0047 {token}")
 manifest = json.loads(read("schemas/launcher-extension.schema.json"))
 require(
     "conflicts" in manifest.get("properties", {}),

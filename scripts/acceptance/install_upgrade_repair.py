@@ -52,7 +52,7 @@ def run(argv: list[str], *, expect_ok: bool, timeout: int = 900) -> dict:
     require(len(completed.stdout) < 128 * 1024 and len(completed.stderr) < 128 * 1024,
             'Нативный процесс создал слишком большой журнал')
     if expect_ok:
-        require(completed.returncode == 0, f'{Path(argv[0]).name} failed (exit={completed.returncode})')
+        require(completed.returncode == 0, f'Команда {Path(argv[0]).name} завершилась ошибкой (код выхода={completed.returncode})')
     else:
         require(completed.returncode != 0, f'{Path(argv[0]).name} Операция ошибочно завершилась успешно при имитированном отказе')
     # Не публикуйте stdout/stderr: инструменты источника могут вывести секретные учётные данные.

@@ -35,7 +35,7 @@ class CertifyJRETests(unittest.TestCase):
         os_name = {"Linux": "linux", "Darwin": "macos"}.get(platform.system(), platform.system().lower())
         arch = mod.normalize_arch(platform.machine())
         if os_name not in {"linux", "macos"} or arch not in {"x86_64", "aarch64"}:
-            self.skipTest("unsupported test host")
+            self.skipTest("Текущая система не поддерживается этим тестом")
         with tempfile.TemporaryDirectory() as tmp:
             java_home = Path(tmp) / "jdk"
             java = java_home / "bin" / "java"
@@ -68,7 +68,7 @@ class CertifyJRETests(unittest.TestCase):
         os_name = {"Linux": "linux", "Darwin": "macos"}.get(platform.system(), platform.system().lower())
         arch = mod.normalize_arch(platform.machine())
         if os_name not in {"linux", "macos"} or arch not in {"x86_64", "aarch64"}:
-            self.skipTest("unsupported test host")
+            self.skipTest("Текущая система не поддерживается этим тестом")
         with tempfile.TemporaryDirectory() as tmp:
             java = Path(tmp) / "java"
             java.write_text(

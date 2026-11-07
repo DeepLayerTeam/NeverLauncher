@@ -127,7 +127,7 @@ class LiveAPI:
         except (URLError, OSError, TimeoutError):
             raise Blocked('Ошибка соединения или сертификата HTTPS Backend') from None
         require(len(raw) <= 262144, 'Ответ Backend превышает допустимый размер')
-        require(status in expected, f'{method} {route.split("?")[0]} returned HTTP {status}, expected {expected}')
+        require(status in expected, f'{method} {route.split("?")[0]} вернул HTTP {status}, ожидался код {expected}')
         try:
             parsed = json.loads(raw)
         except (UnicodeError, ValueError):

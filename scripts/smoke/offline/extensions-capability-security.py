@@ -104,7 +104,7 @@ for token in (
     "--stdin",
     "LAUNCHER_EXTENSION_SECRET_VALUE",
 ):
-    require(token in cli, f"CLI capability security missing {token}")
+    require(token in cli, f"В CLI отсутствует проверка безопасности возможностей {token}")
 routing = read("cli/cmd/launcher/extension_commands_0201.go")
 require(
     "handleExtensionSecurity0207" in routing

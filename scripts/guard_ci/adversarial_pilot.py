@@ -114,7 +114,7 @@ def verify_shadow_file(path: Path, key: bytes) -> list[dict]:
             require(type(record['timestampMs']) is int and 1_500_000_000_000 < record['timestampMs'] <= int(time.time() * 1000) + 300_000 and record['timestampMs'] >= last_ts, 'Недопустимое или немонотонное время наблюдения')
             last_ts = record['timestampMs']
             for name in ('sessionKey', 'nodeKey'):
-                require(isinstance(record[name], str) and bool(HEX.fullmatch(record[name])), f'invalid {name}')
+                require(isinstance(record[name], str) and bool(HEX.fullmatch(record[name])), f'некорректное значение {name}')
             require(record['outcome'] in ('allowed', 'revoked'), 'Неподдерживаемый результат теневого режима')
             require(isinstance(record['reason'], str) and bool(SAFE.fullmatch(record['reason'])), 'Причина содержит чувствительные данные или некорректна')
             require((record['reason'] == 'none') == (record['outcome'] == 'allowed'), 'Недопустимое сочетание результата и причины')

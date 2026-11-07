@@ -59,7 +59,7 @@ class API:
             data = e.read(MAX_BODY + 1)
         require(len(data) <= MAX_BODY, "Ответ Backend превышает допустимый размер")
         require(
-            status in expected, f"{method} {path}: expected {expected}, got {status}"
+            status in expected, f"{method} {path}: ожидалось {expected}, получено {status}"
         )
         if not data:
             return status, {}

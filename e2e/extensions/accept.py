@@ -40,7 +40,7 @@ def run(args, *, success=True, timeout=110):
                           capture_output=True, timeout=timeout, check=False)
     if (proc.returncode == 0) != success:
         raise RuntimeError(f"command {' '.join(str(x) for x in args)}: "
-                           f"exit {proc.returncode}, expected success={success}\n"
+                           f"код выхода {proc.returncode}, ожидался успешный результат={success}\n"
                            f"stdout={proc.stdout[-2500:]}\nstderr={proc.stderr[-2500:]}")
     return proc
 
