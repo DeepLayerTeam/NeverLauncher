@@ -63,7 +63,7 @@ concurrency:
 
 jobs:
   validate-release-ref:
-    name: Require main branch exact source
+    name: Обязательное совпадение исходников с веткой main
     runs-on: ubuntu-24.04
     steps:
       - name: Отклонить запуск промышленного релиза не из основной ветки
@@ -73,12 +73,12 @@ jobs:
           test "$GITHUB_REF" = "refs/heads/main" || { echo "кандидат в производственный релиз можно запускать только из refs/heads/main" >&2; exit 2; }
 
   base-ci:
-    name: Exact-commit main certification and full E2E
+    name: Сертификация точного коммита ветки main и полные сквозные тесты
     needs: [validate-release-ref]
     uses: ./.github/workflows/ci.yml
 
   native-game-acceptance:
-    name: Required six-native-platform Minecraft positive and adversarial E2E
+    name: Обязательные успешные и негативные сквозные тесты Minecraft на шести нативных платформах
     needs: [staged-package-runtime-0342]
     uses: ./.github/workflows/native-game-acceptance-04314.yml
     with:
@@ -86,17 +86,17 @@ jobs:
     secrets: inherit
 
   extensions-acceptance:
-    name: Required six-target Java extensions and Gravit E2E acceptance
+    name: Обязательная приёмка Java-расширений для шести платформ и сквозных тестов Gravit
     needs: [validate-release-ref]
     uses: ./.github/workflows/extension-real-acceptance-04212.yml
 
   auth-platform-protection-ga:
-    name: 0.30.0 live federated authentication and protection gate
+    name: 0.30.0 — проверки реальной федеративной авторизации и защиты
     needs: [base-ci]
     uses: ./.github/workflows/auth-platform-protection-ga-0300.yml
 
   server-control-ga:
-    name: Require exact-commit real Minecraft world restore certification 0.29.0
+    name: Обязательная сертификация восстановления реального мира Minecraft 0.29.0 для точного коммита
     needs: [base-ci]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -123,19 +123,19 @@ jobs:
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
 
   windows-production-signed:
-    name: Authenticode Windows x64 + ARM64 production delivery
+    name: Промышленная поставка Windows x64 и ARM64 с подписью Authenticode
     needs: [base-ci]
     uses: ./.github/workflows/windows-production-delivery.yml
     secrets: inherit
 
   macos-production-notarized:
-    name: Developer ID + notarized macOS x64/ARM64 production delivery
+    name: Промышленная поставка macOS x64/ARM64 с Developer ID и нотариальным заверением
     needs: [base-ci]
     uses: ./.github/workflows/macos-production-delivery.yml
     secrets: inherit
 
   admin-ga-certification:
-    name: Admin 0.22.0 real GA certification (fail closed)
+    name: Admin 0.22.0 — реальная сертификация GA с отказом по умолчанию
     needs: [base-ci]
     runs-on: ubuntu-24.04
     timeout-minutes: 75
@@ -188,7 +188,7 @@ jobs:
           retention-days: 90
 
   profile-ga-certification:
-    name: Profile/workspace GA E2E (real PostgreSQL, Go race and CLI)
+    name: Сквозная приёмка GA профилей и рабочих областей (PostgreSQL, гонки Go, CLI)
     needs: [base-ci]
     runs-on: ubuntu-24.04
     timeout-minutes: 40
@@ -237,7 +237,7 @@ jobs:
           retention-days: 90
 
   certify-platform-signing:
-    name: Require both authenticated Windows and notarized macOS builds
+    name: Обязательные подписанные сборки Windows и нотариально заверенные сборки macOS
     needs: [base-ci, windows-production-signed, macos-production-notarized]
     runs-on: ubuntu-24.04
     steps:
@@ -250,12 +250,12 @@ jobs:
           test "$MACOS" = success
 
   current-source-rc-03514:
-    name: Require current-version native/Desktop/Backend regression matrix
+    name: Обязательная регрессионная матрица текущей версии для нативных компонентов, Desktop и Backend
     needs: [base-ci]
     uses: ./.github/workflows/release-candidate-03514.yml
 
   protected-isolated-dr-03514:
-    name: Require live fresh-site DR and PostgreSQL/API chaos on isolated staging
+    name: Обязательные реальные испытания восстановления на новом узле и отказов PostgreSQL/API в изолированном окружении
     needs: [base-ci]
     runs-on: [self-hosted, linux, rc-staging]
     timeout-minutes: 150
@@ -315,12 +315,12 @@ jobs:
         run: rm -f "$RUNNER_TEMP/rc-dr.env"
 
   production-rc-03216:
-    name: Require real live 0.32.16 security, crash, load and infrastructure tests
+    name: Обязательные реальные проверки безопасности, сбоев, нагрузки и инфраструктуры 0.32.16
     needs: [base-ci]
     uses: ./.github/workflows/production-rc-03216.yml
 
   single-node-ga-0330:
-    name: 0.33.0 independently signed installed SQLite-only GA evidence
+    name: 0.33.0 — независимо подписанные свидетельства GA установленной сборки только с SQLite
     needs: [production-rc-03216]
     runs-on: ubuntu-24.04
     environment: production-release
@@ -380,7 +380,7 @@ jobs:
           retention-days: 90
 
   staged-package-runtime-0342:
-    name: Exact staged package actual runtime (V01/V02)
+    name: Фактический запуск подготовленного пакета точного коммита (V01/V02)
     needs: [base-ci]
     uses: ./.github/workflows/staged-package-runtime-0342.yml
     with:
@@ -389,7 +389,7 @@ jobs:
     secrets: inherit
 
   runtime-ga-0350:
-    name: Verify current-version all-target signed staged runtime and PostgreSQL security
+    name: Проверка подписанной среды выполнения для всех платформ текущей версии и безопасности PostgreSQL
     needs: [base-ci, staged-package-runtime-0342]
     uses: ./.github/workflows/runtime-acceptance-0350.yml
     with:
@@ -397,7 +397,7 @@ jobs:
     secrets: inherit
 
   release-bundle:
-    name: Release candidate bundle
+    name: Пакет кандидата в релиз
     needs: [base-ci, extensions-acceptance, native-game-acceptance, production-rc-03216, current-source-rc-03514, protected-isolated-dr-03514, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
@@ -1049,7 +1049,7 @@ jobs:
 
 
   required-production-ci:
-    name: REQUIRED production pipeline — no skipped, cancelled or absent jobs
+    name: ОБЯЗАТЕЛЬНЫЙ выпускной конвейер — без пропущенных, отменённых или отсутствующих заданий
     if: ${{ always() }}
     needs: [validate-release-ref, base-ci, extensions-acceptance, native-game-acceptance, auth-platform-protection-ga, server-control-ga, windows-production-signed, macos-production-notarized, admin-ga-certification, profile-ga-certification, certify-platform-signing, current-source-rc-03514, protected-isolated-dr-03514, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, release-bundle]
     runs-on: ubuntu-24.04
@@ -1086,7 +1086,7 @@ jobs:
           retention-days: 90
 
   publish-release:
-    name: Publish exact signed GA bundle only after required production CI
+    name: Публикация подписанного пакета GA точного коммита только после обязательных проверок CI
     if: ${{ inputs.publish_release == true }}
     needs: [required-production-ci]
     runs-on: ubuntu-24.04

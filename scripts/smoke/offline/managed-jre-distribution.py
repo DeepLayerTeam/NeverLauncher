@@ -121,7 +121,7 @@ require(
     ci,
     [
         "managed-jre-production:",
-        "Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery",
+        "Управляемая Java II — сквозные проверки Java 8/16/17/21/25 и поставка Temurin 21",
         "Upload exact-commit Managed JRE production assets",
         "name: launcher-managed-jre-${{ github.sha }}",
         "managed-jre-production]",

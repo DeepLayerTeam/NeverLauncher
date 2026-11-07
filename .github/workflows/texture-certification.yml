@@ -82,7 +82,7 @@ jobs:
           python3 scripts/version/manage.py check
           python3 scripts/contracts/validate-openapi.py
   real-s3:
-    name: Real S3 conditional PUT / backup / restore / GC
+    name: Реальные условные PUT-запросы к S3, резервное копирование, восстановление и очистка
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -142,7 +142,7 @@ jobs:
           npm test
           npm run build
   live-protocol:
-    name: Live signed-profile/PNG compatibility probe
+    name: Реальная проверка совместимости подписанного профиля и PNG
     if: github.event_name == 'workflow_dispatch' && inputs.texture_origin != '' && inputs.local_minecraft_uuid != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 8

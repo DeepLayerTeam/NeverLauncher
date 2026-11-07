@@ -13,7 +13,7 @@ permissions:
   contents: read
 jobs:
   java:
-    name: SDK / Host Java ${{ matrix.java }} on ${{ matrix.os }}
+    name: SDK / узел Java ${{ matrix.java }} на ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:

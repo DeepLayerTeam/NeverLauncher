@@ -23,7 +23,7 @@ jobs:
         include:
           - {target: linux-x64, runner: ubuntu-24.04}
           - {target: linux-arm64, runner: ubuntu-24.04-arm}
-    name: '${{ matrix.target }} — JVM, ELF, Guard IPC and process supervision'
+    name: '${{ matrix.target }} — JVM, ELF, IPC Guard и контроль процессов'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 55
     steps:

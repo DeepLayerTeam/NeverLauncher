@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   managed-java-II-and-temurin21:
-    name: Managed Java II 8/16/17/21/25 + Temurin 21 Windows/Linux/macOS x64+ARM64
+    name: Управляемая Java II 8/16/17/21/25 и Temurin 21 для Windows/Linux/macOS x64+ARM64
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:

@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   analyze-go:
-    name: CodeQL Go security analysis
+    name: Анализ безопасности Go с CodeQL
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

@@ -22,7 +22,7 @@ permissions:
   contents: read
 jobs:
   actual-regressions:
-    name: Go journal HMAC interop / JVM agent / 14 Java adapter profiles
+    name: Совместимость журнала Go/HMAC, агент JVM и 14 профилей Java-адаптеров
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -69,7 +69,7 @@ jobs:
           python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json
   physical-live-review:
     if: github.event_name == 'workflow_dispatch' && inputs.physical_live_acceptance == true
-    name: Actual native hosts / game joins / Guard shadow review (never automatic GA)
+    name: Реальные нативные узлы, подключения к игре и теневой аудит Guard (без автоматического GA)
     runs-on: [self-hosted, linux, x64, neverlauncher-e2e-0529]
     timeout-minutes: 240
     needs: actual-regressions

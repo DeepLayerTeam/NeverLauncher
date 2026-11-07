@@ -19,7 +19,7 @@ env:
 
 jobs:
   matrix-plan:
-    name: Validate compatibility targets
+    name: Проверка целевых вариантов совместимости
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
@@ -255,7 +255,7 @@ jobs:
         with: *compatibility_evidence_a
 
   compatibility-e2e-b:
-    name: shard B · ${{ matrix.loader }} ${{ matrix.minecraft }} · ${{ matrix.os }}/${{ matrix.arch }}
+    name: Часть Б · ${{ matrix.loader }} ${{ matrix.minecraft }} · ${{ matrix.os }}/${{ matrix.arch }}
     needs: matrix-plan
     strategy:
       fail-fast: false
@@ -467,7 +467,7 @@ jobs:
         with: *compatibility_evidence_b
 
   publish-matrix:
-    name: Publish public compatibility matrix
+    name: Публикация открытой матрицы совместимости
     if: always() && needs.matrix-plan.result == 'success' && needs.compatibility-e2e.result != 'cancelled' && needs.compatibility-e2e-b.result != 'cancelled'
     needs: [matrix-plan, compatibility-e2e, compatibility-e2e-b]
     runs-on: ubuntu-24.04
@@ -514,7 +514,7 @@ jobs:
           retention-days: 30
 
   acceptance-inventory-0521:
-    name: Fail-closed 0.52.1 acceptance inventory (never GA)
+    name: Инвентаризация приёмки 0.52.1 с отказом по умолчанию (не GA)
     if: always()
     needs: [matrix-plan, compatibility-e2e, compatibility-e2e-b]
     runs-on: ubuntu-24.04

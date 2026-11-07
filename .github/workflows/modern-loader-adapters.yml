@@ -18,7 +18,7 @@ permissions:
   contents: read
 jobs:
   modern-adapter-fixtures:
-    name: Loader resolution, pinning, materialization (${{ matrix.os }})
+    name: Обнаружение, закрепление и подготовка загрузчика (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:

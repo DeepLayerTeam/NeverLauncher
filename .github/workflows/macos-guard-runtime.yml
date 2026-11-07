@@ -23,7 +23,7 @@ jobs:
         include:
           - {name: macos-arm64, runner: macos-15, arch: arm64}
           - {name: macos-x64, runner: macos-15-intel, arch: x86_64}
-    name: '${{ matrix.name }} — libproc, codesign, JVM, Guard watchdog'
+    name: '${{ matrix.name }} — libproc, codesign, JVM и сторож Guard'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:

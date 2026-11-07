@@ -2540,7 +2540,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.15.5 Managed JRE production workflow»: {required}")
     for required in [
         "managed-jre-production:",
-        "Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery",
+        "Управляемая Java II — сквозные проверки Java 8/16/17/21/25 и поставка Temurin 21",
         "Upload exact-commit Managed JRE production assets",
         "name: launcher-managed-jre-${{ github.sha }}",
     ]:

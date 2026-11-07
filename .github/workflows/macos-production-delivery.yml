@@ -31,7 +31,7 @@ env:
 
 jobs:
   notarized-macos:
-    name: Developer ID + notarized macOS x64/ARM64
+    name: Developer ID и нотариально заверенная сборка macOS x64/ARM64
     runs-on: macos-14
     timeout-minutes: 75
     steps:

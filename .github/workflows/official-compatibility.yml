@@ -40,7 +40,7 @@ permissions:
 
 jobs:
   provider-chain-and-sessionserver:
-    name: Go provider chain, sessionserver, security / ${{ matrix.os }}
+    name: 'Go: цепочка провайдера, сервер сессий и безопасность / ${{ matrix.os }}'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     strategy:
@@ -79,7 +79,7 @@ jobs:
         run: python ../../scripts/ga/test_official_artifacts_0270.py
 
   native-runtime-and-desktop:
-    name: Native launcher, OS credential boundary / ${{ matrix.os }}
+    name: Нативный лаунчер и граница хранения учётных данных ОС / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
@@ -123,7 +123,7 @@ jobs:
         run: npm run build
 
   certification-preflight:
-    name: All automated checks (LIVE E2E remains external blocker)
+    name: Все автоматизированные проверки (реальные сквозные тесты остаются внешним условием)
     if: always()
     needs: [provider-chain-and-sessionserver, native-runtime-and-desktop]
     runs-on: ubuntu-24.04

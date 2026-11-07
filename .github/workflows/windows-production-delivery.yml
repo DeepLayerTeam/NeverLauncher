@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   sign-windows:
-    name: Authenticode Windows x64 + ARM64
+    name: Authenticode для Windows x64 и ARM64
     runs-on: windows-2022
     timeout-minutes: 60
     steps:

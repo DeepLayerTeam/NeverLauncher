@@ -25,7 +25,7 @@ permissions:
   contents: read
 jobs:
   independent-java-extensions:
-    name: published SDK / JDK ${{ matrix.java }} / Linux
+    name: Опубликованный SDK / JDK ${{ matrix.java }} / Linux
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:

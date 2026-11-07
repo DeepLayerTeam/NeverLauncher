@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   public-delivery-e2e:
-    name: Public six-target release download + verification
+    name: Публичное скачивание и проверка релиза для шести платформ
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:

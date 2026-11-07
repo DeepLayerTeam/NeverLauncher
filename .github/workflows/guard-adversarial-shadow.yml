@@ -45,7 +45,7 @@ jobs:
           - {target: windows-arm64, os: windows-11-arm}
           - {target: macos-x64, os: macos-15-intel}
           - {target: macos-arm64, os: macos-15}
-    name: '${{ matrix.target }} — real JVM hostile/legitimate processes'
+    name: '${{ matrix.target }} — реальные недоверенные и разрешённые процессы JVM'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:

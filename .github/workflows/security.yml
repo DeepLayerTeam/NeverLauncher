@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   offline-security-contracts:
-    name: Verify identity, attestation and ServerBridge boundaries
+    name: Проверка идентичности, аттестации и границ доверия ServerBridge
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

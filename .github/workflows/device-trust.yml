@@ -22,7 +22,7 @@ env:
 
 jobs:
   matrix-plan:
-    name: Validate Device Trust targets
+    name: Проверка целевых конфигураций доверия к устройствам
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
@@ -122,7 +122,7 @@ jobs:
           retention-days: 14
 
   publish-matrix:
-    name: Publish public Device Trust matrix
+    name: Публикация открытой матрицы доверия к устройствам
     if: always() && needs.matrix-plan.result == 'success'
     needs: [matrix-plan, trust-evidence]
     runs-on: ubuntu-24.04

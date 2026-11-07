@@ -28,7 +28,7 @@ jobs:
           - {target: windows-x64, runner: windows-2022, os: windows, arch: amd64}
           - {target: macos-x64, runner: macos-15-intel, os: macos, arch: amd64}
     runs-on: ${{ matrix.runner }}
-    name: ${{ matrix.target }} native game client components
+    name: ${{ matrix.target }} — компоненты игрового клиента
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4

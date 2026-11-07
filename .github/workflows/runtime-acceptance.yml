@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   security-regression:
-    name: Real PostgreSQL stable-snapshot and forged-evidence rejection
+    name: Реальный PostgreSQL — снимок стабильного релиза и отклонение поддельных свидетельств
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     services:
@@ -54,7 +54,7 @@ jobs:
     # Защищённое окружение разрешает только токен Backend API для чтения.
     # В нём нет ни ключа подписи аттестации, ни ключа промышленного релиза.
     # Фактический стабильный коммит повторно оценивает свидетельства в PostgreSQL.
-    name: Require actual independently signed all-target live evidence
+    name: Обязательные реальные независимо подписанные свидетельства для всех платформ
     needs: [security-regression]
     runs-on: ubuntu-24.04
     timeout-minutes: 15

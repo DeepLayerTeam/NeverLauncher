@@ -19,7 +19,7 @@ env:
 
 jobs:
   go-contracts:
-    name: Go, migrations and contracts
+    name: Go, миграции и контракты
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -131,7 +131,7 @@ jobs:
         run: python3 scripts/test/federation-e2e.py
 
   web:
-    name: Admin and Desktop frontend
+    name: Веб-интерфейсы Admin и Desktop
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -166,7 +166,7 @@ jobs:
           apps/admin/node_modules/.bin/tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/launcher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/launcher-desktop.ts
 
   rust-desktop:
-    name: Runtime and Tauri
+    name: Среда выполнения и Tauri
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -246,7 +246,7 @@ jobs:
           if-no-files-found: error
 
   linux-production:
-    name: Linux production ${{ matrix.arch }}
+    name: Промышленная сборка Linux ${{ matrix.arch }}
     needs: [go-contracts, web]
     strategy:
       fail-fast: false
@@ -325,7 +325,7 @@ jobs:
           retention-days: 14
 
   guard-windows:
-    name: Guard Windows x64 + ARM64 delivery boundary
+    name: Guard для Windows x64 и ARM64 — проверка поставки
     runs-on: windows-2022
     timeout-minutes: 50
     steps:
@@ -452,7 +452,7 @@ jobs:
           if-no-files-found: error
 
   guard-macos:
-    name: Guard macOS production implementation
+    name: Guard для macOS — промышленная реализация
     runs-on: macos-14
     timeout-minutes: 45
     steps:
@@ -530,7 +530,7 @@ jobs:
           if-no-files-found: error
 
   macos-production:
-    name: macOS x64 + ARM64 delivery boundary
+    name: macOS x64 и ARM64 — проверка поставки
     needs: [go-contracts, web]
     runs-on: macos-14
     timeout-minutes: 60
@@ -594,7 +594,7 @@ jobs:
           retention-days: 14
 
   guard-certification:
-    name: Cross-platform Guard CI matrix certification
+    name: Сертификация межплатформенной матрицы Guard CI
     needs: [rust-desktop, guard-windows, guard-macos]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -636,7 +636,7 @@ jobs:
           retention-days: 30
 
   bridge:
-    name: ServerBridge plugins
+    name: Плагины ServerBridge
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -657,7 +657,7 @@ jobs:
           python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release_0420.py' -v
 
   containers:
-    name: Production containers
+    name: Контейнеры промышленного окружения
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -683,7 +683,7 @@ jobs:
           docker build --build-arg LAUNCHER_VERSION="$VERSION" --build-arg LAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f apps/admin/Dockerfile -t launcher-admin:ci .
 
   managed-jre-production:
-    name: Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery
+    name: Управляемая Java II — сквозные проверки Java 8/16/17/21/25 и поставка Temurin 21
     needs: [go-contracts]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -735,7 +735,7 @@ jobs:
           retention-days: 30
 
   production-e2e:
-    name: PostgreSQL + Redis + actual Minecraft Client E2E
+    name: PostgreSQL, Redis и реальная сквозная проверка клиента Minecraft
     needs: [storage-parity-0371, go-contracts, web, rust-desktop, bridge, containers, linux-production, macos-production, guard-windows, guard-macos, guard-certification, managed-jre-production]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -1140,7 +1140,7 @@ jobs:
           retention-days: 14
 
   guard-windows-adversarial:
-    name: Guard Windows adversarial Java ${{ matrix.java }}
+    name: Guard для Windows — проверки на противодействие, Java ${{ matrix.java }}
     runs-on: windows-2022
     timeout-minutes: 60
     strategy:
@@ -1200,7 +1200,7 @@ jobs:
           retention-days: 30
 
   guard-windows-adversarial-certificate:
-    name: Guard Windows adversarial certification
+    name: Guard для Windows — сертификация устойчивости к обходам
     if: always()
     needs: [guard-windows-adversarial]
     runs-on: ubuntu-24.04
@@ -1255,7 +1255,7 @@ jobs:
           retention-days: 30
 
   release-ga-policy:
-    name: Fail-closed versioned GA and historical signing regression
+    name: Регрессии версионированного выпуска GA, отказ по умолчанию и исторических подписей
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -1291,7 +1291,7 @@ jobs:
         run: go test ./cmd/launcher -run '^(TestGA0361|TestRehearsal0365)' -count=1 -timeout=2m
 
   storage-parity-0371:
-    name: Storage inventory and real SQLite/PostgreSQL parity 0.37.1
+    name: Инвентаризация хранилищ и реальная эквивалентность SQLite/PostgreSQL 0.37.1
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     services:
@@ -1413,7 +1413,7 @@ jobs:
           python3 -m py_compile scripts/install/minimal-install.py
 
   minimal-live-e2e-0378:
-    name: REQUIRED live minimal SQLite process, crash and restore (current version)
+    name: 'ОБЯЗАТЕЛЬНО: реальный процесс SQLite, сбой и восстановление (текущая версия)'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -1502,7 +1502,7 @@ jobs:
           retention-days: 30
 
   sdk-http-contracts:
-    name: HTTP SDK v1 JSON/binary/streaming, exact-commit source inputs
+    name: HTTP SDK v1 — JSON, двоичные данные, потоки и исходники точного коммита
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -1535,7 +1535,7 @@ jobs:
           git diff --exit-code -- apps/admin/package-lock.json apps/desktop/package-lock.json sdk/api/go/go.mod sdk/api/typescript
 
   reproducibility-tools-0470:
-    name: Deterministic packer and independent-verification regression
+    name: Регрессии детерминированной упаковки и независимой проверки
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -1559,7 +1559,7 @@ jobs:
           python3 scripts/version/manage.py check
 
   required-ci:
-    name: REQUIRED CI — all jobs SUCCESS for exact commit
+    name: ОБЯЗАТЕЛЬНЫЙ CI — успешность всех заданий для точного коммита
     if: ${{ always() }}
     needs: [reproducibility-tools-0470, sdk-http-contracts, minimal-live-e2e-0378, storage-parity-0371, go-contracts, web, rust-desktop, linux-production, guard-windows, guard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, guard-windows-adversarial, guard-windows-adversarial-certificate, release-ga-policy]
     runs-on: ubuntu-24.04

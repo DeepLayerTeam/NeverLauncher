@@ -21,7 +21,7 @@ permissions:
   contents: read
 jobs:
   native-guard-game:
-    name: '${{ matrix.target }} - Rust native process supervision'
+    name: '${{ matrix.target }} — нативный контроль процессов на Rust'
     strategy:
       fail-fast: false
       matrix:

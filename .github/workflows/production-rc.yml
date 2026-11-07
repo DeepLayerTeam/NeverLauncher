@@ -33,7 +33,7 @@ permissions:
 
 jobs:
   live-rc-gate:
-    name: PostgreSQL Redis S3 SQLite WAL crash replay auth load
+    name: PostgreSQL, Redis, S3, SQLite WAL — сбой, воспроизведение, авторизация и нагрузка
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     services:

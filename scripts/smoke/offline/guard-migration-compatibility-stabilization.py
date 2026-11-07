@@ -132,7 +132,7 @@ require(
     "Обязательная проверка CI",
 )
 if (
-    "guard-macos:\n    name: Guard macOS production implementation\n    runs-on: macos-14\n    timeout-minutes: 45\n    steps:\n    steps:"
+    "guard-macos:\n    name: Guard для macOS — промышленная реализация\n    runs-on: macos-14\n    timeout-minutes: 45\n    steps:\n    steps:"
     in ci
 ):
     raise SystemExit("Задание CI macOS по-прежнему содержит повторяющийся ключ steps")
