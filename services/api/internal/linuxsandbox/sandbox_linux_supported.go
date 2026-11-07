@@ -443,13 +443,13 @@ func init() {
 	case mode == "1" && os.Args[1] == "--launcher-extension-sandbox-0319":
 		if e := childMain(); e != nil {
 			_, _ = fmt.Fprintln(os.NewFile(5, "ready"), "error:", e)
-			_, _ = fmt.Fprintln(os.Stderr, "extension sandbox:", e)
+			_, _ = fmt.Fprintln(os.Stderr, "Песочница расширений:", e)
 			os.Exit(126)
 		}
 		os.Exit(0)
 	case mode == "proxy" && os.Args[1] == "--launcher-extension-proxy-0319":
 		if e := proxyMain(); e != nil {
-			_, _ = fmt.Fprintln(os.Stderr, "extension sandbox IPC:", e)
+			_, _ = fmt.Fprintln(os.Stderr, "IPC песочницы расширений:", e)
 			os.Exit(127)
 		}
 		os.Exit(0)

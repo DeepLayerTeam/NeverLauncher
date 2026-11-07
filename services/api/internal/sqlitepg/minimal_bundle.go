@@ -347,7 +347,7 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 	}
 	// Таблицы переноса только для чтения предотвращают случайное изменение отзыва токенов,
 	// состояния доверия или конфигурации проекта после фиксации снимка.
-	if _, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(MinimalBundleSchema0377)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Launcher minimal bundle is immutable'; END $$`); err != nil {
+	if _, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(MinimalBundleSchema0377)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Минимальный пакет Launcher неизменяем'; END $$`); err != nil {
 		return report, err
 	}
 	for _, name := range []string{"receipt", "files", "chunks"} {

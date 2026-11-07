@@ -57,7 +57,7 @@ func winerr(op string, r uintptr, e error) error {
 	if e != nil && e != syscall.Errno(0) {
 		return fmt.Errorf("%s: %w", op, e)
 	}
-	return fmt.Errorf("%s failed", op)
+	return fmt.Errorf("%s: выполнение завершилось ошибкой", op)
 }
 func utf16FromPtr(p *uint16) string {
 	if p == nil {
@@ -298,7 +298,7 @@ func inheritableStandardHandles() ([3]uintptr, error) {
 		}
 		var duplicated uintptr
 		ok, _, err := duplicateHandle.Call(own, original, own, uintptr(unsafe.Pointer(&duplicated)), 0, 1, duplicateSameAccess)
-		if e := winerr("DuplicateHandle isolated standard stream", ok, err); e != nil {
+		if e := winerr("DuplicateHandle: изоляция стандартного потока", ok, err); e != nil {
 			for _, h := range handles {
 				closeHandle(h)
 			}
@@ -326,7 +326,7 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	defer deleteAttrs.Call(attrs)
 	sc := securityCapabilities{appContainerSid: sid}
 	r, _, e = updateAttrs.Call(attrs, 0, procThreadSecurityCapabilities, uintptr(unsafe.Pointer(&sc)), unsafe.Sizeof(sc), 0, 0)
-	if err := winerr("AppContainer SECURITY_CAPABILITIES", r, e); err != nil {
+	if err := winerr("AppContainer: настройка SECURITY_CAPABILITIES", r, e); err != nil {
 		return 0, 0, 0, 0, err
 	}
 	streams, err := inheritableStandardHandles()
@@ -342,7 +342,7 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	// ограничивается этим явным белым списком (не всеми наследуемыми дескрипторами).
 	r, _, e = updateAttrs.Call(attrs, 0, procThreadHandleList,
 		uintptr(unsafe.Pointer(&streams[0])), unsafe.Sizeof(streams), 0, 0)
-	if err := winerr("AppContainer inherited-handle allowlist", r, e); err != nil {
+	if err := winerr("AppContainer: список разрешённых наследуемых дескрипторов", r, e); err != nil {
 		return 0, 0, 0, 0, err
 	}
 	job, _, e := createJob.Call(0, 0)
@@ -357,12 +357,12 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	limits.jobMemoryLimit = uintptr(c.Policy.MaxMemoryBytes)
 	limits.basic.limitFlags |= 0x200 // JOB_OBJECT_LIMIT_JOB_MEMORY
 	r, _, e = setJob.Call(job, jobExtendedLimitInformation, uintptr(unsafe.Pointer(&limits)), unsafe.Sizeof(limits))
-	if err := winerr("SetInformationJobObject limits", r, e); err != nil {
+	if err := winerr("SetInformationJobObject: ограничения задания", r, e); err != nil {
 		return fail(err)
 	}
 	cpu := cpuRate{control: jobCPURateEnable | jobCPURateHardCap, rate: uint32(c.Policy.MaxCPUPercent * 100)}
 	r, _, e = setJob.Call(job, jobCPURateControlInformation, uintptr(unsafe.Pointer(&cpu)), unsafe.Sizeof(cpu))
-	if err := winerr("SetInformationJobObject CPU", r, e); err != nil {
+	if err := winerr("SetInformationJobObject: ограничения процессора", r, e); err != nil {
 		return fail(err)
 	}
 	// И cmd, и окружение происходят из подписанного проверенного манифеста расширения.
@@ -399,7 +399,7 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	var pi processInfo
 	r, _, e = createProc.Call(uintptr(unsafe.Pointer(utf16(c.Entrypoint))), uintptr(unsafe.Pointer(utf16(commandLine))), 0, 0, 1,
 		extendedStartupInfo|createSuspended|createUnicodeEnvironment, uintptr(unsafe.Pointer(&envBlock[0])), uintptr(unsafe.Pointer(utf16(c.PayloadRoot))), uintptr(unsafe.Pointer(&si)), uintptr(unsafe.Pointer(&pi)))
-	if err := winerr("CreateProcessW AppContainer", r, e); err != nil {
+	if err := winerr("CreateProcessW: создание процесса в AppContainer", r, e); err != nil {
 		return fail(err)
 	}
 	if err := verifyAppContainerToken(pi.process, sid); err != nil {
@@ -409,7 +409,7 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 		return fail(err)
 	}
 	r, _, e = assignJob.Call(job, pi.process)
-	if err := winerr("AssignProcessToJobObject before resume", r, e); err != nil {
+	if err := winerr("AssignProcessToJobObject: назначение до возобновления потока", r, e); err != nil {
 		terminateProcess.Call(pi.process, 1)
 		closeHandle(pi.thread)
 		closeHandle(pi.process)

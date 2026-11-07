@@ -126,19 +126,19 @@ fn valid_manifest_artifact(v:&serde_json::Value)->bool{
 }
 fn verified_policy(dir:&Path,root:&[u8],now:OffsetDateTime)->Result<Policy,String>{
     let policy_raw=safe_file(&dir.join("trust-policy.signed.json"),128*1024)?;
-    let env:PolicyEnvelope=serde_json::from_slice(&policy_raw).map_err(|_|"Некорректный signed trust policy")?;
-    if env.schema_version!="1.0"{return Err("Неподдерживаемая версия trust policy".into())}
-    let payload=STANDARD.decode(&env.payload).map_err(|_|"Некорректный payload trust policy")?;
-    if payload.len()>96*1024{return Err("Trust policy слишком велик".into())}
+    let env:PolicyEnvelope=serde_json::from_slice(&policy_raw).map_err(|_|"Некорректная подписанная политика доверия")?;
+    if env.schema_version!="1.0"{return Err("Неподдерживаемая версия политики доверия".into())}
+    let payload=STANDARD.decode(&env.payload).map_err(|_|"Некорректное содержимое политики доверия")?;
+    if payload.len()>96*1024{return Err("Слишком большой размер политики доверия".into())}
     let mut msg=b"Launcher-Trust-Policy-v1\n".to_vec();msg.extend_from_slice(&payload);
     verify(&msg,root,&env.root_signature)?;
-    let policy:Policy=serde_json::from_slice(&payload).map_err(|_|"Некорректная структура trust policy")?;
+    let policy:Policy=serde_json::from_slice(&payload).map_err(|_|"Некорректная структура политики доверия")?;
     if policy.schema_version!="1.0"||policy.domain!="launcher.trust.v1"||policy.epoch==0||policy.keys.is_empty()||policy.keys.len()>128 {
-        return Err("Некорректный домен или epoch trust policy".into())
+        return Err("Некорректный домен или эпоха политики доверия".into())
     }
     let issued=time_value(&policy.issued_at)?;let expires=time_value(&policy.expires_at)?;
     if issued>now+time::Duration::minutes(5)||expires<=now||expires<=issued||expires-issued>time::Duration::days(90){
-        return Err("Trust policy истекла или некорректна".into())
+        return Err("Срок действия политики доверия истёк или политика некорректна".into())
     }
     let mut ids=std::collections::HashSet::new();let mut pubs=std::collections::HashSet::new();
     let mut active=0;
@@ -146,27 +146,27 @@ fn verified_policy(dir:&Path,root:&[u8],now:OffsetDateTime)->Result<Policy,Strin
         if !identifier(&k.id)||!ids.insert(&k.id)||!pubs.insert(k.public_key.to_lowercase())||bytes_hex(&k.public_key,32).is_err()||
            !matches!(k.role.as_str(),"bootstrap"|"game"|"component"|"release")||
            !matches!(k.status.as_str(),"active"|"verify-only"|"revoked")||time_value(&k.not_before)? > expires {
-            return Err("Некорректный набор delegated keys".into())
+            return Err("Некорректный набор делегированных ключей".into())
         }
         if k.status=="active"{active+=1}
         if k.status=="verify-only"{
             let end=time_value(&k.verify_until)?;let begin=time_value(&k.not_before)?;
-            if end<=begin||end-begin>time::Duration::days(90)||end>expires{return Err("Недопустимый verify-only overlap".into())}
+            if end<=begin||end-begin>time::Duration::days(90)||end>expires{return Err("Недопустимое пересечение сроков действия ключей только для проверки".into())}
         }
     }
     if active==0{return Err("Отсутствуют активные ключи".into())}
     Ok(policy)
 }
 fn verify_signed(raw:&[u8], policy_dir:&Path, root_hex:&str, now:OffsetDateTime)->Result<Provisioning0352,String>{
-    if raw.len()>1024*1024{return Err("Bootstrap слишком велик".into())}
+    if raw.len()>1024*1024{return Err("Слишком большой размер начальной настройки".into())}
     let root=bytes_hex(root_hex,32)?;
-    let env:Envelope=serde_json::from_slice(raw).map_err(|_|"Некорректный signed bootstrap envelope")?;
-    if env.schema_version!="1.0"&&env.schema_version!="2.0" {return Err("Неизвестная версия bootstrap envelope".into())}
+    let env:Envelope=serde_json::from_slice(raw).map_err(|_|"Некорректный контейнер подписанной начальной настройки")?;
+    if env.schema_version!="1.0"&&env.schema_version!="2.0" {return Err("Неизвестная версия контейнера начальной настройки".into())}
     if env.schema_version=="1.0" && policy_dir.join("trust-policy.signed.json").symlink_metadata().is_ok() {
-        return Err("Legacy bootstrap после delegated trust запрещён".into())
+        return Err("Устаревшая начальная настройка запрещена после перехода на делегированное доверие".into())
     }
-    let payload=STANDARD.decode(&env.payload).map_err(|_|"Некорректный base64 bootstrap")?;
-    if payload.len()>1024*1024{return Err("Payload слишком велик".into())}
+    let payload=STANDARD.decode(&env.payload).map_err(|_|"Некорректное кодирование Base64 начальной настройки")?;
+    if payload.len()>1024*1024{return Err("Слишком большой размер содержимого".into())}
     let mut signing_key=root.clone();
     let mut signed_bytes=payload.clone();
     if env.schema_version=="2.0" {
@@ -174,8 +174,8 @@ fn verify_signed(raw:&[u8], policy_dir:&Path, root_hex:&str, now:OffsetDateTime)
         if env.key_id.is_empty()||env.trust_epoch!=policy.epoch{return Err("Несовпадение: подписант и эпоха начальной настройки".into())}
         let signed_at=time_value(&env.signed_at)?;
         let key=policy.keys.iter().find(|k|k.id==env.key_id&&k.role=="bootstrap"&&k.status=="active")
-            .ok_or("Bootstrap signer не активен в root-signed policy")?;
-        if signed_at<time_value(&key.not_before)?||signed_at>now+time::Duration::minutes(5){return Err("Bootstrap подписан вне разрешённого интервала".into())}
+            .ok_or("Ключ подписи начальной настройки неактивен в политике, подписанной корневым ключом")?;
+        if signed_at<time_value(&key.not_before)?||signed_at>now+time::Duration::minutes(5){return Err("Начальная настройка подписана вне разрешённого интервала".into())}
         signing_key=bytes_hex(&key.public_key,32)?;
         signed_bytes=format!("Launcher-Bootstrap-v2\n{}\n{}\n{}\n",env.key_id,env.trust_epoch,env.signed_at).into_bytes();
         signed_bytes.extend_from_slice(&payload);
@@ -215,7 +215,7 @@ pub fn load(dir:&Path)->Result<Option<Provisioning0352>,String>{
     // Производственный корневой ключ встроен в двоичный файл Desktop. Не принимайте ключ от
     // рендерера, локальной конфигурации, строки запроса или переменных окружения процесса.
     let root=option_env!("LAUNCHER_BOOTSTRAP_ROOT_KEY").unwrap_or("");
-    if root.is_empty(){return Err("Desktop не содержит закреплённый bootstrap Ed25519 root; необходима branded production сборка".into())}
+    if root.is_empty(){return Err("В Desktop отсутствует закреплённый корневой ключ Ed25519 для начальной настройки; требуется промышленная сборка с оформлением владельца".into())}
     let raw=safe_file(&file,1024*1024)?;
     let now=OffsetDateTime::from(SystemTime::now());
     verify_signed(&raw,dir,root,now).map(Some)

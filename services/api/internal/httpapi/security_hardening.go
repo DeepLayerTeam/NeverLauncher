@@ -142,7 +142,7 @@ func (s Server) securityHardeningPayload902(kind string) map[string]any {
 			"passwordHashing":          "Argon2id/PHC для всех новых паролей",
 			"legacyHashMigration":      "sha256 допускается только для существующих старых учётных записей администраторов до сброса пароля",
 			"totpAlgorithm":            "HMAC-SHA1, шаг 30 секунд, 6 цифр",
-			"webauthn":                 "Level 3; UV required; discoverable credentials; ES256/Ed25519/RS256",
+			"webauthn":                 "Уровень 3; обязательная проверка пользователя (UV); обнаруживаемые учётные данные; ES256/Ed25519/RS256",
 			"mfaPolicy":                []string{"optional", "required", "phishing-resistant"},
 			"stepUpFreshnessMinutes":   5,
 			"recoveryCodes":            "создаются однократно, хранятся в виде хешей и используются один раз",

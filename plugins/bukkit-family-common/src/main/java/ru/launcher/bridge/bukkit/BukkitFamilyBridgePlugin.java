@@ -265,7 +265,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     sender.sendMessage("Недостаточно прав: launcher.bridge.diagnostics");
                     return true;
                 }
-                sender.sendMessage("Launcher diagnostics: platform=" + expectedPlatform.id() +
+                sender.sendMessage("Диагностика Launcher: платформа=" + expectedPlatform.id() +
                     ", detected=" + BukkitFamilyPlatform.detect().id() +
                     ", failMode=" + state.config.failMode +
                     ", requireLauncherSession=" + state.config.requireLauncherSession +

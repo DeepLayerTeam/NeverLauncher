@@ -1045,9 +1045,9 @@ try {
   foreach ($entry in $zip.Entries) {
     if ([string]::IsNullOrEmpty($entry.FullName)) { continue }
     $normalized = $entry.FullName.Replace('\\','/')
-    if ($normalized.StartsWith('/') -or $normalized.Contains('../') -or $normalized -eq '..') { throw "unsafe zip entry: $normalized" }
+    if ($normalized.StartsWith('/') -or $normalized.Contains('../') -or $normalized -eq '..') { throw "Небезопасный элемент ZIP-архива: $normalized" }
     $target = [IO.Path]::GetFullPath([IO.Path]::Combine($Destination, $normalized.Replace('/', [IO.Path]::DirectorySeparatorChar)))
-    if (-not $target.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { throw "zip path escape: $normalized" }
+    if (-not $target.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { throw "Путь ZIP-архива выходит за пределы каталога: $normalized" }
     if ($normalized.EndsWith('/')) { [IO.Directory]::CreateDirectory($target) | Out-Null; continue }
     [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($target)) | Out-Null
     $input = $entry.Open()

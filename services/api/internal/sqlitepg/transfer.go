@@ -397,7 +397,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	}
 	// Схема импорта намеренно защищена от append/UPDATE/DELETE. Рабочий
 	// код должен начать обслуживать авторизацию из этого зеркала совместимости.
-	_, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(Schema)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Launcher verified import is immutable'; END $$`)
+	_, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(Schema)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Проверенный импорт Launcher неизменяем'; END $$`)
 	if err != nil {
 		return report, err
 	}

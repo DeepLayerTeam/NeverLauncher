@@ -564,7 +564,7 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 		}
 		item, ok := planItem02011(tx.Plan, id)
 		if !ok {
-			rbErrs = append(rbErrs, id+": missing plan item")
+			rbErrs = append(rbErrs, id+": отсутствует элемент плана")
 			continue
 		}
 		if m.Host != nil {
@@ -653,7 +653,7 @@ func (m *Manager) recoverTransaction02011(ctx context.Context, tx model.Extensio
 	if tx.Failure == "" {
 		tx.Failure = "Автоматический откат после прерванной операции обновления"
 	} else {
-		tx.Failure += "; automatically rolled back after interrupted update transaction"
+		tx.Failure += "; автоматически выполнен откат после прерванной транзакции обновления"
 	}
 	_, err := m.Repo.SaveExtensionUpdateTransaction(context.Background(), tx)
 	if err == nil {

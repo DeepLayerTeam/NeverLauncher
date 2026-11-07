@@ -201,7 +201,7 @@ func Detect(cfg config.Config) (Plan, error) {
 				p.LockPath = lock
 				p.Reasons = append(p.Reasons, "Используется явно заданный путь блокировки экземпляра")
 			default:
-				problems = append(problems, "standard with S3 requires LAUNCHER_DEPLOYMENT_LOCK_PATH on a shared, persistent local instance volume")
+				problems = append(problems, "Режим standard с S3 требует LAUNCHER_DEPLOYMENT_LOCK_PATH на общем постоянном локальном томе экземпляра")
 			}
 			if p.LockPath != "" && !filepath.IsAbs(p.LockPath) {
 				if config.IsProductionEnvironment(cfg.Environment) {
