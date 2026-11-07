@@ -43,7 +43,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		return denied(http.StatusServiceUnavailable, "Политика разрешений недоступна")
 	}
 	if !permitted {
-		return denied(http.StatusForbidden, "permission "+permission+" not granted")
+		return denied(http.StatusForbidden, "разрешение "+permission+" не предоставлено")
 	}
 	if ctx.Err() != nil {
 		return denied(http.StatusGatewayTimeout, "Превышено время ожидания серверной службы")
@@ -130,7 +130,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		return pagedBackend0484(scoped, req)
 	case "release.get":
 		if req.Name == "" {
-			return denied(http.StatusBadRequest, "release id required")
+			return denied(http.StatusBadRequest, "требуется идентификатор релиза")
 		}
 		releases, e := s.repo.ListVersions(projectID)
 		if e != nil {
@@ -144,7 +144,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		return denied(http.StatusNotFound, "Релиз не найден")
 	case "job.get":
 		if req.Name == "" || len(req.Name) > 128 {
-			return denied(http.StatusBadRequest, "job id required")
+			return denied(http.StatusBadRequest, "требуется идентификатор задания")
 		}
 		durable, ok := s.repo.(repository.DurableControlPlane)
 		if !ok {
@@ -155,7 +155,7 @@ func (s *Supervisor) executeBackendService0484(ctx context.Context, st *processS
 		// полезную нагрузку, результат, токен аренды, идентичность исполнителя, текст
 		// ошибки или секреты операции.
 		if e != nil || job.ProjectID != projectID {
-			return denied(http.StatusNotFound, "job not found")
+			return denied(http.StatusNotFound, "задание не найдено")
 		}
 		view := map[string]any{"id": job.ID, "projectId": job.ProjectID, "kind": job.Kind, "status": job.Status,
 			"attemptCount": job.AttemptCount, "maxAttempts": job.MaxAttempts, "createdAt": job.CreatedAt,

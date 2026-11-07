@@ -62,7 +62,7 @@ func (r *MemoryRepository) GetOperationalConfig(_ context.Context) (OperationalC
 	r.operationalConfigMu.Lock()
 	defer r.operationalConfigMu.Unlock()
 	if len(r.operationalConfigRevisions) == 0 {
-		return OperationalConfigRevision{Revision: 1, Settings: DefaultOperationalConfig(), Actor: "system", Reason: "initial defaults"}, nil
+		return OperationalConfigRevision{Revision: 1, Settings: DefaultOperationalConfig(), Actor: "system", Reason: "исходные значения по умолчанию"}, nil
 	}
 	return r.operationalConfigRevisions[len(r.operationalConfigRevisions)-1], nil
 }
@@ -74,7 +74,7 @@ func (r *MemoryRepository) ListOperationalConfigRevisions(_ context.Context, lim
 	}
 	all := r.operationalConfigRevisions
 	if len(all) == 0 {
-		all = []OperationalConfigRevision{{Revision: 1, Settings: DefaultOperationalConfig(), Actor: "system", Reason: "initial defaults"}}
+		all = []OperationalConfigRevision{{Revision: 1, Settings: DefaultOperationalConfig(), Actor: "system", Reason: "исходные значения по умолчанию"}}
 	}
 	out := make([]OperationalConfigRevision, 0, limit)
 	for i := len(all) - 1; i >= 0 && len(out) < limit; i-- {
@@ -91,7 +91,7 @@ func (r *MemoryRepository) SaveOperationalConfig(_ context.Context, expected int
 	r.operationalConfigMu.Lock()
 	defer r.operationalConfigMu.Unlock()
 	if len(r.operationalConfigRevisions) == 0 {
-		r.operationalConfigRevisions = []OperationalConfigRevision{{Revision: 1, Settings: DefaultOperationalConfig(), Actor: "system", Reason: "initial defaults"}}
+		r.operationalConfigRevisions = []OperationalConfigRevision{{Revision: 1, Settings: DefaultOperationalConfig(), Actor: "system", Reason: "исходные значения по умолчанию"}}
 	}
 	prev := r.operationalConfigRevisions[len(r.operationalConfigRevisions)-1]
 	if prev.Revision != expected {

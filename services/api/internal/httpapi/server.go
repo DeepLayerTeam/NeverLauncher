@@ -123,7 +123,7 @@ func (s Server) status(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) contracts(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, contractsResponse{Items: []contractInfo{{Name: "Backend API", Path: "schemas/openapi.yaml", Type: "openapi"}}})
+	writeJSON(w, http.StatusOK, contractsResponse{Items: []contractInfo{{Name: "Серверный API", Path: "schemas/openapi.yaml", Type: "openapi"}}})
 }
 
 func (s Server) compatibility(w http.ResponseWriter, r *http.Request) {

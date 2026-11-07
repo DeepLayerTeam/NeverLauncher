@@ -329,7 +329,7 @@ type roleSeed struct{ id, name, desc, perms string }
 var builtInRoles = []roleSeed{
 	{"owner", "Владелец", "Полный доступ", `["*"]`},
 	{"admin", "Администратор", "Администрирование платформы", `["project:read","project:write","release:prepare","release:publish","file:write","users:manage","roles:manage","audit:read","diagnostics:read","storage:manage","settings:manage","security:read","extension:manage","serverbridge:control","serverbridge:console","gameserver:broadcast","gameserver:moderate","gameserver:save","gameserver:traffic","gameserver:shutdown","gameserver:console"]`},
-	{"release-manager", "Release Manager", "Управление релизами", `["project:read","release:prepare","release:publish","audit:read"]`},
+	{"release-manager", "Менеджер релизов", "Управление релизами", `["project:read","release:prepare","release:publish","audit:read"]`},
 	{"operator", "Оператор", "Управление сборками", `["project:read","project:write","release:prepare","file:write","diagnostics:read","serverbridge:control","gameserver:broadcast","gameserver:moderate","gameserver:save","gameserver:traffic"]`},
 	{"support", "Поддержка", "Диагностика", `["project:read","diagnostics:read","audit:read"]`},
 	{"developer", "Разработчик", "Подготовка релизов", `["project:read","release:prepare","file:write"]`},

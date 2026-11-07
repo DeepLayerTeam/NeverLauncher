@@ -688,10 +688,10 @@ func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, cha
 		return errors.New("Несовпадение границ процесса в аттестации Guard")
 	}
 	for label, value := range map[string]string{
-		"guard image":      a.Evidence.Guard.ImageSHA256,
-		"launcher image":   a.Evidence.Launcher.ImageSHA256,
-		"guard modules":    a.Evidence.Guard.Modules.ModuleSetSHA256,
-		"launcher modules": a.Evidence.Launcher.Modules.ModuleSetSHA256,
+		"образ Guard":     a.Evidence.Guard.ImageSHA256,
+		"образ лаунчера":  a.Evidence.Launcher.ImageSHA256,
+		"модули Guard":    a.Evidence.Guard.Modules.ModuleSetSHA256,
+		"модули лаунчера": a.Evidence.Launcher.Modules.ModuleSetSHA256,
 	} {
 		if !isSHA256Hex0134(value) {
 			return fmt.Errorf("Некорректный SHA-256 для %s", label)

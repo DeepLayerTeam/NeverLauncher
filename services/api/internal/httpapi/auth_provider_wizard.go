@@ -71,7 +71,7 @@ func (s Server) wizardTest02910(w http.ResponseWriter, r *http.Request) {
 	}
 	v := wizardRevision02910(req)
 	if v.Reason == "" {
-		v.Reason = "connection diagnostics"
+		v.Reason = "проверка подключения"
 	}
 	if err := validateManagedSecrets02910(v); err != nil {
 		writeError(w, 400, "Небезопасная или некорректная конфигурация провайдера")

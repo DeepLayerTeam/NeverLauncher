@@ -312,11 +312,11 @@ def main(argv=None):
                 f"{(ROOT / 'VERSION').read_text().strip()} — АУДИТ ПРОЙДЕН: {len(journeys)} сценариев G/M, проверки UX01–UX12 сопоставлены, все файлы проверок существуют"
             )
             print(
-                "Scopes:",
+                "Области:",
                 dict(counts),
-                "| not-run:",
+                "| не выполнено:",
                 len(journeys),
-                "| target verified: 0",
+                "| проверено целевых платформ: 0",
             )
             return 0
         require(args.report is not None, "Для запуска требуется --report")

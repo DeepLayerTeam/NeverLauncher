@@ -223,7 +223,7 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 		event = "gravit-import"
 	}
 	auditActor := profile.UserID
-	auditReason := "verified normalized PNG " + event
+	auditReason := "проверенный нормализованный PNG " + event
 	if source == "managed-gravit-import" {
 		auditActor = "system:gravit-texture-import"
 		auditReason = "Gravit TextureProvider migration source=" + input.GravitSourceID + " row=" + input.GravitRowID

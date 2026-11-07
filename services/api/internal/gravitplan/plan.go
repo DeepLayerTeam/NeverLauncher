@@ -138,7 +138,7 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 			} else if t, ok := transferred[f.Path]; ok {
 				row.Status = "automatic"
 				row.Target = t.TargetPath
-				row.Reason = "file SHA-256 pinned to source inventory"
+				row.Reason = "SHA-256 файла закреплён в реестре исходных данных"
 			} else {
 				row.Reason = "Файл не входит в выбранный профиль; отдельно проверьте принадлежность и импорт"
 			}

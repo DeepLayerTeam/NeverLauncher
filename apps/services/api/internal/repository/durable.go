@@ -338,11 +338,11 @@ func (r *SQLRepository) LeaseDurableJobs(ctx context.Context, kind, worker strin
     AND lease_expires_at<=clock_timestamp()
   ORDER BY lease_expires_at FOR UPDATE SKIP LOCKED LIMIT 32
 ), retired AS (
-  UPDATE durable_jobs d SET status='dead',last_error='lease expired; max attempts exceeded',
+  UPDATE durable_jobs d SET status='dead',last_error='срок аренды задания истёк; превышено максимальное число попыток',
     lease_owner='',lease_token='',lease_expires_at=NULL,updated_at=clock_timestamp(),completed_at=clock_timestamp()
   FROM expired WHERE d.id=expired.id RETURNING d.id,d.attempt_count
 )
-UPDATE durable_job_attempts a SET status='dead',error='lease expired; max attempts exceeded',finished_at=clock_timestamp()
+UPDATE durable_job_attempts a SET status='dead',error='срок аренды задания истёк; превышено максимальное число попыток',finished_at=clock_timestamp()
 FROM retired WHERE a.job_id=retired.id AND a.attempt=retired.attempt_count AND a.status='running'`, strings.TrimSpace(kind))
 	if err != nil {
 		return nil, err
@@ -775,7 +775,7 @@ func (r *SQLRepository) ClaimOutboxEvents(ctx context.Context, worker string, li
     AND lease_expires_at<=clock_timestamp()
   ORDER BY lease_expires_at FOR UPDATE SKIP LOCKED LIMIT 64
 )
-UPDATE event_outbox e SET status='dead',last_error='delivery lease expired; max attempts exceeded',
+UPDATE event_outbox e SET status='dead',last_error='срок аренды доставки истёк; превышено максимальное число попыток',
   lease_owner='',lease_token='',lease_expires_at=NULL,updated_at=clock_timestamp()
 FROM expired WHERE e.id=expired.id`)
 	if err != nil {

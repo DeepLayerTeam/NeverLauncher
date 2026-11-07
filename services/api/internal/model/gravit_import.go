@@ -78,7 +78,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		}
 		var s string
 		if err := json.Unmarshal(raw, &s); err != nil || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
-			report(field, "blocked", "", "expected a string")
+			report(field, "blocked", "", "ожидается строка")
 			return "", false
 		}
 		return s, true

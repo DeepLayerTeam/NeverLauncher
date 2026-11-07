@@ -210,7 +210,7 @@ func (r *SQLRepository) SelectSavedTexture0255(ctx context.Context, p model.Mine
 	if _, err = tx.ExecContext(ctx, `UPDATE texture_saved_items SET last_selected_at=$4,model=$5 WHERE user_id=$1 AND digest=$2 AND kind=$3`, p.UserID, digest, kind, now, skinModel); err != nil {
 		return zero, err
 	}
-	if err = recordTextureRevision0255(ctx, tx, a, p.UserID, "select", "selected saved normalized PNG"); err != nil {
+	if err = recordTextureRevision0255(ctx, tx, a, p.UserID, "select", "выбранный сохранённый нормализованный PNG"); err != nil {
 		return zero, err
 	}
 	if err = tx.Commit(); err != nil {

@@ -1480,7 +1480,7 @@ def main():
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 check(set(body) == {"packageId"}, "Допускается только параметр packageId")
                 if not lock.acquire(blocking=False):
-                    self.send_error(429, "attestor busy")
+                    self.send_error(429, "служба аттестации занята")
                     return
                 try:
                     result = execute_matrix(cfg, body["packageId"])

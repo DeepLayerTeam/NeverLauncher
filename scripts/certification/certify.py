@@ -286,7 +286,7 @@ def main():
     else:
         for name in GO_CASES:
             suites.append(
-                {"id": name, "status": "missing", "reason": "go not installed"}
+                {"id": name, "status": "missing", "reason": "Go не установлен"}
             )
     if shutil.which("cargo"):
         suites.append(rust_suite())

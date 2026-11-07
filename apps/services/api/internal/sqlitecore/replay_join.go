@@ -126,7 +126,7 @@ func (r *Repository) RegisterNode(ctx context.Context, input NodeRegistration) (
 			if _, er = q.ExecContext(ctx, `UPDATE bridge_join_tickets SET status='invalidated',terminal_at=? WHERE node_id=? AND status='active'`, now, input.ID); er != nil {
 				return er
 			}
-			if er = invalidateBridgeRuntimeTx(ctx, q, input.ID, "node identity rotated", now); er != nil {
+			if er = invalidateBridgeRuntimeTx(ctx, q, input.ID, "идентичность узла обновлена", now); er != nil {
 				return er
 			}
 			_, er = q.ExecContext(ctx, `UPDATE bridge_nodes SET project_id=?,profile_id=?,channel=?,public_key=?,fingerprint=?,identity_epoch=identity_epoch+1,status='active',updated_at=? WHERE id=?`, input.ProjectID, input.ProfileID, input.Channel, key, fingerprint, now, input.ID)
@@ -170,7 +170,7 @@ func (r *Repository) DisableNode(ctx context.Context, nodeID, actor string) erro
 		if _, e := q.ExecContext(ctx, `UPDATE bridge_nodes SET status='disabled',identity_epoch=identity_epoch+1,updated_at=? WHERE id=?`, now, nodeID); e != nil {
 			return e
 		}
-		if e := invalidateBridgeRuntimeTx(ctx, q, nodeID, "node disabled", now); e != nil {
+		if e := invalidateBridgeRuntimeTx(ctx, q, nodeID, "узел отключён", now); e != nil {
 			return e
 		}
 		return recordAudit(ctx, q, audit(actor, "bridge:node-disable", nodeID))

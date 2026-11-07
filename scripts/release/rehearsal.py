@@ -292,7 +292,7 @@ def verify_update_payload_0410(
                 )
 
     check_rows(update.get("components"), expected_roles, "components")
-    check_rows(update.get("supportFiles"), expected_support, "support files")
+    check_rows(update.get("supportFiles"), expected_support, "вспомогательные файлы")
     # Подписи проверяются закреплённой политикой доверия обновлятора, а не
     # открытыми ключами, переданными внутри пакета. Сопутствующий файл должен
     # связывать именно устанавливаемые байты; проверка согласованности хеша сама по

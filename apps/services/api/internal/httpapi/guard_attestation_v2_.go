@@ -185,19 +185,19 @@ func validateGuardContinuousEvidence01810(e guardContinuousEvidence01810, now ti
 		return errors.New("Основная версия Java не сертифицирована для Guard Attestation v2")
 	}
 	for label, value := range map[string]string{
-		"module event chain":  e.ModuleEventChainSHA256,
-		"module set":          e.ModuleSetSHA256,
-		"hook set":            e.HookSetSHA256,
-		"code set":            e.CodeSetSHA256,
-		"executable map":      e.ExecutableMapSHA256,
-		"thread set":          e.ThreadSetSHA256,
-		"thread origin set":   e.ThreadOriginSetSHA256,
-		"process tree":        e.ProcessTreeSHA256,
-		"debug state":         e.DebugStateSHA256,
-		"JVM state":           e.JVMStateSHA256,
-		"Цепочка событий датчика":  e.SensorEventChainSHA256,
-		"last cross-check":    e.LastCrossCheckSHA256,
-		"continuous evidence": e.EvidenceSHA256,
+		"цепочка событий модулей":            e.ModuleEventChainSHA256,
+		"набор модулей":                      e.ModuleSetSHA256,
+		"набор перехватчиков":                e.HookSetSHA256,
+		"набор исполняемого кода":            e.CodeSetSHA256,
+		"карта исполняемых файлов":           e.ExecutableMapSHA256,
+		"набор потоков":                      e.ThreadSetSHA256,
+		"набор источников потоков":           e.ThreadOriginSetSHA256,
+		"дерево процессов":                   e.ProcessTreeSHA256,
+		"состояние отладки":                  e.DebugStateSHA256,
+		"состояние JVM":                      e.JVMStateSHA256,
+		"Цепочка событий датчика":            e.SensorEventChainSHA256,
+		"последняя перекрёстная проверка":    e.LastCrossCheckSHA256,
+		"свидетельства непрерывной проверки": e.EvidenceSHA256,
 	} {
 		if !isSHA256Hex0134(value) {
 			return fmt.Errorf("Guard Attestation v2: неверный формат SHA-256 для %s", label)

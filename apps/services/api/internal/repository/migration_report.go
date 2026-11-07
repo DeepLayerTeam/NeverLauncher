@@ -106,7 +106,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 		return v, e
 	} else {
 		if idsInv != v.InventorySHA256 || idsSource != v.SourceSHA256 {
-			v.Blockers = append(v.Blockers, "MIG04 identity source checksum mismatch")
+			v.Blockers = append(v.Blockers, "MIG04: контрольная сумма источника идентификационных данных не совпадает")
 		}
 		rows, qe := tx.QueryContext(ctx, `SELECT i.provider,i.source_id,i.username,i.minecraft_uuid,COALESCE(i.target_user_id,mp.user_id,''),i.status FROM migration_identity_rows_0334 i LEFT JOIN minecraft_profiles mp ON mp.uuid=i.minecraft_uuid WHERE i.run_id=$1 ORDER BY i.ordinal`, run)
 		if qe != nil {
@@ -152,7 +152,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 		}
 		add("authentication", state, authSHA, fmt.Sprintf("imported=%d manual_reset=%d", a.Imported, a.ManualReset))
 		for _, row := range a.Rows {
-			status, reason := "manual", "existing Never credentials unchanged"
+			status, reason := "manual", "существующие учётные данные Never не изменены"
 			if row.State == "imported" {
 				status, reason = "transferred", ""
 			}

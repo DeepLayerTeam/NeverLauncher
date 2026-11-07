@@ -109,7 +109,7 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 	// переключения допустимы только при достоверном представлении на ОБЕИХ
 	// сторонах.
 	if len(input.Current.Players) != len(rehearsal.Target.Players) {
-		blockers = append(blockers, "player population changed")
+		blockers = append(blockers, "изменился состав игроков")
 	}
 	mode := "unchanged"
 	sourceDigest := ""

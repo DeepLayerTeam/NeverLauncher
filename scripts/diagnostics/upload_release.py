@@ -141,8 +141,8 @@ def main(argv: list[str] | None = None) -> int:
             ):
                 parser.error(f"Некорректная или пустая карта исходников {sm}")
     for name, path in (
-        ("native debug symbols", args.native_symbols),
-        ("JVM obfuscation mapping", args.jvm_mapping),
+        ("символы отладки нативного кода", args.native_symbols),
+        ("таблица соответствия обфусцированных имён JVM", args.jvm_mapping),
     ):
         if path and (
             not path.exists()

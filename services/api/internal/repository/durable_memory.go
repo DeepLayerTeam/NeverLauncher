@@ -61,7 +61,7 @@ func (r *MemoryRepository) leaseJobLocked0213(id, worker string, ttl time.Durati
 	}
 	if j.AttemptCount >= j.MaxAttempts {
 		j.Status = model.DurableJobStatusDead
-		j.LastError = "lease expired; max attempts exceeded"
+		j.LastError = "срок аренды задания истёк; превышено максимальное число попыток"
 		j.CompletedAt, j.UpdatedAt = now, now
 		j.LeaseOwner, j.LeaseToken = "", ""
 		j.LeaseExpiresAt = time.Time{}
@@ -80,7 +80,7 @@ func (r *MemoryRepository) leaseJobLocked0213(id, worker string, ttl time.Durati
 		return model.DurableJob{}, err
 	}
 	if j.Status == model.DurableJobStatusRunning && j.AttemptCount > 0 {
-		r.finishMemoryOperationAttempt0217(id, "failed", "lease expired; recovered by another worker")
+		r.finishMemoryOperationAttempt0217(id, "failed", "срок аренды задания истёк; задание принято другим исполнителем")
 	}
 	j.Status = model.DurableJobStatusRunning
 	j.LeaseOwner = worker
@@ -114,9 +114,9 @@ func (r *MemoryRepository) LeaseDurableJobs(_ context.Context, kind, worker stri
 			continue
 		}
 		if j.Status == model.DurableJobStatusRunning && j.AttemptCount >= j.MaxAttempts && !j.LeaseExpiresAt.After(now) {
-			r.finishMemoryOperationAttempt0217(id, "dead", "lease expired; max attempts exceeded")
+			r.finishMemoryOperationAttempt0217(id, "dead", "срок аренды задания истёк; превышено максимальное число попыток")
 			j.Status = model.DurableJobStatusDead
-			j.LastError = "lease expired; max attempts exceeded"
+			j.LastError = "срок аренды задания истёк; превышено максимальное число попыток"
 			j.LeaseOwner, j.LeaseToken = "", ""
 			j.LeaseExpiresAt = time.Time{}
 			j.CompletedAt, j.UpdatedAt = now, now
@@ -348,7 +348,7 @@ func (r *MemoryRepository) ClaimOutboxEvents(_ context.Context, worker string, l
 	for key, e := range r.durableOutbox {
 		if e.Status == model.OutboxStatusRunning && e.AttemptCount >= e.MaxAttempts && !e.LeaseExpiresAt.After(now) {
 			e.Status = model.OutboxStatusDead
-			e.LastError = "delivery lease expired; max attempts exceeded"
+			e.LastError = "срок аренды доставки истёк; превышено максимальное число попыток"
 			e.LeaseOwner, e.LeaseToken = "", ""
 			e.LeaseExpiresAt = time.Time{}
 			e.UpdatedAt = now

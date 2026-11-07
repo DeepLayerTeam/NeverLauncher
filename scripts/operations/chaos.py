@@ -239,12 +239,12 @@ def api_failover(project: str, env_file: Path, url: str, limit: float) -> dict:
     event_started = stamp()
     try:
         dr.compose(project, env_file, "stop", "-t", "3", "api", timeout=45)
-        poll(lambda: direct_ready(project, env_file, "api-b"), True, limit, "surviving API")
+        poll(lambda: direct_ready(project, env_file, "api-b"), True, limit, "оставшийся доступным API")
         poll(lambda: public_ready(url), True, limit, "Переключение API через Nginx")
         failover = monotonic() - started
     finally:
         dr.compose(project, env_file, "up", "-d", "api", timeout=90)
-    poll(lambda: direct_ready(project, env_file, "api"), True, limit, "restarted API")
+    poll(lambda: direct_ready(project, env_file, "api"), True, limit, "перезапущенный API")
     return {"fault": "api-stopped", "startedUtc": event_started, "restoredUtc": stamp(), "failoverSeconds": round(failover, 3),
             "rtoSeconds": round(failover, 3), "serviceSurvived": True}
 

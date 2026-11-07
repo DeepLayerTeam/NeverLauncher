@@ -41,7 +41,7 @@ func (s Server) authPasswordPolicy(w http.ResponseWriter, r *http.Request) {
 		"algorithm":         "Argon2id",
 		"minimumLength":     12,
 		"recommendedLength": 16,
-		"requirements":      []string{"unique password", "no common password", "no project name", "server-side pepper", "rate-limited verification"},
+		"requirements":      []string{"уникальный пароль", "не используйте распространённые пароли", "не используйте название проекта", "дополнительный секрет на стороне сервера", "ограничение частоты проверок"},
 		"reset":             map[string]any{"tokenTtlMinutes": 30, "singleUse": true, "revokeSessions": true, "audit": true},
 	}})
 }
@@ -177,7 +177,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		"user":          sanitizeUserAccount(user),
 		"session":       sanitizeSessionRecord(session),
 		"tokens":        map[string]any{"accessToken": accessToken, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refreshToken, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true},
-		"next":          []string{"store refresh token in secure storage", "Используйте токен доступа для защищённых адресов API", "обновите до истечения срока действия", "Повторный вход после отзыва"},
+		"next":          []string{"храните токен обновления в защищённом хранилище", "Используйте токен доступа для защищённых адресов API", "обновите до истечения срока действия", "Повторный вход после отзыва"},
 	}})
 }
 
@@ -282,7 +282,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authRefreshPlan(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "implemented", "endpoint": "POST /api/v1/auth/refresh", "steps": []string{"verify refresh token hash", "load server-side session/device binding", "При наличии проверьте подтверждение привязанного ключа устройства", "detect revoked/expired session", "rotate refresh token", "recompute session risk", "issue new access token", "write session audit event"}, "ttl": map[string]any{"accessTokenMinutes": int(accessTokenTTL.Minutes()), "refreshTokenDays": int(refreshTokenTTL.Hours() / 24)}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "implemented", "endpoint": "POST /api/v1/auth/refresh", "steps": []string{"проверка хеша токена обновления", "загрузка серверной привязки сессии к устройству", "При наличии проверьте подтверждение привязанного ключа устройства", "выявление отозванной или истёкшей сессии", "смена токена обновления", "повторная оценка риска сессии", "выпуск нового токена доступа", "запись события аудита сессии"}, "ttl": map[string]any{"accessTokenMinutes": int(accessTokenTTL.Minutes()), "refreshTokenDays": int(refreshTokenTTL.Hours() / 24)}}})
 }
 
 func (s Server) authLogout(w http.ResponseWriter, r *http.Request) {

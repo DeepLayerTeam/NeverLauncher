@@ -215,7 +215,7 @@ func emptyLive0473(ctx context.Context, tx pgx.Tx) error {
 		"extension_ga_contract":        `singleton=true AND package_format_version='1.0' AND manifest_schema_version='2.0' AND host_protocol_version='1.0' AND extension_api_version='1.0' AND legacy_api_aliases='["3.7"]'::jsonb`,
 		"extension_trust_policy":       `singleton=true AND mode='strict' AND allowed_publishers='[]'::jsonb`,
 		"operational_config_current":   `id=1 AND revision=1 AND settings='{"auditDefaultPageSize":25,"auditMaxPageSize":100,"auditLookbackDays":30,"auditExposeClientDetails":false,"jobsDefaultPageSize":25,"jobsMaxPageSize":100}'::jsonb`,
-		"operational_config_revisions": `revision=1 AND actor='system' AND reason='initial defaults' AND restored_from IS NULL AND settings='{"auditDefaultPageSize":25,"auditMaxPageSize":100,"auditLookbackDays":30,"auditExposeClientDetails":false,"jobsDefaultPageSize":25,"jobsMaxPageSize":100}'::jsonb`,
+		"operational_config_revisions": `revision=1 AND actor='system' AND reason='исходные значения по умолчанию' AND restored_from IS NULL AND settings='{"auditDefaultPageSize":25,"auditMaxPageSize":100,"auditLookbackDays":30,"auditExposeClientDetails":false,"jobsDefaultPageSize":25,"jobsMaxPageSize":100}'::jsonb`,
 	}
 	rows, err := tx.Query(ctx, `SELECT tablename FROM pg_tables WHERE schemaname=current_schema() AND tablename NOT IN ('schema_migrations','roles') ORDER BY tablename`)
 	if err != nil {

@@ -277,7 +277,7 @@ func (c *Core) RefreshProviderCredential(ctx context.Context, providerID, provid
 		return authconnector.Authentication{}, err
 	}
 	if expected := strings.TrimSpace(expectedSubject); expected != "" && auth.Identity.Subject != expected {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrConflict, "provider refresh changed identity subject")
+		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrConflict, "обновление провайдера изменило идентификатор пользователя")
 	}
 	return auth, nil
 }
@@ -380,7 +380,7 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 		}
 	}
 	if len(mappedRoles) > 1 {
-		return model.User{}, model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "external identity matches multiple Never role mappings")
+		return model.User{}, model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "внешняя учётная запись соответствует нескольким назначениям ролей Never")
 	}
 	for mapped := range mappedRoles {
 		roleID = mapped
@@ -432,7 +432,7 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 	}
 	existing, err := c.repo.GetAuthIdentityByIssuer(providerID, issuer, identity.Subject)
 	if err == nil && existing.UserID != userID {
-		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "identity already linked")
+		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "учётная запись уже привязана")
 	}
 	if err != nil && !errors.Is(err, repository.ErrNotFound) {
 		return model.AuthIdentity{}, err
@@ -454,7 +454,7 @@ func (c *Core) ResolveProviderIdentity(ctx context.Context, providerID, subject 
 	resolver := connector.(authconnector.IdentityResolver)
 	subject = strings.TrimSpace(subject)
 	if subject == "" {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "subject is required")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "требуется идентификатор пользователя")
 	}
 	identity, err := resolver.ResolveIdentity(ctx, authconnector.ResolveRequest{Subject: subject})
 	if err != nil {
@@ -464,7 +464,7 @@ func (c *Core) ResolveProviderIdentity(ctx context.Context, providerID, subject 
 		return authconnector.Identity{}, err
 	}
 	if identity.Subject != subject {
-		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrConflict, "provider resolve changed subject")
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrConflict, "проверка провайдера изменила идентификатор пользователя")
 	}
 	return identity, nil
 }
@@ -480,7 +480,7 @@ func (c *Core) ResolveProviderProfile(ctx context.Context, providerID, subject s
 	}
 	subject = strings.TrimSpace(subject)
 	if subject == "" {
-		return authconnector.Profile{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "subject is required")
+		return authconnector.Profile{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "требуется идентификатор пользователя")
 	}
 	profile, err := connector.(authconnector.ProfileResolver).ResolveProfile(ctx, authconnector.ResolveRequest{Subject: subject})
 	if err != nil {

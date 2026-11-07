@@ -107,7 +107,7 @@ var builtInProfilePresets0225 = []ProfilePreset0225{
 	{"quilt", "Quilt", "Клиент с загрузчиком Quilt", "quilt", "custom"},
 	{"forge", "Forge", "Клиент с загрузчиком Forge", "forge", "custom"},
 	{"neoforge", "NeoForge", "Клиент с загрузчиком NeoForge", "neoforge", "custom"},
-	{"vanilla-lite", "Vanilla Lite", "Облегчённый пресет Vanilla", "vanilla", "lite"},
+	{"vanilla-lite", "Облегчённая Vanilla", "Облегчённый пресет Vanilla", "vanilla", "lite"},
 }
 
 func ListProfilePresets0225() []ProfilePreset0225 {

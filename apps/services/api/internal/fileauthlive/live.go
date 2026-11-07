@@ -260,10 +260,10 @@ func (c *LiveConnector) AuthenticatePassword(ctx context.Context, req authconnec
 	// даже если при чтении он был действительным.
 	latest, checkErr := c.current(ctx)
 	if checkErr != nil || latest.digest != current.digest {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrUnavailable, "live FileAuth source changed during verification", checkErr)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrUnavailable, "источник FileAuth изменился во время проверки", checkErr)
 	}
 	if err := ctx.Err(); err != nil {
-		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrUnavailable, "FileAuth login canceled", err)
+		return authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrUnavailable, "вход через FileAuth отменён", err)
 	}
 	return authconnector.Authentication{Identity: liveIdentity(a), AuthMethods: []string{"password"}}, nil
 }
