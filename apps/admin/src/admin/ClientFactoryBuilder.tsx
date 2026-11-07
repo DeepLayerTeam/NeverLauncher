@@ -562,7 +562,7 @@ export function ClientFactoryBuilder02710({
           {plan && step === "result" && (
             <>
               <dl className="clientFactoryMeta">
-                <dt>InstallPlan</dt>
+                <dt>План установки</dt>
                 <dd>
                   <code>{plan.reproducibilitySha256}</code>
                 </dd>

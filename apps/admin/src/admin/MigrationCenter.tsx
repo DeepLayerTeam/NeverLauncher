@@ -1323,7 +1323,7 @@ export function MigrationCenter0331({
         Durable workflow для проверки целевого проекта Never и фиксации
         инвентаризации. Статус «prepared» означает только сохранённый baseline;
         совместимость Gravit анализируется отдельно по ZIP; импорт
-        поддерживаемых учётных записей доступен отдельно. Cutover не
+        поддерживаемых учётных записей доступен отдельно. Переключение не
         выполняется.
       </p>
       <form onSubmit={(e) => void create(e)} className="subcard">
@@ -1408,7 +1408,7 @@ export function MigrationCenter0331({
             Архив исходного проекта (LaunchServer.json, profiles/, runtime,
             modules/). Конфигурации и секреты не сохраняются на сервере.
             Неизвестные модули требуют проверки. Даже отчёт без блокеров не
-            разрешает cutover.
+            разрешает переключение.
           </p>
           <label className="field">
             <span>ZIP проекта Gravit (максимум 512 MiB)</span>
@@ -1536,7 +1536,7 @@ export function MigrationCenter0331({
                 Совпало: {identities.summary.matched ?? 0}; ожидает импорта:{" "}
                 {identities.summary.pending_import ?? 0}; заблокировано:{" "}
                 {identities.summary.blocked ?? 0}. Все сопоставлены:{" "}
-                {identities.ready ? "да" : "нет"}. Это не разрешение на cutover.
+                {identities.ready ? "да" : "нет"}. Это не разрешение на переключение.
               </p>
               <details>
                 <summary>Сопоставление UUID ({identities.rows.length})</summary>
@@ -1648,7 +1648,7 @@ export function MigrationCenter0331({
             Для новых импортированных пользователей: транзакционный отзыв всех
             старых сеансов Never, привязок устройств, challenges,
             TPM/measured-boot доказательств. Уже существующие аккаунты не
-            изменяются. Внешние ключи Gravit не импортируются. Cutover запрещён.
+            изменяются. Внешние ключи Gravit не импортируются. Переключение запрещено.
           </p>
           <div className="buttonRow">
             <button
@@ -1952,7 +1952,7 @@ export function MigrationCenter0331({
               <p>
                 Модулей: {modules0338.modules.length}, ServerWrapper:{" "}
                 {modules0338.wrappers.length}, блокеров:{" "}
-                {modules0338.blockers.length}. Cutover запрещён.
+                {modules0338.blockers.length}. Переключение запрещено.
               </p>
               {modules0338.blockers.map((x, i) => (
                 <p key={i} className="error">
@@ -2076,7 +2076,7 @@ export function MigrationCenter0331({
                   {bridgeStatus0446 && (
                     <p role="status">
                       Узел {bridgeStatus0446.serverId}: {bridgeStatus0446.state} ({bridgeStatus0446.reason}).
-                      Даже при online требуется игровая репетиция login/join перед cutover.
+                      Даже при online требуется игровая репетиция login/join перед переключением.
                     </p>
                   )}
                 </>
@@ -2110,8 +2110,8 @@ export function MigrationCenter0331({
               <p>
                 Стенд: <code>{rehearsal03310.stageId}</code> · проверок:{" "}
                 {rehearsal03310.probes.length} · результат:{" "}
-                {rehearsal03310.ready ? "пройдена" : "заблокирована"} · cutover:
-                запрещён.
+                {rehearsal03310.ready ? "пройдена" : "заблокирована"} · переключение:
+                запрещено.
               </p>
               {rehearsal03310.liveSession ? (
                 <p>Игровой сеанс: {rehearsal03310.liveSession.playerName} / <code>{rehearsal03310.liveSession.playerUuid}</code> · вход: {rehearsal03310.liveSession.joinedAt} · клиент SHA-256: <code>{rehearsal03310.liveSession.clientSha256}</code></p>
@@ -2137,7 +2137,7 @@ export function MigrationCenter0331({
           <p>
             Переключает рабочий указатель <code>channel_heads</code> на
             проверенный и подписанный релиз Never. Пока канал staged, PostgreSQL
-            блокирует другие публикации. Исходный Gravit writer необходимо
+            блокирует другие публикации. Исходный процесс записи Gravit необходимо
             остановить и проверить отдельно: Never не умеет подтвердить его
             отключение.
           </p>
@@ -2172,7 +2172,7 @@ export function MigrationCenter0331({
             />
           </label>
           <label className="field">
-            <span>Подтверждение: точный migration run ID</span>
+            <span>Подтверждение: точный идентификатор задачи миграции</span>
             <input
               value={cutoverConfirm03311}
               onChange={(e) => setCutoverConfirm03311(e.target.value)}
@@ -2216,7 +2216,7 @@ export function MigrationCenter0331({
           </label>
           <label className="field">
             <span>
-              SHA-256 свежего исходного snapshot (должен совпасть с MIG10)
+              SHA-256 свежего исходного снимка состояния (должен совпасть с MIG10)
             </span>
             <input
               value={cutoverSnapshot03311}
@@ -2229,7 +2229,7 @@ export function MigrationCenter0331({
               checked={cutoverSourceStopped03311}
               onChange={(e) => setCutoverSourceStopped03311(e.target.checked)}
             />{" "}
-            Исходный writer Gravit остановлен и независимо проверен оператором
+            Исходный процесс записи Gravit остановлен и независимо проверен оператором
           </label>
           {cutovers03311.map((route) => (
             <div key={`${route.profileId}/${route.channel}`}>
@@ -2272,7 +2272,7 @@ export function MigrationCenter0331({
                   <p>
                     Только безопасное обратное переключение Never. Перед планом
                     остановите запись Never и обоих игровых серверов вне панели;
-                    подготовьте JSON свежего snapshot мира, UUID, инвентаря,
+                    подготовьте JSON свежего снимка состояния мира, UUID, инвентаря,
                     прав и экономики. При изменениях данных требуется внешняя
                     сверка/перенос новых записей в Gravit: укажите также новый
                     снимок согласованного Gravit и SHA-256 доказательства.
@@ -2281,7 +2281,7 @@ export function MigrationCenter0331({
                   </p>
                   <label className="field">
                     <span>
-                      Актуальный snapshot JSON из независимо остановленного
+                      Актуальный снимок состояния в формате JSON из независимо остановленного
                       окружения
                     </span>
                     <textarea
@@ -2338,7 +2338,7 @@ export function MigrationCenter0331({
                         setRollbackNeverFenced03312(e.target.checked)
                       }
                     />{" "}
-                    Never и игровые writers остановлены оператором
+                    Процессы записи Never и игры остановлены оператором
                   </label>
                   <label className="field">
                     <input
@@ -2348,7 +2348,7 @@ export function MigrationCenter0331({
                         setRollbackSourceFenced03312(e.target.checked)
                       }
                     />{" "}
-                    Исходный Gravit writer остаётся независимо остановленным
+                    Исходный процесс записи Gravit остаётся независимо остановленным
                   </label>
                   <button
                     disabled={
@@ -2509,7 +2509,7 @@ export function MigrationCenter0331({
               compatibility.claimedVersion ??
               "не определена"}{" "}
             ({compatibility.versionStatus}, {compatibility.versionEvidence});
-            файлов: {compatibility.sourceEntries}. Cutover: запрещён.
+            файлов: {compatibility.sourceEntries}. Переключение запрещено.
           </p>
           <p>
             SHA-256 архива: <code>{compatibility.sourceSha256}</code>

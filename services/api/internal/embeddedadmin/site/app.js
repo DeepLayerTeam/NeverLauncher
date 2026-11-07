@@ -178,7 +178,7 @@ byId("migration-create").addEventListener("submit", async (e) => {
     byId("migration-run-id").value = result.id;
     await migrationView();
     message(
-      "Migration run создан. Выполните baseline и загрузите ZIP для анализа.",
+      "Задача миграции создана. Выполните исходную проверку и загрузите ZIP для анализа.",
     );
   } catch (err) {
     message(err.message, true);
@@ -197,7 +197,7 @@ byId("migration-select").addEventListener("submit", async (e) => {
 for (const op of ["execute", "pause", "resume"]) {
   byId("migration-" + op).addEventListener("click", async (e) => {
     if (!migrationId()) {
-      message("Укажите Migration run ID", true);
+      message("Укажите идентификатор задачи миграции", true);
       return;
     }
     e.currentTarget.disabled = true;
@@ -219,13 +219,13 @@ for (const op of ["execute", "pause", "resume"]) {
 byId("migration-assess").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!migrationId()) {
-    message("Укажите Migration run ID", true);
+    message("Укажите идентификатор задачи миграции", true);
     return;
   }
   const form = byId("migration-assess");
   const file = form.querySelector("[name=source]").files[0];
   if (!file || file.size > 64 * 1024 * 1024) {
-    message("Требуется ZIP до 64 MiB", true);
+    message("Требуется ZIP размером до 64 МиБ", true);
     return;
   }
   const button = form.querySelector("button");
@@ -268,7 +268,7 @@ for (const action of ["inventory", "export"]) {
     const id = migrationId(),
       file = byId("migration-assess").querySelector("[name=source]").files[0];
     if (!id || !file || file.size > 512 * 1024 * 1024) {
-      message("Выберите run и исходный ZIP до 512 MiB", true);
+      message("Выберите задачу миграции и исходный ZIP размером до 512 МиБ", true);
       return;
     }
     e.currentTarget.disabled = true;
@@ -298,7 +298,7 @@ for (const action of ["inventory", "export"]) {
           null,
           2,
         );
-        message("Source inventory сохранён в PostgreSQL");
+        message("Инвентаризация источников сохранена в PostgreSQL");
       } else {
         if (!response.headers.get("X-Migration-Manifest-SHA256"))
           throw new Error("Экспорт не содержит SHA-256 манифеста");
@@ -333,7 +333,7 @@ for (const action of ["map-identities", "verify-identities"]) {
       !id ||
       (action === "map-identities" && (!file || file.size > 512 * 1024 * 1024))
     ) {
-      message("Выберите run и исходный ZIP до 512 MiB", true);
+      message("Выберите задачу миграции и исходный ZIP размером до 512 МиБ", true);
       return;
     }
     const uri =
@@ -365,7 +365,7 @@ for (const action of ["map-identities", "verify-identities"]) {
         null,
         2,
       );
-      message("Карта UUID сверена. Cutover не разрешён.");
+      message("Карта UUID сверена. Переключение пока запрещено.");
     } catch (e) {
       message(e.message, true);
     } finally {
@@ -385,7 +385,7 @@ for (const action of ["preview", "import"]) {
       const id = migrationId(),
         file = byId("migration-assess").querySelector("[name=source]").files[0];
       if (!id || !file) {
-        message("Укажите migration run и исходный ZIP", true);
+        message("Укажите идентификатор задачи миграции и исходный ZIP", true);
         return;
       }
       const decision = values("migration-auth");
@@ -393,7 +393,7 @@ for (const action of ["preview", "import"]) {
         action === "import" &&
         (decision.confirmRun !== id || !credentialPreview335)
       ) {
-        message("Сначала dry-run, затем введите точный run ID", true);
+        message("Сначала выполните пробный запуск, затем введите точный идентификатор задачи миграции", true);
         return;
       }
       const button = event.currentTarget;
@@ -430,7 +430,7 @@ for (const action of ["preview", "import"]) {
         } else {
           credentialPreview335 = null;
           byId("migration-auth").querySelector("[name=confirmRun]").value = "";
-          message("Auth import сохранён транзакционно");
+          message("Импорт данных авторизации сохранён транзакционно");
         }
       } catch (err) {
         message(err.message, true);
@@ -450,7 +450,7 @@ for (const action of ["preview", "activate", "verify"]) {
     async (event) => {
       const id = migrationId();
       if (!id) {
-        message("Укажите migration run ID", true);
+        message("Укажите идентификатор задачи миграции", true);
         return;
       }
       if (
@@ -512,7 +512,7 @@ for (const action of ["preview", "status", "import", "optionals"]) {
     const id = migrationId(),
       file = byId("migration-assess").querySelector("[name=source]").files[0];
     if (!id || (action !== "status" && action !== "optionals" && !file)) {
-      message("Выберите run и исходный ZIP", true);
+      message("Выберите задачу миграции и исходный ZIP", true);
       return;
     }
     const pp = byId("migration-content-profile-path").value.trim();
@@ -524,11 +524,11 @@ for (const action of ["preview", "status", "import", "optionals"]) {
       (action === "import" || action === "optionals") &&
       byId("migration-content-run").value.trim() !== id
     ) {
-      message("Введите точный run ID", true);
+      message("Введите точный идентификатор задачи миграции", true);
       return;
     }
     if (action === "import" && !migrationContentPreview337?.ready) {
-      message("Сначала выполните успешный dry-run", true);
+      message("Сначала завершите пробный запуск без ошибок", true);
       return;
     }
     const btn = ev.currentTarget;
@@ -579,8 +579,8 @@ for (const action of ["preview", "status", "import", "optionals"]) {
       if (action === "import") migrationContentPreview337 = null;
       message(
         action === "import"
-          ? "Содержимое перенесено в Build Workspace; требуется сборка, проверка и подпись"
-          : "Операция Content Migration выполнена",
+          ? "Содержимое перенесено в рабочую область сборки; требуется сборка, проверка и подпись"
+          : "Перенос содержимого выполнен",
       );
     } catch (e) {
       message(e.message, true);
@@ -596,7 +596,7 @@ for (const action of ["analyze", "get", "enroll"]) {
   byId("migration-modules-" + action).addEventListener("click", async (ev) => {
     const id = migrationId();
     if (!id) {
-      message("Укажите migration run ID", true);
+      message("Укажите идентификатор задачи миграции", true);
       return;
     }
     const file =
@@ -675,7 +675,7 @@ for (const action of ["analyze", "get", "enroll"]) {
 byId("migration-rehearsal-get").addEventListener("click", async (e) => {
   const id = migrationId();
   if (!id) {
-    message("Укажите Migration run ID", true);
+    message("Укажите идентификатор задачи миграции", true);
     return;
   }
   e.currentTarget.disabled = true;
@@ -690,7 +690,7 @@ byId("migration-rehearsal-get").addEventListener("click", async (e) => {
     );
     message(
       report.ready
-        ? "Проверенная репетиция прошла; cutover остаётся запрещённым"
+        ? "Проверенная репетиция завершена; переключение остаётся запрещённым"
         : "Репетиция имеет блокировки; см. отчёт",
     );
   } catch (err) {
@@ -705,7 +705,7 @@ for (const op of ["list", "stage", "activate", "cancel"]) {
   byId("migration-cutover-" + op).addEventListener("click", async (event) => {
     const id = migrationId();
     if (!id) {
-      message("Укажите migration run ID", true);
+      message("Укажите идентификатор задачи миграции", true);
       return;
     }
     const profileId = byId("migration-cutover-profile").value.trim();
@@ -716,7 +716,7 @@ for (const op of ["list", "stage", "activate", "cancel"]) {
       return;
     }
     if (op === "activate" && !byId("migration-cutover-source-fenced").checked) {
-      message("Сначала остановите исходный Gravit writer вне Never", true);
+      message("Сначала остановите исходный процесс записи Gravit вне Never", true);
       return;
     }
     const route = `/api/v1/admin/migration-runs/${encodeURIComponent(id)}/cutovers`;
@@ -805,7 +805,7 @@ for (const operation of ["plan", "commit", "status"]) {
           (run !== confirmed || !byId("migration-rollback-fenced").checked))
       ) {
         message(
-          "Укажите run/profile/channel, подтвердите run и остановку Never writers",
+          "Укажите задачу миграции, профиль и канал, подтвердите задачу миграции и остановку процессов записи Never",
           true,
         );
         return;
@@ -814,7 +814,7 @@ for (const operation of ["plan", "commit", "status"]) {
         operation === "commit" &&
         !byId("migration-rollback-source-fenced").checked
       ) {
-        message("Gravit writer необходимо отдельно остановить", true);
+        message("Процесс записи Gravit необходимо остановить отдельно", true);
         return;
       }
       const rev = Number(byId("migration-cutover-revision").value);
@@ -823,7 +823,7 @@ for (const operation of ["plan", "commit", "status"]) {
         try {
           data.current = JSON.parse(byId("migration-rollback-snapshot").value);
         } catch {
-          message("Требуется свежий snapshot JSON", true);
+          message("Требуется новый снимок состояния в формате JSON", true);
           return;
         }
         const reconciled = byId(
@@ -833,7 +833,7 @@ for (const operation of ["plan", "commit", "status"]) {
           try {
             data.reconciledSource = JSON.parse(reconciled);
           } catch {
-            message("Некорректный Gravit reconciliation JSON", true);
+            message("Некорректный JSON сверки данных Gravit", true);
             return;
           }
           data.reconciliationEvidenceSha256 = byId(
@@ -898,7 +898,7 @@ for (const operation of ["plan", "commit", "status"]) {
           byId("migration-rollback-plan-sha").value = result.planSha256;
         message(
           result?.ready
-            ? `Rollback ${result.state}; исходный writer НЕ перезапущен`
+            ? `Откат: ${result.state}; исходный процесс записи НЕ перезапущен`
             : `Откат заблокирован: ${(result?.blockers || []).join("; ")}`,
         );
       } catch (err) {
@@ -916,14 +916,14 @@ for (const action of ["report", "status", "review"]) {
   byId("migration-rc-" + action).addEventListener("click", async (event) => {
     const run = migrationId();
     if (!run) {
-      message("Укажите run ID", true);
+      message("Укажите идентификатор задачи миграции", true);
       return;
     }
     const path = `/api/v1/admin/migration-runs/${encodeURIComponent(run)}/report`;
     const review = action === "review",
       status = action === "status";
     if (review && byId("migration-rc-confirm").value.trim() !== run) {
-      message("Нужен точный run ID", true);
+      message("Нужен точный идентификатор задачи миграции", true);
       return;
     }
     const body = review

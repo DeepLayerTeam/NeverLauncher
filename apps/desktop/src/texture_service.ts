@@ -271,7 +271,7 @@ export class TextureServiceClient0258 {
   ): Promise<void> {
     const uuid = profileUuid.replace(/-/g, "").toLowerCase();
     if (!/^[0-9a-f]{32}$/.test(uuid) || !/^[0-9a-f]{64}$/.test(digest))
-      throw new Error("Неверный Minecraft UUID или SHA-256 текстуры.");
+      throw new Error("Неверный UUID Minecraft или SHA-256 текстуры.");
     const base = new URL(this.base);
     if (
       !["https:", "http:"].includes(base.protocol) ||

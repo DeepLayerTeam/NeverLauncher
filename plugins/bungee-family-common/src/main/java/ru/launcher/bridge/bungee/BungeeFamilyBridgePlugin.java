@@ -179,7 +179,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         if (current == null || !current.confirmAuthenticatedPlayer(username, uuid)) {
             event.setCancelled(true);
             event.setCancelReason(TextComponent.fromLegacyText(
-                "Подтверждённый Minecraft UUID не совпадает с сессией Launcher"));
+                "Подтверждённый UUID Minecraft не совпадает с сессией Launcher"));
             getLogger().warning("launcher.join.uuid-denied username=" + username + " platform=" + expectedPlatform.id());
         }
     }

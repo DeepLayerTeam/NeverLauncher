@@ -312,7 +312,7 @@ pub struct OfficialAccount0267 {
     pub active: bool,
 }
 fn normalized_uuid(uuid: &str) -> Result<String, String> {
-    if !uuid_valid(uuid) { return Err("Некорректный Minecraft UUID".into()); }
+    if !uuid_valid(uuid) { return Err("Некорректный UUID Minecraft".into()); }
     Ok(uuid.to_ascii_lowercase())
 }
 fn account_slot(id: &str, uuid: &str) -> Result<String, String> {
@@ -473,7 +473,7 @@ impl IdentityManager {
             return Err(match status {
             401 => "Сессия Never/Minecraft недействительна; войдите повторно".into(),
             403 => "Доступ Minecraft запрещён провайдером или настройками аккаунта".into(),
-            409 if route == "/link" => "Minecraft UUID уже связан с другой учётной записью Never".into(),
+            409 if route == "/link" => "UUID Minecraft уже связан с другой учётной записью Never".into(),
             429 => "Слишком много запросов; повторите позднее".into(),
             502..=599 => "Сервис Microsoft/Minecraft временно недоступен".into(),
             _ => format!("Официальная авторизация: HTTP {status}"),
@@ -1174,10 +1174,10 @@ impl IdentityManager {
         let _guard=self.vault_lock.lock().await;
         migrate_legacy(&id)?;
         let (slot,mut record)=selected_record(&id)?.ok_or("Minecraft-аккаунт не выбран")?;
-        if normalized_uuid(&record.profile.id)?!=requested {return Err("Выбранный Minecraft UUID изменился".into());}
+        if normalized_uuid(&record.profile.id)?!=requested {return Err("Выбранный UUID Minecraft изменился".into());}
         if record.native.is_none() {return Err("Для привязки требуется повторный официальный вход Microsoft через native flow".into());}
         self.native_validate(&base,&slot,access,&mut record,false).await?;
-        if normalized_uuid(&record.profile.id)?!=requested {return Err("Minecraft UUID изменился при проверке".into());}
+        if normalized_uuid(&record.profile.id)?!=requested {return Err("UUID Minecraft изменился при проверке".into());}
         let bearer=Zeroizing::new(record.native.as_ref().ok_or("Отсутствует официальный token")?.minecraft_token.clone());
         // Учётные данные остаются только в нативном коде; интерфейс видит проверенный результат.
         let response=self.request(&base,access,"/link",Method::POST,None,Some(json!({

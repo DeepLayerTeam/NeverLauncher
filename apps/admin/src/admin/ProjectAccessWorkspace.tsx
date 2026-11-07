@@ -65,7 +65,7 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
         setError('Права пользователя изменены другим администратором. Обновите список перед повторной попыткой.');
         await refresh().catch(() => undefined);
       } else if (err instanceof ApiError && [401,403,428].includes(err.status)) {
-        setError(`${err.message}. Проверьте право users:manage и выполните свежий passkey MFA step-up.`);
+        setError(`${err.message}. Проверьте право users:manage и выполните повторную проверку MFA с ключом доступа.`);
       } else setError(err instanceof Error ? err.message : String(err));
     } finally { setBusy(false); }
   }

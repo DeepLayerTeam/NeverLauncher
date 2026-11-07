@@ -865,7 +865,7 @@ async fn resolve_adoptium_latest_asset(
         return Ok(None);
     }
     if !response.status().is_success() {
-        return Err(format!("Adoptium latest API вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
+        return Err(format!("API Adoptium для последней версии вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
     }
     let assets = response
         .json::<Vec<AdoptiumAsset>>()
@@ -901,7 +901,7 @@ async fn resolve_adoptium_feature_release_asset(
         return Ok(None);
     }
     if !response.status().is_success() {
-        return Err(format!("Adoptium feature release API вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
+        return Err(format!("API Adoptium для выбранной версии вернул HTTP {} для Java {major}/{api_os}/{api_arch}/{image_type}", response.status()));
     }
     let releases = response
         .json::<Vec<AdoptiumFeatureRelease>>()

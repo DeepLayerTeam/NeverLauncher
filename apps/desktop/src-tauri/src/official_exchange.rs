@@ -33,7 +33,7 @@ impl ProviderError {
             Self::XboxRegion => "Xbox недоступен для региона этого аккаунта",
             Self::XboxFamily => "Настройки семьи или возраста ограничивают Xbox",
             Self::NoMinecraftJava => "Отсутствует доступный Minecraft Java Edition профиль",
-            Self::IdentityMismatch => "Minecraft UUID изменился; требуется явное переподключение аккаунта",
+            Self::IdentityMismatch => "UUID Minecraft изменился; требуется явное переподключение аккаунта",
             Self::Throttled(_) => "Провайдер ограничил частоту запросов",
             Self::Transient | Self::Unavailable => "Microsoft/Xbox/Minecraft временно недоступны",
             Self::InvalidResponse => "Неверный или неполный ответ игрового провайдера",

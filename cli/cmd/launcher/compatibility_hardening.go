@@ -53,7 +53,7 @@ func resolveVanillaMetadataWithRecovery(ctx context.Context, client *http.Client
 			cached.Recovered = true
 			return cached, nil
 		}
-		return vanillaResolvedMetadata{}, fmt.Errorf("Mojang version manifest повреждён: %w", err)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Манифест версий Mojang повреждён: %w", err)
 	}
 	selectedID := resolveRequestedMinecraftVersion(manifest, requestedVersion)
 	selected, ok := findMojangManifestVersion(manifest, selectedID)
@@ -64,7 +64,7 @@ func resolveVanillaMetadataWithRecovery(ctx context.Context, client *http.Client
 		return vanillaResolvedMetadata{}, fmt.Errorf("Minecraft %s отсутствует в Mojang version manifest", selectedID)
 	}
 	if selected.URL == "" || selected.SHA1 == "" {
-		return vanillaResolvedMetadata{}, fmt.Errorf("Mojang manifest entry %s не содержит URL/SHA1", selectedID)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Запись манифеста Mojang %s не содержит URL/SHA1", selectedID)
 	}
 	if err := validateSHA1Hex(selected.SHA1); err != nil {
 		return vanillaResolvedMetadata{}, fmt.Errorf("Запись %s манифеста Mojang: %w", selectedID, err)

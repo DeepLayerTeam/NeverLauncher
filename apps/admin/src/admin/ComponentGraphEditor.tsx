@@ -97,7 +97,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
  const entries=section==='components'?components:section==='categories'?categories:section==='groups'?groups:presets;
  return <article className="subcard componentEditor0248">
   <h4>Редактор графа компонентов · 0.24.8</h4>
-  <p className="muted">Manifest {snapshot.manifestSchemaVersion} · Каталог {snapshot.catalog?.schemaVersion} r{initialRevision} · SHA-256 {snapshot.catalog?.digest?.slice(0,16)}… · {snapshot.status}</p>
+  <p className="muted">Манифест {snapshot.manifestSchemaVersion} · Каталог {snapshot.catalog?.schemaVersion} r{initialRevision} · SHA-256 {snapshot.catalog?.digest?.slice(0,16)}… · {snapshot.status}</p>
   {!eligible&&<p role="alert" className="error">Редактирование доступно только в неподписанном манифесте v3. Создайте новый v3-пакет; подписанные и опубликованные релизы неизменяемы.</p>}
   <div className="buttonRow"><button disabled={busy||saving||dirty} onClick={()=>void load()}>Загрузить с сервера заново</button><button disabled={!dirty||busy||saving} onClick={()=>{if(window.confirm('Сбросить несохранённые изменения?')){setCatalog(initialCatalog(snapshot.catalog!));setPreview(null);setPreviewKey('')}}}>Сбросить правки</button></div>
   <fieldset disabled={!usable}>

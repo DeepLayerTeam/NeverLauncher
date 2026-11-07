@@ -376,7 +376,7 @@ export function OfficialMinecraftPanel0257({
             ) : (
               <p>
                 {linked
-                  ? "Minecraft UUID подтверждён сервером Never."
+                  ? "UUID Minecraft подтверждён сервером Never."
                   : "Локальная игровая учётная запись не привязана к учётной записи Never."}
               </p>
             )}

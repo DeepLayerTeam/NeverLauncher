@@ -142,7 +142,7 @@ public final class LauncherVelocityBridge {
         String authenticatedUUID = event.getPlayer().getUniqueId() == null ? "" : event.getPlayer().getUniqueId().toString();
         if (current == null || !current.confirmAuthenticatedPlayer(username, authenticatedUUID)) {
             event.setResult(LoginEvent.ComponentResult.denied(Component.text(
-                "Подтверждённый Minecraft UUID не совпадает с сессией Launcher")));
+                "Подтверждённый UUID Minecraft не совпадает с сессией Launcher")));
             logger.warning("launcher.join.uuid-denied username=" + username + " platform=velocity");
         }
     }

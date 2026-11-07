@@ -21,12 +21,12 @@ export function offlineRecovery0358(error: unknown): string {
   if (/signature|ed25519|trust.policy|invalid.signer|подпись|ключ.*подписи/i.test(message))
     return 'Получите у владельца актуальный подписанный пакет; не отключайте проверку подписи.';
   if (/offline.*(disabled|not.allow|denied.*policy)|offline.cache.disabled/i.test(message))
-    return 'Этот профиль запрещает offline. Выберите разрешённый профиль или играйте онлайн.';
+    return 'Этот профиль запрещает автономный режим. Выберите разрешённый профиль или играйте онлайн.';
   if (/profile|channel|pinned.key|scope|release.differs|preset|подписанн.*профил/i.test(message))
     return 'Вернитесь к установленному профилю и каналу или обновите сборку онлайн.';
   if (/cache|cached.manifest|no.cached.manifest/i.test(message))
-    return 'Подключитесь к сети, получите подписанный манифест и сохраните offline-кеш.';
+    return 'Подключитесь к сети, получите подписанный манифест и сохраните кеш автономного режима.';
   if (/not.verified|integrity|missing|invalid|client.files|file.*corrupt|установк/i.test(message))
     return 'Подключитесь к сети и выполните «Восстановить файлы» в разделе загрузок.';
-  return 'Повторите проверку offline-кеша; при повторении ошибки откройте диагностику.';
+  return 'Повторите проверку кеша автономного режима; при повторении ошибки откройте диагностику.';
 }

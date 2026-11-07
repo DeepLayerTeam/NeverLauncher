@@ -739,7 +739,7 @@ func installForgeLegacy(
 		return forgeMaterializeResult{}, fmt.Errorf("профиль устаревшего Forge inheritsFrom=%s, ожидался %s", bundle.Version.InheritsFrom, vanilla.MinecraftVersion)
 	}
 	if bundle.Version.ID == "" || bundle.Version.MainClass == "" {
-		return forgeMaterializeResult{}, errors.New("Forge legacy runtime profile не содержит id/mainClass")
+		return forgeMaterializeResult{}, errors.New("Устаревший профиль среды выполнения Forge не содержит id/mainClass")
 	}
 	if err := validateLoaderProfileID(bundle.Version.ID); err != nil {
 		return forgeMaterializeResult{}, err
@@ -2244,7 +2244,7 @@ func selectInstallerJava(explicit string, minimumMajor int) (string, error) {
 	}
 	info, err := os.Stat(candidate)
 	if err != nil || info.IsDir() {
-		return "", fmt.Errorf("Java executable недоступен: %s", candidate)
+		return "", fmt.Errorf("Исполняемый файл Java недоступен: %s", candidate)
 	}
 	major, err := javaMajorVersion(candidate)
 	if err != nil {

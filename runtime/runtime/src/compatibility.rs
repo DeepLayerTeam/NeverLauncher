@@ -298,7 +298,7 @@ pub async fn resolve_compatibility(
             .await
             .map_err(|err| format!("не удалось прочитать Minecraft metadata {}: {err}", full_path.display()))?;
         let mut metadata: VersionMetadata = serde_json::from_slice(&bytes)
-            .map_err(|err| format!("Minecraft metadata {} повреждён: {err}", relative_path))?;
+            .map_err(|err| format!("Метаданные Minecraft {} повреждены: {err}", relative_path))?;
         if metadata.id.trim().is_empty() {
             metadata.id = current_id.clone();
         }
@@ -531,7 +531,7 @@ fn merge_layers(
         }
         for library in &layer.libraries {
             if library.name.trim().is_empty() {
-                return Err(format!("Minecraft metadata {} содержит library без name", layer.id));
+                return Err(format!("Метаданные Minecraft {} содержат библиотеку без названия", layer.id));
             }
             // Фильтруйте до объединения координат Maven. Mojang
             // 1.6.x–1.12.x может перечислять две версии org.lwjgl.lwjgl:lwjgl

@@ -11,11 +11,11 @@ export function resolveLaunchMode0269(intent: LaunchIntent0269): GameLaunchMode0
   switch (intent.identity) {
     case 'official':
       if (!intent.hasOfficialProfile) throw new Error('Выберите подтверждённый официальный Minecraft-профиль.');
-      if (intent.serverId) throw new Error('Official не использует Never ServerBridge ID. Очистите ID сервера и укажите прямой игровой адрес.');
+      if (intent.serverId) throw new Error('Официальный режим не использует Never ServerBridge ID. Очистите ID сервера и укажите прямой игровой адрес.');
       return 'official';
     case 'offline':
-      if (!intent.offlineAllowed) throw new Error('Offline запрещён подписанным игровым профилем.');
-      if (intent.autoEnter || intent.serverId) throw new Error('Offline не подключается к ServerBridge или online-mode серверам.');
+      if (!intent.offlineAllowed) throw new Error('Автономный режим запрещён подписанным игровым профилем.');
+      if (intent.autoEnter || intent.serverId) throw new Error('Автономный режим не подключается к ServerBridge или online-mode серверам.');
       return 'offline';
     case 'local':
       return 'local';

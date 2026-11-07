@@ -509,7 +509,7 @@ impl GuardSupervisor {
             .ok_or_else(|| "Граница изоляции процесса Guard не инициализирована".to_string())?;
         let payload = send_command(handle, "process-policy").await?;
         let policy: GuardProcessPolicyReport = serde_json::from_value(payload)
-            .map_err(|err| format!("Guard process policy payload повреждён: {err}"))?;
+            .map_err(|err| format!("Повреждены данные политики процесса Guard: {err}"))?;
         validate_guard_process_policy(handle, &policy)?;
         Ok(policy)
     }
@@ -550,7 +550,7 @@ impl GuardSupervisor {
         }
         let payload = send_command_with_payload(handle, "guard-attestation", &request_payload).await?;
         let attestation: GuardRemoteAttestation = serde_json::from_value(payload)
-            .map_err(|err| format!("Guard remote attestation payload повреждён: {err}"))?;
+            .map_err(|err| format!("Повреждены данные удалённой аттестации Guard: {err}"))?;
         validate_remote_attestation(handle, challenge_id, challenge, &attestation)?;
         Ok(attestation)
     }
@@ -642,7 +642,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     let raw = std::fs::read(&manifest_path)
         .map_err(|err| format!("не удалось прочитать манифест пакета Windows: {err}"))?;
     let manifest: WindowsPackageManifest = serde_json::from_slice(&raw)
-        .map_err(|err| format!("Windows package manifest повреждён: {err}"))?;
+        .map_err(|err| format!("Повреждён манифест пакета Windows: {err}"))?;
     let canonical_arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "x64" };
     let legacy_identity = manifest.schema_version == "1.0" && manifest.platform == "windows-amd64";
     let canonical_identity = manifest.schema_version == "1.1"
@@ -939,7 +939,7 @@ async fn send_command_inner(
 #[cfg(windows)]
 fn parse_status(value: Value) -> Result<GuardStatus, String> {
     let status: GuardStatus = serde_json::from_value(value)
-        .map_err(|err| format!("Guard status payload повреждён: {err}"))?;
+        .map_err(|err| format!("Повреждены данные состояния Guard: {err}"))?;
     validate_release_identity(&status, expected_windows_platform())?;
     Ok(status)
 }
@@ -1239,7 +1239,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
     {
         let mut bootstrap_stdin = std::io::stdin();
         std::io::Read::read_exact(&mut bootstrap_stdin, &mut bootstrap_secret)
-            .map_err(|err| format!("Guard bootstrap secret не получен: {err}"))?;
+            .map_err(|err| format!("Не получен секрет первичной настройки Guard: {err}"))?;
     }
 
     let started_at_unix = now_unix()?;
@@ -1521,7 +1521,7 @@ async fn serve_authenticated_session(
             }
             "guard-attestation" => {
                 let request: GuardAttestationRequest = serde_json::from_str(&request.payload)
-                    .map_err(|err| format!("Guard attestation request payload повреждён: {err}"))?;
+                    .map_err(|err| format!("Повреждены данные запроса аттестации Guard: {err}"))?;
                 if request.challenge_id.trim().is_empty()
                     || request.challenge_id.len() > 160
                     || request.challenge.is_empty()

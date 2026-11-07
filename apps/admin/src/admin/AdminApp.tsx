@@ -1905,7 +1905,7 @@ export function AdminApp() {
           )}
           {token && (
             <details className="advanced">
-              <summary>Безопасность сессии и passkeys</summary>
+              <summary>Безопасность сеанса и ключи доступа</summary>
               <div className="passkeyRow">
                 <button
                   onClick={() =>

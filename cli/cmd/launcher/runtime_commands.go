@@ -117,7 +117,7 @@ func handleRuntime(args []string) error {
 		}
 		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "javaPath": javaPath, "status": status, "recommendedMajorVersion": 21, "supportedMajorVersions": []int{8, 16, 17, 21}, "checks": []string{"path", "major-version", "executable-bit", "launch-compatibility"}})
 		if status != "available" {
-			return errors.New("Java runtime не найден по указанному пути")
+			return errors.New("Среда выполнения Java не найдена по указанному пути")
 		}
 		return nil
 	case "launch-plan":

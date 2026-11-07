@@ -1227,7 +1227,7 @@ function App() {
       .catch((error) => {
         if (active)
           setAuthProviderError0293(
-            `Невозможно получить список auth providers: ${String(error)}`,
+            `Невозможно получить список провайдеров авторизации: ${String(error)}`,
           );
       });
     return () => {
@@ -1369,7 +1369,7 @@ function App() {
         setSelectedProfile(fallback.profileId || "");
         setNativeConfigLoaded0357(true);
         log(
-          "Только предварительный просмотр в браузере: параметры восстановлены из localStorage без нативной проверки доверия.",
+          "Только предварительный просмотр в браузере: параметры восстановлены из локального хранилища браузера без нативной проверки доверия.",
         );
       }
     })();
@@ -1470,7 +1470,7 @@ function App() {
           }
         })
         .catch((error) =>
-          log(`Не удалось получить статус runtime process: ${String(error)}`),
+          log(`Не удалось получить состояние процесса среды выполнения: ${String(error)}`),
         );
     }, 1000);
     return () => window.clearInterval(timer);
@@ -1748,14 +1748,14 @@ function App() {
 
   async function passkeyStepUp(session: AuthSession): Promise<AuthSession> {
     if (!navigator.credentials?.get)
-      throw new Error("WebAuthn/passkey недоступен во встроенном веб-представлении Desktop.");
+      throw new Error("WebAuthn (ключ доступа) недоступен во встроенном веб-представлении Desktop.");
     const beginResponse = await postDeviceJson(
       "/api/v1/auth/passkeys/step-up/begin",
       session.accessToken,
     );
     if (!beginResponse.ok)
       throw new Error(
-        `Не удалось начать дополнительную проверку passkey: ${beginResponse.status} ${beginResponse.statusText}`,
+        `Не удалось начать дополнительную проверку по ключу доступа: ${beginResponse.status} ${beginResponse.statusText}`,
       );
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
@@ -1788,7 +1788,7 @@ function App() {
     );
     if (!completeResponse.ok)
       throw new Error(
-        `Не удалось завершить дополнительную проверку passkey: ${completeResponse.status} ${completeResponse.statusText}`,
+        `Не удалось завершить дополнительную проверку по ключу доступа: ${completeResponse.status} ${completeResponse.statusText}`,
       );
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
@@ -2446,7 +2446,7 @@ function App() {
       );
     setDeviceTrustStatus("verified");
     log(
-      `Владение ключом подтверждено устройством ${key.deviceId}; binding=${key.keyBinding}; provider=${key.hardwareProvider || key.storageBackend}.`,
+      `Владение ключом подтверждено устройством ${key.deviceId}; привязка=${key.keyBinding}; провайдер=${key.hardwareProvider || key.storageBackend}.`,
     );
     const trusted = await persistTrustedAccess(session, data.accessToken);
     return attestDesktopDeviceKey(trusted, key);
@@ -2695,7 +2695,7 @@ function App() {
       `Привязана учётная запись ${linked.provider} / ${linked.issuer} / ${linked.subject}.`,
     );
     log(
-      `Провайдер ${linked.provider} привязан с подтверждением внешних credentials.`,
+      `Провайдер ${linked.provider} привязан с подтверждением внешних учётных данных.`,
     );
   }
 
@@ -3013,7 +3013,7 @@ function App() {
         normalizedSettings({ ...current, offlineEnabled: false }),
       );
       setOfflineStatus0358(`Автономный режим недоступен: ${String(error)}. ${action}`);
-      log(`Offline отклонён: ${String(error)}. ${action}`);
+      log(`Автономный режим отклонён: ${String(error)}. ${action}`);
     }
   }
 
@@ -4360,9 +4360,9 @@ function App() {
       if (minecraftIdentity === "offline") {
         const recovery = offlineRecovery0358(error);
         setOfflineStatus0358(
-          `Offline запуск отклонён: ${String(error)}. ${recovery}`,
+          `Автономный запуск отклонён: ${String(error)}. ${recovery}`,
         );
-        log(`Offline запуск отклонён: ${String(error)}. ${recovery}`);
+        log(`Автономный запуск отклонён: ${String(error)}. ${recovery}`);
       } else {
         log(`Запуск не выполнен: ${String(error)}`);
       }
@@ -6100,7 +6100,7 @@ function AuthPanel({
         Маршрутизация: default={routing0293.defaultProvider || "не задан"},{" "}
         {routing0293.requireExplicitProvider
           ? "неизвестный идентификатор требует явного провайдера"
-          : "fallback при ошибке авторизации запрещён"}
+          : "резервный способ входа при ошибке авторизации запрещён"}
         . {authProviderError0293}
       </p>
       <label>

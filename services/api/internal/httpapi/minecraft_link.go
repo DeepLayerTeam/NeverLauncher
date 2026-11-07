@@ -25,7 +25,7 @@ type officialLinkRequest0268 struct {
 }
 
 var errLinkProofMalformed0268 = errors.New("Некорректное подтверждение Minecraft")
-var errLinkProofMismatch0268 = errors.New("Несовпадение подтверждённого Minecraft UUID")
+var errLinkProofMismatch0268 = errors.New("Несовпадение подтверждённого UUID Minecraft")
 
 type minecraftProfileVerifier0268 interface {
 	Profile(context.Context, string) (officialminecraft.Profile, error)

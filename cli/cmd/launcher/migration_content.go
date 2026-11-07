@@ -33,7 +33,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Gravit content transfer: требуется HTTPS или локальный IP-адрес обратной связи")
+			return errors.New("Перенос содержимого Gravit: требуется HTTPS или локальный IP-адрес обратной связи")
 		}
 	}
 	f, e := os.Open(source)

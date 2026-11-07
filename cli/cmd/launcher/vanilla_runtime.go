@@ -294,7 +294,7 @@ func handleRuntimeVanillaServer(args []string) error {
 
 func installVanillaServer(ctx context.Context, requestedVersion, serverDir, versionManifest string, client *http.Client) (vanillaServerInstallResult, error) {
 	if strings.TrimSpace(serverDir) == "" {
-		return vanillaServerInstallResult{}, errors.New("Vanilla server install требует serverDir")
+		return vanillaServerInstallResult{}, errors.New("Установка сервера Vanilla требует serverDir")
 	}
 	if strings.TrimSpace(versionManifest) == "" {
 		versionManifest = defaultMojangVersionManifest
@@ -363,7 +363,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		return vanillaInstallResult{}, cacheErr
 	}
 	if strings.TrimSpace(opts.ClientDir) == "" {
-		return vanillaInstallResult{}, errors.New("Vanilla install требует clientDir")
+		return vanillaInstallResult{}, errors.New("Установка клиента Vanilla требует clientDir")
 	}
 	if opts.VersionManifest == "" {
 		opts.VersionManifest = defaultMojangVersionManifest

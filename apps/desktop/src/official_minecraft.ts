@@ -101,7 +101,7 @@ export class OfficialMinecraftClient0257 {
     if (generation !== this.generation)
       throw new Error("Авторизация отменена.");
     if (!profile?.id || !profile.name)
-      throw new Error("Microsoft-вход не подтвердил Minecraft Java профиль.");
+      throw new Error("Microsoft-вход не подтвердил профиль Minecraft Java.");
     this.active = true;
     return profile;
   }
@@ -160,7 +160,7 @@ export class OfficialMinecraftClient0257 {
     if (generation !== this.generation)
       throw new Error("Авторизация отменена.");
     if (!profile?.id || !profile.name)
-      throw new Error("Minecraft Java профиль не подтверждён.");
+      throw new Error("Профиль Minecraft Java не подтверждён.");
     this.active = true;
     return profile;
   }

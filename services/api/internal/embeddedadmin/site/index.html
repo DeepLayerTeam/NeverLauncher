@@ -172,7 +172,7 @@
               placeholder="Точный идентификатор задачи миграции"
           /></label>
           <button id="migration-preview-credentials" type="button">
-            Проверка авторизации (dry-run)</button
+            Проверка авторизации (пробный запуск)</button
           ><button id="migration-import-credentials" type="button">
             Импортировать новые учётные записи
           </button>
@@ -296,14 +296,14 @@
               placeholder="my-profile"
           /></label>
           <label
-            >НОВЫЙ открытый ключ Ed25519 (base64url; private key никогда не
+            >НОВЫЙ открытый ключ Ed25519 (base64url; закрытый ключ никогда не
             отправляется)<input
               id="migration-modules-public-key"
               autocomplete="off"
           /></label>
           <label
             ><input id="migration-modules-fresh" type="checkbox" /> Подтверждаю,
-            что это новый независимый Ed25519 keypair Never; старые ключи Gravit
+            что это новая независимая пара ключей Ed25519 Never; старые ключи Gravit
             не используются</label
           >
           <label
@@ -312,7 +312,7 @@
               autocomplete="off"
           /></label>
           <button id="migration-modules-enroll" type="button">
-            Зарегистрировать новый ServerBridge node (MFA)
+            Зарегистрировать новый узел ServerBridge (MFA)
           </button>
         </fieldset>
         <fieldset>
@@ -320,7 +320,7 @@
           <p>
             Запуск только из CLI в отдельном тестовом окружении; Backend
             выполняет независимую проверку UUID и сохранённых MIG03–MIG08. Не
-            является разрешением на production cutover.
+            является разрешением на переключение в промышленном окружении.
           </p>
           <button id="migration-rehearsal-get" type="button">
             Проверить последний отчёт репетиции
@@ -329,9 +329,9 @@
         <fieldset>
           <legend>Поэтапное переключение (MIG11)</legend>
           <p>
-            Рабочее переключение `channel_heads`. Staging блокирует публикацию
-            указанного профиля/канала в PostgreSQL. Остановка Gravit/world/SQL
-            writers выполняется оператором отдельно; подтверждение и SHA не
+            Рабочее переключение `channel_heads`. Подготовительный этап блокирует публикацию
+            указанного профиля/канала в PostgreSQL. Остановка процессов записи
+            Gravit, игрового мира и SQL выполняется оператором отдельно; подтверждение и SHA не
             доказывают её автоматически.
           </p>
           <label
@@ -368,9 +368,9 @@
             Проверить состояния переключения
           </button>
           <p>
-            Для activation введите ожидаемую ревизию cutover receipt (не channel
-            head), ссылку на внешнее доказательство fencing и SHA-256 независимо
-            полученного snapshot текущего Gravit.
+            Для активации укажите ожидаемую ревизию подтверждения переключения (не
+            ревизию указателя канала), ссылку на внешнее подтверждение блокировки источника
+            и SHA-256 независимо полученного снимка текущего состояния Gravit.
           </p>
           <label
             >Ревизия квитанции переключения<input
@@ -392,20 +392,20 @@
           /></label>
           <label
             ><input id="migration-cutover-source-fenced" type="checkbox" />
-            Исходный Gravit writer отдельно остановлен и проверен
+            Исходный процесс записи Gravit отдельно остановлен и проверен
             оператором</label
           >
           <button id="migration-cutover-activate" type="button">
-            Activate (MFA; переключить канал)</button
+            Активировать (MFA; переключить канал)</button
           ><button id="migration-cutover-cancel" type="button">
-            Отменить staging до activation
+            Отменить подготовительный этап до активации
           </button>
         </fieldset>
         <fieldset>
           <legend>Эксплуатационный откат (MIG12)</legend>
           <p>
-            Безопасный rollback возвращает только канал Never при совпадении
-            мира, инвентаря, экономики, прав и UUID с MIG10. Snapshot
+            Безопасный откат возвращает только канал Never при совпадении
+            мира, инвентаря, экономики, прав и UUID с MIG10. Снимок состояния
             экспортируйте из отдельно остановленного игрового сервера.
             Изменённые данные блокируют автоматический откат.
           </p>
@@ -440,14 +440,14 @@
           /></label>
           <label
             ><input id="migration-rollback-fenced" type="checkbox" />
-            Never/game writers остановлены и проверены отдельно</label
+            Процессы записи Never и игрового сервера остановлены и проверены отдельно</label
           >
           <label
             ><input id="migration-rollback-source-fenced" type="checkbox" />
-            Gravit writer продолжает быть остановленным</label
+            Процесс записи Gravit остаётся остановленным</label
           >
           <button id="migration-rollback-plan" type="button">
-            Проверить rollback (MFA)
+            Проверить откат (MFA)
           </button>
           <button id="migration-rollback-commit" type="button">
             Подтвердить откат (MFA)
@@ -492,8 +492,8 @@
           </button>
         </fieldset>
         <p>
-          Сначала выполните dry-run. Импорт не обновляет пароли существующих
-          пользователей, не переносит токены или права и не разрешает cutover.
+          Сначала выполните пробный запуск. Импорт не обновляет пароли существующих
+          пользователей, не переносит токены или права и не разрешает переключение.
         </p>
         <p>
           Экспорт содержит исходные конфигурации и может включать пароли/ключи.
@@ -504,8 +504,8 @@
         <pre id="projects"></pre>
       </section>
       <footer>
-        Полная Admin SPA развёртывается отдельно. Здесь доступны bootstrap,
-        вход, readiness и создание первого проекта.
+        Полная веб-панель администрирования развёртывается отдельно. Здесь доступны начальная настройка,
+        вход, проверка готовности и создание первого проекта.
       </footer>
     </main>
     <script src="/admin/app.js" defer></script>

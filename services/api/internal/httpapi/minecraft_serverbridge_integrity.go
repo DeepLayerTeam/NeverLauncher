@@ -205,10 +205,10 @@ func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, neverSessi
 	}
 	session, _, _, err := s.validateMinecraftToken119(minecraftAccessToken)
 	if err != nil {
-		return model.MinecraftSession{}, errors.New("Minecraft session недействительна")
+		return model.MinecraftSession{}, errors.New("Сеанс Minecraft недействителен")
 	}
 	if session.UserID != strings.TrimSpace(userID) || session.NeverSessionID != strings.TrimSpace(neverSessionID) || strings.TrimSpace(session.TrustedDeviceID) != strings.TrimSpace(trustedDeviceID) || session.BindingEpoch != bindingEpoch {
-		return model.MinecraftSession{}, errors.New("Minecraft session не совпадает с Never session/device binding")
+		return model.MinecraftSession{}, errors.New("Сеанс Minecraft не соответствует сеансу Never и привязке устройства")
 	}
 	decision := s.evaluateMinecraftIntegrity0135(session)
 	if !decision.Allowed {

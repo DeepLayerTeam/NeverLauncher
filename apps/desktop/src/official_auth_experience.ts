@@ -77,9 +77,9 @@ export function describeAuthenticationFailure02610(error: unknown): string {
       raw,
     )
   )
-    return "Minecraft Java профиль или игровой доступ не подтверждены.";
+    return "Профиль Minecraft Java или игровой доступ не подтверждены.";
   if (/uuid|identity.mismatch|подмен/i.test(raw))
-    return "Minecraft UUID не совпал с сохранённым аккаунтом. Вход заблокирован.";
+    return "UUID Minecraft не совпал с сохранённым аккаунтом. Вход заблокирован.";
   if (/vault|keyring|credential|хранилищ/i.test(raw))
     return "Системное хранилище учётных данных недоступно. Проверьте настройки ОС.";
   if (
@@ -91,7 +91,7 @@ export function describeAuthenticationFailure02610(error: unknown): string {
   if (/не найден|not.found/i.test(raw))
     return "Аккаунт не найден. Обновите список или войдите заново.";
   if (/уже привязан|already.linked|conflict|конфликт/i.test(raw))
-    return "Этот Minecraft UUID уже привязан к другому аккаунту.";
+    return "Этот UUID Minecraft уже привязан к другому аккаунту.";
   return "Операция с игровым аккаунтом не выполнена. Повторите попытку или проверьте диагностику.";
 }
 

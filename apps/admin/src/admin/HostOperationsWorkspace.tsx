@@ -333,7 +333,7 @@ export function HostOperationsWorkspace04111({
         </p>
       )}
       <dl className="bridgeFacts">
-        <dt>RemoteControl</dt>
+        <dt>Удалённое управление</dt>
         <dd>
           {fresh
             ? snapshot!.host.nodeId
@@ -437,7 +437,7 @@ export function HostOperationsWorkspace04111({
           <dl className="bridgeFacts">
             <dt>Состояние в PostgreSQL</dt>
             <dd>{statusRu(current.status)}</dd>
-            <dt>RemoteControl</dt>
+            <dt>Удалённое управление</dt>
             <dd>
               {current.remoteNodeId || "—"} ·{" "}
               {current.remoteReceipt?.state || "без receipt"}

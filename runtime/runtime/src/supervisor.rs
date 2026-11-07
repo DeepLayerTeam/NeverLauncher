@@ -472,19 +472,19 @@ impl ProcessSupervisor {
         };
         {
             let mut guard = child.lock().await;
-            let process = guard.as_mut().ok_or_else(|| format!("runtime process {id} уже завершён"))?;
+            let process = guard.as_mut().ok_or_else(|| format!("процесс среды выполнения {id} уже завершён"))?;
             #[cfg(target_os = "linux")]
             {
-                let pid = process.id().ok_or_else(|| format!("runtime process {id} PID недоступен"))?;
+                let pid = process.id().ok_or_else(|| format!("процесс среды выполнения {id} PID недоступен"))?;
                 crate::linux_policy::terminate_runtime_process_group(pid)?;
             }
             #[cfg(target_os = "macos")]
             {
-                let pid = process.id().ok_or_else(|| format!("runtime process {id} PID недоступен"))?;
+                let pid = process.id().ok_or_else(|| format!("процесс среды выполнения {id} PID недоступен"))?;
                 crate::macos_policy::terminate_runtime_process_group(pid)?;
             }
             #[cfg(all(not(target_os = "linux"), not(target_os = "macos")))]
-            process.start_kill().map_err(|err| format!("не удалось остановить runtime process {id}: {err}"))?;
+            process.start_kill().map_err(|err| format!("не удалось остановить процесс среды выполнения {id}: {err}"))?;
         }
         let mut map = self.processes.lock().await;
         let process = map.get_mut(id).ok_or_else(|| format!("Процесс среды выполнения {id} не найден"))?;

@@ -35,7 +35,7 @@ export function OfficialProviderWorkspace02611({ backendUrl, token }: { backendU
       <p>Ревизия #{current.revision || 0} · {current.revision === 0 ? 'Используются начальные настройки окружения' : `Изменено: ${current.createdAt || '—'}`}</p>
       <div className="configFields">
         <label className="field">ID приложения (клиента) Microsoft<input autoComplete="off" spellCheck={false} maxLength={36} value={draft.clientId} onChange={e => update({ clientId: e.target.value.trim() })} /><small className="muted">Собственный зарегистрированный публичный идентификатор клиента в формате UUID.</small></label>
-        <label className="field">Издатель <input value="consumers (личные учётные записи Microsoft)" readOnly /><small className="muted">Другие issuer и произвольные OAuth endpoints запрещены.</small></label>
+        <label className="field">Издатель <input value="consumers (личные учётные записи Microsoft)" readOnly /><small className="muted">Другие издатели токенов и произвольные конечные точки OAuth запрещены.</small></label>
         <label className="field"><span><input type="checkbox" checked={draft.enabled} onChange={e => update({ enabled:e.target.checked })} /> Разрешить официальную игровую авторизацию</span></label>
         <label className="field"><span><input type="checkbox" checked={draft.browserEnabled} onChange={e => update({ browserEnabled:e.target.checked })} /> Системный браузер + PKCE</span></label>
         <label className="field"><span><input type="checkbox" checked={draft.deviceEnabled} onChange={e => update({ deviceEnabled:e.target.checked })} /> Резервный вход по коду устройства</span></label>

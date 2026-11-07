@@ -989,7 +989,7 @@ pub async fn certify_vanilla_compatibility(
     linux_policy::prepare_runtime_command(&mut command);
     let mut child = command.spawn().map_err(|err| format!("не удалось запустить Vanilla {version}: {err}"))?;
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
-        .map_err(|err| format!("Vanilla certification заблокирован runtime policy: {err}"))?;
+        .map_err(|err| format!("Сертификация Vanilla заблокирована политикой среды выполнения: {err}"))?;
     #[cfg(target_os = "linux")]
     if let Err(reason) = linux_policy::runtime_policy(&mut child) {
         if let Some(pid) = child.id() { let _ = linux_policy::terminate_runtime_process_group(pid); }
@@ -1006,7 +1006,7 @@ pub async fn certify_vanilla_compatibility(
     let (status, timed_out) = match timeout(Duration::from_secs(max_runtime_seconds), child.wait()).await {
         Ok(result) => (Some(result.map_err(|err| format!("превышено время ожидания среды выполнения Vanilla: {err}"))?), false),
         Err(_) => {
-            child.kill().await.map_err(|err| format!("Vanilla runtime не удалось остановить после timeout: {err}"))?;
+            child.kill().await.map_err(|err| format!("Среду выполнения Vanilla не удалось остановить после истечения времени ожидания: {err}"))?;
             let _ = child.wait().await;
             (None, true)
         }
