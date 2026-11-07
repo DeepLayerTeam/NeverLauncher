@@ -33,7 +33,7 @@ require(
         "target_identity_epoch",
         "server_bridge_handoffs_active_target_player_uq",
     ],
-    "0.14.8 PostgreSQL migration",
+    "Миграция PostgreSQL 0.14.8",
 )
 repo = read("services/api/internal/repository/server_bridge_v2.go")
 require(
@@ -50,7 +50,7 @@ require(
         "target_identity_epoch=$3",
         "server_bridge_topology_edges_v2",
     ],
-    "PostgreSQL handoff repository",
+    "Хранилище передачи управления в PostgreSQL",
 )
 http = (
     read("services/api/internal/httpapi/server_bridge_topology_handoff_0148.go")
@@ -68,7 +68,7 @@ require(
         "authorization",
         "proxy-handoff",
     ],
-    "HTTP topology/handoff runtime",
+    "Runtime топологии и передачи управления по HTTP",
 )
 config = read(
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeConfig.java"
@@ -88,7 +88,7 @@ require(
 require(
     client,
     ["createHandoff", "config.handoffPath()", 'sendSignedWithFailover("POST"'],
-    "signed handoff client",
+    "Клиент подписанной передачи управления",
 )
 proxy = read(
     "plugins/proxy-family-common/src/main/java/ru/launcher/bridge/proxy/ProxyBridgeRuntime.java"
@@ -102,12 +102,12 @@ bungee = read(
 require(
     proxy,
     ["createHandoffAsync", "current.api.createHandoff"],
-    "proxy shared handoff runtime",
+    "Общий Runtime передачи управления для прокси",
 )
 require(
     velocity,
     ["ServerPreConnectEvent", "createHandoff", "ServerResult.denied"],
-    "Velocity handoff gate",
+    "Проверка передачи управления Velocity",
 )
 require(
     bungee,
@@ -118,18 +118,18 @@ require(
         "event.setCancelled(true)",
         "event.getPlayer().connect",
     ],
-    "Bungee/Waterfall handoff gate",
+    "Проверка передачи управления Bungee/Waterfall",
 )
 openapi = read("scripts/contracts/generate_openapi.py")
 require(
     openapi,
     ["/api/v1/server-bridge/handoff", "BridgeHandoffRequest"],
-    "OpenAPI handoff contract",
+    "Контракт передачи управления в OpenAPI",
 )
 require(
     read("services/api/internal/httpapi/routes_bridge.go"),
     ["/api/v1/server-bridge/topology"],
-    "topology route",
+    "Маршрут топологии",
 )
 migration = read("e2e/scripts/run-zero-patch-topology-handoff-migration-e2e.sh")
 require(
@@ -140,6 +140,6 @@ require(
         "server_bridge_topology_edges_v2",
         "server_bridge_handoffs_v2",
     ],
-    "0.14.7 -> 0.14.8 migration E2E",
+    "Сквозная проверка миграции с 0.14.7 на 0.14.8",
 )
 print(f"Launcher 0.14.8: проверка топологии без патчей и передачи управления: OK ({version})")

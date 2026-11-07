@@ -28,7 +28,7 @@ if api_migration != cli_migration:
 require(
     api_migration,
     ["server_bridge_nodes_v2_kind_check", "'forge'", "'neoforge'", "'fabric'"],
-    "0.14.7 PostgreSQL migration",
+    "Миграция PostgreSQL 0.14.7",
 )
 settings = read("settings.gradle.kts")
 require(
@@ -40,7 +40,7 @@ require(
         'include("plugins:forge-bridge")',
         'include("plugins:neoforge-bridge")',
     ],
-    "Gradle Forge-family modules",
+    "Модули Gradle семейства Forge",
 )
 runtime = read(
     "plugins/modloader-family-common/src/main/java/ru/launcher/bridge/modloader/ModLoaderBridgeRuntime.java"
@@ -61,7 +61,7 @@ require(
         "validationExecutor.shutdownNow()",
         "heartbeatExecutor.shutdownNow()",
     ],
-    "shared modloader-family production runtime",
+    "Общий промышленный Runtime семейства загрузчиков модов",
 )
 forge = read(
     "plugins/forge-bridge/src/main/java/ru/launcher/bridge/forge/LauncherForgeBridge.java"
@@ -87,7 +87,7 @@ require(
         "LauncherForgeBridge::loadedArtifactPath",
         '"forge"',
     ],
-    "Forge pre-world configuration login gate",
+    "Проверка входа Forge до загрузки игрового мира",
 )
 require(
     neo,
@@ -107,7 +107,7 @@ require(
         "LauncherNeoForgeBridge::loadedArtifactPath",
         '"neoforge"',
     ],
-    "NeoForge pre-world configuration login gate",
+    "Проверка входа NeoForge до загрузки игрового мира",
 )
 forge_build = read("plugins/forge-bridge/build.gradle.kts")
 neo_build = read("plugins/neoforge-bridge/build.gradle.kts")
@@ -123,7 +123,7 @@ require(
         'implementation(minecraft.dependency("net.minecraftforge:forge:1.21.1-52.1.16"))',
         'add(bridgeRuntime.name, project(":plugins:modloader-family-common"))',
     ],
-    "Forge production build",
+    "Промышленная сборка Forge",
 )
 require(
     neo_build,
@@ -133,7 +133,7 @@ require(
         'configurations.create("bridgeRuntime")',
         'add(bridgeRuntime.name, project(":plugins:modloader-family-common"))',
     ],
-    "NeoForge production build",
+    "Промышленная сборка NeoForge",
 )
 require(
     read("plugins/forge-bridge/src/main/resources/META-INF/mods.toml"),
@@ -160,12 +160,12 @@ manifest = read("services/api/internal/httpapi/bridge_plugins.go")
 require(
     backend,
     ['"fabric"', '"forge"', '"neoforge"'],
-    "Backend Forge/NeoForge kind enforcement",
+    "Проверка типов Forge и NeoForge на Backend",
 )
 require(
     integrity,
     ["ForgeSHA256", "NeoForgeSHA256", 'case "forge":', 'case "neoforge":'],
-    "Forge/NeoForge integrity namespaces",
+    "Пространства имён целостности Forge/NeoForge",
 )
 require(
     config,
@@ -175,7 +175,7 @@ require(
         "NeoForgeSHA256",
         "для 0.14.7+",
     ],
-    "0.14.7 production release policy",
+    "Политика промышленного релиза 0.14.7",
 )
 for kind, descriptor in (
     ("forge", "META-INF/mods.toml"),
@@ -202,7 +202,7 @@ require(
         "META-INF/mods.toml",
         "META-INF/neoforge.mods.toml",
     ],
-    "Forge/NeoForge release build",
+    "Сборка релиза Forge/NeoForge",
 )
 release_builder = read("scripts/release/build-release.sh")
 bridge_loop = re.search(r"for bridge in ([A-Za-z0-9_ ]+); do", release_builder)
@@ -214,12 +214,12 @@ require(
         '"launcher-forge-bridge-" + ver + ".jar"',
         '"launcher-neoforge-bridge-" + ver + ".jar"',
     ],
-    "release verification Forge/NeoForge artifacts",
+    "Проверка артефактов релиза Forge/NeoForge",
 )
 require(
     read("scripts/contracts/generate_openapi.py"),
     ['"fabric"', '"forge"', '"neoforge"'],
-    "OpenAPI Forge/NeoForge kinds",
+    "Типы Forge и NeoForge в OpenAPI",
 )
 tests = read("services/api/internal/httpapi/serverbridge_forge_neoforge_0147_test.go")
 require(
@@ -229,7 +229,7 @@ require(
         "TestForgeNeoForgeIntegrityNamespaces0147",
         "TestForgeNeoForgeManifest0147",
     ],
-    "Forge/NeoForge regressions",
+    "Регрессионные проверки Forge/NeoForge",
 )
 e2e = read("e2e/scripts/run-minecraft-e2e.sh")
 compose = read("e2e/docker-compose.minecraft-e2e.yml")
@@ -256,7 +256,7 @@ require(
         "${allow_probe_mode[@]}",
         "${deny_probe_mode[@]}",
     ],
-    "Forge/NeoForge runtime E2E",
+    "Сквозные проверки Runtime Forge/NeoForge",
 )
 flow = e2e[
     e2e.index("flow_for_server() {") : e2e.index("flow_for_server velocity-e2e-p3")
@@ -287,7 +287,7 @@ require(
         "mode=configuration",
         "loginAcknowledged={str(login_acknowledged).lower()}",
     ],
-    "Minecraft 1.21.1 Forge/NeoForge stateful login probe",
+    "Проверка входа Minecraft 1.21.1 Forge/NeoForge с сохранением состояния",
 )
 require(
     compose,
@@ -299,7 +299,7 @@ require(
         "./runtime/plugins/forge:/mods:ro",
         "./runtime/plugins/neoforge:/mods:ro",
     ],
-    "Forge/NeoForge Docker E2E",
+    "Сквозная проверка Forge/NeoForge в Docker",
 )
 migration = read("e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh")
 require(
@@ -310,7 +310,7 @@ require(
         "kind IN ('forge','neoforge')",
         "non-canonical kind bypassed constraint",
     ],
-    "0.14.6 -> 0.14.7 migration E2E",
+    "Сквозная проверка миграции с 0.14.6 на 0.14.7",
 )
 for text, label in (
     (read("scripts/release/preflight.sh"), "preflight"),

@@ -28,7 +28,7 @@ require(
         "server_bridge_nodes_v2_kind_check",
         "'velocity','bukkit','spigot','paper','purpur','folia'",
     ],
-    "0.14.4 PostgreSQL migration",
+    "Миграция PostgreSQL 0.14.4",
 )
 
 settings = read("settings.gradle.kts")
@@ -43,7 +43,7 @@ require(
         'include("plugins:purpur-bridge")',
         'include("plugins:folia-bridge")',
     ],
-    "Gradle Bukkit-family modules",
+    "Модули Gradle семейства Bukkit",
 )
 
 runtime = read(
@@ -63,7 +63,7 @@ require(
         "disablePlugin(this)",
         "executor.shutdownNow()",
     ],
-    "shared production Bukkit-family runtime",
+    "Общий промышленный Runtime семейства Bukkit",
 )
 for forbidden in ("Bukkit.getScheduler()", "runTask(", "runTaskAsynchronously("):
     if forbidden in runtime:
@@ -157,7 +157,7 @@ require(
         'case "spigot":',
         'case "folia":',
     ],
-    "Backend artifact integrity policy",
+    "Политика целостности артефактов Backend",
 )
 for kind in ("bukkit", "spigot", "paper", "purpur", "folia"):
     require(
@@ -174,7 +174,7 @@ release_commands = read("cli/cmd/launcher/release_commands.go")
 require(
     release_commands,
     ["BRIDGE_RELEASE_ALLOWLIST.json", "BRIDGE_PLUGIN_MANIFEST.json"],
-    "release verification requires bridge policy artifacts",
+    "Проверке релиза необходимы артефакты политики ServerBridge",
 )
 
 build = read("scripts/build/bridge-plugins.sh")
@@ -197,7 +197,7 @@ require(
         "foliaSha256",
         "folia-supported: true",
     ],
-    "release integrity allowlist",
+    "Список разрешённых артефактов релиза",
 )
 
 config = read("services/api/internal/config/config.go")
@@ -219,7 +219,7 @@ require(
     [
         'enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]'
     ],
-    "OpenAPI Bukkit-family enum",
+    "Перечень значений семейства Bukkit в OpenAPI",
 )
 
 tests = read("services/api/internal/httpapi/serverbridge_bukkit_family_0144_test.go")
@@ -230,7 +230,7 @@ require(
         "TestServerBridgeBukkitFamilyIntegrityAllowlist0144",
         "TestBridgePluginsManifestIncludesEntireBukkitFamily0144",
     ],
-    "Bukkit-family backend regressions",
+    "Регрессионные тесты Backend для семейства Bukkit",
 )
 
 runtime_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
@@ -282,7 +282,7 @@ require(
         "foliaPinnedRuntime:true",
         "bukkitFamilyRuntime:true",
     ],
-    "real Spigot/Folia runtime E2E",
+    "Сквозные проверки Runtime на настоящих Spigot/Folia",
 )
 folia_materialize_start = runtime_e2e.index("materialize_pinned_folia_runtime() {")
 folia_apply = runtime_e2e.index(
@@ -372,7 +372,7 @@ require(
         "./runtime/plugins/folia:/plugins:ro",
         "./runtime/folia-runtime:/folia-runtime:ro",
     ],
-    "Spigot/Folia Docker E2E",
+    "Сквозные проверки Spigot/Folia в Docker",
 )
 
 
@@ -397,7 +397,7 @@ require(
         "for kind in bukkit spigot paper purpur folia",
         "invalid ServerBridge kind bypassed PostgreSQL constraint",
     ],
-    "0.14.3 -> 0.14.4 migration E2E",
+    "Сквозная проверка миграции с 0.14.3 на 0.14.4",
 )
 
 preflight = read("scripts/release/preflight.sh")
@@ -420,7 +420,7 @@ require(
         "1.10.105-SNAPSHOT",
         "1.0-20230828.145440-5",
     ],
-    "pinned Folia build dependency CI evidence",
+    "Свидетельства закрепления зависимостей Folia при сборке в CI",
 )
 
 print(f"Launcher 0.14.4: проверка семейства Bukkit: OK ({version})")

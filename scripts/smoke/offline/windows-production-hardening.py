@@ -47,7 +47,7 @@ require(
         "IsProcessInJob",
         "ensure_windows_production_hardening",
     ],
-    "Windows process/lifetime hardening",
+    "Усиление защиты процессов и их жизненного цикла в Windows",
 )
 
 guard = read("runtime/runtime/src/guard_ipc.rs")
@@ -74,7 +74,7 @@ require(
         "verify_windows_authenticode_trust",
         "Launcher Guard IPC ready v4",
     ],
-    "Guard hardened IPC/package boundary",
+    "Усиленная защита IPC и границ пакета Guard",
 )
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
@@ -88,7 +88,7 @@ require(
         "status.package_manifest_verified",
         "Windows production hardening verification failed",
     ],
-    "Desktop fail-closed production hardening",
+    "Промышленная защита Desktop с блокировкой при ошибке",
 )
 
 binary = read("runtime/runtime/src/bin/guard.rs")
@@ -123,7 +123,7 @@ require(
         "requireAuthenticode = $SignedProduction",
         'packageVerification = "sha256+pe-machine+authenticode-before-guard-spawn"',
     ],
-    "Windows signed release pipeline",
+    "Конвейер подписанного релиза Windows",
 )
 
 integration = read("runtime/runtime/tests/guard_windows.rs")
@@ -135,7 +135,7 @@ require(
         "status.secure_pipe_acl",
         "status.lifetime_job_enforced",
     ],
-    "Windows native hardening integration",
+    "Интеграция нативной защиты Windows",
 )
 
 ci = read(".github/workflows/ci.yml")
@@ -152,7 +152,7 @@ require(
         "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         "build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage",
     ],
-    "Windows native CI",
+    "Нативные проверки Windows в CI",
 )
 
 # Документация безопасности Markdown необязательна; соблюдение требований проверено выше.

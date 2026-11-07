@@ -74,7 +74,7 @@ require(
         'if [[ "$os_name" == "linux" ]]',
         "xvfb-run",
     ],
-    "platform-native certification helper",
+    "Вспомогательный инструмент нативной сертификации",
 )
 for loader in anchors:
     script = read(f"e2e/scripts/run-{loader}-certification-case.sh")
@@ -106,13 +106,13 @@ require(
         "natives/{internal_os}/{arch}",
         '"osx" if os_name == "macos"',
     ],
-    "loader native verifier",
+    "Нативная проверка загрузчика",
 )
 runtime = read("runtime/runtime/src/lib.rs")
 require(
     runtime,
     ["natives_directory: String", "natives_dir.to_string_lossy().to_string()"],
-    "Runtime selected-native evidence",
+    "Свидетельства выбранной нативной сборки Runtime",
 )
 
 matrix = read("scripts/compatibility/matrix.py")
@@ -127,7 +127,7 @@ require(
         "loaderPlatformLaunch",
         "loader-platform.json",
     ],
-    "matrix 0.17.9 enforcement",
+    "Обязательная проверка матрицы 0.17.9",
 )
 compat = read("e2e/scripts/run-compatibility-case.sh")
 require(
@@ -140,7 +140,7 @@ require(
         "loader-platform.json",
         "nativesDirectory",
     ],
-    "compatibility result cross-platform evidence",
+    "Кроссплатформенные свидетельства совместимости",
 )
 release = read("cli/cmd/launcher/compatibility_release.go")
 require(
@@ -154,7 +154,7 @@ require(
         "loaderPlatformLaunch",
         "cross-platform-loaders-0.17.9-windows-linux-macos-x64-arm64-native-client",
     ],
-    "release certification 0.17.9",
+    "Сертификация релиза 0.17.9",
 )
 
 workflow = read(".github/workflows/compatibility.yml")
@@ -164,12 +164,12 @@ require(
         "architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}",
         "e2e/runtime/loader-platform.json",
     ],
-    "cross-platform workflow",
+    "Кроссплатформенный процесс проверки",
 )
 require(
     matrix,
     ["ubuntu-24.04-arm", "windows-11-arm", "macos-15-intel", "macos-15"],
-    "matrix hosted-runner mapping",
+    "Соответствие матрицы размещённым исполнителям CI",
 )
 
 tests = (
@@ -186,7 +186,7 @@ require(
         "TestCompatibilityCertificationCrossPlatformLoaders0179",
         "TestCompatibilityCertificationCrossPlatformLoaders0179RejectsTamperedCoverage",
     ],
-    "0.17.9 regression tests",
+    "Регрессионные тесты версии 0.17.9",
 )
 
 print(

@@ -59,7 +59,7 @@ require(
         else "publicProductionDeliveryMatrixFile0159",
         "PostPublishE2E",
     ],
-    "Production Delivery Release implementation",
+    "Реализация промышленной поставки релиза",
 )
 require(
     release,
@@ -71,7 +71,7 @@ require(
         "productionDeliveryReleaseSha256",
         'manifest["channel"] = productionDeliveryReleaseChannel0160',
     ],
-    "release integration",
+    "Интеграция релиза",
 )
 require(
     build,
@@ -81,12 +81,12 @@ require(
         "release production-verify",
         "immutable version segment",
     ],
-    "production build integration",
+    "Интеграция промышленной сборки",
 )
 require(
     bundle,
     ["PRODUCTION_DELIVERY_RELEASE.json", "release publish-check"],
-    "release bundle gate",
+    "Обязательная проверка комплекта релиза",
 )
 require(
     public_delivery,
@@ -95,7 +95,7 @@ require(
         "ProductionDeliveryReleaseVerified",
         "verifyProductionDeliveryRelease0160",
     ],
-    "public E2E integration",
+    "Публичная сквозная интеграция",
 )
 require(
     public_workflow,
@@ -104,7 +104,7 @@ require(
         "release production-verify",
         "productionDeliveryReleaseVerified",
     ],
-    "post-publish GA verification",
+    "Проверка готовности GA после публикации",
 )
 require(
     tests,
@@ -113,7 +113,7 @@ require(
         "TestProductionDeliveryRelease0160RejectsUnversionedPublicOrigin",
         "TestProductionDeliveryRelease0160RejectsPrereleaseSemver",
     ],
-    "Production Delivery Release tests",
+    "Тесты промышленной поставки релиза",
 )
 
 subprocess.run(

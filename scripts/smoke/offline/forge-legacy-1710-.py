@@ -66,7 +66,7 @@ require(
         "verifyForgeLegacyUniversal",
         "net.minecraft.launchwrapper.Launch",
     ],
-    "Forge 1.7.10 legacy materializer",
+    "Установщик устаревшего Forge 1.7.10",
 )
 
 commands = read("cli/cmd/launcher/runtime_commands.go")
@@ -77,7 +77,7 @@ require(
         '"forge-legacy-pre-1.7.10"',
         "legacy V1 universal installer",
     ],
-    "runtime capability status",
+    "Состояние возможностей Runtime",
 )
 
 runtime = read("runtime/runtime/src/compatibility.rs")
@@ -91,7 +91,7 @@ require(
         "library.client_req == Some(false)",
         "legacy_forge_native_classifier_without_downloads_is_resolved_from_maven_coordinate",
     ],
-    "Runtime 1.7.10 legacy resolution",
+    "Разрешение зависимостей Runtime для старой версии 1.7.10",
 )
 
 forge_case = read("e2e/scripts/run-forge-certification-case.sh")
@@ -106,7 +106,7 @@ require(
         "certify-vanilla",
         "actual-mojang-client",
     ],
-    "Forge 1.7.10 actual-client certification",
+    "Сертификация Forge 1.7.10 на настоящем клиенте",
 )
 
 matrix = read("scripts/compatibility/matrix.py")
@@ -117,7 +117,7 @@ require(
         "forge_legacy_1710_0175_required",
         "Forge Legacy 1.7.10 0.17.5",
     ],
-    "Forge 1.7.10 matrix",
+    "Матрица Forge 1.7.10",
 )
 release = read("cli/cmd/launcher/compatibility_release.go")
 require(
@@ -127,7 +127,7 @@ require(
         "compatibilityForgeLegacy1710_0175Required",
         "forge-legacy-0.17.5-real-1.7.10-launchwrapper-cpw-fml-actual-client",
     ],
-    "Forge 1.7.10 release certification",
+    "Сертификация релиза Forge 1.7.10",
 )
 
 tests = (
@@ -147,7 +147,7 @@ require(
         "TestForgeLegacy1710V1LaunchWrapperInstaller",
         "TestCanonicalLegacyForgeRepositoryURL",
     ],
-    "Forge 1.7.10 regression coverage",
+    "Покрытие регрессионными тестами Forge 1.7.10",
 )
 
 print(

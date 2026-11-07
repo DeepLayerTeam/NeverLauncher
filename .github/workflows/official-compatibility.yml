@@ -137,6 +137,6 @@ jobs:
           test "$NATIVE_RESULT" = success
       - name: Явно сохранить реальные препятствия выпуску релиза
         run: |
-          echo 'Automated preflight only: live own-app Microsoft/Xbox/Minecraft proof,'
-          echo 'real vanilla and modded game joins, OS vault behavior and provider'
-          echo 'до выпуска 0.27.0 GA одобрение НЕОБХОДИМО проверить отдельно.'
+          echo 'Выполнена только автоматизированная предварительная проверка: подтверждения входа через Microsoft/Xbox/Minecraft в настоящем приложении,'
+          echo 'реального подключения к Vanilla и модифицированным серверам, работы хранилища ОС и провайдера авторизации'
+          echo 'перед выпуском 0.27.0 GA необходимо получить и проверить отдельно.'

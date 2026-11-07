@@ -58,7 +58,7 @@ require(
 require(
     pool,
     ["AtomicInteger", "blockedUntilMillis", "candidates(", "success(", "failure("],
-    "endpoint pool",
+    "Пул конечных точек",
 )
 require(
     client,
@@ -97,7 +97,7 @@ require(
         "idx_server_bridge_control_resume_01911",
         "idx_server_bridge_control_owner_01911",
     ],
-    "HA migration",
+    "Миграция отказоустойчивой конфигурации",
 )
 require(
     repo,
@@ -120,7 +120,7 @@ require(
         "ReleaseCommandLease",
         "TouchChannel",
     ],
-    "Redis fencing",
+    "Ограничение конкурирующих владельцев блокировок Redis",
 )
 require(
     runtime,
@@ -147,7 +147,7 @@ require(
         "LAUNCHER_REPLICA_ID",
         "LAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing",
     ],
-    "HA config",
+    "Конфигурация отказоустойчивости",
 )
 require(
     control,

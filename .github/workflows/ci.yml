@@ -566,7 +566,7 @@ jobs:
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"
           bash scripts/release/build-macos-production.sh --allow-ad-hoc
-          echo "macOS production inventory before delivery verification:"
+          echo "Инвентаризация промышленной сборки macOS перед проверкой поставки:"
           find "${DIR}" -maxdepth 1 -type f -print | sort
           test -x /tmp/nl
           /tmp/nl delivery manifest --bundle "${DIR}" --version "${VERSION}"

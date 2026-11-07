@@ -24,7 +24,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 3):
-    raise SystemExit(f"Guard process policy gate: требуется «>=0.13.3, got» {version}")
+    raise SystemExit(f"Проверка политики процессов Guard: требуется версия не ниже 0.13.3, получена {version}")
 
 cargo = read("runtime/runtime/Cargo.toml")
 require(
@@ -34,7 +34,7 @@ require(
         '"Win32_System_Diagnostics_ToolHelp"',
         '"Win32_System_Threading"',
     ],
-    "Runtime Windows policy dependencies",
+    "Зависимости политики Runtime для Windows",
 )
 
 policy = read("runtime/runtime/src/windows_policy.rs")
@@ -65,7 +65,7 @@ require(
         "enforce_runtime_process",
         "runtime_process_is_suspended_assigned_and_resumed",
     ],
-    "Windows runtime/process policy implementation",
+    "Реализация политики Runtime и процессов Windows",
 )
 
 guard = read("runtime/runtime/src/bin/guard.rs")
@@ -86,7 +86,7 @@ require(
         "validate_guard_process_policy",
         "GUARD_WINDOWS_PROCESS_POLICY_VERSION",
     ],
-    "Authenticated process-policy IPC",
+    "Аутентифицированный IPC для политики процессов",
 )
 
 supervisor = read("runtime/runtime/src/supervisor.rs")
@@ -99,7 +99,7 @@ require(
         "runtime_policy: Some(runtime_policy)",
         "Windows runtime/process policy enforcement failed",
     ],
-    "Runtime supervisor fail-closed process policy",
+    "Строгая политика процессов наблюдателя Runtime",
 )
 
 runtime = read("runtime/runtime/src/lib.rs")
@@ -110,7 +110,7 @@ require(
         "windows_policy::enforce_runtime_process(&mut child)",
         "RuntimeProcessPolicyReport",
     ],
-    "Direct Runtime policy enforcement",
+    "Прямое применение политики Runtime",
 )
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
@@ -123,7 +123,7 @@ require(
         "launch заблокирован: Guard Windows process policy verification failed",
         "guard_process_policy",
     ],
-    "Desktop policy pre-launch gate",
+    "Проверка политики Desktop перед запуском",
 )
 
 integration = read("runtime/runtime/tests/guard_windows.rs")
@@ -136,7 +136,7 @@ require(
         "dynamic_code_prohibited",
         "child_process_creation_blocked",
     ],
-    "Windows Guard policy integration test",
+    "Интеграционный тест политики Windows Guard",
 )
 
 ci = read(".github/workflows/ci.yml")
@@ -154,7 +154,7 @@ require(
         "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows",
         "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
     ],
-    "Windows native policy CI",
+    "Нативная проверка политики Windows в CI",
 )
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.

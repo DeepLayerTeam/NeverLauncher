@@ -39,7 +39,7 @@ require(
         "consumed_at TIMESTAMPTZ",
         "minecraft_joins_0143_terminal_check",
     ],
-    "0.14.3 migration",
+    "Миграция 0.14.3",
 )
 
 helper = read("services/api/internal/httpapi/server_bridge_join_tickets_0143.go")
@@ -97,7 +97,7 @@ require(
         "ConsumeMinecraftJoin",
         "only the first concurrent /hasJoined",
     ],
-    "Yggdrasil one-time /hasJoined",
+    "Одноразовый запрос /hasJoined в Yggdrasil",
 )
 
 serverbridge_test = read(
@@ -112,7 +112,7 @@ require(
         "expected exactly one ticket redemption",
         "redemption audit proof was not persisted",
     ],
-    "ServerBridge one-time regression tests",
+    "Регрессионные тесты одноразовых запросов ServerBridge",
 )
 require(
     yggdrasil_test,
@@ -120,7 +120,7 @@ require(
         "one-time Yggdrasil join replay",
         "http.StatusNoContent",
     ],
-    "Yggdrasil replay regression test",
+    "Регрессионный тест защиты Yggdrasil от повторов",
 )
 
 migration_e2e = read("e2e/scripts/run-one-time-join-ticket-migration-e2e.sh")
@@ -134,7 +134,7 @@ require(
         "legacyYggdrasilJoinsDiscarded:true",
         "redemptionProofPersisted:true",
     ],
-    "0.14.2 -> 0.14.3 migration E2E",
+    "Сквозная проверка миграции с 0.14.2 на 0.14.3",
 )
 
 main_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
@@ -147,7 +147,7 @@ require(
         "redeemed_nonce_hash",
         "validate_join paper-e2e-p3",
     ],
-    "Minecraft one-time ticket E2E",
+    "Сквозная проверка одноразового билета Minecraft",
 )
 
 preflight = read("scripts/release/preflight.sh")
@@ -169,7 +169,7 @@ require(
         "One-Time Join Tickets",
         "one-time join ticket",
     ],
-    "OpenAPI one-time join documentation",
+    "Документация одноразового подключения в OpenAPI",
 )
 
 print(f"Launcher 0.14.3: проверка одноразовых билетов входа: OK ({version})")

@@ -39,7 +39,7 @@ jobs:
             --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
             --attempt "$GITHUB_RUN_ATTEMPT" \
             --output "$RUNNER_TEMP/acceptance/inventory.json"; then
-            echo 'ERROR: проверка приёмки без фактического запуска неожиданно прошла' >&2
+            echo 'ОШИБКА: проверка приёмки без фактического запуска неожиданно прошла' >&2
             exit 1
           fi
           python3 - "$RUNNER_TEMP/acceptance/inventory.json" <<'PY'

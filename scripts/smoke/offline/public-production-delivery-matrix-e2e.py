@@ -43,7 +43,7 @@ require(
         "Базовый URL публичной поставки должен использовать HTTPS",
         "redirect changed to untrusted host",
     ],
-    "public production delivery core",
+    "Ядро публичной промышленной поставки",
 )
 
 commands = read("cli/cmd/launcher/delivery_manifest.go")
@@ -58,7 +58,7 @@ require(
         '"--trust-policy"',
         '"--trust-state"',
     ],
-    "delivery CLI",
+    "Командная строка поставки",
 )
 
 release = read("cli/cmd/launcher/release_commands.go")
@@ -70,7 +70,7 @@ require(
         "PUBLIC_PRODUCTION_DELIVERY_MATRIX.json",
         "writePublicProductionDeliveryMatrix0159",
     ],
-    "release integration",
+    "Интеграция релиза",
 )
 
 build = read("scripts/release/build-release.sh")
@@ -82,7 +82,7 @@ require(
         "runtime-windows-x64.exe",
         "runtime-windows-arm64.exe",
     ],
-    "production build script",
+    "Скрипт промышленной сборки",
 )
 
 workflow = read(".github/workflows/public-production-delivery.yml")
@@ -97,7 +97,7 @@ require(
         "LAUNCHER_RELEASE_TRUST_POLICY_FILE",
         "PUBLIC_DELIVERY_E2E_REPORT.json",
     ],
-    "post-publish E2E workflow",
+    "Сквозные проверки после публикации",
 )
 
 tests = read("cli/cmd/launcher/public_delivery_matrix_test.go")
@@ -108,7 +108,7 @@ require(
         "TestPublicProductionDeliveryMatrix0159RejectsMissingRuntime",
         "TestFetchPublicMatrix0159LoopbackHTTP",
     ],
-    "public delivery tests",
+    "Тесты публичной поставки",
 )
 
 subprocess.run(

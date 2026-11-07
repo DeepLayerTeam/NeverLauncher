@@ -52,7 +52,7 @@ require(
         "ReplaceTrustedDeviceKey",
         "oldFingerprintPermanentTombstone",
     ],
-    "replacement ceremony",
+    "Процедура замены ключа",
 )
 require(
     routes,
@@ -62,7 +62,7 @@ require(
         "key-recovery/begin",
         "key-recovery/complete",
     ],
-    "routes",
+    "Маршруты",
 )
 require(
     repo,
@@ -82,7 +82,7 @@ require(
         "trusted-device-key-replaced",
         "replace trusted device: commit: %w",
     ],
-    "atomic SQL key replacement",
+    "Атомарная замена ключа SQL",
 )
 require(
     model,
@@ -92,7 +92,7 @@ require(
         "ReplacementReason",
         "DeviceKeyReplacementResult",
     ],
-    "device replacement model",
+    "Модель замены устройства",
 )
 if migration_api != migration_cli:
     raise SystemExit("Миграции 0017 для API и CLI различаются")
@@ -104,7 +104,7 @@ require(
         "replacement_reason",
         "idx_trusted_devices_replacement",
     ],
-    "migration 0017",
+    "Миграция 0017",
 )
 require(
     native,
@@ -118,7 +118,7 @@ require(
         "random_key_generation",
         "staged_keyring_entry",
     ],
-    "native staged-key lifecycle",
+    "Жизненный цикл поэтапно активируемого ключа",
 )
 require(
     tauri,
@@ -129,7 +129,7 @@ require(
         "commit_staged_device_key",
         "abort_staged_device_key",
     ],
-    "Tauri command boundary",
+    "Граница полномочий команд Tauri",
 )
 require(
     desktop,
@@ -143,7 +143,7 @@ require(
         "commit_staged_device_key",
         "serverCommitted",
     ],
-    "desktop replacement flow",
+    "Процесс замены устройства в Desktop",
 )
 require(
     tests,
@@ -152,7 +152,7 @@ require(
         "TestDeviceKeyRecoveryRequiresFreshPhishingResistantAuthAndOnlyNewKeyProof0128",
         "TestBoundSessionCannotBypassReplacementViaOrdinaryRegistration0128",
     ],
-    "0.12.8 regressions",
+    "Регрессионные проверки 0.12.8",
 )
 
 subprocess.run(

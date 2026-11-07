@@ -32,7 +32,7 @@ require(
         "setpgid",
         "guard/linux-runtime-process-policy/v1",
     ],
-    "Linux runtime policy",
+    "Политика Runtime для Linux",
 )
 ipc = read("runtime/runtime/src/linux_guard.rs")
 require(
@@ -49,7 +49,7 @@ require(
         "guard-attestation",
         "integrity-evidence",
     ],
-    "Linux authenticated IPC",
+    "Аутентифицированный IPC Linux",
 )
 integrity = read("runtime/runtime/src/integrity.rs")
 require(
@@ -60,13 +60,13 @@ require(
         "/proc/{pid}/status",
         "LinuxProcessSecurityEvidence",
     ],
-    "Linux integrity evidence",
+    "Свидетельства целостности Linux",
 )
 att = read("runtime/runtime/src/attestation.rs")
 require(
     att,
     ["guard/linux-guard-attestation/v1", "Guard Attestation Core Linux v1"],
-    "Linux attestation",
+    "Аттестация Linux",
 )
 desktop = read("apps/desktop/src-tauri/src/main.rs")
 require(
@@ -77,7 +77,7 @@ require(
         "ensure_linux_production_hardening",
         "Guard Linux production hardening verification failed",
     ],
-    "Desktop Linux enforcement",
+    "Принудительное применение политик Linux в Desktop",
 )
 backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
 require(
@@ -89,7 +89,7 @@ require(
         "isLinuxDevicePlatform0137",
         "Guard Linux process policy verification failed",
     ],
-    "Backend Linux verification",
+    "Проверка Linux на Backend",
 )
 release = read("scripts/release/build-linux-desktop.sh")
 require(
@@ -100,7 +100,7 @@ require(
         "GUARD_RELEASE_ALLOWLIST_LINUX.json",
         "sha256sum",
     ],
-    "Linux release package",
+    "Релизный пакет Linux",
 )
 ci = read(".github/workflows/ci.yml")
 require(
@@ -110,8 +110,8 @@ require(
         "build-linux-desktop.sh",
         "linux-production-implementation-0137.py",
     ],
-    "CI Linux gate",
+    "Обязательная проверка Linux в CI",
 )
 preflight = read("scripts/release/preflight.sh")
-require(preflight, ["linux-production-implementation-0137.py"], "preflight Linux gate")
+require(preflight, ["linux-production-implementation-0137.py"], "Предварительная обязательная проверка Linux")
 print("Launcher 0.13.7: проверка готовности Linux: OK")

@@ -169,7 +169,7 @@ require(
         "detectedArch",
         "certified",
     ],
-    "JRE attestation",
+    "Аттестация среды Java",
 )
 require(
     read("e2e/scripts/run-compatibility-case.sh"),
@@ -180,7 +180,7 @@ require(
         '"jreRuntimeVersion"',
         '"jreExecutableSha256"',
     ],
-    "compatibility target JRE binding",
+    "Привязка целевой совместимости к JRE",
 )
 require(
     read("scripts/compatibility/matrix.py"),
@@ -193,7 +193,7 @@ require(
         "build_ga_jre_base",
         '"jreBase"',
     ],
-    "GA matrix aggregation",
+    "Объединение результатов матрицы GA",
 )
 require(
     read("cli/cmd/launcher/compatibility_release.go"),
@@ -209,7 +209,7 @@ require(
         "java21-25-vanilla-0.17.0v3-complete-2-release-grid-exact",
         "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base",
     ],
-    "GA release certification",
+    "Сертификация релиза GA",
 )
 require(
     read("cli/cmd/launcher/vanilla_runtime.go"),
@@ -221,7 +221,7 @@ require(
         "expectedJavaMajorForVanilla0170v3",
         "validateVanillaLaunchMetadata",
     ],
-    "GA 0.17.0v3 Vanilla materializer",
+    "Установщик Vanilla для GA 0.17.0v3",
 )
 require(
     read("runtime/runtime/src/compatibility.rs"),
@@ -233,17 +233,17 @@ require(
         "0.17.0v3 requires exact Java",
         "metadata does not contain executable arguments.game or minecraftArguments",
     ],
-    "GA 0.17.0v3 Runtime execution",
+    "Выполнение Runtime GA 0.17.0v3",
 )
 require(
     read(".github/workflows/compatibility.yml"),
     ["java-runtime.json", "run-compatibility-case.sh"],
-    "GA CI evidence",
+    "Свидетельства проверки GA в CI",
 )
 require(
     read("scripts/smoke/offline/compatibility-matrix.sh"),
     ["test_certify_jre.py"],
-    "GA preflight regression",
+    "Регрессионная предварительная проверка GA",
 )
 
 print(

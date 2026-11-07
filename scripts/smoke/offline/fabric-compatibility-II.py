@@ -126,7 +126,7 @@ require(
         "mutable loader selector leaked",
         "actual-mojang-client",
     ],
-    "Fabric actual-client certification",
+    "Сертификация на настоящем клиенте Fabric",
 )
 
 compat_case = read("e2e/scripts/run-compatibility-case.sh")
@@ -141,7 +141,7 @@ require(
         "resolvedLoaderVersion",
         '"actualClient": probe.get("status") == "passed"',
     ],
-    "Fabric compatibility routing/evidence",
+    "Маршрутизация и свидетельства совместимости Fabric",
 )
 
 matrix = read("scripts/compatibility/matrix.py")
@@ -155,7 +155,7 @@ require(
         "install_file = f\"{target['loader']}-install.json\"",
         "certification_file = f\"{target['loader']}-certification.json\"",
     ],
-    "Fabric matrix enforcement",
+    "Обязательные проверки матрицы Fabric",
 )
 
 release = read("cli/cmd/launcher/compatibility_release.go")
@@ -168,7 +168,7 @@ require(
         "fabric-compatibility-II-0.17.1-stable-1.14-through-current-actual-client",
         "immutable version",
     ],
-    "Fabric release certification",
+    "Сертификация релиза Fabric",
 )
 
 workflow = read(".github/workflows/compatibility.yml")
@@ -179,7 +179,7 @@ require(
         "fabric-install.json",
         "fabric-certification.json",
     ],
-    "Fabric CI raw evidence",
+    "Исходные свидетельства проверки Fabric в CI",
 )
 
 tests = read("scripts/compatibility/test_matrix.py") + read(
@@ -197,7 +197,7 @@ require(
         "TestCompatibilityCertificationFabricII0171RejectsWrongJavaMajor",
         "TestCompatibilityCertificationFabricII0171RejectsMutableResolvedLoader",
     ],
-    "Fabric 0.17.1 regression coverage",
+    "Покрытие регрессионными тестами Fabric 0.17.1",
 )
 
 print(

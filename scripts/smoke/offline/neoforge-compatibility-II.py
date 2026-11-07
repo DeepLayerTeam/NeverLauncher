@@ -116,7 +116,7 @@ require(
         "runForgeProcessors",
         "installed-and-verified",
     ],
-    "NeoForge production materializer",
+    "Промышленный установщик NeoForge",
 )
 
 case = read("e2e/scripts/run-neoforge-certification-case.sh")
@@ -138,7 +138,7 @@ require(
         "'loader': 'neoforge'",
         "'actualClient': True",
     ],
-    "NeoForge actual-client certification",
+    "Сертификация на настоящем клиенте NeoForge",
 )
 
 compat = read("e2e/scripts/run-compatibility-case.sh")
@@ -149,7 +149,7 @@ require(
         "run-neoforge-certification-case.sh",
         'loader in ("fabric", "quilt", "forge", "neoforge")',
     ],
-    "NeoForge compatibility routing",
+    "Маршрутизация совместимости NeoForge",
 )
 
 matrix = read("scripts/compatibility/matrix.py")
@@ -160,7 +160,7 @@ require(
         "neoforge_compatibility_ii_0176_required",
         "NeoForge Compatibility II 0.17.6",
     ],
-    "NeoForge matrix enforcement",
+    "Обязательные проверки матрицы NeoForge",
 )
 
 release = read("cli/cmd/launcher/compatibility_release.go")
@@ -172,7 +172,7 @@ require(
         "NeoForgeVersions",
         "neoforge-compatibility-II-0.17.6-stable-1.20.1-through-26.2-processor-actual-client",
     ],
-    "NeoForge release certification",
+    "Сертификация релиза NeoForge",
 )
 
 api = read("services/api/internal/httpapi/server.go")
@@ -181,14 +181,14 @@ require(
     [
         '{"id": "neoforge", "name": "NeoForge", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "launcher-neoforge-materializer", "managedJava": true}',
     ],
-    "NeoForge public loader catalog",
+    "Публичный каталог загрузчика NeoForge",
 )
 
 workflow = read(".github/workflows/compatibility.yml")
 require(
     workflow,
     ["neoforge-install.json", "neoforge-certification.json"],
-    "NeoForge CI raw evidence",
+    "Исходные свидетельства проверки NeoForge в CI",
 )
 
 tests = (
@@ -211,7 +211,7 @@ require(
         "26.2.0.75",
         "1.20.1-47.1.79",
     ],
-    "NeoForge 0.17.6 regression coverage",
+    "Покрытие регрессионными тестами NeoForge 0.17.6",
 )
 
 print(

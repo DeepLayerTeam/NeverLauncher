@@ -46,7 +46,7 @@ require(
         "launcher_version",
         "integrity_verified_at",
     ],
-    "Minecraft integrity migration",
+    "Миграция целостности Minecraft",
 )
 
 model = read("services/api/internal/model/model.go")
@@ -89,7 +89,7 @@ require(
         "snapshotFromGuardLaunchTicket0135",
         "IntegrityVerified",
     ],
-    "Minecraft credential integration",
+    "Интеграция учётных данных Minecraft",
 )
 
 bridge = read("services/api/internal/httpapi/server_bridge.go")
@@ -104,7 +104,7 @@ require(
         'server.PluginSHA256 = ""',
         'server.IntegrityStatus = ""',
     ],
-    "ServerBridge gameplay integrity integration",
+    "Интеграция контроля целостности игрового процесса ServerBridge",
 )
 
 plugins = read("services/api/internal/httpapi/bridge_plugins.go")
@@ -118,7 +118,7 @@ require(
         "evaluateServerBridgeJoinIntegrity0135",
         "serverbridge-artifact-integrity",
     ],
-    "ServerBridge backend artifact enforcement",
+    "Обязательная проверка артефактов ServerBridge на Backend",
 )
 
 plugin_policy = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
@@ -131,7 +131,7 @@ require(
         "bridge_integrity_release_revoked",
         "bridge_integrity_heartbeat_required",
     ],
-    "ServerBridge release policy",
+    "Политика релиза ServerBridge",
 )
 
 java_integrity = read(
@@ -145,7 +145,7 @@ require(
         "Files.isRegularFile",
         'MessageDigest.getInstance("SHA-256")',
     ],
-    "ServerBridge JAR self-measurement",
+    "Самопроверка JAR-файла ServerBridge",
 )
 java_client = read(
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/LauncherApiClient.java"
@@ -158,7 +158,7 @@ require(
         "bridge_integrity_unavailable",
         "pluginVersion",
     ],
-    "ServerBridge fail-closed client",
+    "Клиент ServerBridge с блокировкой при ошибке",
 )
 proxy_family_source = read(
     "plugins/proxy-family-common/src/main/java/ru/launcher/bridge/proxy/ProxyBridgeRuntime.java"
@@ -166,7 +166,7 @@ proxy_family_source = read(
 require(
     proxy_family_source,
     ["BridgeIntegrity.artifactSha256", "new LauncherApiClient(config"],
-    "proxy-family runtime self-measurement",
+    "Самопроверка Runtime семейства прокси",
 )
 bukkit_family_source = read(
     "plugins/bukkit-family-common/src/main/java/ru/launcher/bridge/bukkit/BukkitFamilyBridgePlugin.java"
@@ -174,7 +174,7 @@ bukkit_family_source = read(
 require(
     bukkit_family_source,
     ["BridgeIntegrity.artifactSha256", "LauncherApiClient(config"],
-    "Bukkit-family runtime self-measurement",
+    "Самопроверка Runtime семейства Bukkit",
 )
 for platform, cls, expected in [
     ("bukkit", "LauncherBukkitBridge", "BUKKIT"),
@@ -242,7 +242,7 @@ openapi = read("schemas/openapi.yaml")
 require(
     openapi,
     ["minecraftAccessToken", "pluginSha256", "Current ServerBridge JAR SHA-256"],
-    "OpenAPI integrity contract",
+    "Контракт целостности в OpenAPI",
 )
 
 tests = read(
@@ -257,7 +257,7 @@ require(
         "TestMinecraftIntegritySnapshot0135IsReevaluatedAgainstCurrentReleasePolicy",
         "integrity_release_revoked",
     ],
-    "0.13.5 enforcement tests",
+    "Тесты обязательного применения политик 0.13.5",
 )
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.

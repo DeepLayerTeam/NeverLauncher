@@ -36,14 +36,14 @@ require(
         "validate_installed_runtime",
         "runtime record java path вышел за Managed Java root через symlink",
     ],
-    "Runtime Managed Java II",
+    "Managed Java II в Runtime",
 )
 
 runtime_cli = read("runtime/runtime/src/bin/runtime.rs")
 require(
     runtime_cli,
     ["--major <8|16|17|21|25>", "ensure_managed_java"],
-    "Runtime Java CLI",
+    "Командная строка Java Runtime",
 )
 
 e2e = read("e2e/scripts/run-managed-java-II-e2e.sh")
@@ -72,10 +72,10 @@ require(
 )
 
 preflight = read("scripts/release/preflight.sh")
-require(preflight, ["managed-java-II-0165.py"], "Managed Java II preflight")
+require(preflight, ["managed-java-II-0165.py"], "Предварительная проверка Managed Java II")
 
 release = read("cli/cmd/launcher/release_commands.go")
-require(release, ["managed-java-II-8-16-17-21-25"], "Managed Java II release gate")
+require(release, ["managed-java-II-8-16-17-21-25"], "Обязательная проверка релиза Managed Java II")
 
 subprocess.run(
     ["go", "test", "./cmd/launcher", "-run", "TestManagedJavaII", "-count=1"],

@@ -90,7 +90,7 @@ jobs:
               if ($Signature.Status -ne 'Valid' -or -not $Signature.SignerCertificate) {
                 throw "invalid Authenticode chain for $($Exe.FullName): $($Signature.Status)"
               }
-              Write-Host "Verified final signed package executable: $($Exe.Name) $Arch"
+              Write-Host "Проверен исполняемый файл окончательного подписанного пакета: $($Exe.Name) $Arch"
             }
           }
       - name: Удалить подписание учётные данные файл

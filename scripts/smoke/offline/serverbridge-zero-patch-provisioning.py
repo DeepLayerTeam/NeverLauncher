@@ -26,7 +26,7 @@ release = read("cli/cmd/launcher/serverbridge_release.go")
 require(
     main,
     ['case "server-bridge", "serverbridge":', "handleServerBridge0199"],
-    "CLI command wiring",
+    "Подключение команд CLI",
 )
 require(
     prov,
@@ -61,7 +61,7 @@ require(
         "already-enrolled",
         "rotate-identity",
     ],
-    "Zero-Patch provisioning implementation",
+    "Реализация развёртывания без изменения файлов сервера",
 )
 for forbidden in [
     "server.properties =",
@@ -82,7 +82,7 @@ require(
         "TestServerBridgeDryRunDoesNotMutate0199",
         "TestServerBridgeReleaseTargetCohortIncludesUniversalAdapters0199",
     ],
-    "0.19.9 provisioning tests",
+    "Тесты развёртывания 0.19.9",
 )
 require(
     release,
@@ -91,7 +91,7 @@ require(
         "serverBridgeReleaseTargetsForVersion0150",
         "serverBridgeUniversalAdaptersRequired0198",
     ],
-    "release cohort verifier",
+    "Проверка группы релизов",
 )
 targets = json.loads(read("serverbridge/targets.json"))
 if targets.get("productVersion") != version or len(targets.get("targets", [])) != 14:

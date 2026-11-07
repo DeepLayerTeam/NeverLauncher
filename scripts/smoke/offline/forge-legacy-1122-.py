@@ -71,7 +71,7 @@ require(
         "legacyUniversalSha1",
         "legacyUniversalSha256",
     ],
-    "Forge legacy materializer",
+    "Установщик устаревших версий Forge",
 )
 
 commands = read("cli/cmd/launcher/runtime_commands.go")
@@ -81,7 +81,7 @@ require(
         '"forge-legacy-1.12.2"',
         "legacy V1 universal installer",
     ],
-    "runtime capability status",
+    "Состояние возможностей Runtime",
 )
 
 runtime = read("runtime/runtime/src/compatibility.rs")
@@ -92,7 +92,7 @@ require(
         "client_req: Option<bool>",
         "library.client_req == Some(false)",
     ],
-    "Runtime legacy client library semantics",
+    "Совместимость Runtime со старыми клиентскими библиотеками",
 )
 
 forge_case = read("e2e/scripts/run-forge-certification-case.sh")
@@ -110,7 +110,7 @@ require(
         "resolvedLoaderVersion",
         "actual-mojang-client",
     ],
-    "Forge legacy actual-client certification",
+    "Сертификация старого Forge на настоящем клиенте",
 )
 
 matrix = read("scripts/compatibility/matrix.py")
@@ -121,7 +121,7 @@ require(
         "forge_legacy_1122_0174_required",
         "Forge Legacy 1.12.2 0.17.4",
     ],
-    "Forge legacy matrix",
+    "Матрица старых версий Forge",
 )
 release = read("cli/cmd/launcher/compatibility_release.go")
 require(
@@ -132,7 +132,7 @@ require(
         "forge-legacy-0.17.4-real-1.12.2-universal-fmltweaker-actual-client",
         "immutable version",
     ],
-    "Forge legacy release certification",
+    "Сертификация релиза старых версий Forge",
 )
 
 tests = (
@@ -152,7 +152,7 @@ require(
         "TestForgeLegacy1122V1UniversalInstaller",
         "TestForgeLegacy1122RepackedEmptyProcessorInstaller",
     ],
-    "Forge legacy regression coverage",
+    "Покрытие старых версий Forge регрессионными тестами",
 )
 
 print(

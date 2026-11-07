@@ -58,7 +58,7 @@ def main() -> int:
             "hook_set_digest",
             "should_skip_module",
         ],
-        "real bounded IAT interception/self-integrity backend",
+        "Реальный ограниченный перехват IAT и самопроверка целостности Backend",
     )
     # JVM может напрямую импортировать нативные API памяти ntdll. Наблюдать их нужно
     # через точно типизированные обёртки только текущего процесса; ошибочный
@@ -76,7 +76,7 @@ def main() -> int:
             "record_virtual_alloc(address, size, protect)",
             "record_virtual_protect(address, size, protect)",
         ],
-        "current-process NT memory provenance with NTSTATUS fail-closed",
+        "Происхождение памяти текущего процесса NT с блокировкой по ошибке NTSTATUS",
     )
     for forbidden in (
         "SetWindowsHookEx",
@@ -105,7 +105,7 @@ def main() -> int:
             "hook_engine::shutdown_restore()",
             "module_worker(channel, sequence",
         ],
-        "Sensor startup/continuous hook lifecycle",
+        "Жизненный цикл начальных и непрерывных перехватов датчика",
     )
     require(
         parent,
@@ -122,7 +122,7 @@ def main() -> int:
             "Hook Engine integrity violation",
             "fail_closed",
         ],
-        "parent-side authenticated readiness/evidence/fail-closed enforcement",
+        "Проверка готовности, свидетельств и блокировки при ошибке в родительском процессе",
     )
     require(
         report,
@@ -135,7 +135,7 @@ def main() -> int:
             "integrity_check_count",
             "hook_set_sha256",
         ],
-        "runtime hook evidence",
+        "Свидетельства перехвата Runtime",
     )
     require(
         bootstrap,
@@ -145,7 +145,7 @@ def main() -> int:
             "guard-sensor-startup-v3",
             "authenticate_sensor_or_kill",
         ],
-        "protocol-v3 fail-closed bootstrap",
+        "Строгая инициализация протокола v3 с блокировкой при ошибке",
     )
     require(
         integration,
@@ -157,7 +157,7 @@ def main() -> int:
             "report.hook_engine.intercepted_call_count >= 1",
             "report.hook_engine.hook_set_sha256.len(), 64",
         ],
-        "real JVM interception/self-check integration regression",
+        "Интеграционные регрессионные проверки перехвата и самопроверки настоящей JVM",
     )
     require(
         ci,
@@ -167,7 +167,7 @@ def main() -> int:
             "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
             "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         ],
-        "Windows compilation/integration/clippy CI",
+        "Компиляция, интеграция и Clippy для Windows в CI",
     )
     if "guard-aggressive-hook-engine-0184.py" not in preflight:
         raise SystemExit(

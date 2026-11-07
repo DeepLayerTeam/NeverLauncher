@@ -43,7 +43,7 @@ require(
         '("macos", "x64"',
         '("macos", "arm64"',
     ],
-    "Managed JRE builder",
+    "Сборщик управляемой среды Java",
 )
 
 verifier = read("cli/cmd/launcher/managed_jre_delivery.go")
@@ -60,7 +60,7 @@ require(
         "DELIVERY_MANIFEST.json",
         "Managed JRE artifact %s is not bound",
     ],
-    "Managed JRE verifier",
+    "Проверка управляемой среды Java",
 )
 
 runtime = read("runtime/runtime/src/managed_java.rs")
@@ -75,7 +75,7 @@ require(
         "ensure_local_archive",
         "Managed JRE javaEntry mismatch",
     ],
-    "Runtime Managed JRE consumer",
+    "Использование управляемой Java в Runtime",
 )
 
 release = read("cli/cmd/launcher/release_commands.go")
@@ -87,7 +87,7 @@ require(
         "managedJREArtifacts0155(ver)",
         "Managed JRE Distribution",
     ],
-    "release integration",
+    "Интеграция релиза",
 )
 
 staging = read("scripts/release/build-release.sh")
@@ -100,7 +100,7 @@ require(
         "MANAGED_JRE_EVIDENCE.json",
         "launcher-jre-temurin21-",
     ],
-    "release staging",
+    "Подготовка релиза",
 )
 
 workflow = read(".github/workflows/managed-jre-production-delivery.yml")
@@ -112,7 +112,7 @@ require(
         "delivery verify-jre",
         "launcher-managed-jre-",
     ],
-    "Managed JRE production workflow",
+    "Процесс промышленного выпуска управляемой Java",
 )
 
 ci = read(".github/workflows/ci.yml")
@@ -126,7 +126,7 @@ require(
         "name: launcher-managed-jre-${{ github.sha }}",
         "managed-jre-production]",
     ],
-    "Managed JRE main CI certification wiring",
+    "Подключение основной сертификации управляемой Java в CI",
 )
 require(
     production_release,
@@ -135,7 +135,7 @@ require(
         "path: managed-jre-artifacts",
         "LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts",
     ],
-    "Managed JRE production release staging",
+    "Подготовка промышленного релиза управляемой Java",
 )
 
 subprocess.run(

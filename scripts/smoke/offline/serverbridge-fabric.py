@@ -32,7 +32,7 @@ require(
         "'velocity'",
         "'folia'",
     ],
-    "0.14.6 PostgreSQL migration",
+    "Миграция PostgreSQL 0.14.6",
 )
 
 settings = read("settings.gradle.kts")
@@ -42,7 +42,7 @@ require(
         'maven("https://maven.fabricmc.net/")',
         'include("plugins:fabric-bridge")',
     ],
-    "Gradle Fabric module/repository",
+    "Модуль и репозиторий Fabric в Gradle",
 )
 
 build_gradle = read("plugins/fabric-bridge/build.gradle.kts")
@@ -56,7 +56,7 @@ require(
         'modImplementation("net.fabricmc.fabric-api:fabric-api:0.116.17+1.21.1")',
         'include(project(":plugins:bridge-common"))',
     ],
-    "Fabric Loom production build",
+    "Промышленная сборка Fabric Loom",
 )
 
 fabric_mod = read("plugins/fabric-bridge/src/main/resources/fabric.mod.json")
@@ -89,7 +89,7 @@ require(
         '@Accessor("profileName")',
         '@Accessor("connection")',
     ],
-    "Fabric login accessor",
+    "Компонент доступа к авторизации Fabric",
 )
 
 runtime = read(
@@ -115,14 +115,14 @@ require(
         "validationExecutor.shutdownNow()",
         "heartbeatExecutor.shutdownNow()",
     ],
-    "Fabric production runtime",
+    "Промышленный Runtime Fabric",
 )
 
 backend = read("services/api/internal/httpapi/server_bridge.go")
 integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
 manifest = read("services/api/internal/httpapi/bridge_plugins.go")
 config = read("services/api/internal/config/config.go")
-require(backend, ['"folia", "fabric"'], "Backend Fabric kind enforcement")
+require(backend, ['"folia", "fabric"'], "Проверка типа Fabric на Backend")
 require(
     integrity,
     ["FabricSHA256", 'case "fabric":', "policy.FabricSHA256"],
@@ -146,7 +146,7 @@ require(
         '"descriptor": "fabric.mod.json"',
         '"clientModRequired": false',
     ],
-    "Fabric manifest/compatibility",
+    "Манифест и совместимость Fabric",
 )
 
 build = read("scripts/build/bridge-plugins.sh")
@@ -165,7 +165,7 @@ require(
         'metadata.get("environment") != "server"',
         'launcher.get("clientModRequired") is not False',
     ],
-    "Fabric release build/integrity",
+    "Сборка релиза и целостность Fabric",
 )
 if 'unzip -p "$FABRIC_ARTIFACT" fabric.mod.json | grep -q' in build:
     raise SystemExit(
@@ -179,7 +179,7 @@ require(
         "launcher = custom.get('launcher') if isinstance(custom, dict) else None",
         "launcher.get('clientModRequired') is not False",
     ],
-    "Fabric release certifier metadata path",
+    "Путь к метаданным сертификации релиза Fabric",
 )
 if "data.get('clientModRequired') is not False" in certifier:
     raise SystemExit(
@@ -188,7 +188,7 @@ if "data.get('clientModRequired') is not False" in certifier:
 
 release = read("scripts/release/build-release.sh")
 release_cli = read("cli/cmd/launcher/release_commands.go")
-require(release, ["paper purpur folia fabric"], "release bundle Fabric artifact")
+require(release, ["paper purpur folia fabric"], "Артефакт Fabric в комплекте релиза")
 require(
     release_cli,
     ['"launcher-fabric-bridge-" + ver + ".jar"'],
@@ -196,7 +196,7 @@ require(
 )
 
 openapi_gen = read("scripts/contracts/generate_openapi.py")
-require(openapi_gen, ['"folia","fabric"'], "OpenAPI Fabric kind")
+require(openapi_gen, ['"folia","fabric"'], "Тип Fabric в OpenAPI")
 
 tests = read("services/api/internal/httpapi/serverbridge_fabric_0146_test.go")
 require(
@@ -206,7 +206,7 @@ require(
         "TestServerBridgeFabricIntegrityAllowlist0146",
         "TestBridgePluginsManifestIncludesFabric0146",
     ],
-    "Fabric backend regressions",
+    "Регрессионные проверки Backend для Fabric",
 )
 
 runtime_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
@@ -233,7 +233,7 @@ require(
         "MODRINTH_PROJECTS: fabric-api",
         "./runtime/plugins/fabric:/mods:ro",
     ],
-    "Fabric Docker E2E",
+    "Сквозные проверки Fabric в Docker",
 )
 
 migration_e2e = read("e2e/scripts/run-fabric-server-bridge-migration-e2e.sh")
@@ -245,7 +245,7 @@ require(
         "'fabric-0146','Fabric 0146','fabric'",
         "invalid Fabric kind bypassed PostgreSQL constraint",
     ],
-    "0.14.5 -> 0.14.6 migration E2E",
+    "Сквозная проверка миграции с 0.14.5 на 0.14.6",
 )
 
 preflight = read("scripts/release/preflight.sh")

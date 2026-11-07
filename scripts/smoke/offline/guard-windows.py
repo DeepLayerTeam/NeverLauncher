@@ -38,7 +38,7 @@ require(
         'subtle = "2"',
         'zeroize = "1"',
     ],
-    "Runtime Cargo",
+    "Конфигурация Cargo Runtime",
 )
 
 guard = read("runtime/runtime/src/guard_ipc.rs")
@@ -65,14 +65,14 @@ require(
         "server.disconnect()",
         "zeroize",
     ],
-    "Guard authenticated IPC",
+    "Аутентифицированный IPC Guard",
 )
 
 binary = read("runtime/runtime/src/bin/guard.rs")
 require(
     binary,
     ["--pipe", "--parent-pid", "run_windows_guard_server"],
-    "Guard process entrypoint",
+    "Точка входа процесса Guard",
 )
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
@@ -112,7 +112,7 @@ require(
         "WINDOWS_PACKAGE_MANIFEST.json",
         "Compress-Archive",
     ],
-    "Windows release packaging",
+    "Упаковка релиза Windows",
 )
 
 ci = read(".github/workflows/ci.yml")
@@ -123,7 +123,7 @@ require(
         "guard_windows",
         "build-windows-desktop.ps1",
     ],
-    "Guard Windows CI",
+    "Проверки Windows Guard в CI",
 )
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.

@@ -51,7 +51,7 @@ def main() -> int:
             "pub struct WindowsProtectionCapabilities",
             "requirements_satisfied",
         ],
-        "profile/capability model",
+        "Модель профилей и возможностей",
     )
     require(
         policy,
@@ -68,7 +68,7 @@ def main() -> int:
             "protection_core_rejects_capability_drift",
             "protection_core_rejects_profile_substitution",
         ],
-        "runtime enforcement",
+        "Применение политик Runtime",
     )
     require(
         ipc,
@@ -82,7 +82,7 @@ def main() -> int:
             "windows_capability_model_version",
             "validate_status_profile",
         ],
-        "authenticated supervisor integration",
+        "Интеграция аутентифицированного наблюдателя",
     )
     require(
         guard,
@@ -91,7 +91,7 @@ def main() -> int:
             "windows_protection_profile(&args)",
             "--protection-profile audit|compat|aggressive",
         ],
-        "guard executable profile activation",
+        "Активация профиля исполняемого файла Guard",
     )
     require(
         lib,
@@ -101,7 +101,7 @@ def main() -> int:
             "WindowsProtectionCapabilities",
             "ensure_windows_protection_core_with_profile",
         ],
-        "public runtime API",
+        "Публичный API Runtime",
     )
     require(
         integration,
@@ -112,7 +112,7 @@ def main() -> int:
             "guard_lifetime_job_bound",
             "remote_attestation",
         ],
-        "Windows executable integration coverage",
+        "Покрытие интеграционными тестами исполняемых файлов Windows",
     )
     require(
         ci,
@@ -121,7 +121,7 @@ def main() -> int:
             "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         ],
-        "Windows CI",
+        "Проверки Windows в CI",
     )
     if "windows-protection-core-II-0181.py" not in preflight:
         raise SystemExit(

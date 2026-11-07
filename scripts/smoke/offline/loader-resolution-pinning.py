@@ -38,7 +38,7 @@ require(
         "assertPinnedPayload",
         "assertPinnedRuntimeProfile",
     ],
-    "loader resolution lock",
+    "Фиксация разрешения зависимостей загрузчика",
 )
 
 meta = read("cli/cmd/launcher/loader_runtime.go")
@@ -53,7 +53,7 @@ require(
         "assertPinnedPayload",
         "assertPinnedRuntimeProfile",
     ],
-    "Fabric/Quilt resolution pinning",
+    "Закрепление версий при разрешении зависимостей Fabric/Quilt",
 )
 
 forge = read("cli/cmd/launcher/forge_runtime.go")
@@ -68,7 +68,7 @@ require(
         "assertPinnedPayloadSHA256",
         "assertPinnedRuntimeProfile",
     ],
-    "Forge/NeoForge resolution pinning",
+    "Закрепление версий при разрешении зависимостей Forge/NeoForge",
 )
 
 for loader in ("fabric", "quilt", "forge", "neoforge"):
@@ -96,7 +96,7 @@ require(
         "loaderResolution",
         "sourceSha256",
     ],
-    "integration replay certification",
+    "Интеграционная сертификация защиты от повторов",
 )
 
 compat = read("e2e/scripts/run-compatibility-case.sh")
@@ -110,7 +110,7 @@ require(
         '"reproducibleResolution"',
         "-resolution-lock.json",
     ],
-    "compatibility result pin evidence",
+    "Свидетельства фиксации версий по результатам проверки совместимости",
 )
 
 matrix = read("scripts/compatibility/matrix.py")
@@ -124,7 +124,7 @@ require(
         "loaderPinned",
         "reproducibleResolution",
     ],
-    "compatibility aggregate pin enforcement",
+    "Обязательная фиксация версий в сводной проверке совместимости",
 )
 
 release = read("cli/cmd/launcher/compatibility_release.go")
@@ -136,7 +136,7 @@ require(
         "compatibilityLoaderResolution0177Required",
         "loader-resolution-pinning-0.17.7-immutable-lock-upstream-sha256-profile-sha256-replay",
     ],
-    "release certification pin enforcement",
+    "Обязательная проверка закреплённых версий при сертификации",
 )
 
 tests = (
@@ -153,7 +153,7 @@ require(
         "TestCompatibilityCertificationLoaderResolutionPinning0177",
         "test_0177_aggregate_rejects_missing_loader_resolution_pin",
     ],
-    "0.17.7 pinning regression tests",
+    "Регрессионные тесты закрепления версий 0.17.7",
 )
 
 workflow = read(".github/workflows/compatibility.yml")

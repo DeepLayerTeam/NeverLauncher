@@ -38,13 +38,13 @@ require(
         "folia-supported: true",
         "clientModRequired",
     ],
-    "ServerBridge 3 certification",
+    "Сертификация ServerBridge 3",
 )
 build = read("scripts/build/bridge-plugins.sh")
 require(
     build,
     ["serverbridge/certify_release.py", "Production ServerBridge 3 artifacts"],
-    "bridge build",
+    "Сборка ServerBridge",
 )
 release = read("scripts/release/build-release.sh")
 require(
@@ -54,7 +54,7 @@ require(
         "BRIDGE_RELEASE_ALLOWLIST.json",
         "BRIDGE_PLUGIN_MANIFEST.json",
     ],
-    "release bundle",
+    "Комплект релиза",
 )
 required = read("scripts/smoke/release-required/release-bundle.sh")
 require(
@@ -64,13 +64,13 @@ require(
         "BRIDGE_RELEASE_ALLOWLIST.json",
         "BRIDGE_PLUGIN_MANIFEST.json",
     ],
-    "publish gate",
+    "Обязательная проверка перед публикацией",
 )
 status = read("services/api/internal/httpapi/bridge_plugins.go")
 if parts >= (0, 20, 0):
-    require(status, ["ServerBridge 3 GA"], "runtime release status")
+    require(status, ["ServerBridge 3 GA"], "Статус релиза Runtime")
 else:
-    require(status, [f"Launcher {version} ServerBridge 3"], "runtime release status")
+    require(status, [f"Launcher {version} ServerBridge 3"], "Статус релиза Runtime")
 import json
 
 targets = json.loads(read("serverbridge/targets.json"))

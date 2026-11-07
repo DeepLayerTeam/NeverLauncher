@@ -41,7 +41,7 @@ require(
         "outside the certified GA support surface",
         "requires Java",
     ],
-    "runtime GA support policy",
+    "Политика поддержки Runtime для GA",
 )
 
 meta = read("cli/cmd/launcher/loader_runtime.go")
@@ -73,7 +73,7 @@ require(
         "legacyForgeGA",
         "loader-compatibility-ga-0.18.0-runtime-enforced-fabric-quilt-forge-neoforge-legacy-all-292-targets-signed-bundle",
     ],
-    "GA release certificate",
+    "Сертификат релиза GA",
 )
 
 release = read("cli/cmd/launcher/release_commands.go")
@@ -86,7 +86,7 @@ require(
         "loaderGASupportSHA2560180",
         "ga-certified",
     ],
-    "GA release publish enforcement",
+    "Принудительная проверка публикации релиза GA",
 )
 
 workflow = read(".github/workflows/production-release-candidate.yml")
@@ -97,7 +97,7 @@ require(
         "loaderCompatibilityGA == true",
         "loaderCompatibilityGASupportSha256",
     ],
-    "production GA workflow assertion",
+    "Проверка рабочего процесса промышленного выпуска GA",
 )
 
 tests = read("cli/cmd/launcher/loader_ga_test.go") + read(
@@ -114,7 +114,7 @@ require(
         "TestLoaderCompatibilityGA0180RejectsCertifiedRuntimeSurfaceDrift",
         "TestLoaderCompatibilityGA0180RejectsTamperedRuntimeSupportHash",
     ],
-    "GA regression tests",
+    "Регрессионные тесты GA",
 )
 
 targets = json.loads(read("compatibility/targets.json"))["targets"]

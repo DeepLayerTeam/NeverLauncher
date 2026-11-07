@@ -35,7 +35,7 @@ require(
         "Hardened Runtime",
         "guard/macos-runtime-process-policy/v1",
     ],
-    "macOS runtime hardening",
+    "Усиление защиты Runtime для macOS",
 )
 ipc = read("runtime/runtime/src/macos_guard.rs")
 require(
@@ -55,7 +55,7 @@ require(
         "guard_sha256",
         "ru.skif4er.launcher.guard",
     ],
-    "macOS authenticated IPC/package verification",
+    "Проверка аутентифицированного IPC и пакета macOS",
 )
 integrity = read("runtime/runtime/src/integrity.rs")
 require(
@@ -68,13 +68,13 @@ require(
         "hardened_runtime",
         "library_validation",
     ],
-    "macOS integrity evidence",
+    "Свидетельства целостности macOS",
 )
 att = read("runtime/runtime/src/attestation.rs")
 require(
     att,
     ["guard/macos-guard-attestation/v1", "Guard Attestation Core macOS v1"],
-    "macOS attestation",
+    "Аттестация macOS",
 )
 desktop = read("apps/desktop/src-tauri/src/main.rs")
 require(
@@ -85,7 +85,7 @@ require(
         "ensure_macos_production_hardening",
         "Guard macOS production hardening verification failed",
     ],
-    "Desktop macOS enforcement",
+    "Принудительное применение политик macOS в Desktop",
 )
 backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
 require(
@@ -97,13 +97,13 @@ require(
         "isMacOSDevicePlatform0138",
         "Guard macOS process policy verification failed",
     ],
-    "Backend macOS verification",
+    "Проверка macOS на Backend",
 )
 tests = read("services/api/internal/httpapi/guard_attestation_0134_test.go")
 require(
     tests,
     ["TestMacOSGuardAttestationValidation0138", "LibraryValidation = false"],
-    "Backend macOS tests",
+    "Тесты Backend для macOS",
 )
 release = read("scripts/release/build-macos-desktop.sh")
 require(
@@ -124,7 +124,7 @@ require(
         "guardSize",
         "--identifier ru.skif4er.launcher.guard",
     ],
-    "macOS release package",
+    "Релизный пакет macOS",
 )
 ci = read(".github/workflows/ci.yml")
 require(
@@ -136,8 +136,8 @@ require(
         "build-macos-desktop.sh",
         "macos-production-implementation-0138.py",
     ],
-    "CI macOS gate",
+    "Обязательная проверка macOS в CI",
 )
 preflight = read("scripts/release/preflight.sh")
-require(preflight, ["macos-production-implementation-0138.py"], "preflight macOS gate")
+require(preflight, ["macos-production-implementation-0138.py"], "Предварительная обязательная проверка macOS")
 print("Launcher 0.13.8: проверка готовности macOS: OK")

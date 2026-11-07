@@ -79,7 +79,7 @@ def main() -> int:
             "thread_integrity::shutdown()",
             "thread_process_event(",
         ],
-        "Sensor startup/continuous thread lifecycle",
+        "Жизненный цикл начальных и непрерывных потоков датчика",
     )
     require(
         policy,
@@ -165,7 +165,7 @@ def main() -> int:
             "PAGE_EXECUTE_READWRITE",
             "create_private_executable_thread",
         ],
-        "adversarial MEM_PRIVATE thread-start fixture",
+        "Атакующий тестовый сценарий запуска потока MEM_PRIVATE",
     )
     require(
         ci,

@@ -36,7 +36,7 @@ require(
         "mc-health",
         "./runtime/loader-native-server:/data",
     ],
-    "loader-native dedicated server",
+    "Выделенный сервер для нативного загрузчика",
 )
 
 native = read("e2e/scripts/run-loader-native-e2e.sh")
@@ -58,7 +58,7 @@ require(
         "nativeHandshake",
         "actual-client-joined-dedicated-loader-server",
     ],
-    "loader-native execution",
+    "Исполнение нативного загрузчика",
 )
 
 integration = read("e2e/scripts/run-minecraft-e2e.sh")
@@ -74,7 +74,7 @@ require(
         "loaderNativeClientJoin",
         "loaderVersionMatched",
     ],
-    "integration loader-native routing",
+    "Интеграция маршрутизации нативных загрузчиков",
 )
 
 compat = read("e2e/scripts/run-compatibility-case.sh")
@@ -89,7 +89,7 @@ require(
         "loaderServerHealthy",
         "loaderNativeClientJoin",
     ],
-    "compatibility loader-native evidence",
+    "Свидетельства совместимости нативных загрузчиков",
 )
 
 matrix = read("scripts/compatibility/matrix.py")
@@ -105,7 +105,7 @@ require(
         "loader-native-server-artifacts.txt",
         "health-loader-native.json",
     ],
-    "matrix loader-native enforcement",
+    "Обязательная проверка нативных загрузчиков в матрице",
 )
 
 release = read("cli/cmd/launcher/compatibility_release.go")
@@ -124,7 +124,7 @@ require(
         "neoforge-1.21.1-linux-x64",
         "loader-native-e2e-0.17.8-fabric-quilt-forge-neoforge-client-server-exact-loader-join",
     ],
-    "release certification loader-native enforcement",
+    "Обязательная сертификация нативных загрузчиков",
 )
 
 tests = read("cli/cmd/launcher/compatibility_release_test.go") + read(
@@ -140,7 +140,7 @@ require(
         "test_0178_aggregate_rejects_missing_loader_native_join",
         "test_0178_aggregate_rejects_missing_loader_native_evidence",
     ],
-    "0.17.8 loader-native regression tests",
+    "Регрессионные тесты нативных загрузчиков 0.17.8",
 )
 
 workflow = read(".github/workflows/compatibility.yml")

@@ -28,7 +28,7 @@ require(
         "server_bridge_nodes_v2_kind_check",
         "'velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia'",
     ],
-    "0.14.5 PostgreSQL migration",
+    "Миграция PostgreSQL 0.14.5",
 )
 
 settings = read("settings.gradle.kts")
@@ -42,7 +42,7 @@ require(
         'include("plugins:bungeecord-bridge")',
         'include("plugins:waterfall-bridge")',
     ],
-    "Gradle proxy-family modules",
+    "Модули Gradle семейства прокси",
 )
 
 runtime = read(
@@ -64,7 +64,7 @@ require(
         "new ArrayBlockingQueue<>(256)",
         "new ThreadPoolExecutor.AbortPolicy()",
     ],
-    "shared production proxy runtime",
+    "Общий промышленный Runtime семейства прокси",
 )
 
 velocity = read(
@@ -78,7 +78,7 @@ require(
         "ProxyShutdownEvent",
         '"velocity"',
     ],
-    "Velocity proxy adapter",
+    "Прокси-адаптер Velocity",
 )
 
 bungee_runtime = read(
@@ -96,7 +96,7 @@ require(
         "registerCommand",
         "unregisterCommands",
     ],
-    "Bungee-family runtime",
+    "Runtime семейства Bungee",
 )
 platform = read(
     "plugins/bungee-family-common/src/main/java/ru/launcher/bridge/bungee/BungeeFamilyPlatform.java"
@@ -109,7 +109,7 @@ require(
         'brand.contains("waterfall")',
         'brand.contains("bungeecord")',
     ],
-    "Bungee runtime discriminator",
+    "Определение варианта Bungee в Runtime",
 )
 
 for kind, class_name, expected in (
@@ -186,7 +186,7 @@ require(
         "BungeeFamilyBridgePlugin.class",
         "bungee.yml",
     ],
-    "proxy release build/integrity",
+    "Сборка релиза прокси и проверка целостности",
 )
 
 config = read("services/api/internal/config/config.go")
@@ -207,7 +207,7 @@ require(
     [
         'enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]'
     ],
-    "OpenAPI proxy-family enum",
+    "Перечень семейств прокси в OpenAPI",
 )
 
 tests = read("services/api/internal/httpapi/serverbridge_proxy_family_0145_test.go")
@@ -218,7 +218,7 @@ require(
         "TestServerBridgeProxyFamilyIntegrityAllowlist0145",
         "TestBridgePluginsManifestIncludesProxyFamily0145",
     ],
-    "proxy-family backend regressions",
+    "Регрессионные проверки Backend для семейства прокси",
 )
 
 runtime_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
@@ -250,7 +250,7 @@ require(
         "./runtime/plugins/bungeecord:/plugins:ro",
         "./runtime/plugins/waterfall:/plugins:ro",
     ],
-    "Velocity/BungeeCord/Waterfall Docker E2E",
+    "Сквозные проверки Velocity/BungeeCord/Waterfall в Docker",
 )
 if '- "25570:25565"' in compose_e2e:
     raise SystemExit(
@@ -279,7 +279,7 @@ require(
         "for kind in velocity bungeecord waterfall",
         "invalid proxy kind bypassed PostgreSQL constraint",
     ],
-    "0.14.4 -> 0.14.5 migration E2E",
+    "Сквозная проверка миграции с 0.14.4 на 0.14.5",
 )
 
 preflight = read("scripts/release/preflight.sh")

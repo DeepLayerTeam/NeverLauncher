@@ -31,7 +31,7 @@ require(
         "idx_server_bridge_topology_active_freshness_0149",
         "idx_server_bridge_handoffs_active_expiry_0149",
     ],
-    "0.14.9 migration",
+    "Миграция 0.14.9",
 )
 repo = read("services/api/internal/repository/server_bridge_v2.go")
 require(
@@ -43,7 +43,7 @@ require(
         "effective_status",
         "ExpiredNonceBacklog",
     ],
-    "HA repository",
+    "Хранилище отказоустойчивости",
 )
 consume = repo[
     repo.index("func (r *SQLRepository) ConsumeServerBridgeNodeNonce") : repo.index(
@@ -64,7 +64,7 @@ require(
         "runtime-e2e",
         "build-compatibility",
     ],
-    "public matrix endpoint",
+    "Точка доступа к публичной матрице",
 )
 hardening = (
     read("services/api/internal/httpapi/server_bridge_http_hardening_0149.go")
@@ -81,7 +81,7 @@ require(
         "RateLimitServerBridgePerMinute",
         "LAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE",
     ],
-    "HTTP/rate hardening",
+    "Усиление защиты HTTP и ограничений запросов",
 )
 obs = read("services/api/internal/httpapi/observability.go") + read(
     "services/api/internal/httpapi/bridge_plugins.go"
@@ -93,7 +93,7 @@ require(
         "launcher_serverbridge_nodes_fresh",
         "ha-advisory-lock-maintenance",
     ],
-    "HA observability",
+    "Мониторинг отказоустойчивости",
 )
 matrix = read("serverbridge/targets.json") + read("scripts/serverbridge/matrix.py")
 require(
@@ -108,7 +108,7 @@ require(
         '"neoforge"',
         "productVersion",
     ],
-    "public matrix source",
+    "Источник публичной матрицы",
 )
 e2e = read("e2e/scripts/run-serverbridge-ha-hardening-migration-e2e.sh") + read(
     "services/api/internal/repository/server_bridge_ha_0149_integration_test.go"
@@ -121,11 +121,11 @@ require(
         "TestServerBridgeHA0149",
         "exactly one nonce consumer",
     ],
-    "HA PostgreSQL E2E",
+    "Сквозные проверки отказоустойчивости PostgreSQL",
 )
 preflight = read("scripts/release/preflight.sh")
 require(
-    preflight, ["serverbridge-public-matrix-ha-hardening-0149.py"], "release preflight"
+    preflight, ["serverbridge-public-matrix-ha-hardening-0149.py"], "Предварительная проверка релиза"
 )
 ci = read(".github/workflows/ci.yml")
 require(
@@ -135,6 +135,6 @@ require(
         "scripts/serverbridge/matrix.py validate",
         "run-serverbridge-ha-hardening-migration-e2e.sh",
     ],
-    "CI wiring",
+    "Подключение проверок CI",
 )
 print(f"Launcher 0.14.9: проверка публичной матрицы ServerBridge и HA/защиты: OK ({version})")

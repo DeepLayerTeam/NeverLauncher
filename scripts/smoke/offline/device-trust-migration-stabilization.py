@@ -55,7 +55,7 @@ require(
         "legacy-device-revoked",
         "UPDATE minecraft_sessions SET trusted_device_id=NULL",
     ],
-    "0.12.10 stabilization migration",
+    "Миграция стабилизации 0.12.10",
 )
 
 repo_devices = read("services/api/internal/repository/devices_0121.go")
@@ -68,7 +68,7 @@ require(
         "NULL,NULL,'')",
         "ON CONFLICT DO NOTHING RETURNING",
     ],
-    "nullable replacement repository path",
+    "Путь к хранилищу замен с поддержкой пустого значения",
 )
 require(
     repo_postgres,
@@ -78,7 +78,7 @@ require(
         "var trustedDeviceID sql.NullString",
         "item.TrustedDeviceID = trustedDeviceID.String",
     ],
-    "nullable Minecraft trust snapshot repository path",
+    "Путь к хранилищу снимков доверия Minecraft с поддержкой пустого значения",
 )
 
 upgrade_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
@@ -95,7 +95,7 @@ require(
         "cross-user Minecraft device snapshot unexpectedly succeeded",
         "migration-stabilization.json",
     ],
-    "0.12.10 PostgreSQL upgrade E2E",
+    "Сквозная проверка обновления PostgreSQL 0.12.10",
 )
 
 protocol_e2e = read("e2e/scripts/run-device-trust-e2e.sh")
@@ -107,7 +107,7 @@ require(
         "run-device-trust-migration-e2e.sh first",
         "0018_device_trust_stabilization_01210",
     ],
-    "0.12.10 public protocol evidence",
+    "Публичные свидетельства проверки протокола 0.12.10",
 )
 
 targets = json.loads(read("device-trust/targets.json"))
@@ -127,7 +127,7 @@ matrix = read("scripts/device_trust/matrix.py")
 require(
     matrix,
     ["migrationStabilization01210", "migration stabilization 0.12.10"],
-    "public trust matrix",
+    "Публичная матрица доверия",
 )
 
 preflight = read("scripts/release/preflight.sh")

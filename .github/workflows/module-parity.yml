@@ -43,11 +43,11 @@ jobs:
           (cd cli && go test -count=1 ./internal/moduleparity ./cmd/launcher -run '^TestAudit0301|^TestModuleParityCLI0301' )
           (cd cli && go vet ./internal/moduleparity)
           (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
-      - name: Проверить все M01-M19 источники и Java протокол привязка
+      - name: Проверить исходники всех модулей M01–M19 и протокол привязки Java
         run: |
           mkdir -p audit-evidence
           "$RUNNER_TEMP/nl" module-parity audit --report audit-evidence/source.json
-      - name: Выполнить Desktop запуск регрессионная проверка тесты
+      - name: Запустить регрессионные тесты Desktop
         run: |
           "$RUNNER_TEMP/nl" module-parity audit --run-tests --require-tests --module M07 --timeout 90s --report audit-evidence/desktop-linux.json
       - name: Выполнить нативные регрессионные тесты Prestarter
@@ -56,7 +56,7 @@ jobs:
       - name: Доказать, что отсутствие модулей нельзя объявить полной функциональной эквивалентностью
         run: |
           if "$RUNNER_TEMP/nl" module-parity audit --require-full-parity --report audit-evidence/uncertified.json; then
-            echo 'Uncertified matrix falsely reported full M01-M19 parity' >&2
+            echo 'Несертифицированная матрица ошибочно сообщила о полной функциональной эквивалентности M01–M19' >&2
             exit 1
           fi
       - uses: actions/upload-artifact@v4

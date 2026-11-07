@@ -36,7 +36,7 @@ require(
         '"Win32_System_Diagnostics_ToolHelp"',
         '"Win32_System_Threading"',
     ],
-    "Runtime Windows dependencies",
+    "Зависимости Runtime для Windows",
 )
 
 integrity = read("runtime/runtime/src/integrity.rs")
@@ -68,7 +68,7 @@ require(
         "recompute_evidence_sha256",
         "validate_evidence_shape",
     ],
-    "Windows Integrity Evidence v1 implementation",
+    "Реализация свидетельств целостности Windows v1",
 )
 
 guard = read("runtime/runtime/src/guard_ipc.rs")
@@ -84,7 +84,7 @@ require(
         "session proof verification failed",
         "observed_windows_parent_pid",
     ],
-    "Authenticated IPC integrity command",
+    "Команда проверки целостности аутентифицированного IPC",
 )
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
@@ -96,7 +96,7 @@ require(
         "launch заблокирован: Guard Windows Integrity Evidence v1 недоступен",
         "guard_integrity_evidence",
     ],
-    "Desktop fail-closed integrity wiring",
+    "Подключение строгой проверки целостности в Desktop",
 )
 
 integration = read("runtime/runtime/tests/guard_windows.rs")
@@ -111,7 +111,7 @@ require(
         "evidence.session_proof.len()",
         "module_count > 0",
     ],
-    "Windows integrity integration test",
+    "Интеграционный тест целостности Windows",
 )
 
 ci = read(".github/workflows/ci.yml")

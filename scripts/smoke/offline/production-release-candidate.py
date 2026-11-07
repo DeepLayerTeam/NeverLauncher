@@ -49,7 +49,7 @@ require(
         "verifyPublicProductionDeliveryMatrix0159",
         "PROVENANCE.json sourceCommit mismatch",
     ],
-    "production candidate implementation",
+    "Реализация кандидата на промышленный релиз",
 )
 require(
     release,
@@ -60,7 +60,7 @@ require(
         "verifyProductionReleaseCandidate01511",
         "production-release-candidate-exact-source-cohort",
     ],
-    "release integration",
+    "Интеграция релиза",
 )
 require(
     build,
@@ -71,7 +71,7 @@ require(
         "release candidate-verify",
         "PRODUCTION_RELEASE_CANDIDATE.json",
     ],
-    "production build integration",
+    "Интеграция промышленной сборки",
 )
 require(
     tests,
@@ -81,7 +81,7 @@ require(
         "TestSLSAProvenance01511CarriesExactSourceCommit",
         "TestNormalizeSourceCommit01511RejectsPlaceholders",
     ],
-    "production candidate tests",
+    "Тесты кандидата на промышленный релиз",
 )
 
 layout_resolver = ROOT / "scripts/release/resolve-artifact-payload.sh"
@@ -95,7 +95,7 @@ require(
         '"launcher-cli-linux-x64" "Поставка для Linux x64/ARM64"',
         '"launcher-cli-macos-x64" "Поставка для macOS x64/ARM64"',
     ],
-    "production artifact layout staging",
+    "Подготовка структуры промышленных артефактов",
 )
 
 

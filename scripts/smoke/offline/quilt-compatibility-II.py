@@ -94,7 +94,7 @@ require(
         "materializeLoaderLibraries",
         "installed-and-verified",
     ],
-    "Quilt materializer/runtime resolution",
+    "Установка и разрешение зависимостей Runtime Quilt",
 )
 
 quilt_case = read("e2e/scripts/run-quilt-certification-case.sh")
@@ -114,7 +114,7 @@ require(
         "mutable loader selector leaked",
         "actual-mojang-client",
     ],
-    "Quilt actual-client certification",
+    "Сертификация на настоящем клиенте Quilt",
 )
 
 compat_case = read("e2e/scripts/run-compatibility-case.sh")
@@ -129,7 +129,7 @@ require(
         "resolvedLoaderVersion",
         '"actualClient": probe.get("status") == "passed"',
     ],
-    "Quilt compatibility routing/evidence",
+    "Маршрутизация и свидетельства совместимости Quilt",
 )
 
 matrix = read("scripts/compatibility/matrix.py")
@@ -143,7 +143,7 @@ require(
         "install_file = f\"{target['loader']}-install.json\"",
         "certification_file = f\"{target['loader']}-certification.json\"",
     ],
-    "Quilt matrix enforcement",
+    "Обязательные проверки матрицы Quilt",
 )
 
 release = read("cli/cmd/launcher/compatibility_release.go")
@@ -156,7 +156,7 @@ require(
         "quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client",
         "immutable version",
     ],
-    "Quilt release certification",
+    "Сертификация релиза Quilt",
 )
 
 workflow = read(".github/workflows/compatibility.yml")
@@ -167,7 +167,7 @@ require(
         "quilt-install.json",
         "quilt-certification.json",
     ],
-    "Quilt CI raw evidence",
+    "Исходные свидетельства проверки Quilt в CI",
 )
 
 tests = (
@@ -189,7 +189,7 @@ require(
         "TestQuiltLatestStableSelectionUsesStableSemVerWhenMetaOmitsStableFlag",
         "TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases",
     ],
-    "Quilt 0.17.2 regression coverage",
+    "Покрытие регрессионными тестами Quilt 0.17.2",
 )
 
 print(

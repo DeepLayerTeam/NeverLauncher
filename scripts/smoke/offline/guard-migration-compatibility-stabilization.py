@@ -36,7 +36,7 @@ require(
         "105 seconds",
         "partial Guard snapshot",
     ],
-    "0.13.10 Guard stabilization migration",
+    "Миграция стабилизации Guard 0.13.10",
 )
 
 integrity = read(
@@ -49,7 +49,7 @@ require(
         "isLinuxDevicePlatform0137(device.Platform)",
         "isMacOSDevicePlatform0138(device.Platform)",
     ],
-    "Minecraft/ServerBridge Guard platform compatibility",
+    "Совместимость Guard с платформами Minecraft/ServerBridge",
 )
 
 tests = read(
@@ -58,7 +58,7 @@ tests = read(
 require(
     tests,
     ["TestGuardIntegrityRequirementIncludesMacOS01310", "darwin-arm64"],
-    "macOS Guard regression test",
+    "Регрессионный тест Guard для macOS",
 )
 
 matrix = read("scripts/guard_ci/matrix.py")
@@ -69,7 +69,7 @@ require(
         '"repository": args.repository',
         "repository=args.repository",
     ],
-    "Guard CI repository binding",
+    "Привязка хранилища Guard в CI",
 )
 
 go_release = read("cli/cmd/launcher/guard_ci_release.go")
@@ -79,14 +79,14 @@ require(
         "Repository     string",
         "result.Repository != matrix.Repository",
     ],
-    "CLI Guard evidence repository binding",
+    "Привязка CLI к хранилищу свидетельств Guard",
 )
 
 go_tests = read("cli/cmd/launcher/guard_ci_release_test.go")
 require(
     go_tests,
     ["TestGuardCICertificationRejectsRepositoryMismatch01310", "fork/launcher"],
-    "CLI repository mismatch regression",
+    "Регрессионная проверка несовпадения хранилища CLI",
 )
 
 migration_e2e = read("e2e/scripts/run-guard-migration-e2e.sh")
@@ -99,7 +99,7 @@ require(
         "partial Guard snapshot",
         "snapshot freshness constraint",
     ],
-    "Guard migration E2E",
+    "Сквозные тесты миграции Guard",
 )
 
 legacy_migration_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
@@ -109,7 +109,7 @@ require(
         "(( 10#$ordinal > 17 )) && continue",
         "0017_device_key_recovery_rotation_0128",
     ],
-    "legacy device-trust migration E2E compatibility",
+    "Совместимость сквозной миграции старых механизмов доверия устройствам",
 )
 
 preflight = read("scripts/release/preflight.sh")
@@ -119,7 +119,7 @@ require(
         "guard-migration-compatibility-stabilization-01310.py",
         "run-guard-migration-e2e.sh",
     ],
-    "release preflight",
+    "Предварительная проверка релиза",
 )
 ci = read(".github/workflows/ci.yml")
 require(
@@ -129,7 +129,7 @@ require(
         "run-guard-migration-e2e.sh",
         "launcher-guard-migration-e2e-evidence",
     ],
-    "CI gate",
+    "Обязательная проверка CI",
 )
 if (
     "guard-macos:\n    name: Guard macOS production implementation\n    runs-on: macos-14\n    timeout-minutes: 45\n    steps:\n    steps:"
@@ -147,7 +147,7 @@ require(
         f'st.Current != "{latest_migration}"',
         "TestGuardMigrationCompatibilityStabilization01310",
     ],
-    "Backend migration catalog tests",
+    "Тесты каталога миграций Backend",
 )
 cli_migration_tests = read("cli/internal/dbmigrate/migrate_test.go")
 require(
@@ -166,7 +166,7 @@ require(
         "0030_serverbridge_migration_stabilization_01410",
         "0031_guard_attestation_challenge_purposes_0161",
     ],
-    "CLI migration catalog tests",
+    "Тесты каталога миграций CLI",
 )
 
 # Менеджер версий должен был перенести 0.13.10 в метаданные политики Guard.

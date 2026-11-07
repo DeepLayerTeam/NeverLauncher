@@ -91,7 +91,7 @@ require(
         "profileSha256",
         "installed-and-verified",
     ],
-    "Forge processor materializer",
+    "Установщик компонентов обработки Forge",
 )
 
 forge_case = read("e2e/scripts/run-forge-certification-case.sh")
@@ -113,7 +113,7 @@ require(
         "mutable loader selector leaked",
         "actual-mojang-client",
     ],
-    "Forge actual-client certification",
+    "Сертификация на настоящем клиенте Forge",
 )
 
 compat_case = read("e2e/scripts/run-compatibility-case.sh")
@@ -128,7 +128,7 @@ require(
         "resolvedLoaderVersion",
         '"actualClient": probe.get("status") == "passed"',
     ],
-    "Forge compatibility routing/evidence",
+    "Маршрутизация и свидетельства совместимости Forge",
 )
 
 matrix = read("scripts/compatibility/matrix.py")
@@ -142,7 +142,7 @@ require(
         "install_file = f\"{target['loader']}-install.json\"",
         "certification_file = f\"{target['loader']}-certification.json\"",
     ],
-    "Forge matrix enforcement",
+    "Обязательные проверки матрицы Forge",
 )
 
 release = read("cli/cmd/launcher/compatibility_release.go")
@@ -155,7 +155,7 @@ require(
         "forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client",
         "immutable version",
     ],
-    "Forge release certification",
+    "Сертификация релиза Forge",
 )
 
 api_catalog = read("services/api/internal/httpapi/server.go")
@@ -164,7 +164,7 @@ require(
     [
         '{"id": "forge", "name": "Forge", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "launcher-forge-materializer", "managedJava": true}',
     ],
-    "Forge public loader catalog",
+    "Публичный каталог загрузчика Forge",
 )
 
 workflow = read(".github/workflows/compatibility.yml")
@@ -175,7 +175,7 @@ require(
         "forge-install.json",
         "forge-certification.json",
     ],
-    "Forge CI raw evidence",
+    "Исходные свидетельства проверки Forge в CI",
 )
 
 tests = (
@@ -196,7 +196,7 @@ require(
         "TestCompatibilityCertificationForgeModern0173RejectsMutableResolvedLoader",
         "TestForgeInstallV1ProcessorTokens",
     ],
-    "Forge 0.17.3 regression coverage",
+    "Покрытие регрессионными тестами Forge 0.17.3",
 )
 
 print(

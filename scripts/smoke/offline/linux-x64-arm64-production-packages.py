@@ -39,7 +39,7 @@ require(
         "linux-package.py",
         "--expected-arch",
     ],
-    "native Linux production builder",
+    "Сборщик нативной промышленной версии Linux",
 )
 
 packager = read("scripts/release/linux-package.py")
@@ -54,7 +54,7 @@ require(
         "mtime=0",
         'mode": "0755"',
     ],
-    "deterministic Linux packager",
+    "Детерминированный упаковщик Linux",
 )
 
 verifier = read("cli/cmd/launcher/linux_delivery.go")
@@ -72,7 +72,7 @@ require(
         "writeLinuxProductionEvidence0153",
         "sha256+signed-release-bundle",
     ],
-    "Linux delivery verifier",
+    "Проверка поставки Linux",
 )
 
 release = read("cli/cmd/launcher/release_commands.go")
@@ -85,7 +85,7 @@ require(
         "LINUX_PACKAGE_MANIFEST_X64.json",
         "LINUX_PACKAGE_MANIFEST_ARM64.json",
     ],
-    "release integration",
+    "Интеграция релиза",
 )
 
 staging = read("scripts/release/build-release.sh")
@@ -98,7 +98,7 @@ require(
         "LINUX_PACKAGE_MANIFEST_$(tr",
         "launcher-cli-linux-x64",
     ],
-    "release staging",
+    "Подготовка релиза",
 )
 
 ci = read(".github/workflows/ci.yml")
@@ -111,7 +111,7 @@ require(
         "build-linux-production.sh",
         "launcher-linux-production-${{ matrix.arch }}-${{ github.sha }}",
     ],
-    "native Linux CI matrix",
+    "Матрица проверок Linux в CI",
 )
 
 production_release = read(".github/workflows/production-release-candidate.yml")
@@ -124,7 +124,7 @@ require(
         "merge-multiple: true",
         "LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts",
     ],
-    "production release Linux x64 + ARM64 staging",
+    "Подготовка промышленного релиза Linux x64 и ARM64",
 )
 
 subprocess.run(

@@ -55,14 +55,14 @@ require(
         "banner",
         "cardboard",
     ],
-    "capability profiles/hybrid fail-closed",
+    "Профили возможностей и строгая проверка гибридного режима",
 )
 require(
     read(
         "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeRuntimeDescriptor.java"
     ),
     ["BridgeAdapterProfiles.find", "runtimeCapabilities"],
-    "runtime capability publication",
+    "Публикация возможностей Runtime",
 )
 require(
     read(
@@ -73,7 +73,7 @@ require(
         "BridgeAdapterCapability.TELEMETRY_BOUNDED_WORLD_COUNTERS",
         "BridgeAdapterProfiles.rejectUncertifiedHybrid",
     ],
-    "Bukkit capability execution",
+    "Выполнение возможностей Bukkit",
 )
 quilt = read(
     "plugins/quilt-bridge/src/main/java/ru/launcher/bridge/quilt/LauncherQuiltBridge.java"
@@ -88,12 +88,12 @@ require(
         "startControlChannel",
         '"loader.quilt"',
     ],
-    "Quilt production adapter",
+    "Промышленный адаптер Quilt",
 )
 require(
     read("plugins/quilt-bridge/src/main/resources/fabric.mod.json"),
     ['"quilt_loader"', '"environment": "server"', '"clientModRequired": false'],
-    "Quilt server-only metadata",
+    "Метаданные Quilt для сервера",
 )
 sponge = read(
     "plugins/sponge-bridge/src/main/java/ru/launcher/bridge/sponge/LauncherSpongeBridge.java"
@@ -108,7 +108,7 @@ require(
         "recordPlatformTelemetry",
         "startControlChannel",
     ],
-    "Sponge native adapter",
+    "Нативный адаптер Sponge",
 )
 vanilla = read(
     "plugins/vanilla-bridge/src/main/java/ru/launcher/bridge/vanilla/LauncherVanillaBridge.java"
@@ -126,7 +126,7 @@ require(
         "startControlChannel",
         "server.console",
     ],
-    "Vanilla sidecar",
+    "Вспомогательный процесс Vanilla",
 )
 require(
     rcon,
@@ -136,7 +136,7 @@ require(
         "writeLEInt",
         "RCON authentication failed",
     ],
-    "Vanilla RCON wire client",
+    "Клиент сетевого протокола RCON для Vanilla",
 )
 for forbidden in ["ProcessBuilder", "Runtime.getRuntime().exec", "/bin/sh", "cmd.exe"]:
     if forbidden in vanilla or forbidden in rcon:
@@ -149,7 +149,7 @@ migration = read(
 require(
     migration,
     ["'quilt'", "'sponge'", "'vanilla'", "separate certification"],
-    "0.19.8 migration",
+    "Миграция 0.19.8",
 )
 for hybrid in [
     "'mohist'",
@@ -187,13 +187,13 @@ require(
         "SPONGE_SHA256",
         "VANILLA_SHA256",
     ],
-    "production build",
+    "Промышленная сборка",
 )
 openapi = read("scripts/contracts/generate_openapi.py")
 require(
     openapi,
     ['"fabric","quilt","forge","neoforge","sponge","vanilla"'],
-    "OpenAPI platform enum",
+    "Перечень платформ в OpenAPI",
 )
 print(
     "Проверка производственного релиза универсальных серверных адаптеров ServerBridge 0.19.8+: OK (14 адаптеров, гибридные конфигурации отклоняются)"

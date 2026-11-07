@@ -47,7 +47,7 @@ require(
         "verifyLoaderCompatibilityReleaseCertificate01711",
         "loader-compatibility-rc-0.17.11-full-release-certificate-all-292-targets-evidence-root-signed-bundle",
     ],
-    "full loader release certificate",
+    "Полный сертификат релиза загрузчиков",
 )
 
 compat = read("cli/cmd/launcher/compatibility_release.go")
@@ -58,7 +58,7 @@ require(
         "writeLoaderCompatibilityReleaseCertificate01711",
         "verifyLoaderCompatibilityReleaseCertificate01711",
     ],
-    "compatibility certification RC integration",
+    "Интеграция сертификации кандидата на релиз совместимости",
 )
 
 release = read("cli/cmd/launcher/release_commands.go")
@@ -70,7 +70,7 @@ require(
         "loaderCompatibilityReleaseCertified",
         "loaderCompatibilityReleaseCertificateSha256",
     ],
-    "signed release bundle RC integration",
+    "Интеграция подписанного комплекта кандидата на релиз",
 )
 
 production_workflow = read(".github/workflows/production-release-candidate.yml")
@@ -82,7 +82,7 @@ require(
         "loaderCompatibilityReleaseCertified == true",
         "loaderCompatibilityReleaseCertificateSha256",
     ],
-    "production release candidate RC assertion",
+    "Проверка кандидата на промышленный релиз",
 )
 
 tests = read("cli/cmd/launcher/compatibility_release_certificate_test.go")
@@ -94,7 +94,7 @@ require(
         "TestLoaderCompatibilityReleaseCertificate01711RejectsMissingCertificate",
         "TestLoaderCompatibilityReleaseCertificate01711EvidenceRootChanges",
     ],
-    "0.17.11 RC regression tests",
+    "Регрессионные тесты кандидата на релиз 0.17.11",
 )
 
 targets = json.loads(read("compatibility/targets.json"))["targets"]

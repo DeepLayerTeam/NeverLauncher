@@ -36,7 +36,7 @@ require(
         "downloadPinnedSHA256Artifact",
         "quarantine",
     ],
-    "content-addressed loader cache",
+    "Кэш загрузчика с адресацией по содержимому",
 )
 
 processors = read("cli/cmd/launcher/forge_processor_recovery.go")
@@ -51,7 +51,7 @@ require(
         "Recovered",
         "Attempts",
     ],
-    "durable processor recovery journal",
+    "Постоянный журнал восстановления обработчика",
 )
 
 loader_runtime = read("cli/cmd/launcher/loader_runtime.go")
@@ -63,7 +63,7 @@ require(
         "UpstreamRecoveryUsed",
         "fetchLoaderProfileWithCache",
     ],
-    "Fabric/Quilt cache recovery",
+    "Восстановление кэша Fabric/Quilt",
 )
 forge_runtime = read("cli/cmd/launcher/forge_runtime.go")
 require(
@@ -76,7 +76,7 @@ require(
         "restorePinnedInstallerFromCache",
         "downloadPinnedSHA256Artifact",
     ],
-    "Forge/NeoForge installer recovery",
+    "Восстановление установщика Forge/NeoForge",
 )
 
 e2e = read("e2e/scripts/run-loader-hardening-probe.sh")
@@ -89,7 +89,7 @@ require(
         "processorRecoveryVerified",
         "contentAddressedCache",
     ],
-    "loader hardening recovery probe",
+    "Проверка восстановления защищённого загрузчика",
 )
 compat = read("e2e/scripts/run-compatibility-case.sh")
 require(
@@ -102,7 +102,7 @@ require(
         "loaderProcessorRecovery",
         "loader-hardening.json",
     ],
-    "compatibility hardening evidence",
+    "Свидетельства усиленной защиты совместимости",
 )
 matrix = read("scripts/compatibility/matrix.py")
 require(
@@ -114,7 +114,7 @@ require(
         "loaderUpstreamRecovery",
         "loader-hardening.json",
     ],
-    "matrix hardening enforcement",
+    "Обязательная проверка защиты матрицы",
 )
 release = read("cli/cmd/launcher/compatibility_release.go")
 require(
@@ -127,7 +127,7 @@ require(
         "loaderProcessorRecovery",
         "loader-hardening-0.17.10-content-addressed-cache-pinned-upstream-installer-processor-crash-recovery",
     ],
-    "release hardening certification",
+    "Сертификация усиленной защиты релиза",
 )
 
 tests = (
@@ -150,14 +150,14 @@ require(
         "test_01710_aggregate_rejects_missing_loader_cache_recovery",
         "test_01710_aggregate_rejects_missing_processor_recovery",
     ],
-    "0.17.10 recovery regression tests",
+    "Регрессионные тесты восстановления версии 0.17.10",
 )
 
 workflow = read(".github/workflows/compatibility.yml")
 require(
     workflow,
     ["e2e/runtime/loader-hardening.json", "e2e/runtime/loader-hardening-package.json"],
-    "compatibility hardening artifacts",
+    "Артефакты усиленной защиты совместимости",
 )
 
 print(

@@ -42,7 +42,7 @@ require(
         "token_hash=''",
         "status='invalidated'",
     ],
-    "0.14.2 migration",
+    "Миграция 0.14.2",
 )
 
 identity = read("services/api/internal/httpapi/server_bridge_identity_0142.go")
@@ -58,7 +58,7 @@ require(
         "serverbridge_node_nonce_replayed",
         "subtle.ConstantTimeCompare",
     ],
-    "Backend node signature verification",
+    "Проверка подписи узла на Backend",
 )
 
 repo = read("services/api/internal/repository/server_bridge_v2.go")
@@ -82,7 +82,7 @@ require(
         '"nodeAuthentication": "ed25519-signed-requests"',
         '"replayProtection": "postgresql-single-use-nonce"',
     ],
-    "PostgreSQL identity repository",
+    "Хранилище идентификаторов в PostgreSQL",
 )
 
 bridge = read("services/api/internal/httpapi/server_bridge.go")
@@ -95,12 +95,12 @@ require(
         "identityEpoch",
         "Ed25519 signed request headers",
     ],
-    "ServerBridge identity lifecycle",
+    "Жизненный цикл идентификаторов ServerBridge",
 )
 require(
     routes,
     ["/rotate-identity", "serverBridgeRotateIdentity"],
-    "identity rotation route",
+    "Маршрут ротации идентификаторов",
 )
 if "rotate-token" in routes or "serverBridgeRotateToken" in bridge:
     raise SystemExit("Ротация устаревшего bearer-токена по-прежнему доступна")
@@ -125,7 +125,7 @@ require(
         'decodeRequired(properties, "publicKey")',
         "NodeIdentity-self-test-v1",
     ],
-    "ServerBridge private-key lifecycle",
+    "Жизненный цикл закрытых ключей ServerBridge",
 )
 require(
     java_client,
@@ -195,7 +195,7 @@ require(
         "activeJoinInvalidated:true",
         "server_bridge_node_nonces_v2",
     ],
-    "0.14.1 -> 0.14.2 migration E2E",
+    "Сквозная проверка миграции с 0.14.1 на 0.14.2",
 )
 main_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
 require(
@@ -206,7 +206,7 @@ require(
         'keyAlgorithm:"ed25519"',
         "node-identities/paper",
     ],
-    "Minecraft signed-node E2E",
+    "Сквозная проверка подписанного узла Minecraft",
 )
 
 crypto_helper = read("e2e/scripts/serverbridge-node-crypto.sh")
@@ -217,7 +217,7 @@ require(
         '-in "$canonical_file"',
         "invalid Ed25519 signature length",
     ],
-    "ServerBridge E2E Ed25519 signer",
+    "Подписывание Ed25519 для сквозных проверок ServerBridge",
 )
 
 # Регрессионная проверка одноразовой подписи Ed25519 в OpenSSL. stdin на

@@ -35,7 +35,7 @@ require(
         "status='expired'",
         "DELETE FROM server_bridge_node_nonces_v2",
     ],
-    "0.14.10 migration",
+    "Миграция 0.14.10",
 )
 repo = read("services/api/internal/repository/server_bridge_v2.go") + read(
     "services/api/internal/httpapi/server_bridge_ha_0149.go"
@@ -50,7 +50,7 @@ require(
         "a.status<>'active' OR a.expires_at <= $1",
         "interval '1 hour'",
     ],
-    "0.14.10 maintenance",
+    "Обслуживание версии 0.14.10",
 )
 if "ctid IN (SELECT ctid FROM server_bridge_" in repo:
     raise SystemExit("Устаревший путь обслуживания ctid по-прежнему присутствует")
@@ -58,11 +58,11 @@ model = read("services/api/internal/model/model.go")
 require(
     model,
     ["terminalJoinTicketsPurged", "terminalHandoffsPurged"],
-    "maintenance telemetry",
+    "Телеметрия обслуживания",
 )
 preflight = read("scripts/release/preflight.sh")
 require(
-    preflight, ["serverbridge-migration-stabilization-01410.py"], "release preflight"
+    preflight, ["serverbridge-migration-stabilization-01410.py"], "Предварительная проверка релиза"
 )
 ci = read(".github/workflows/ci.yml")
 require(
@@ -71,6 +71,6 @@ require(
         "serverbridge-migration-stabilization-01410.py",
         "run-serverbridge-migration-stabilization-e2e.sh",
     ],
-    "CI wiring",
+    "Подключение проверок CI",
 )
 print(f"Launcher 0.14.10: проверка миграции и стабилизации ServerBridge: OK ({version})")

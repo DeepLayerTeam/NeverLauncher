@@ -53,7 +53,7 @@ def main() -> int:
             "handle.join()",
             "std::process::abort()",
         ],
-        "native continuous DLL event producer",
+        "Нативный источник непрерывных событий DLL",
     )
     require(
         parent,
@@ -75,7 +75,7 @@ def main() -> int:
             "TerminateProcess",
             "fail_closed",
         ],
-        "parent-side continuous enforcement/evidence",
+        "Непрерывное применение политик и сбор свидетельств в родительском процессе",
     )
     require(
         bootstrap,
@@ -88,7 +88,7 @@ def main() -> int:
             "WindowsSensorSession",
             "pub fn report(&self) -> WindowsSensorReport",
         ],
-        "Sensor bootstrap to Module Guard arm binding",
+        "Привязка запуска датчика к активации Module Guard",
     )
     require(
         supervisor,
@@ -97,7 +97,7 @@ def main() -> int:
             "process_status_snapshot",
             "session.report()",
         ],
-        "live supervised Module Guard evidence",
+        "Свидетельства работы Module Guard под наблюдением",
     )
     require(
         integration,
@@ -110,7 +110,7 @@ def main() -> int:
             "unsigned module outside trusted roots must be fail-closed",
             "report.violation_count >= 1",
         ],
-        "real JVM DLL load/enforcement regression tests",
+        "Регрессионные тесты загрузки DLL в настоящей JVM и применения политик",
     )
     require(
         ci,
@@ -120,7 +120,7 @@ def main() -> int:
             "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
             "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         ],
-        "Windows CI compile/integration/clippy enforcement",
+        "Обязательная компиляция, интеграция и Clippy для Windows в CI",
     )
     if "guard-module-guard-0183.py" not in preflight:
         raise SystemExit(

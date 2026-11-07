@@ -37,7 +37,7 @@ jobs:
           VERSION="$(tr -d '[:space:]' < VERSION)"
           TAG="${RELEASE_TAG:-v${VERSION}}"
           if [[ "${TAG#v}" != "${VERSION}" ]]; then
-            echo "release tag ${TAG} does not match VERSION=${VERSION}" >&2
+            echo "Тег релиза ${TAG} не соответствует VERSION=${VERSION}" >&2
             exit 2
           fi
           MATRIX_URL="${INPUT_MATRIX_URL:-https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/PUBLIC_PRODUCTION_DELIVERY_MATRIX.json}"

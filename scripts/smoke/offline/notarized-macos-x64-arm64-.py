@@ -46,7 +46,7 @@ require(
         'codesign --verify --strict --verbose=2 "${MACOS_DIR}/launcher-desktop"',
         'codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"',
     ],
-    "macOS production builder",
+    "Сборщик промышленной версии macOS",
 )
 require(
     builder,
@@ -56,7 +56,7 @@ require(
         'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.launcher "${APP_ROOT}"',
         'codesign --verify --deep --strict --verbose=2 "${APP_ROOT}"',
     ],
-    "inside-out macOS signing",
+    "Поэтапное подписание macOS изнутри наружу",
 )
 if "APP_SIGN_ARGS+=(--deep)" in builder or "codesign --deep --force" in builder:
     raise SystemExit(
@@ -114,7 +114,7 @@ require(
         "require_signature: bool = True",
         'require_signature=(component != "desktop-launcher")',
     ],
-    "macOS package helper",
+    "Вспомогательный инструмент пакета macOS",
 )
 
 verifier = read("cli/cmd/launcher/macos_delivery.go")
@@ -134,7 +134,7 @@ require(
         'spctl, "--assess"',
         "verifyMacOSNotarizationEvidence0154",
     ],
-    "macOS delivery verifier",
+    "Проверка поставки macOS",
 )
 
 release = read("cli/cmd/launcher/release_commands.go")
@@ -147,7 +147,7 @@ require(
         "MACOS_PACKAGE_MANIFEST_X64.json",
         "MACOS_PACKAGE_MANIFEST_ARM64.json",
     ],
-    "release integration",
+    "Интеграция релиза",
 )
 
 staging = read("scripts/release/build-release.sh")
@@ -159,7 +159,7 @@ require(
         "launcher-desktop-${VERSION}-macos-${arch}.zip",
         "MACOS_NOTARIZATION_EVIDENCE.json",
     ],
-    "release staging",
+    "Подготовка релиза",
 )
 
 ci = read(".github/workflows/ci.yml")
@@ -170,7 +170,7 @@ require(
         "build-macos-production.sh --allow-ad-hoc",
         "launcher-macos-production-${{ github.sha }}",
     ],
-    "CI macOS delivery boundary",
+    "Граница проверки поставки macOS в CI",
 )
 
 workflow = read(".github/workflows/macos-production-delivery.yml")
@@ -187,7 +187,7 @@ require(
         "delivery verify-macos",
         "--production",
     ],
-    "production notarization workflow",
+    "Процесс нотариального заверения промышленного выпуска",
 )
 
 production_release = read(".github/workflows/production-release-candidate.yml")
@@ -202,7 +202,7 @@ require(
         "LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts",
         "needs: [base-ci, windows-production-signed, macos-production-notarized]",
     ],
-    "production release macOS notarization wiring",
+    "Подключение нотариального заверения промышленного релиза macOS",
 )
 if (
     "macos-production-notarized:" in ci

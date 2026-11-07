@@ -38,7 +38,7 @@ require(
         "credential-rotation-required",
         "launcher_persistence_snapshots_950",
     ],
-    "ServerBridge Protocol v2 migration",
+    "Миграция протокола ServerBridge v2",
 )
 
 repo = read("services/api/internal/repository/server_bridge_v2.go")
@@ -52,11 +52,11 @@ require(
         "status='invalidated'",
         '"sourceOfTruth": "postgresql"',
     ],
-    "PostgreSQL ServerBridge repository",
+    "Хранилище ServerBridge в PostgreSQL",
 )
 
 handler = read("services/api/internal/httpapi/handler.go")
-require(handler, ["configureRepositoryV2(s.Repo)"], "ServerBridge repository wiring")
+require(handler, ["configureRepositoryV2(s.Repo)"], "Подключение хранилища ServerBridge")
 protocol = read("services/api/internal/httpapi/server_bridge_protocol_0191.go")
 bridge = (
     read("services/api/internal/httpapi/server_bridge.go")
@@ -74,7 +74,7 @@ require(
         "one-time atomic join tickets",
         '"sourceOfTruth": "memory-dev-test"',
     ],
-    "ServerBridge v2 runtime",
+    "Runtime ServerBridge v2",
 )
 plugins = read("services/api/internal/httpapi/bridge_plugins.go")
 require(
@@ -98,7 +98,7 @@ defaults = read(
 require(
     java,
     ["protocolVersion", "BridgeDefaults.PROTOCOL_VERSION"],
-    "ServerBridge Java client",
+    "Java-клиент ServerBridge",
 )
 require(
     defaults,

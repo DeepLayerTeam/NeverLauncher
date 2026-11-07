@@ -42,14 +42,14 @@ require(
         "current trust policy",
         "root trust anchor",
     ],
-    "Release Verification v2 core",
+    "Ядро проверки релиза v2",
 )
 
 keyring = read("cli/cmd/launcher/security_keyring.go")
 require(
     keyring,
     ["TrustEpoch", "reg.TrustEpoch++", 'Status: "active"'],
-    "key lifecycle registry",
+    "Реестр жизненного цикла ключей",
 )
 
 release = read("cli/cmd/launcher/release_commands.go")
@@ -61,7 +61,7 @@ require(
         "release-verification-v2-trust-lifecycle-anti-rollback",
         "--trust-state",
     ],
-    "release integration",
+    "Интеграция релиза",
 )
 
 build = read("scripts/release/build-release.sh")
@@ -73,14 +73,14 @@ require(
         "LAUNCHER_RELEASE_TRUST_STATE_FILE",
         '--trust-policy "${TRUST_POLICY}"',
     ],
-    "production release script",
+    "Скрипт промышленного релиза",
 )
 
 bundle_gate = read("scripts/smoke/release-required/release-bundle.sh")
 require(
     bundle_gate,
     ["RELEASE_TRUST_POLICY.json", "TRUST_STATE", "--trust-state"],
-    "release bundle gate",
+    "Обязательная проверка комплекта релиза",
 )
 
 tests = read("cli/cmd/launcher/release_verification_v2_test.go")
@@ -90,7 +90,7 @@ require(
         "TestReleaseVerificationV2TrustLifecycleAndAntiRollback",
         "TestReleaseTrustPolicyRejectsTampering",
     ],
-    "Release Verification v2 tests",
+    "Тесты проверки релиза v2",
 )
 
 subprocess.run(

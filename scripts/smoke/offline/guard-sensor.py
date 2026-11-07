@@ -130,7 +130,7 @@ def main() -> int:
     require(
         release,
         ["guard-sensor-windows-x64.dll", "guard-sensor-windows-arm64.dll"],
-        "publish gate",
+        "Обязательная проверка перед публикацией",
     )
     require(
         integration,

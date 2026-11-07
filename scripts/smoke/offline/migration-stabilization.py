@@ -55,7 +55,7 @@ require(
         "runMigrationStabilizationSelfTest01510",
         "Противоречивые манифесты релиза одной версии не были отклонены",
     ],
-    "0.15.10 stabilization core",
+    "Ядро стабилизации 0.15.10",
 )
 require(
     trust,
@@ -65,7 +65,7 @@ require(
         "same-version release manifest mismatch",
         "releaseTrustStateSchema01510",
     ],
-    "0.15.10 trust state",
+    "Состояние доверия 0.15.10",
 )
 require(
     updater,
@@ -75,7 +75,7 @@ require(
         "componentStateMigration",
         "terminalPayloadsCleaned",
     ],
-    "0.15.10 updater integration",
+    "Интеграция обновления 0.15.10",
 )
 require(
     component,
@@ -84,10 +84,10 @@ require(
         "persist canonical component update state",
         "removeSafeComponentTreePayload01510",
     ],
-    "0.15.10 component update integration",
+    "Интеграция обновления компонентов 0.15.10",
 )
 require(
-    main, ['case "migrate-state":', 'case "stabilization-self-test":'], "0.15.10 CLI"
+    main, ['case "migrate-state":', 'case "stabilization-self-test":'], "Интерфейс командной строки 0.15.10"
 )
 require(
     release,
@@ -96,7 +96,7 @@ require(
         "runMigrationStabilizationSelfTest01510",
         "migration stabilization",
     ],
-    "0.15.10 release integration",
+    "Интеграция релиза 0.15.10",
 )
 require(
     tests,
@@ -106,14 +106,14 @@ require(
         "TestReleaseTrustStateLock01510RejectsConcurrentVerifier",
         "TestTransactionalUpdater01510CleansRollbackPayload",
     ],
-    "0.15.10 regression tests",
+    "Регрессионные тесты версии 0.15.10",
 )
-require(preflight, ["migration-stabilization-01510.py"], "release preflight")
+require(preflight, ["migration-stabilization-01510.py"], "Предварительная проверка релиза")
 require(ci, ["migration-stabilization-01510.py"], "CI")
 require(
     policy,
     ["0.15.10 Migration + stabilization", "migration-stabilization-01510.py"],
-    "repository policy",
+    "Политика хранилища",
 )
 
 subprocess.run(

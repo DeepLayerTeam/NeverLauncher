@@ -45,7 +45,7 @@ require(
         'platform = "windows-amd64"',
         "windows-amd64-guard-ci-package",
     ],
-    "Windows builder",
+    "Сборщик Windows",
 )
 
 verifier = read("cli/cmd/launcher/windows_signing.go")
@@ -65,7 +65,7 @@ require(
         "signtool.exe",
         "Get-AuthenticodeSignature",
     ],
-    "Windows signing verifier",
+    "Проверка подписи Windows",
 )
 
 release = read("cli/cmd/launcher/release_commands.go")
@@ -77,7 +77,7 @@ require(
         "launcher-cli-windows-arm64.exe",
         "WINDOWS_PACKAGE_MANIFEST_ARM64.json",
     ],
-    "release integration",
+    "Интеграция релиза",
 )
 
 build_release = read("scripts/release/build-release.sh")
@@ -89,7 +89,7 @@ require(
         "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json",
         "WINDOWS_SIGNING_EVIDENCE.json",
     ],
-    "release staging",
+    "Подготовка релиза",
 )
 
 workflow = read(".github/workflows/windows-production-delivery.yml")
@@ -103,7 +103,7 @@ require(
         "delivery verify-windows",
         "--production",
     ],
-    "production signing workflow",
+    "Процесс подписания промышленного релиза",
 )
 
 ci = read(".github/workflows/ci.yml")
@@ -119,7 +119,7 @@ require(
         "LAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts",
         "needs: [base-ci, windows-production-signed, macos-production-notarized]",
     ],
-    "production release Windows signing wiring",
+    "Подключение подписи промышленного релиза Windows",
 )
 if (
     "windows-production-signed:" in ci

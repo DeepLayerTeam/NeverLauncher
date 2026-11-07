@@ -39,7 +39,7 @@ require(
         "evidence_sha256",
         "session_proof",
     ],
-    "Guard challenge-bound attestation",
+    "Аттестация Guard с привязкой к запросу",
 )
 
 guard = read("runtime/runtime/src/guard_ipc.rs")
@@ -54,7 +54,7 @@ require(
         "attestation_session_proof",
         "validate_remote_attestation",
     ],
-    "Guard authenticated attestation IPC",
+    "Аутентифицированный IPC аттестации Guard",
 )
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
@@ -66,7 +66,7 @@ require(
         "sign_guard_attestation",
         "hardware_bound",
     ],
-    "Desktop Guard Attestation command",
+    "Команда аттестации Guard в Desktop",
 )
 
 device_keys = read("apps/desktop/src-tauri/src/device_keys.rs")
@@ -79,7 +79,7 @@ require(
         "attestation-sha256=",
         "evidence-sha256=",
     ],
-    "Hardware device-key Guard binding",
+    "Привязка Guard к аппаратному ключу устройства",
 )
 
 frontend = read("apps/desktop/src/main.tsx")
@@ -92,7 +92,7 @@ require(
         "/guard-attest/complete",
         "guardAttestationTicket",
     ],
-    "Desktop end-to-end Guard verification flow",
+    "Сквозной процесс проверки Guard в Desktop",
 )
 
 guard_purpose_migration_api = read(
@@ -110,7 +110,7 @@ require(
         "key-rotate",
         "key-recover",
     ],
-    "PostgreSQL Guard challenge-purpose schema",
+    "Схема PostgreSQL для назначения запроса Guard",
 )
 
 guard_migration_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
@@ -124,7 +124,7 @@ require(
         "guard-launch-v1",
         "guardPurposeMigrationSealed:true",
     ],
-    "PostgreSQL Guard challenge-purpose migration E2E",
+    "Сквозная миграция PostgreSQL для назначения запроса Guard",
 )
 
 backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
@@ -144,7 +144,7 @@ require(
         "consumeGuardLaunchTicket0134",
         "isWindowsDevicePlatform0134",
     ],
-    "Backend Guard verification and anti-replay",
+    "Проверка Guard и защита от повторов на Backend",
 )
 
 minecraft = read("services/api/internal/httpapi/minecraft_auth_119.go")
@@ -155,7 +155,7 @@ require(
         "guardAttestationRequiredForSession0134",
         "consumeGuardLaunchTicket0134",
     ],
-    "Minecraft session Guard-ticket enforcement",
+    "Обязательная проверка билета Guard для сеанса Minecraft",
 )
 
 config = read("services/api/internal/config/config.go")
@@ -166,7 +166,7 @@ require(
         "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
         "обязателен в production",
     ],
-    "Production release allowlist configuration",
+    "Настройка списка разрешённых файлов промышленного релиза",
 )
 
 backend_test = read("services/api/internal/httpapi/guard_attestation_0134_test.go")
@@ -179,7 +179,7 @@ require(
         "http.StatusPreconditionFailed",
         "TestGuardAttestationRejectsReleaseHashOutsideAllowlist0134",
     ],
-    "Backend Guard Attestation E2E tests",
+    "Сквозные тесты аттестации Guard на Backend",
 )
 
 integration = read("runtime/runtime/tests/guard_windows.rs")
@@ -190,7 +190,7 @@ require(
         "GUARD_REMOTE_ATTESTATION_SCHEMA",
         "attestation.attestation_sha256.len()",
     ],
-    "Windows Guard remote-attestation integration test",
+    "Интеграционный тест удалённой аттестации Windows Guard",
 )
 
 release = read("scripts/release/build-windows-desktop.ps1")
@@ -203,7 +203,7 @@ require(
         "guardSha256",
         "launcherSha256",
     ],
-    "Windows release allowlist generation",
+    "Создание списка разрешённых файлов Windows-релиза",
 )
 
 ci = read(".github/workflows/ci.yml")
@@ -220,7 +220,7 @@ require(
         "cargo test --manifest-path runtime/runtime/Cargo.toml --lib attestation::tests",
         "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows",
     ],
-    "Windows Guard Attestation native CI",
+    "Нативная проверка аттестации Windows Guard в CI",
 )
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.

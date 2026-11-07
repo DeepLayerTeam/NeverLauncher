@@ -199,7 +199,7 @@ def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
     check(
         proof["schemaVersion"] == "launcher.lifecycle-validation.v1"
         and proof["status"] == "passed",
-        "V09 lifecycle incomplete",
+        "Жизненный цикл V09 не завершён",
     )
     check(
         proof["currentPackageId"] == current_pkg["packageId"]

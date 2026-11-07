@@ -37,7 +37,7 @@ require(
         "deliveryTargetCompatible",
         "checksum/size mismatch",
     ],
-    "delivery implementation",
+    "Реализация поставки",
 )
 release = read("cli/cmd/launcher/release_commands.go")
 require(
@@ -48,13 +48,13 @@ require(
         'checks = append(checks, "delivery-manifest-platform-architecture")',
         "deliveryManifestFile0151",
     ],
-    "release integration",
+    "Интеграция релиза",
 )
 main = read("cli/cmd/launcher/main.go")
-require(main, ['case "delivery":', "handleDelivery(args[1:])"], "CLI routing")
+require(main, ['case "delivery":', "handleDelivery(args[1:])"], "Маршрутизация CLI")
 release_gate = read("scripts/smoke/release-required/release-bundle.sh")
 require(
-    release_gate, ["DELIVERY_MANIFEST.json", "release publish-check"], "publish gate"
+    release_gate, ["DELIVERY_MANIFEST.json", "release publish-check"], "Обязательная проверка перед публикацией"
 )
 
 with tempfile.TemporaryDirectory(prefix="launcher-0151-") as tmp_raw:

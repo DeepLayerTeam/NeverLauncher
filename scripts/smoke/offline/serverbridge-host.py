@@ -31,9 +31,9 @@ ci = read(".github/workflows/ci.yml")
 require(
     provision,
     ['case "host":', "handleServerBridgeHost01910(args[1:])"],
-    "ServerBridge host CLI wiring",
+    "Подключение команд хоста ServerBridge к CLI",
 )
-require(main, ["Zero-Patch provisioning + host supervisor"], "main help")
+require(main, ["Zero-Patch provisioning + host supervisor"], "Основная справка")
 require(
     host,
     [
@@ -83,7 +83,7 @@ require(
         "--stop-timeout-seconds",
         "--follow",
     ],
-    "ServerBridge Host implementation",
+    "Реализация хоста ServerBridge",
 )
 require(
     unix,
@@ -93,7 +93,7 @@ require(
         "syscall.Kill(-pid, syscall.SIGTERM)",
         "syscall.Kill(-pid, syscall.SIGKILL)",
     ],
-    "Unix process supervision",
+    "Наблюдение за процессами Unix",
 )
 require(
     windows,
@@ -103,7 +103,7 @@ require(
         "hostDetachedProcess01910",
         "process.Kill()",
     ],
-    "Windows process supervision",
+    "Наблюдение за процессами Windows",
 )
 require(
     tests,
@@ -113,7 +113,7 @@ require(
         "TestServerBridgeHostStopSupervisedProcess01910",
         "TestServerBridgeHostForgeArgsMode01910",
     ],
-    "ServerBridge Host tests",
+    "Тесты хоста ServerBridge",
 )
 for forbidden in [
     "authlib-injector",

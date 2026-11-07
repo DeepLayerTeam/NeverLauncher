@@ -41,7 +41,7 @@ require(
         '[]string{"desktop", "guard", "runtime"}',
         "macosTreeRollback",
     ],
-    "component transactional updater",
+    "Транзакционное обновление компонентов",
 )
 
 main_go = read("cli/cmd/launcher/main.go")
@@ -53,7 +53,7 @@ require(
         '"--wait-pid"',
         '"--restart"',
     ],
-    "update CLI",
+    "CLI обновления",
 )
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
@@ -70,7 +70,7 @@ require(
         "--restart",
         "exit_handle.exit(0)",
     ],
-    "Desktop updater handoff",
+    "Передача управления обновлению Desktop",
 )
 
 windows = read("scripts/release/build-windows-desktop.ps1")
@@ -85,7 +85,7 @@ require(
         'component = "runtime"',
         "authenticode-rfc3161",
     ],
-    "Windows package",
+    "Пакет Windows",
 )
 
 linux = read("scripts/release/linux-package.py")
@@ -98,7 +98,7 @@ require(
         '"runtime"',
         '"sha256-delivery"',
     ],
-    "Linux package",
+    "Пакет Linux",
 )
 
 mac = read("scripts/release/macos-package.py") + read(
@@ -115,7 +115,7 @@ require(
         "guard",
         "runtime",
     ],
-    "macOS package",
+    "Пакет macOS",
 )
 
 rust = (
@@ -126,7 +126,7 @@ rust = (
 require(
     rust,
     ["canonical_arch", "canonical_identity", "package_path", "MacOSPackageArtifact"],
-    "Guard canonical package verification",
+    "Проверка канонического пакета Guard",
 )
 
 tests = read("cli/cmd/launcher/component_update_test.go")
@@ -137,7 +137,7 @@ require(
         "TestComponentTreePostVerifyFailureRollsBack0157",
         "TestComponentUpdateRequiresPinnedProductionArchive0157",
     ],
-    "component update regression tests",
+    "Регрессионные тесты обновления компонентов",
 )
 
 ci = read(".github/workflows/ci.yml")

@@ -44,7 +44,7 @@ require(
         "Sync()",
         "updaterProcessAlive0156",
     ],
-    "transactional updater core",
+    "Ядро транзакционного обновления",
 )
 
 command_go = read("cli/cmd/launcher/transactional_updater_command.go")
@@ -58,14 +58,14 @@ require(
         "automatic-rollback",
         "durable-journal",
     ],
-    "transactional updater commands",
+    "Команды транзакционного обновления",
 )
 
 main_go = read("cli/cmd/launcher/main.go")
 require(
     main_go,
     ['case "apply":', 'case "status":', 'case "recover":', 'case "self-test":'],
-    "update CLI integration",
+    "Интеграция CLI обновления",
 )
 
 client = read("cli/cmd/launcher/client_lifecycle.go") + read(
@@ -82,7 +82,7 @@ require(
         "removedFiles",
         ".launcher/client-state.json",
     ],
-    "client updater integration",
+    "Интеграция обновления клиента",
 )
 
 windows_lock = read("cli/cmd/launcher/transactional_updater_process_windows.go")
@@ -95,9 +95,9 @@ require(
         if False
         else "processQueryLimitedInformation",
     ],
-    "Windows updater lock",
+    "Блокировка обновления Windows",
 )
-require(unix_lock, ["syscall.Signal(0)", "syscall.EPERM"], "Unix updater lock")
+require(unix_lock, ["syscall.Signal(0)", "syscall.EPERM"], "Блокировка обновления Unix")
 
 tests = read("cli/cmd/launcher/transactional_updater_test.go")
 require(
@@ -108,7 +108,7 @@ require(
         "TestTransactionalUpdaterCrashRecovery0156",
         "TestTransactionalUpdaterRejectsTraversal0156",
     ],
-    "transactional updater regression tests",
+    "Регрессионные тесты транзакционного обновления",
 )
 
 ci = read(".github/workflows/ci.yml")

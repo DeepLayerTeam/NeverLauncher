@@ -58,7 +58,7 @@ require(
         "serverBridgeControlCanonical01912",
         "ServerBridgeControlPreviousSigningPrivateKey",
     ],
-    "canonical v3 domain",
+    "Канонический домен v3",
 )
 require(
     protocol,
@@ -79,7 +79,7 @@ require(
         "serverbridge_capability_downgrade_detected",
         "serverbridge_runtime_binding_mismatch",
     ],
-    "node v3 binding",
+    "Привязка узла v3",
 )
 require(
     events,
@@ -135,7 +135,7 @@ require(
         "nodeKeyFingerprint",
         "securityCapabilityDigest",
     ],
-    "v3 event signer",
+    "Подписывание событий протокола v3",
 )
 require(
     build,
@@ -198,7 +198,7 @@ require(
         "TARGETS=(velocity bungeecord waterfall bukkit spigot paper purpur folia fabric quilt forge neoforge sponge vanilla)",
         'for target in "${TARGETS[@]}"',
     ],
-    "per-target E2E execution",
+    "Выполнение сквозных проверок для каждой целевой платформы",
 )
 # Docker-бэкенд использует нелокальное имя HTTP-хоста. Для моста v3 нужен
 # закреплённый якорь доверия; молчаливое HTTP TOFU было бы снижением защиты.
@@ -235,7 +235,7 @@ require(
         "tampered/runtime-replayed event rejected",
         "tampered node runtime rejected",
     ],
-    "runtime adversarial harness",
+    "Среда атакующих тестов Runtime",
 )
 
 matrix = json.loads(read("serverbridge/security-e2e-matrix.json"))
