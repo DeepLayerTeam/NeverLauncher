@@ -119,7 +119,7 @@ impl ProcessSupervisor {
     ) -> Result<ProcessStatus, String> {
         verify_manifest_signature(manifest, pinned_public_key)?;
         if let Some(p) = preferences.as_ref() {
-            if !p.offline && credentials.is_none() { return Err("online launch: требуется «a valid Minecraft session»".into()); }
+            if !p.offline && credentials.is_none() { return Err("Для запуска в сети требуется действующий сеанс Minecraft".into()); }
         }
         tokio::fs::create_dir_all(root).await.map_err(|err| format!("не удалось создать рабочий каталог: {err}"))?;
         let client_release_lease = crate::transactional_release::acquire_launch_lease(manifest, root, pinned_public_key).await?;
@@ -141,7 +141,7 @@ impl ProcessSupervisor {
         }
         crate::managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
         if !plan.main_module.is_empty() && root.join(".launcher/trusted-jvm/active.json").exists() {
-            return Err("Guard Trusted JVM: требуется «a classpath Minecraft main»".into());
+            return Err("Для доверенной JVM Guard требуется главный класс Minecraft, указанный в classpath".into());
         }
         let trusted = crate::guarded_trusted_launch_0503::prepare_verified(
             root, &manifest.project_id, &manifest.minecraft.version,
@@ -157,14 +157,14 @@ impl ProcessSupervisor {
         #[cfg(target_os = "linux")]
         {
             let daemon = crate::linux_guard::GuardSupervisor::new();
-            daemon.ensure_started().await.map_err(|e|format!("Ошибка: «Linux Guard startup»: {e}"))?;
+            daemon.ensure_started().await.map_err(|e|format!("Ошибка запуска Guard в Linux: {e}"))?;
             daemon.ping_running().await?;
             live_guard.bind_linux_guard_daemon(daemon)?;
         }
         #[cfg(target_os = "macos")]
         {
             let daemon = crate::macos_guard::GuardSupervisor::new();
-            daemon.ensure_started().await.map_err(|e|format!("Ошибка: «macOS Guard startup»: {e}"))?;
+            daemon.ensure_started().await.map_err(|e|format!("Ошибка запуска Guard в macOS: {e}"))?;
             daemon.ping_running().await?;
             live_guard.bind_macos_guard_daemon(daemon)?;
         }
@@ -223,7 +223,7 @@ impl ProcessSupervisor {
                 if let Some(pid) = child.id() { let _ = crate::linux_policy::terminate_runtime_process_group(pid); }
                 let _ = child.kill().await;
                 let _ = child.wait().await;
-                return Err(format!("Ошибка: «Linux runtime/process policy enforcement»: {err}"));
+                return Err(format!("Ошибка применения политик Runtime и процессов в Linux: {err}"));
             }
         };
         #[cfg(target_os = "macos")]
@@ -233,7 +233,7 @@ impl ProcessSupervisor {
                 if let Some(pid) = child.id() { let _ = crate::macos_policy::terminate_runtime_process_group(pid); }
                 let _ = child.kill().await;
                 let _ = child.wait().await;
-                return Err(format!("Ошибка: «macOS runtime/process policy enforcement»: {err}"));
+                return Err(format!("Ошибка применения политик Runtime и процессов в macOS: {err}"));
             }
         };
 
@@ -245,7 +245,7 @@ impl ProcessSupervisor {
             if let Some(pid) = child.id() { let _ = crate::linux_policy::terminate_runtime_process_group(pid); }
             let _ = child.kill().await;
             let _ = child.wait().await;
-            return Err(format!("Ошибка: «Linux Guard game process validation»: {reason}"));
+            return Err(format!("Ошибка проверки игрового процесса Guard в Linux: {reason}"));
         }
 
         #[cfg(target_os = "macos")]
@@ -256,7 +256,7 @@ impl ProcessSupervisor {
             if let Some(pid) = child.id() { let _ = crate::macos_policy::terminate_runtime_process_group(pid); }
             let _ = child.kill().await;
             let _ = child.wait().await;
-            return Err(format!("Ошибка: «macOS Guard game process validation»: {reason}"));
+            return Err(format!("Ошибка проверки игрового процесса Guard в macOS: {reason}"));
         }
 
         let pid = child.id();
@@ -321,7 +321,7 @@ impl ProcessSupervisor {
                 let failure = match result {
                     Ok(Ok(())) => None,
                     Ok(Err(e)) => Some(e),
-                    Err(e) => Some(format!("Ошибка: «native live Guard watcher»: {e}")),
+                    Err(e) => Some(format!("Ошибка нативного наблюдателя Guard за работающей игрой: {e}")),
                 };
                 #[cfg(target_os = "linux")]
                 let failure = if failure.is_none() {

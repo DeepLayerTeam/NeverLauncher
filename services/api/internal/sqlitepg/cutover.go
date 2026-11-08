@@ -33,7 +33,7 @@ type CutoverCheck0475 struct {
 func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmail string) (CutoverCheck0475, error) {
 	result := CutoverCheck0475{SourceSHA256: sourceSHA, ProjectID: projectID}
 	if len(sourceSHA) != 64 || strings.ToLower(sourceSHA) != sourceSHA || strings.TrimSpace(dsn) == "" || projectID == "" || ownerEmail == "" {
-		return result, errors.New("Требуется: «source SHA-256, PostgreSQL DSN, project ID and owner email are»")
+		return result, errors.New("Необходимо указать SHA-256 источника, DSN PostgreSQL, идентификатор проекта и электронную почту владельца")
 	}
 	if _, err := hex.DecodeString(sourceSHA); err != nil {
 		return result, err
@@ -52,7 +52,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	defer tx.Rollback(context.Background())
 	var raw string
 	if err = tx.QueryRow(ctx, `SELECT report::text FROM sqlite_live_receipts_0473 WHERE source_sha256=$1`, sourceSHA).Scan(&raw); err != nil {
-		return result, fmt.Errorf("Не найдено: «matching live import receipt»: %w", err)
+		return result, fmt.Errorf("Не найдена соответствующая квитанция фактического импорта: %w", err)
 	}
 	var report LiveReport0473
 	if err = json.Unmarshal([]byte(raw), &report); err != nil {
@@ -71,7 +71,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	seen := make(map[string]bool)
 	for _, table := range report.LiveTables {
 		if allowed[table.Source] != table.Destination || seen[table.Source] || table.Rows < 0 {
-			return result, errors.New("Некорректное значение: «live table receipt»")
+			return result, errors.New("Некорректная квитанция переноса таблицы")
 		}
 		seen[table.Source] = true
 		// Имя таблицы берётся только из скомпилированных сопоставлений, а не из JSON-квитанции.
@@ -95,7 +95,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 	var driver, catalogDigest string
 	var count int64
 	if err = tx.QueryRow(ctx, `SELECT driver,objects,catalog_sha256 FROM sqlite_file_receipts_0474 WHERE source_sha256=$1`, sourceSHA).Scan(&driver, &count, &catalogDigest); err != nil {
-		return result, fmt.Errorf("Отсутствует: «matching verified file-copy receipt»: %w", err)
+		return result, fmt.Errorf("Отсутствует соответствующая проверенная квитанция копирования файлов: %w", err)
 	}
 	if count != report.Files || (driver != "local" && driver != "s3") {
 		return result, errors.New("Квитанция файлов не соответствует импорту в работающую систему")
@@ -147,7 +147,7 @@ func VerifyCutover0475(ctx context.Context, dsn, sourceSHA, projectID, ownerEmai
 		return result, fmt.Errorf("Не найдено: владелец: %w", err)
 	}
 	if password == "" || status != "active" {
-		return result, errors.New("владелец: запрещено «authenticate using imported password»")
+		return result, errors.New("Владельцу запрещено входить с использованием импортированного пароля")
 	}
 	var belongs bool
 	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM projects WHERE id=$1)`, projectID).Scan(&belongs); err != nil || !belongs {

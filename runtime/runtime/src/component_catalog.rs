@@ -188,7 +188,7 @@ fn validate_conditions_0244(cat:&ComponentCatalog)->Result<(),String>{
         if v.schema_version!="1.0"{return Err(format!("Компонент {} использует неподдерживаемую схему условий {}",c.id,v.schema_version))}
         distinct_conditions_0244(&v.os,8,|s|matches!(s,"windows"|"linux"|"macos"))?;
         distinct_conditions_0244(&v.arch,8,|s|matches!(s,"x86_64"|"aarch64"))?;
-        if v.java_major_min>99||v.java_major_max>99||(v.java_major_max!=0&&v.java_major_min>v.java_major_max){return Err(format!("Некорректное значение: «Java condition on {}»",c.id))}
+        if v.java_major_min>99||v.java_major_max>99||(v.java_major_max!=0&&v.java_major_min>v.java_major_max){return Err(format!("Некорректное условие версии Java для компонента {}",c.id))}
         distinct_conditions_0244(&v.minecraft_versions,64,|s|!s.is_empty()&&s.len()<=80&&!s.bytes().any(|b|b.is_ascii_whitespace()||b==0))?;
         distinct_conditions_0244(&v.loaders,12,|s|matches!(s,"vanilla"|"fabric"|"quilt"|"forge"|"neoforge"))?;
         distinct_conditions_0244(&v.permissions,32,|s|valid_permission_0244(s))?;
@@ -312,7 +312,7 @@ fn label(n:&str,d:&str)->bool{!n.trim().is_empty()&&n.len()<=256&&d.len()<=2048&
 fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
     validate_conditions_0244(cat)?;
     if cat.schema_version=="1.0"{
-        if !cat.categories.is_empty()||!cat.groups.is_empty()||!cat.presets.is_empty()||!cat.default_preset.is_empty() {return Err("«v1 catalog»: запрещено «contain topology»".into())}
+        if !cat.categories.is_empty()||!cat.groups.is_empty()||!cat.presets.is_empty()||!cat.default_preset.is_empty() {return Err("Каталог версии 1 не может содержать сведения о структуре компонентов".into())}
         for c in &cat.components{if !c.version.is_empty()||!c.dependencies.is_empty()||!c.conflicts.is_empty()||!c.exclusive_group.is_empty()||!c.description.is_empty()||!c.category_id.is_empty()||!c.group_id.is_empty()||c.required||c.default||c.visible.is_some()||c.limited||!c.metadata.is_empty(){return Err(format!("Компонент v1 содержит топологию: {}",c.id))}}
         return Ok(())
     }
@@ -333,7 +333,7 @@ fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
         if c.visible.is_none()||!label(&c.name,&c.description)||c.metadata.len()>32{return Err(format!("Некорректные метаданные или настройки видимости: {}",c.id))}
         if !c.category_id.is_empty()&&!categories.contains_key(c.category_id.as_str()){return Err(format!("Неизвестное значение: «category {}»",c.category_id))}
         if !c.group_id.is_empty(){let g=groups.get(c.group_id.as_str()).ok_or(format!("Неизвестная группа {}",c.group_id))?;if !g.category_id.is_empty()&&!c.category_id.is_empty()&&g.category_id!=c.category_id{return Err(format!("Несовпадение категории группы компонента {}",c.id))}}
-        for (k,v) in &c.metadata{if !valid_id(k)||k.len()>64||v.len()>1024||v.chars().any(|ch|matches!(ch,'\0'|'\r')){return Err(format!("Некорректное значение: «component metadata {}»",c.id))}}
+        for (k,v) in &c.metadata{if !valid_id(k)||k.len()>64||v.len()>1024||v.chars().any(|ch|matches!(ch,'\0'|'\r')){return Err(format!("Некорректные метаданные компонента {}",c.id))}}
         ids.insert(c.id.as_str());
     }
     let mut preset_ids=HashSet::new();
@@ -351,7 +351,7 @@ struct Semver0243 {major:u64,minor:u64,patch:u64,pre:Vec<String>}
 fn parse_semver_0243(value:&str)->Result<Semver0243,String>{
     if value.is_empty()||value.len()>128||value.bytes().any(|b|b.is_ascii_whitespace()){return Err(format!("Некорректное значение: семантическая версия {value:?}"))}
     let (before_build,build)=value.split_once('+').map_or((value,None),|(a,b)|(a,Some(b)));
-    if let Some(build)=build {if !valid_semver_ids_0243(build,false){return Err(format!("Некорректное значение: «build metadata in» {value:?}"))}}
+    if let Some(build)=build {if !valid_semver_ids_0243(build,false){return Err(format!("Некорректные метаданные сборки в версии {value:?}"))}}
     let (base,pre)=before_build.split_once('-').map_or((before_build,None),|(a,b)|(a,Some(b)));
     let pre=if let Some(pre)=pre {if !valid_semver_ids_0243(pre,true){return Err(format!("Некорректное значение: «prerelease in» {value:?}"))}pre.split('.').map(str::to_string).collect()} else {Vec::new()};
     let parts:Vec<_>=base.split('.').collect();
@@ -470,11 +470,11 @@ fn selection_roots_0247(cat:&ComponentCatalog,preset:&str)->Result<(HashSet<Stri
         if !changes.is_empty() {
             if changes.split(',').count()>cat.components.len(){return Err("Слишком много выбранных вариантов компонентов".into())}
             for change in changes.split(','){
-                let (enable,id)=match change.as_bytes().first(){Some(b'+')=>(true,&change[1..]),Some(b'-')=>(false,&change[1..]),_=>return Err("Некорректное значение: «choice operator»".into())};
+                let (enable,id)=match change.as_bytes().first(){Some(b'+')=>(true,&change[1..]),Some(b'-')=>(false,&change[1..]),_=>return Err("Некорректный оператор выбора компонента".into())};
                 if !valid_id(id)||!seen.insert(id){return Err(format!("Некорректный или повторяющийся вариант компонента: {id}"))}
                 let c=cat.components.iter().find(|c|c.id==id).ok_or_else(||format!("Выбран неподписанный компонент: {id}"))?;
-                if !enable&&c.required{return Err(format!("«required component»: запрещено «be disabled:» {id}"))}
-                if enable&&(c.visible==Some(false)||c.limited){return Err(format!("компонент: запрещено «be manually enabled:» {id}"))}
+                if !enable&&c.required{return Err(format!("Обязательный компонент нельзя отключить: {id}"))}
+                if enable&&(c.visible==Some(false)||c.limited){return Err(format!("Компонент нельзя включить вручную: {id}"))}
                 if enable {roots.insert(id.to_owned());}else{roots.remove(id);disabled.insert(id.to_owned());}
             }
         }
@@ -495,7 +495,7 @@ fn resolve_graph_v3(cat:&ComponentCatalog,preset:&str)->Result<HashSet<String>,S
                 let mut path=chain.to_vec();path.push(id.to_string());
                 return Err(format!("Несовпадение версий: для {id} требуется {} {:?}, доступно {} (через {})",dep.id,dep.version_range,other.version,path.join(" -> ")))
             }
-            if disabled.contains(&dep.id){return Err(format!("Для «required_dependency:» {id} требуется «{}, which was explicitly disabled»",dep.id))}
+            if disabled.contains(&dep.id){return Err(format!("Обязательная зависимость компонента {id} ({}) явно отключена",dep.id))}
             selected.insert(dep.id.clone());
             let mut next=chain.to_vec();next.push(id.to_string());include(&dep.id,&next,components,selected,disabled,done)?;
         }
@@ -554,7 +554,7 @@ pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<Componen
             if !wanted.is_empty(){return Err("Каталог v1 не поддерживает пользовательский выбор".into())}
             cat.components.iter().map(|c|c.id.clone()).collect()
         },
-        _=>return Err("Не поддерживается: «catalog schema»".into()),
+        _=>return Err("Неподдерживаемая схема каталога компонентов".into()),
     };
     let unavailable=cat.components.iter().filter_map(|c|{
         condition_unavailable_0244(c,&env).ok().flatten().map(|reason|UnavailableComponent0244{id:c.id.clone(),reason})
@@ -581,7 +581,7 @@ pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<Componen
 
 pub fn validate(m:&Manifest)->Result<(),String>{
     if m.schema_version!="3.0"{if m.component_catalog.is_some(){return Err("componentCatalog: требуется «manifest v3»".into())}return Ok(())}
-    let cat=m.component_catalog.as_ref().ok_or("v3: требуется «signed componentCatalog»")?;
+    let cat=m.component_catalog.as_ref().ok_or("Для схемы v3 требуется подписанный componentCatalog")?;
     if !matches!(cat.schema_version.as_str(),"1.0"|"2.0"|"3.0"|"4.0"|"5.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else if cat.schema_version=="2.0"{digest_v2(cat)}else if cat.schema_version=="3.0"{digest_v3(cat)}else if cat.schema_version=="4.0"{digest_v4(cat)}else{crate::component_actions_0245::digest_v5(cat)}){return Err("Некорректное значение: «v3 component snapshot/digest»".into())}
     validate_topology(cat)?;
     crate::component_actions_0245::validate_actions(cat)?;
@@ -600,7 +600,7 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
     validate(m)?;
     let mut active:HashSet<String>=m.files.iter().filter(|f|file_ownership::effective_ownership(f)!="optional").map(|f|f.path.clone()).collect();
     if m.schema_version!="3.0" {active.extend(m.files.iter().map(|f|f.path.clone()));return Ok(active)}
-    let cat=m.component_catalog.as_ref().ok_or("Отсутствует: «component catalog»")?;
+    let cat=m.component_catalog.as_ref().ok_or("Каталог компонентов отсутствует")?;
     let mut selected=HashSet::new();
     if matches!(cat.schema_version.as_str(),"3.0"|"4.0"|"5.0") {
         let resolved=if cat.schema_version=="4.0"||cat.schema_version=="5.0"{

@@ -88,7 +88,7 @@ func guardCompatArchiveIncoming05011(root, key string, raw []byte, v guardCompat
 			return err
 		}
 		if floor == nil || floor.RootSHA256 != current.RootSHA256 || !((floor.Epoch == current.Policy.Epoch && floor.Digest == current.Digest) || (floor.Epoch == v.Policy.Epoch && floor.Digest == v.Digest)) {
-			return errors.New("«current Guard policy» не совпадает с «accepted floor or interrupted install»")
+			return errors.New("Текущая политика Guard не соответствует принятой минимальной версии или прерванной установке")
 		}
 		if err = guardHistoryPersist05011(root, old, current); err != nil {
 			return err
@@ -135,7 +135,7 @@ func guardHistoryRead05011(root, key string, active *guardCompatVerified0502) ([
 			return nil, errors.New("Несоответствие: история Guard filename/content")
 		}
 		if currentRoot != "" && currentRoot != v.RootSHA256 {
-			return nil, errors.New("Обнаружено изменение: «Guard history trust anchor»")
+			return nil, errors.New("Изменился доверенный ключ истории политик Guard")
 		}
 		items = append(items, guardHistoryItem05011{Epoch: v.Policy.Epoch, PayloadSHA256: v.Digest, IssuedAt: v.Policy.IssuedAt, ExpiresAt: v.Policy.ExpiresAt, ProjectID: v.Policy.ProjectID, Minecraft: v.Policy.Minecraft, Loader: v.Policy.Loader, Current: active != nil && active.Policy.Epoch == v.Policy.Epoch && active.Digest == v.Digest})
 	}
@@ -172,7 +172,7 @@ func decodeArchivedPayload05011(env guardCompatEnvelope0502) (guardCompatPolicy0
 func decodeGuardBase6405011(encoded string) ([]byte, error) {
 	// Ограничивайте размер чтения даже при враждебно сформированных файлах истории.
 	if len(encoded) > 256*1024 {
-		return nil, errors.New("Превышен допустимый размер: «history payload»")
+		return nil, errors.New("Данные истории политик превышают допустимый размер")
 	}
 	return base64.StdEncoding.Strict().DecodeString(encoded)
 }
@@ -183,7 +183,7 @@ func guardCompatAuthorizeRollback05011(root, key, file string) error {
 		return err
 	}
 	if old == nil {
-		return errors.New("Откат: требуется «an installed signed Guard policy»")
+		return errors.New("Для отката требуется установленная подписанная политика Guard")
 	}
 	st, err := os.Lstat(file)
 	if err != nil {
@@ -204,7 +204,7 @@ func guardCompatAuthorizeRollback05011(root, key, file string) error {
 		return errors.New("Для отката требуется НОВАЯ подписанная эпоха")
 	}
 	if newer.Policy.ProjectID != old.Policy.ProjectID || newer.Policy.Minecraft != old.Policy.Minecraft || !strings.EqualFold(newer.Policy.Loader, old.Policy.Loader) {
-		return errors.New("откат: запрещено «change project/game/loader scope»")
+		return errors.New("При откате запрещено изменять область действия проекта, игры или загрузчика")
 	}
 	for _, revoked := range old.Policy.RevokedDigests {
 		if !hasGuardString05011(newer.Policy.RevokedDigests, revoked) {

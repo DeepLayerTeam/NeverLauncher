@@ -36,7 +36,7 @@ func hostValidateJavaExecutable0283(path string, allowCustom bool) error {
 	if allowCustom {
 		return nil
 	}
-	return fmt.Errorf("Для «non-Java executable» %q требуется «explicit host-level --allow-custom-java-executable»", base)
+	return fmt.Errorf("Для исполняемого файла не из стандартной поставки Java %q необходимо явно указать --allow-custom-java-executable на уровне хоста", base)
 }
 
 func hostJavaListFlag0283(args []string, single, repeated string) []string {
@@ -55,7 +55,7 @@ func hostResolveJavaEntries0283(root string, raw []string, allowWildcard bool) (
 	seen := make(map[string]bool, len(raw))
 	for _, item := range raw {
 		if item == "" || len(item) > 4096 || strings.ContainsAny(item, "\x00\r\n") {
-			return nil, errors.New("Пустое значение: «or invalid JVM path entry»")
+			return nil, errors.New("Элемент пути JVM пуст или некорректен")
 		}
 		if strings.ContainsAny(item, "*?") {
 			if !allowWildcard || !strings.HasSuffix(item, string(filepath.Separator)+"*") || strings.Count(item, "*") != 1 || strings.Contains(item, "?") {
@@ -80,7 +80,7 @@ func hostResolveJavaEntries0283(root string, raw []string, allowWildcard bool) (
 			} else if info.Mode().IsRegular() && strings.EqualFold(filepath.Ext(path), ".jar") {
 				item, err = hostResolveInsideRoot01910(root, path, true)
 			} else {
-				return nil, fmt.Errorf("Путь JVM %q: требуется «a directory or .jar file»", item)
+				return nil, fmt.Errorf("Путь JVM %q должен указывать на каталог или файл .jar", item)
 			}
 			if err != nil {
 				return nil, fmt.Errorf("Путь JVM %q: %w", path, err)
@@ -146,27 +146,27 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 	switch config.LaunchMode {
 	case "java-jar", "java-args-file":
 		if config.MainClass != "" || config.Module != "" || len(config.Classpath) != 0 || len(config.Modulepath) != 0 {
-			return errors.New("«java-jar/java-args-file modes»: запрещено «mix main class, module or classpath settings»")
+			return errors.New("В режимах java-jar и java-args-file нельзя одновременно задавать главный класс, модуль или параметры classpath")
 		}
 	case "java-main-class":
 		if config.ServerJar != "" || config.JavaArgsFile != "" {
-			return errors.New("«main-class mode»: запрещено одновременное использование параметров запуска jar и argfile")
+			return errors.New("В режиме главного класса нельзя указывать параметры запуска jar и argfile")
 		}
 		if !hostJavaClass0283.MatchString(config.MainClass) || len(config.Classpath) == 0 || config.Module != "" || len(config.Modulepath) != 0 {
-			return errors.New("java-main-class: требуется «--main-class and --classpath-entry; modulepath is not supported in this mode»")
+			return errors.New("Для java-main-class требуются --main-class и --classpath-entry; modulepath в этом режиме не поддерживается")
 		}
 	case "java-module":
 		if config.ServerJar != "" || config.JavaArgsFile != "" {
-			return errors.New("«module mode»: запрещено одновременное использование параметров запуска jar и argfile")
+			return errors.New("В модульном режиме нельзя указывать параметры запуска jar и argfile")
 		}
 		if config.JavaMajor > 0 && config.JavaMajor < 9 {
 			return errors.New("Для модулей Java необходима Java 9 или новее")
 		}
 		if !hostJavaModule0283.MatchString(config.Module) || len(config.Modulepath) == 0 || len(config.Classpath) != 0 {
-			return errors.New("java-module: требуется «--module and --modulepath-entry; classpath is not supported in this mode»")
+			return errors.New("Для java-module требуются --module и --modulepath-entry; classpath в этом режиме не поддерживается")
 		}
 		if config.MainClass != "" && !hostJavaClass0283.MatchString(config.MainClass) {
-			return errors.New("Некорректное значение: «module main class»")
+			return errors.New("Некорректный главный класс модуля")
 		}
 	default:
 		return fmt.Errorf("Не поддерживается: режим запуска хоста %q", config.LaunchMode)
@@ -187,7 +187,7 @@ func hostValidateJvmArguments0283(jvm, server []string) error {
 			digits := strings.TrimRight(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(arg, "-Xms"), "-Xmx"), "-Xss"), "kKmMgG")
 			n, err := strconv.ParseUint(digits, 10, 48)
 			if err != nil {
-				return errors.New("Некорректное значение: «JVM memory value»")
+				return errors.New("Некорректное значение памяти JVM")
 			}
 			suffix := strings.ToUpper(arg[len(arg)-1:])
 			switch suffix {
@@ -206,7 +206,7 @@ func hostValidateJvmArguments0283(jvm, server []string) error {
 	}
 	for _, arg := range server {
 		if arg == "" || len(arg) > 1024 || strings.HasPrefix(arg, "@") || strings.ContainsAny(arg, "\x00\r\n") {
-			return fmt.Errorf("Некорректное значение: «game argument %q (empty/response-file/control characters are forbidden)»", arg)
+			return fmt.Errorf("Недопустимый аргумент игры %q: запрещены пустые значения, файлы аргументов и управляющие символы", arg)
 		}
 	}
 	return nil
@@ -238,7 +238,7 @@ func hostReadUserJVMArgs0283(path string) ([]string, error) {
 		return nil, err
 	}
 	if info.Size() > 256*1024 {
-		return nil, errors.New("Превышен допустимый размер: «user JVM argument file»")
+		return nil, errors.New("Превышен допустимый размер пользовательского файла аргументов JVM")
 	}
 	f, err := os.Open(path)
 	if err != nil {

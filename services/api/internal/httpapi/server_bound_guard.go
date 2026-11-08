@@ -21,7 +21,7 @@ func (s Server) guardBoundStore0507() (repository.GuardBoundSessionStore0507, er
 	}
 	store, ok := s.State.ServerBridge.backendV2().(repository.GuardBoundSessionStore0507)
 	if !ok {
-		return nil, errors.New("Для сессия Guard требуется «durable PostgreSQL backend»")
+		return nil, errors.New("Для сеанса Guard требуется постоянное хранилище PostgreSQL")
 	}
 	return store, nil
 }
@@ -32,7 +32,7 @@ func (s Server) guardBoundStore0507() (repository.GuardBoundSessionStore0507, er
 // компонентов.
 func createGuardBoundSession0507(join bridgeJoinRecord, verifiedPlan *verifiedPlanEvidence02412, verified model.DeviceChallenge) (repository.GuardBoundSession0507, error) {
 	if verifiedPlan == nil || verified.ID == "" || join.SessionCorrelationID == "" {
-		return repository.GuardBoundSession0507{}, errors.New("Требуется: «verified build and Guard evidence»")
+		return repository.GuardBoundSession0507{}, errors.New("Требуются подтверждённая сборка и доказательства Guard")
 	}
 	m := verified.Metadata
 	major, err := strconv.Atoi(metadataString0121(m, "javaMajor"))
@@ -61,7 +61,7 @@ func createGuardBoundSession0507(join bridgeJoinRecord, verifiedPlan *verifiedPl
 		verifiedPlan.GuardAttestationSHA256 != metadataString0121(m, "attestationSha256") ||
 		metadataString0121(m, "sessionId") != b.SessionID || metadataString0121(m, "bindingEpoch") != strconv.FormatInt(b.BindingEpoch, 10) ||
 		metadataString0121(m, "minecraftSessionId") != b.MinecraftSessionID && b.IdentityRealm != "official" {
-		return repository.GuardBoundSession0507{}, errors.New("Несовпадение: «Guard / component plan session binding»")
+		return repository.GuardBoundSession0507{}, errors.New("Не совпадает привязка сеанса Guard к плану компонентов")
 	}
 	if !isSHA256Hex0134(b.CorrelationID) || !isSHA256Hex0134(b.PlanSHA256) || !isSHA256Hex0134(b.CatalogSHA256) ||
 		!isHexLength02412(b.ReleaseSignature, 128) || !isSHA256Hex0134(b.GuardAttestationSHA256) || !isSHA256Hex0134(b.GuardEvidenceSHA256) ||
@@ -71,7 +71,7 @@ func createGuardBoundSession0507(join bridgeJoinRecord, verifiedPlan *verifiedPl
 		return repository.GuardBoundSession0507{}, errors.New("Неправильный формат: сеанс Guard дайджест")
 	}
 	if join.IdentityRealm != "local" && join.IdentityRealm != "official" {
-		return repository.GuardBoundSession0507{}, errors.New("Неизвестное значение: «Minecraft identity realm»")
+		return repository.GuardBoundSession0507{}, errors.New("Неизвестный тип идентификации Minecraft")
 	}
 	return b, nil
 }

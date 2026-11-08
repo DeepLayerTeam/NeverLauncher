@@ -57,7 +57,7 @@ type tableInfo struct {
 
 func identifier(name string) (string, error) {
 	if name == "" || len(name) > 62 || strings.ContainsRune(name, 0) {
-		return "", fmt.Errorf("Небезопасное значение: «SQL identifier» %q", name)
+		return "", fmt.Errorf("Недопустимый SQL-идентификатор %q", name)
 	}
 	// Для VALUES не применяется интерполяция SQL. Идентификаторы всегда экранируются кавычками.
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`, nil
@@ -76,7 +76,7 @@ func columnType(typ string) (string, error) {
 	case strings.Contains(t, "CHAR") || strings.Contains(t, "CLOB") || strings.Contains(t, "TEXT") || strings.Contains(t, "JSON") || strings.Contains(t, "DATE"):
 		return "TEXT", nil
 	default:
-		return "", fmt.Errorf("Не поддерживается: «SQLite column affinity» %q", typ)
+		return "", fmt.Errorf("Неподдерживаемый тип хранения столбца SQLite %q", typ)
 	}
 }
 func columns(ctx context.Context, db *sql.DB, table string) ([]column, error) {
@@ -94,7 +94,7 @@ func columns(ctx context.Context, db *sql.DB, table string) ([]column, error) {
 			return nil, err
 		}
 		if hidden != 0 {
-			return nil, fmt.Errorf("Не поддерживается: «%s: generated/hidden SQLite column»", table)
+			return nil, fmt.Errorf("Таблица %s: вычисляемый или скрытый столбец SQLite не поддерживается", table)
 		}
 		if _, err = identifier(name); err != nil {
 			return nil, err
@@ -239,7 +239,7 @@ func normalValue(v any, typ string) (any, error) {
 			return float64(x), nil
 		}
 	}
-	return nil, fmt.Errorf("Неожиданное значение: «SQLite value type %T for column» %s", v, typ)
+	return nil, fmt.Errorf("Неожиданный тип значения SQLite %T для столбца %s", v, typ)
 }
 func rowDigest(vals []any) (string, []byte, error) {
 	b, err := json.Marshal(vals)
@@ -437,7 +437,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		return report, errors.New("Исходный снимок изменился при импорте")
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return report, fmt.Errorf("PostgreSQL commit outcome: требуется «reconciled before retry:» %w", err)
+		return report, fmt.Errorf("Перед повтором операции необходимо согласовать результат транзакции PostgreSQL: %w", err)
 	}
 	return report, nil
 }
@@ -544,12 +544,12 @@ func verifyPG(ctx context.Context, tx pgx.Tx, t tableInfo, results []TableResult
 			break
 		}
 		if len(values) != len(t.Columns)+2 {
-			err = errors.New("Некорректное значение: «PG row shape»")
+			err = errors.New("Некорректная структура строки PostgreSQL")
 			break
 		}
 		got++
 		if ordinal, ok := values[len(t.Columns)].(int64); !ok || ordinal != got {
-			err = fmt.Errorf("Несовпадение: «%s row order»", t.Name)
+			err = fmt.Errorf("Нарушен порядок строк таблицы %s", t.Name)
 			break
 		}
 		normalized := make([]any, len(t.Columns))
@@ -581,7 +581,7 @@ func verifyPG(ctx context.Context, tx pgx.Tx, t tableInfo, results []TableResult
 		return err
 	}
 	if got != n || hex.EncodeToString(h.Sum(nil)) != expected.SHA256 {
-		return fmt.Errorf("Ошибка: «%s cryptographic reconciliation»", t.Name)
+		return fmt.Errorf("Ошибка криптографического согласования таблицы %s", t.Name)
 	}
 	return nil
 }
@@ -626,7 +626,7 @@ func addUniqueIndexes(ctx context.Context, src *sql.DB, tx pgx.Tx, ts []tableInf
 					break
 				}
 				if cid < 0 {
-					e = fmt.Errorf("Для «expression-based unique index» %s требуется «manual translation»", item.name)
+					e = fmt.Errorf("Уникальный индекс с выражением %s необходимо перенести вручную", item.name)
 					break
 				}
 				names = append(names, quoted(n))

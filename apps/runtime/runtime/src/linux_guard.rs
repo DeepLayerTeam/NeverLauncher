@@ -113,7 +113,7 @@ impl GuardSupervisor {
         // inode через /proc/self/fd. Последующее переименование пути не
         // перенаправит spawn() на другой бинарник Guard.
         let pinned_image=if let Some(expected)=verified_guard_hash.as_ref() {
-            let image=File::open(&executable).map_err(|e|format!("Ошибка: «open verified Guard image»: {e}"))?;
+            let image=File::open(&executable).map_err(|e|format!("Не удалось открыть проверенный исполняемый файл Guard: {e}"))?;
             let observed=sha256_open_file(&image)?;
             if !ct_eq(observed.as_bytes(),expected.as_bytes()) {
                 return Err("Исполняемый образ Guard изменился после проверки манифеста пакета".into());
@@ -156,7 +156,7 @@ impl GuardSupervisor {
         *state=Some(handle); Ok(status)
     }
     pub async fn status(&self)->Result<GuardStatus,String>{self.ensure_started().await}
-    pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Отсутствует Guard")?; let v=send_command(h,"ping","").await?; if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("Некорректное значение: «Guard ping»".into())} }
+    pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Отсутствует Guard")?; let v=send_command(h,"ping","").await?; if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("Некорректный ответ Guard на проверку связи".into())} }
     /// Проверяет только уже аутентифицированный процесс Guard. Не
     /// перезапускайте его незаметно после допуска игры; разрыв IPC — нарушение.
     pub async fn ping_running(&self)->Result<(),String>{
@@ -188,12 +188,12 @@ fn runtime_dir()->Result<PathBuf,String>{
     let p = std::env::var_os("XDG_RUNTIME_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(format!("/run/user/{uid}")));
-    let m=std::fs::metadata(&p).map_err(|e|format!("Ошибка: «stat Linux runtime directory {}»: {e}",p.display()))?;
+    let m=std::fs::metadata(&p).map_err(|e|format!("Не удалось получить сведения о каталоге Runtime в Linux {}: {e}",p.display()))?;
     if !m.is_dir()||m.uid()!=uid||(m.mode()&0o077)!=0{return Err("Каталог Linux Runtime должен принадлежать текущему UID и быть недоступным для группы и остальных пользователей".into())}
-    let d=p.join("launcher"); std::fs::create_dir_all(&d).map_err(|e|format!("Ошибка: «create runtime dir»: {e}"))?; std::fs::set_permissions(&d,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?; Ok(d)
+    let d=p.join("launcher"); std::fs::create_dir_all(&d).map_err(|e|format!("Не удалось создать каталог Runtime: {e}"))?; std::fs::set_permissions(&d,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?; Ok(d)
 }
 fn make_endpoint(pid:u32)->Result<PathBuf,String>{ let mut r=[0u8;8];OsRng.fill_bytes(&mut r);Ok(runtime_dir()?.join(format!("guard-{pid}-{}.sock",hex::encode(r)))) }
-fn validate_endpoint(path:&Path)->Result<(),String>{ let base=runtime_dir()?.canonicalize().map_err(|e|e.to_string())?; let parent=path.parent().ok_or("Отсутствует: «socket parent»")?.canonicalize().map_err(|e|e.to_string())?; if parent!=base{return Err("Сокет Guard находится вне закрытого каталога Runtime".into())}; let name=path.file_name().and_then(|v|v.to_str()).ok_or("Некорректное значение: «socket filename»")?; if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("Некорректное имя сокета Guard".into())} Ok(()) }
+fn validate_endpoint(path:&Path)->Result<(),String>{ let base=runtime_dir()?.canonicalize().map_err(|e|e.to_string())?; let parent=path.parent().ok_or("Отсутствует родительский каталог сокета")?.canonicalize().map_err(|e|e.to_string())?; if parent!=base{return Err("Сокет Guard находится вне закрытого каталога Runtime".into())}; let name=path.file_name().and_then(|v|v.to_str()).ok_or("Некорректное значение: «socket filename»")?; if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("Некорректное имя сокета Guard".into())} Ok(()) }
 fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{ let sm=std::fs::symlink_metadata(path).map_err(|e|format!("Не удалось получить сведения о файле {}: {e}",path.display()))?; if sm.file_type().is_symlink()||!sm.file_type().is_file(){return Err(format!("{} должен быть обычным файлом, а не символической ссылкой",path.display()))}; let owner=sm.uid(); if owner!=current_uid()&&owner!=0{return Err(format!("Владельцем {} должен быть текущий UID или root",path.display()))}; if sm.mode()&0o022!=0{return Err(format!("{} не должен разрешать запись группе или всем пользователям",path.display()))}; if executable&&sm.mode()&0o111==0{return Err(format!("{} не является исполняемым файлом",path.display()))}; Ok(()) }
 fn sha256_file(path:&Path)->Result<String,String>{let f=File::open(path).map_err(|e|e.to_string())?;let mut r=BufReader::new(f);let mut h=Sha256::new();let mut b=[0u8;65536];loop{let n=r.read(&mut b).map_err(|e|e.to_string())?;if n==0{break}h.update(&b[..n]);}Ok(hex::encode(h.finalize()))}
 fn sha256_open_file(file:&File)->Result<String,String>{
@@ -211,7 +211,7 @@ fn verify_linux_manifest_signature(path:&Path,raw:&[u8])->Result<(),String>{
     let pinned=option_env!("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY")
         .ok_or("Для Guard в рабочей сборке Linux необходим публичный ключ Ed25519, закреплённый при сборке")?;
     let key_bytes=hex::decode(pinned.trim()).map_err(|_|"Некорректное значение: встроенный публичный ключ Guard для Linux")?;
-    let raw_key:[u8;32]=key_bytes.try_into().map_err(|_|"Некорректное значение: «compiled Linux Guard public key length»")?;
+    let raw_key:[u8;32]=key_bytes.try_into().map_err(|_|"Некорректная длина встроенного открытого ключа Guard для Linux")?;
     let key=VerifyingKey::from_bytes(&raw_key).map_err(|_|"Некорректное значение: встроенный публичный ключ Guard для Linux")?;
     let detached=path.with_file_name(format!("{}.ed25519",
         path.file_name().and_then(|f|f.to_str()).ok_or("Недопустимое имя файла манифеста")?));
@@ -232,14 +232,14 @@ fn verify_linux_manifest_signature(path:&Path,raw:&[u8])->Result<(),String>{
 
 fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
     let desktop=std::env::current_exe().map_err(|e|e.to_string())?; validate_secure_file(&desktop,true)?; validate_secure_file(guard,true)?;
-    let dd=desktop.parent().ok_or("Родительский процесс Desktop отсутствует")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("Отсутствует: «guard parent»")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop и Guard должны находиться в одном каталоге пакета".into())}
+    let dd=desktop.parent().ok_or("Родительский процесс Desktop отсутствует")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("Отсутствует родительский каталог Guard")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop и Guard должны находиться в одном каталоге пакета".into())}
     let mp=dd.join(PACKAGE_MANIFEST); validate_secure_file(&mp,false)?; let raw=std::fs::read(&mp).map_err(|e|e.to_string())?;
     verify_linux_manifest_signature(&mp,&raw)?;
-    let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Некорректное значение: «Linux package manifest JSON»: {e}"))?;
+    let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Некорректный JSON манифеста пакета Linux: {e}"))?;
     let canonical_arch=if cfg!(target_arch="aarch64"){"arm64"}else{"x64"};
     let legacy=m.schema_version=="1.0"&&m.platform=="linux-amd64"&&m.guard_protocol_version==GUARD_PROTOCOL_VERSION&&m.authenticated_ipc=="unix-domain-socket+0600+so-peercred+hmac-sha256-v4"&&m.linux_production_hardening_version==GUARD_LINUX_HARDENING_VERSION;
     let canonical=m.schema_version=="1.0"&&m.platform=="linux"&&m.architecture==canonical_arch;
-    if m.product_version!=env!("CARGO_PKG_VERSION")||(!legacy&&!canonical){return Err("Несовпадение: «Linux package manifest identity/hardening»".into())}
+    if m.product_version!=env!("CARGO_PKG_VERSION")||(!legacy&&!canonical){return Err("Не совпадают идентификатор или параметры усиления защиты в манифесте пакета Linux".into())}
     let mut verified_guard_hash=None;
     for path in [&desktop,guard]{
         let name=path.file_name().and_then(|v|v.to_str()).ok_or("Недопустимое имя артефакта")?;
@@ -247,14 +247,14 @@ fn verify_linux_package_manifest(guard:&Path)->Result<String,String>{
             if canonical&&!a.package_path.is_empty(){Path::new(&a.package_path).file_name().and_then(|v|v.to_str())==Some(name)}else{a.name==name}
         }).ok_or_else(||format!("Артефакт {name} отсутствует в манифесте пакета Linux"))?;
         let meta=std::fs::metadata(path).map_err(|e|e.to_string())?;
-        if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Ошибка: «Linux package artifact verification»: {name}"))}
+        if meta.len()!=a.size||!ct_eq(sha256_file(path)?.as_bytes(),a.sha256.to_lowercase().as_bytes()){return Err(format!("Не пройдена проверка артефакта пакета Linux: {name}"))}
         if path == guard { verified_guard_hash=Some(a.sha256.to_ascii_lowercase()); }
     }
     // После запуска сравнивайте образ процесса с неизменным ожидаемым
     // дайджестом из исходного манифеста, а не с повторным чтением пути Guard.
     verified_guard_hash.ok_or_else(||"В проверенном манифесте отсутствует контрольная сумма Guard".into())
 }
-fn resolve_guard_executable()->Result<PathBuf,String>{let exe=std::env::current_exe().map_err(|e|e.to_string())?;Ok(exe.parent().ok_or("Отсутствует: «desktop parent»")?.join("guard"))}
+fn resolve_guard_executable()->Result<PathBuf,String>{let exe=std::env::current_exe().map_err(|e|e.to_string())?;Ok(exe.parent().ok_or("Отсутствует родительский каталог Desktop")?.join("guard"))}
 
 async fn connect_socket(path:&Path,guard_pid:u32)->Result<UnixStream,String>{
     let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("Не удалось подключиться к Unix-сокету Guard: {e}"))}sleep(Duration::from_millis(40)).await}}
@@ -296,7 +296,7 @@ fn linux_platform() -> &'static str {
 fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Несовпадение версий релиза Guard и Desktop: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!=linux_platform(){return Err(format!("Платформа Guard не совпадает: ожидалась {}, получено {}",linux_platform(),s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Несовпадение протоколов Guard и Desktop: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Состояние Guard не прошло обязательную проверку доверия среды выполнения".into())}Ok(())}
 fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let l=p.linux.as_ref().ok_or("Отсутствуют сведения о политике процессов Linux")?;if p.schema!=GUARD_LINUX_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!l.no_new_privs||!l.dumpable_disabled||!l.core_dumps_disabled||!l.ptrace_restricted||!l.parent_death_signal||!l.private_umask{return Err("Политика процессов Guard Linux отклонила запрос".into())}Ok(())}
 fn validate_evidence(h:&GuardHandle,e:&GuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"Некорректное значение: хеш подтверждающих данных")?){return Err("Несовпадение: хеш подтверждающих данных".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"Некорректное значение: подтверждение проверочных данных")?){return Err("Несовпадение: подтверждение сессии проверочных данных".into())}Ok(())}
-fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=GUARD_LINUX_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("Несовпадение: «Linux Guard Attestation binding»".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"Некорректное значение: хеш аттестации")?){return Err("Несовпадение: хеш аттестации".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"Некорректное значение: подтверждение аттестации")?){return Err("Несовпадение: подтверждение сессии аттестации".into())}Ok(())}
+fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=GUARD_LINUX_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("Не совпадает привязка аттестации Guard для Linux".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"Некорректное значение: хеш аттестации")?){return Err("Несовпадение: хеш аттестации".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"Некорректное значение: подтверждение аттестации")?){return Err("Несовпадение: подтверждение сессии аттестации".into())}Ok(())}
 
 pub async fn run_linux_guard_server(endpoint:PathBuf,parent_pid:u32)->Result<(),String>{
     validate_endpoint(&endpoint)?; let hard=ensure_linux_production_hardening()?; let policy=policy_report()?; let observed=crate::integrity::observed_linux_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("Родительский процесс Guard Linux не совпадает: ожидался={parent_pid}, обнаружен={observed}"))}

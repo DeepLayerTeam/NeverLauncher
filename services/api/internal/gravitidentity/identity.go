@@ -125,14 +125,14 @@ func uniqueUserFields(raw []byte) error {
 		}
 		key, ok := keyToken.(string)
 		if !ok {
-			return errors.New("Некорректное значение: «FileAuth user key»")
+			return errors.New("Некорректный идентификатор пользователя FileAuth")
 		}
 		// encoding/json сопоставляет поля структур без учёта регистра. Отклоняйте
 		// псевдонимы вроде username/USERNAME вместо неявного доверия последнему
 		// значению, меняющему импортируемую идентичность.
 		folded := strings.ToLower(key)
 		if seen[folded] {
-			return fmt.Errorf("Обнаружен дубликат: «FileAuth user field» %q", key)
+			return fmt.Errorf("Повторяющееся поле пользователя FileAuth: %q", key)
 		}
 		seen[folded] = true
 		var value json.RawMessage
@@ -200,7 +200,7 @@ func parseSQLCSV(b []byte, pathname string) ([]Account, error) {
 	for i, c := range header {
 		c = strings.ToLower(strings.TrimSpace(strings.TrimPrefix(c, "\ufeff")))
 		if _, ok := cols[c]; ok {
-			return nil, errors.New("Обнаружен дубликат: «SQL CSV column»")
+			return nil, errors.New("Повторяющийся столбец SQL CSV")
 		}
 		cols[c] = i
 	}
@@ -293,7 +293,7 @@ func Extract(ctx context.Context, src io.ReaderAt, size int64, snapshot inv.Inve
 		}
 	}
 	if selected == 0 {
-		return nil, errors.New("Отсутствует: «supported FileAuthSystem/Database.json or sql-export/users.csv identity snapshot found»")
+		return nil, errors.New("Не найден поддерживаемый снимок учётных записей FileAuthSystem/Database.json или sql-export/users.csv")
 	}
 	if len(accounts) == 0 {
 		return nil, errors.New("Снимок исходных учётных записей не содержит аккаунтов")

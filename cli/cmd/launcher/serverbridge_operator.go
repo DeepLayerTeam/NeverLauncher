@@ -41,7 +41,7 @@ func bridgeEndpointSecure02812(raw string) error {
 		return errors.New("URL серверной части должен содержать только HTTPS-источник, без учётных данных, запроса и фрагмента")
 	}
 	if parsed.Path != "" && parsed.Path != "/" {
-		return errors.New("URL серверной части: запрещено «include an API path»")
+		return errors.New("URL серверной части не должен содержать путь API")
 	}
 	if parsed.Scheme == "https" {
 		return nil
@@ -88,11 +88,11 @@ func verifyBridgeLocal02812(root string) (bridgeVerification02812, bridgeProvisi
 	path := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json")
 	state, err := readBridgeProvisionState0199(path)
 	if err != nil {
-		return result, state, bridgeEnrollmentRequest0199{}, fmt.Errorf("Отсутствует: «managed bridge»: %w", err)
+		return result, state, bridgeEnrollmentRequest0199{}, fmt.Errorf("Не найдена управляемая интеграция ServerBridge: %w", err)
 	}
 	result.Platform, result.Version, result.ArtifactSHA256 = state.Platform, state.Version, state.ArtifactSHA256
 	if !bridgeSupportedPlatform0199(state.Platform) || state.Version == "" || len(state.ArtifactSHA256) != 64 {
-		return result, state, bridgeEnrollmentRequest0199{}, errors.New("Некорректное значение: «managed installation state»")
+		return result, state, bridgeEnrollmentRequest0199{}, errors.New("Некорректное состояние управляемой установки")
 	}
 	for _, path := range []string{state.ArtifactPath, state.ConfigPath, state.IdentityPath, state.EnrollmentRequestPath} {
 		if err := bridgeInsideRoot02812(root, path); err != nil {
@@ -101,11 +101,11 @@ func verifyBridgeLocal02812(root string) (bridgeVerification02812, bridgeProvisi
 	}
 	detection, err := detectServerBridgePlatform0199(root, state.Platform)
 	if err != nil || detection.Platform != state.Platform || filepath.Clean(state.ConfigPath) != filepath.Clean(detection.ConfigPath) || filepath.Dir(state.ArtifactPath) != detection.InstallDir {
-		return result, state, bridgeEnrollmentRequest0199{}, errors.New("Обнаружено изменение: «platform or managed installation location»")
+		return result, state, bridgeEnrollmentRequest0199{}, errors.New("Обнаружено изменение платформы или каталога управляемой установки")
 	}
 	hash, _, err := hashFile(state.ArtifactPath)
 	if err != nil || !strings.EqualFold(hash, state.ArtifactSHA256) {
-		return result, state, bridgeEnrollmentRequest0199{}, errors.New("Несовпадение: «installed artifact missing or SHA-256»")
+		return result, state, bridgeEnrollmentRequest0199{}, errors.New("Установленный артефакт отсутствует или его SHA-256 не совпадает")
 	}
 	if err := verifyBridgeArtifactShape0199(state.ArtifactPath, state.Platform); err != nil {
 		return result, state, bridgeEnrollmentRequest0199{}, err
@@ -141,7 +141,7 @@ func verifyBridgeRuntime02812(local bridgeVerification02812, req bridgeEnrollmen
 	}
 	field := func(key string) string { s, _ := node[key].(string); return strings.TrimSpace(s) }
 	if field("kind") != req.Kind || field("projectId") != req.ProjectID || field("keyFingerprint") != req.KeyFingerprint {
-		return local, errors.New("Несовпадение: «Backend node identity/platform/project»")
+		return local, errors.New("Идентификатор узла, платформа или проект не совпадают с данными Backend")
 	}
 	if field("pluginVersion") != local.Version || !strings.EqualFold(field("pluginSha256"), local.ArtifactSHA256) {
 		return local, errors.New("Версия или хеш плагина Runtime отличается от установленного артефакта")
@@ -236,10 +236,10 @@ func bridgeWaitHostExit02812(root string) error {
 			return nil
 		}
 		if err != nil {
-			return fmt.Errorf("Не удалось проверить «old host lock:» %w", err)
+			return fmt.Errorf("Не удалось проверить прежнюю блокировку хоста: %w", err)
 		}
 		if !hostIdentityMatches0282(lock.PID, lock.Identity) {
-			return errors.New("stale Host lock: требуется «explicit reconciliation»")
+			return errors.New("Обнаружена устаревшая блокировка хоста; требуется явное согласование состояния")
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -266,7 +266,7 @@ func bridgeRollout02812(args []string) error {
 	managed := oldErr == nil
 	host := hostPaths01910(root)
 	if _, err := readServerBridgeHostConfig01910(host["config"]); err != nil {
-		return fmt.Errorf("Для поэтапное развёртывание требуется «configured Host Supervisor:» %w", err)
+		return fmt.Errorf("Для поэтапного развёртывания требуется настроенный диспетчер хоста: %w", err)
 	}
 	wasRunning := false
 	if runtimeState, err := readServerBridgeHostRuntime01910(host["runtime"]); err == nil {
@@ -314,7 +314,7 @@ func bridgeRollout02812(args []string) error {
 	}
 	if wasRunning {
 		if err := stopServerBridgeHost01910([]string{"--server-root", root}); err != nil {
-			return fmt.Errorf("Обнаружено изменение: «game did not stop cleanly; no files»: %w", err)
+			return fmt.Errorf("Игра не была корректно остановлена; изменение файлов запрещено: %w", err)
 		}
 		if err := bridgeWaitHostExit02812(root); err != nil {
 			return err
@@ -332,7 +332,7 @@ func bridgeRollout02812(args []string) error {
 		}
 		if state, e := readServerBridgeHostRuntime01910(host["runtime"]); e == nil && hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
 			if e := stopServerBridgeHost01910([]string{"--server-root", root}); e != nil {
-				return fmt.Errorf("«rollout error: %v; rollback BLOCKED:»: запрещено «stop new process:» %w", problem, e)
+				return fmt.Errorf("Ошибка развёртывания: %v; откат заблокирован, поскольку новый процесс не удалось остановить: %w", problem, e)
 			}
 		}
 		if e := bridgeWaitHostExit02812(root); e != nil {
@@ -406,17 +406,17 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 		return errors.New("Некорректное значение: идентификатор транзакции")
 	}
 	if tx.Operation != "install" && tx.Operation != "upgrade" {
-		return errors.New("Не поддерживается: «transaction operation»")
+		return errors.New("Неподдерживаемая операция транзакции")
 	}
 	allowedBackup := filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "backups", tx.ID)
 	if len(tx.Changes) == 0 || len(tx.Changes) > 32 {
-		return errors.New("Неожиданное значение: «transaction change count»")
+		return errors.New("Неожиданное количество изменений в транзакции")
 	}
 	// Файл транзакции на диске не должен позволять выбирать произвольные файлы
 	// под корнем Minecraft (миры, плагины, playerdata).
 	state, err := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
 	if err != nil || state.TransactionID != tx.ID || state.Platform != tx.Platform {
-		return errors.New("транзакция не совпадает с «active managed installation»")
+		return errors.New("Транзакция не соответствует действующей управляемой установке")
 	}
 	detection := bridgeDetectionForPlatform0199(root, tx.Platform, "verified", nil)
 	allowed := map[string]bool{
@@ -444,7 +444,7 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 			return err
 		}
 		if seen[change.Path] {
-			return errors.New("Обнаружен дубликат: «transaction target»")
+			return errors.New("Обнаружено повторяющееся назначение в транзакции")
 		}
 		seen[change.Path] = true
 		if change.Existed {
@@ -458,7 +458,7 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 			sum := sha256.Sum256([]byte(filepath.Clean(change.Path)))
 			expected := hex.EncodeToString(sum[:8]) + "-" + filepath.Base(change.Path)
 			if filepath.Base(change.BackupPath) != expected {
-				return errors.New("Несовпадение: «transaction backup name»")
+				return errors.New("Имя резервной копии транзакции не совпадает")
 			}
 		} else if change.BackupPath != "" {
 			return errors.New("Для несуществующей цели обнаружена неожиданная резервная копия")

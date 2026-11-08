@@ -1213,7 +1213,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			return fmt.Errorf("Не совпадает размер обязательного артефакта %s: манифест=%d, фактически=%d", artifact.Name, artifact.Size, size)
 		}
 		if artifact.SHA256 == "" || !strings.EqualFold(artifact.SHA256, actual) {
-			return fmt.Errorf("Несовпадение: «required artifact %s sha256»", artifact.Name)
+			return fmt.Errorf("Не совпадает SHA-256 обязательного артефакта %s", artifact.Name)
 		}
 	}
 	if requiredCount == 0 {
@@ -1236,7 +1236,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		expected, name := parts[0], parts[1]
 		cleanName, err := safeReleaseRelativePath0158(name)
 		if err != nil {
-			return fmt.Errorf("Некорректное значение: «SHA256SUMS path» %q: %w", name, err)
+			return fmt.Errorf("Некорректный путь в файле SHA256SUMS %q: %w", name, err)
 		}
 		actual, _, err := hashFile(filepath.Join(dir, cleanName))
 		if err != nil {
@@ -1599,7 +1599,7 @@ func readManifest(path string) (Manifest, error) {
 		return Manifest{}, err
 	}
 	if manifest.SchemaVersion == "3.0" {
-		return Manifest{}, errors.New("Manifest v3 component catalog: требуется «native Runtime 0.24.1; legacy CLI updater cannot safely apply this release»")
+		return Manifest{}, errors.New("Каталог компонентов Manifest v3 требует нативный Runtime версии 0.24.1 или новее; устаревшее CLI-обновление не может безопасно установить этот релиз")
 	}
 	if manifest.ProjectID == "" || manifest.ProfileID == "" || manifest.Version == "" {
 		return Manifest{}, errors.New("манифест не содержит обязательные поля projectId, profileId или version")

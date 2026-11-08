@@ -163,13 +163,13 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 	case err != nil:
 		return nil, fmt.Errorf("Чтение: SQLite HTTP состояние: %w", err)
 	case ver != 1:
-		return nil, fmt.Errorf("Не поддерживается: «SQLite HTTP state format» %d", ver)
+		return nil, fmt.Errorf("Неподдерживаемый формат состояния SQLite HTTP: %d", ver)
 	case r.seq < 1:
-		return nil, errors.New("Некорректное значение: «SQLite HTTP sequence»")
+		return nil, errors.New("Некорректный номер последовательности SQLite HTTP")
 	default:
 		sum := sha256.Sum256(raw)
 		if hex.EncodeToString(sum[:]) != sha {
-			return nil, errors.New("Несовпадение: «SQLite HTTP state integrity digest»")
+			return nil, errors.New("Не совпадает контрольная сумма целостности состояния SQLite HTTP")
 		}
 		state, e := decodeSQLiteHTTPDocument0471(raw)
 		if e != nil {
@@ -285,7 +285,7 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 		return state, err
 	}
 	if !validPrivateSQLite0373(state) {
-		return state, errors.New("Несовпадение: «SQLite HTTP private state alignment»")
+		return state, errors.New("Секретное состояние SQLite HTTP не согласовано")
 	}
 	return state, nil
 }
@@ -370,10 +370,10 @@ func (r *SQLiteHTTPRepository0372) Health(ctx context.Context) error {
 		}
 		sum := sha256.Sum256(raw)
 		if hex.EncodeToString(sum[:]) != sha {
-			return errors.New("Несовпадение: «SQLite HTTP state digest»")
+			return errors.New("Контрольная сумма состояния SQLite HTTP не совпадает")
 		}
 		if _, e := decodeSQLiteHTTPDocument0471(raw); e != nil {
-			return fmt.Errorf("Некорректное значение: «SQLite HTTP state»: %w", e)
+			return fmt.Errorf("Некорректное состояние SQLite HTTP: %w", e)
 		}
 		return nil
 	})

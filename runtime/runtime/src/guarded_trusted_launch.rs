@@ -49,11 +49,11 @@ fn check_package(root: &Path, release: &str, digest: &str) -> Result<(), String>
     let mut current = root.to_path_buf();
     for part in format!("{release}/signed.nlext").split('/') {
         current.push(part);
-        let md = fs::symlink_metadata(&current).map_err(|e| format!("Отсутствует: «Guard Trusted JVM package»: {e}"))?;
+        let md = fs::symlink_metadata(&current).map_err(|e| format!("Не найден пакет доверенной JVM Guard: {e}"))?;
         if md.file_type().is_symlink() { return Err("Символическая ссылка в пути к пакету доверенной JVM для Guard".into()) }
     }
     let md = fs::metadata(&current).map_err(|e| e.to_string())?;
-    if !md.is_file() || md.len() == 0 || md.len() > 256 * 1024 * 1024 { return Err("Некорректное значение: «Guard Trusted JVM signed package size/type»".into()) }
+    if !md.is_file() || md.len() == 0 || md.len() > 256 * 1024 * 1024 { return Err("Некорректный размер или тип подписанного пакета доверенной JVM Guard".into()) }
     let mut src = File::open(&current).map_err(|e| e.to_string())?;
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 65536];
@@ -72,7 +72,7 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     if plugins.len() > 32 || transforms.len() > 4096 { return Err("Превышен лимит плагинов или преобразований доверенной JVM для Guard".into()) }
     let mut text = format!("main={}\nguard.policy.active=true\ntransform.count={}\n", STANDARD.encode(main), transforms.len());
     for (i, (class, owner)) in transforms.iter().enumerate() {
-        if !is_digest(owner) { return Err("Некорректное значение: «Guard Trusted JVM transform owner digest»".into()) }
+        if !is_digest(owner) { return Err("Некорректная контрольная сумма владельца преобразования доверенной JVM Guard".into()) }
         text.push_str(&format!("transform.{i}.owner={owner}\ntransform.{i}.class={}\n", STANDARD.encode(class)));
     }
     if !["vanilla","fabric","quilt","forge","neoforge","neo-forge","neo_forge"].contains(&loader.to_ascii_lowercase().as_str()) {
@@ -92,7 +92,7 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
     }
     text.push_str(&format!("count={}\n", plugins.len()));
     for (i, (path, digest)) in plugins.iter().enumerate() {
-        if !is_digest(digest) { return Err("Некорректное значение: «Guard Trusted JVM plugin digest»".into()) }
+        if !is_digest(digest) { return Err("Некорректная контрольная сумма плагина доверенной JVM Guard".into()) }
         text.push_str(&format!("plugin.{i}={}\nplugin.{i}.sha256={digest}\n", STANDARD.encode(path.to_string_lossy().as_bytes())));
     }
     Ok(text)
@@ -122,7 +122,7 @@ fn prepare_inner(root: &Path, project: &str, minecraft: &str, loader: &str, orig
     if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 8192 {
         return Err("Guard Trusted JVM: активная запись не является обычным файлом допустимого размера".into());
     }
-    let rec: Active = serde_json::from_slice(&fs::read(&active).map_err(|e| e.to_string())?).map_err(|e| format!("Некорректное значение: «Guard Trusted JVM active record»: {e}"))?;
+    let rec: Active = serde_json::from_slice(&fs::read(&active).map_err(|e| e.to_string())?).map_err(|e| format!("Некорректная запись об активной доверенной JVM Guard: {e}"))?;
     if rec.schema_version != "launcher.trusted-jvm.v1" || rec.approved_access != "full-minecraft-jvm" ||
         !is_digest(&rec.package_sha256) || !is_digest(&rec.agent_sha256) || rec.plugins.len() > 16 {
         return Err("Guard Trusted JVM: в активной записи некорректный идентификатор или разрешение".into());

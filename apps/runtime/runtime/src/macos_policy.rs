@@ -157,14 +157,14 @@ mod imp {
     unsafe fn disable_core_dumps() -> Result<(), String> {
         let limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
         if libc::setrlimit(libc::RLIMIT_CORE, &limit) != 0 {
-            return Err(os_err("Ошибка: «macOS setrlimit(RLIMIT_CORE)»"));
+            return Err(os_err("Ошибка настройки ограничения дампа памяти macOS setrlimit(RLIMIT_CORE)"));
         }
         Ok(())
     }
 
     unsafe fn deny_debugger_attach() -> Result<(), String> {
         if libc::ptrace(PT_DENY_ATTACH, 0, std::ptr::null_mut(), 0) != 0 {
-            return Err(os_err("Ошибка: «macOS PT_DENY_ATTACH»"));
+            return Err(os_err("Ошибка защиты от подключения отладчика macOS PT_DENY_ATTACH"));
         }
         Ok(())
     }
@@ -177,7 +177,7 @@ mod imp {
                 deny_debugger_attach()?;
                 libc::umask(0o077);
             }
-            let executable = std::env::current_exe().map_err(|err| format!("Ошибка: «resolve current executable»: {err}"))?;
+            let executable = std::env::current_exe().map_err(|err| format!("Не удалось определить текущий исполняемый файл: {err}"))?;
             let signature = verify_macos_code_signature(&executable)?;
             if !signature.valid || !signature.hardened_runtime || !signature.library_validation {
                 return Err("Для промышленной защиты macOS требуется действующая подпись Hardened Runtime с проверкой библиотек".to_string());
@@ -213,14 +213,14 @@ mod imp {
 
     pub fn install_parent_exit_watch(parent_pid: u32) -> Result<(), String> {
         if parent_pid == 0 || parent_pid > i32::MAX as u32 {
-            return Err("Некорректное значение: «macOS parent PID»".to_string());
+            return Err("Некорректный PID родительского процесса macOS".to_string());
         }
         let current_parent = unsafe { libc::getppid() };
         if current_parent != parent_pid as libc::pid_t {
             return Err(format!("Не совпадает PID родительского процесса macOS: ожидался {parent_pid}, обнаружен {current_parent}"));
         }
         let kq = unsafe { libc::kqueue() };
-        if kq < 0 { return Err(os_err("Ошибка: «macOS kqueue»")); }
+        if kq < 0 { return Err(os_err("Ошибка системного вызова kqueue в macOS")); }
         let mut change: libc::kevent = unsafe { std::mem::zeroed() };
         change.ident = parent_pid as libc::uintptr_t;
         change.filter = libc::EVFILT_PROC;
@@ -228,7 +228,7 @@ mod imp {
         change.fflags = libc::NOTE_EXIT;
         let rc = unsafe { libc::kevent(kq, &change, 1, std::ptr::null_mut(), 0, std::ptr::null()) };
         if rc < 0 {
-            let err = os_err("Ошибка: «macOS parent kqueue registration»");
+            let err = os_err("Ошибка регистрации отслеживания родительского процесса через kqueue macOS");
             unsafe { libc::close(kq); }
             return Err(err);
         }
@@ -272,7 +272,7 @@ mod imp {
     pub fn runtime_policy(child: &mut Child) -> Result<MacOSRuntimeProcessPolicyReport, String> {
         let pid = child.id().ok_or_else(|| "PID среды выполнения macOS недоступен".to_string())?;
         let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
-        if pgid < 0 { return Err(os_err("Ошибка: «macOS getpgid»")); }
+        if pgid < 0 { return Err(os_err("Ошибка получения группы процессов через getpgid macOS")); }
         let own_process_group = pgid as u32 == pid;
         if !own_process_group { return Err("Ошибка: «проверка политики группы процессов среды выполнения macOS»".to_string()); }
         Ok(MacOSRuntimeProcessPolicyReport {
@@ -287,12 +287,12 @@ mod imp {
     }
 
     pub fn terminate_runtime_process_group(pid: u32) -> Result<(), String> {
-        if pid == 0 || pid > i32::MAX as u32 { return Err("Некорректное значение: «macOS runtime process group PID»".to_string()); }
+        if pid == 0 || pid > i32::MAX as u32 { return Err("Некорректный PID группы процессов Runtime в macOS".to_string()); }
         let rc = unsafe { libc::kill(-(pid as libc::pid_t), libc::SIGKILL) };
         if rc == 0 { return Ok(()); }
         let err = io::Error::last_os_error();
         if err.raw_os_error() == Some(libc::ESRCH) { return Ok(()); }
-        Err(format!("Ошибка: «macOS kill process group» {pid}: {err}"))
+        Err(format!("Не удалось остановить группу процессов macOS {pid}: {err}"))
     }
 }
 

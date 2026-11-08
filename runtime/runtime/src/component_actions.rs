@@ -84,7 +84,7 @@ pub fn validate_actions(cat:&ComponentCatalog)->Result<(),String> {
                         if !seen.insert(format!("{}:{}",a.kind,arg)){return Err(format!("Обнаружен дубликат: «{} argument in {}»",a.kind,c.id))}
                     }
                 },
-                _=>return Err(format!("Не поддерживается: «optional action {} in {}»",a.kind,c.id))
+                _=>return Err(format!("Неподдерживаемое необязательное действие {} в компоненте {}",a.kind,c.id))
             }
         }
     }
@@ -126,18 +126,18 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
                     if !plan.main_module.is_empty(){return Err(format!("Действие classpath компонента {} несовместимо с модульной точкой входа",component.id))}
                     if !active.contains(&action.path){return Err(format!("Файл classpath компонента {} не установлен: {}",component.id,action.path))}
                     let joined=crate::safe_join(root,&action.path)?.to_string_lossy().to_string();
-                    if !seen_classpath.insert(joined.clone()){return Err(format!("Обнаружен дубликат: «optional classpath entry: {}»",action.path))}
+                    if !seen_classpath.insert(joined.clone()){return Err(format!("Повторяющаяся необязательная запись classpath: {}",action.path))}
                     plan.classpath_entries.push(joined);
                 },
                 "JvmArgs"=>{
                     for arg in &action.args {
-                        if !seen_jvm.insert(arg.clone()){return Err(format!("Обнаружен дубликат: «optional JVM argument in {}»",component.id))}
+                        if !seen_jvm.insert(arg.clone()){return Err(format!("Повторяющийся необязательный аргумент JVM в компоненте {}",component.id))}
                         plan.jvm_args.push(arg.clone());
                     }
                 },
                 "ClientArgs"=>{
                     for arg in &action.args {
-                        if !seen_client.insert(arg.clone()){return Err(format!("Обнаружен дубликат: «optional client argument in {}»",component.id))}
+                        if !seen_client.insert(arg.clone()){return Err(format!("Повторяющийся необязательный аргумент клиента в компоненте {}",component.id))}
                         plan.game_args.push(arg.clone());
                     }
                 },

@@ -61,7 +61,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	}
 	keyPath := strings.TrimSpace(os.Getenv("LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE"))
 	if keyPath == "" {
-		return errors.New("Требуется: «0.46.0 GA BLOCKED: independent operator trust anchor»")
+		return errors.New("Выпуск 0.46.0 GA заблокирован: необходим независимый доверенный ключ оператора")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, keyPath); err != nil {
 		return err
@@ -108,7 +108,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 		return err
 	}
 	if a.Schema != "neverlauncher.operations-ga.0460.v1" || a.Version != version || m.Version != version || a.SourceCommit != m.SourceCommit || !regexp.MustCompile(`^[a-f0-9]{40}([a-f0-9]{24})?$`).MatchString(a.SourceCommit) {
-		return errors.New("«operations GA» не совпадает с «exact source commit and version»")
+		return errors.New("Данные проверки эксплуатации GA не соответствуют точному коммиту исходников и версии")
 	}
 	issued, err := time.Parse(time.RFC3339Nano, a.IssuedAt)
 	if err != nil || time.Since(issued) > 14*24*time.Hour || time.Until(issued) > 5*time.Minute {
@@ -116,7 +116,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	}
 	hex64 := regexp.MustCompile(`^[0-9a-f]{64}$`)
 	if a.Operator == "" || a.SourceMachine == a.RestoreMachine || !hex64.MatchString(a.SourceMachine) || !hex64.MatchString(a.RestoreMachine) || !hex64.MatchString(a.OpenApiV1Sha256) {
-		return errors.New("Некорректное значение: «independent operator, hosts or frozen API fingerprint»")
+		return errors.New("Некорректные сведения о независимом операторе, узлах или зафиксированном отпечатке API")
 	}
 	// Байты утверждённого API v1 должны совпадать с исходными байтами, закреплёнными в BOM выпуска;
 	// произвольного отдельного дайджеста API в утверждении недостаточно.
@@ -146,15 +146,15 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 		return errors.New("BOM релиза должен закреплять ровно один основной контракт API")
 	}
 	if a.Scope != "Фактическая независимая эксплуатационная приёмка; RPO проверен только на контрольных данных, без утверждений об отказоустойчивости физических узлов и неизмеренного RPO нагрузки" {
-		return errors.New("Не поддерживается: «operations GA evidence scope»")
+		return errors.New("Неподдерживаемая область подтверждающих данных эксплуатационной проверки GA")
 	}
 	requiredStages := []string{"install-standard", "upgrade-standard", "restore-standard", "failover-network-ha"}
 	if len(a.StageReceipts) != len(requiredStages) {
-		return errors.New("Требуется: «all four independent operational receipts»")
+		return errors.New("Требуются все четыре независимые квитанции эксплуатационных проверок")
 	}
 	for _, stage := range requiredStages {
 		if !hex64.MatchString(a.StageReceipts[stage]) {
-			return fmt.Errorf("Некорректное значение: «operational receipt hash»: %s", stage)
+			return fmt.Errorf("Некорректная контрольная сумма эксплуатационной квитанции: %s", stage)
 		}
 	}
 	if len(a.Targets) != 6 {
@@ -163,14 +163,14 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	for _, t := range distributionTargets04511(version) {
 		r, ok := a.Targets[t.target]
 		if !ok || r.Name != t.packageFile || !hex64.MatchString(r.SHA256) {
-			return fmt.Errorf("Отсутствует: «operations GA target»: %s", t.target)
+			return fmt.Errorf("Отсутствует целевая платформа эксплуатационной проверки GA: %s", t.target)
 		}
 		h, e := distributionHash04511(dir, t.packageFile)
 		if e != nil {
 			return e
 		}
 		if h != r.SHA256 {
-			return fmt.Errorf("Обнаружено изменение: «operations GA final package»: %s", t.target)
+			return fmt.Errorf("Изменился итоговый пакет эксплуатационной проверки GA: %s", t.target)
 		}
 	}
 	for _, name := range []string{operationsGAFile0460, operationsGASig0460} {

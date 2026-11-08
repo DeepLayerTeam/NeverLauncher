@@ -245,10 +245,10 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		id := strings.TrimSpace(target.ID)
 		osName := strings.ToLower(strings.TrimSpace(target.OS))
 		if id == "" || targetByID[id].ID != "" {
-			return releaseGuardCICertification{}, fmt.Errorf("Некорректное значение: «or duplicate Guard CI target»: %s", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Некорректная или повторяющаяся целевая платформа CI Guard: %s", id)
 		}
 		if osCheck[osName] == "" || target.Arch != expectedArch[osName] || strings.TrimSpace(target.Runner) == "" || target.CISigningMode != expectedSigning[osName] {
-			return releaseGuardCICertification{}, fmt.Errorf("Некорректное значение: «Guard CI target identity/policy»: %s", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Некорректный идентификатор или политика целевой платформы CI Guard: %s", id)
 		}
 		checks := map[string]bool{}
 		for _, check := range target.RequiredChecks {
@@ -371,7 +371,7 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 func verifyGuardCIArtifactsInDir(dir string, artifacts []releaseGuardCertifiedArtifact) error {
 	for _, artifact := range artifacts {
 		if filepath.Base(artifact.Name) != artifact.Name {
-			return fmt.Errorf("Небезопасное значение: «certified Guard artifact path»: %s", artifact.Name)
+			return fmt.Errorf("Небезопасный путь к сертифицированному артефакту Guard: %s", artifact.Name)
 		}
 		actual, size, err := hashFile(filepath.Join(dir, artifact.Name))
 		if err != nil {
@@ -409,7 +409,7 @@ func verifyGuardCICertificationInBundle(dir, ver string) error {
 		return errors.New("GUARD_CI_CERTIFICATION не соответствует embedded matrix/targets")
 	}
 	if !reflect.DeepEqual(stored.RequiredTargetIDs, expected.RequiredTargetIDs) || !reflect.DeepEqual(stored.PassedTargetIDs, expected.PassedTargetIDs) || !reflect.DeepEqual(stored.CertifiedArtifacts, expected.CertifiedArtifacts) {
-		return errors.New("Несовпадение: «GUARD_CI_CERTIFICATION target/artifact sets»")
+		return errors.New("Наборы целевых платформ и артефактов GUARD_CI_CERTIFICATION не совпадают")
 	}
 	return verifyGuardCIArtifactsInDir(dir, stored.CertifiedArtifacts)
 }

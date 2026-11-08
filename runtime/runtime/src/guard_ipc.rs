@@ -1024,7 +1024,7 @@ fn validate_integrity_evidence(
     let expected_digest = recompute_evidence_sha256(evidence)?;
     let actual_digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
     if !constant_time_eq(&expected_digest, &actual_digest) {
-        return Err("Ошибка: «Guard integrity evidence digest verification»".to_string());
+        return Err("Ошибка проверки хеша доказательств целостности Guard".to_string());
     }
     let expected_proof = integrity_session_proof(&handle.session_key, &actual_digest);
     let actual_proof = decode_hex_32(&evidence.session_proof, "integritySessionProof")?;
@@ -1045,7 +1045,7 @@ fn validate_remote_attestation(
     if attestation.challenge_id != challenge_id
         || attestation.challenge_sha256 != challenge_sha256(challenge)
     {
-        return Err("Несовпадение: «Guard remote attestation challenge binding»".to_string());
+        return Err("Не совпадает привязка запроса удалённой аттестации Guard".to_string());
     }
     validate_integrity_evidence(handle, &attestation.evidence)?;
     validate_guard_process_policy(handle, &attestation.process_policy)?;
@@ -1057,7 +1057,7 @@ fn validate_remote_attestation(
     let expected_proof = attestation_session_proof(&handle.session_key, &actual_digest);
     let actual_proof = decode_hex_32(&attestation.session_proof, "attestationSessionProof")?;
     if !constant_time_eq(&expected_proof, &actual_proof) {
-        return Err("Ошибка: «Guard remote attestation session proof verification»".to_string());
+        return Err("Не удалось проверить доказательство сеанса удалённой аттестации Guard".to_string());
     }
     Ok(())
 }
@@ -1263,7 +1263,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
             Ok(Ok(())) => {}
             Ok(Err(err)) => {
                 bootstrap_secret.zeroize();
-                return Err(format!("Ошибка: «Guard IPC connect»: {err}"));
+                return Err(format!("Не удалось подключиться к Guard по IPC: {err}"));
             }
             Err(_) => {
                 bootstrap_secret.zeroize();
@@ -1381,7 +1381,7 @@ async fn server_authenticate(
     let expected_client_proof = handshake_proof(bootstrap_secret, b"client", &handshake);
     let actual_client_proof = decode_hex_32(&authentication.client_proof, "clientProof")?;
     if !constant_time_eq(&expected_client_proof, &actual_client_proof) {
-        return Err("Ошибка: «Guard client authentication»".to_string());
+        return Err("Не удалось выполнить аутентификацию клиента Guard".to_string());
     }
 
     let session_key = derive_session_key(bootstrap_secret, &handshake);
@@ -1433,7 +1433,7 @@ async fn serve_authenticated_session(
             Err(err) => return Err(err),
         };
         if request.protocol_version != GUARD_PROTOCOL_VERSION {
-            return Err("Несовпадение: «Guard IPC request protocol»".to_string());
+            return Err("Протокол запроса IPC Guard не совпадает".to_string());
         }
         if request.sequence != expected_sequence {
             return Err(format!(
@@ -1453,7 +1453,7 @@ async fn serve_authenticated_session(
         );
         let actual_mac = decode_hex_32(&request.mac, "requestMac")?;
         if !constant_time_eq(&expected_mac, &actual_mac) {
-            return Err("Ошибка: «Guard IPC request MAC verification»".to_string());
+            return Err("Не удалось проверить код аутентификации (MAC) запроса IPC Guard".to_string());
         }
 
         let (ok, payload, shutdown) = match request.command.as_str() {
@@ -1508,7 +1508,7 @@ async fn serve_authenticated_session(
                     collect_windows_integrity_evidence(parent_pid)
                 })
                 .await
-                .map_err(|err| format!("Ошибка: «Guard integrity evidence worker»: {err}"))??;
+                .map_err(|err| format!("Ошибка обработчика доказательств целостности Guard: {err}"))??;
                 let digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
                 evidence.session_proof = hex::encode(integrity_session_proof(session_key, &digest));
                 (
@@ -1533,7 +1533,7 @@ async fn serve_authenticated_session(
                     collect_windows_integrity_evidence(parent_pid)
                 })
                 .await
-                .map_err(|err| format!("Ошибка: «Guard remote attestation evidence worker»: {err}"))??;
+                .map_err(|err| format!("Ошибка обработчика доказательств удалённой аттестации Guard: {err}"))??;
                 let evidence_digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
                 evidence.session_proof = hex::encode(integrity_session_proof(session_key, &evidence_digest));
                 let mut attestation = GuardRemoteAttestation {
@@ -1615,7 +1615,7 @@ where
     T: Serialize,
 {
     let mut bytes = serde_json::to_vec(value)
-        .map_err(|err| format!("Ошибка: «Guard IPC serialization»: {err}"))?;
+        .map_err(|err| format!("Ошибка сериализации IPC-сообщения Guard: {err}"))?;
     if bytes.len() > MAX_FRAME_BYTES {
         return Err("Кадр IPC Guard превышает допустимый размер".to_string());
     }
@@ -1623,11 +1623,11 @@ where
     writer
         .write_all(&bytes)
         .await
-        .map_err(|err| format!("Ошибка: «Guard IPC write»: {err}"))?;
+        .map_err(|err| format!("Ошибка записи IPC-сообщения Guard: {err}"))?;
     writer
         .flush()
         .await
-        .map_err(|err| format!("Ошибка: «Guard IPC flush»: {err}"))
+        .map_err(|err| format!("Ошибка сброса буфера IPC Guard: {err}"))
 }
 
 #[cfg(windows)]
@@ -1642,7 +1642,7 @@ where
         let read = reader
             .read(&mut one)
             .await
-            .map_err(|err| format!("Ошибка: «Guard IPC read»: {err}"))?;
+            .map_err(|err| format!("Ошибка чтения IPC-сообщения Guard: {err}"))?;
         if read == 0 {
             return Err("Другая сторона IPC Guard закрыла соединение".to_string());
         }

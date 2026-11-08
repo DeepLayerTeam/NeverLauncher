@@ -1268,7 +1268,7 @@ async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>
                     .to_string_lossy().replace('\\', "/");
                 if relative == ".runtime.json" { continue; }
                 if !(meta.is_file() || meta.file_type().is_symlink()) {
-                    return Err(format!("Не поддерживается: «Java runtime entry»: {relative}"));
+                    return Err(format!("Неподдерживаемый элемент среды выполнения Java: {relative}"));
                 }
                 if meta.file_type().is_symlink() {
                     let resolved = std::fs::canonicalize(&path).map_err(|e| e.to_string())?;
@@ -1312,7 +1312,7 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
     use std::io::{Read, Seek, SeekFrom};
     let expected_arch = normalize_adoptium_arch(arch);
     if expected_arch != "x86_64" && expected_arch != "aarch64" {
-        return Err(format!("Не поддерживается: «native Java architecture» {arch}"));
+        return Err(format!("Неподдерживаемая архитектура нативной Java: {arch}"));
     }
     let mut file = std::fs::File::open(java).map_err(|e| format!("Открытие исполняемого файла Java: {e}"))?;
     let len = file.metadata().map_err(|e| e.to_string())?.len();
@@ -1379,7 +1379,7 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
                 }
             } else { false }
         },
-        _ => return Err(format!("Не поддерживается: «native Java OS» {os}")),
+        _ => return Err(format!("Неподдерживаемая ОС для нативной Java: {os}")),
     };
     if valid { Ok(()) } else {
         Err(format!("Архитектура исполняемого файла управляемой Java не совпадает: ожидалась {os}/{expected_arch}"))
@@ -1390,7 +1390,7 @@ fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<()
 async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result<(), String> {
     let meta = std::fs::symlink_metadata(java).map_err(|e| format!("Метаданные исполняемого файла Java: {e}"))?;
     if !meta.is_file() || meta.file_type().is_symlink() {
-        return Err("«Managed Java executable»: требуется обычный файл".into());
+        return Err("Исполняемый файл управляемой Java должен быть обычным файлом".into());
     }
     #[cfg(unix)] {
         use std::os::unix::fs::PermissionsExt;
@@ -1406,8 +1406,8 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
     }
     let output = tokio::time::timeout(Duration::from_secs(20), command.output())
         .await.map_err(|_| "Самопроверка управляемой Java превысила 20 секунд".to_string())?
-        .map_err(|e| format!("Ошибка: «Managed Java self-test»: {e}"))?;
-    if !output.status.success() { return Err("Ошибка: «Managed Java JVM self-test»".into()); }
+        .map_err(|e| format!("Ошибка самопроверки управляемой Java: {e}"))?;
+    if !output.status.success() { return Err("Не пройдена самопроверка JVM управляемой Java".into()); }
     let details = format!("{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
     let detected = crate::parse_java_major_version(&details);
     if detected != Some(major) { return Err(format!("Основная версия управляемой Java не совпадает: ожидалась {major}, получено {detected:?}")); }
@@ -1448,7 +1448,7 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
     }
     let output = tokio::time::timeout(Duration::from_secs(20), command.output())
         .await.map_err(|_| "Выполнение тестового байт-кода управляемой Java превысило 20 секунд".to_string())?
-        .map_err(|e| format!("Ошибка: «Managed Java bytecode execution»: {e}"))?;
+        .map_err(|e| format!("Ошибка выполнения байткода управляемой Java: {e}"))?;
     if !output.status.success() {
         return Err(format!("Управляемая Java не смогла выполнить байткод, совместимый с Java 8: {}",
             String::from_utf8_lossy(&output.stderr)));
@@ -1463,7 +1463,7 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
         parts[2].parse::<u32>().map_err(|_| "Проверка управляемой Java вернула неверную версию спецификации".to_string())?
     };
     if probed_major != major {
-        return Err(format!("Несовпадение: «Managed Java bytecode major»: {probed_major} vs {major}"));
+        return Err(format!("Версия байткода управляемой Java не совпадает: {probed_major} и {major}"));
     }
     // JVM должна использовать собственные библиотеки среды выполнения образа. Обёртка, запускающая постороннюю системную Java, не является управляемой установкой.
     let packaged_home = java.parent().and_then(Path::parent)

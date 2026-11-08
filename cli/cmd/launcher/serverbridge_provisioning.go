@@ -1122,13 +1122,13 @@ func enrollServerBridge0199(args []string) error {
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "backend": backend, "endpoint": endpoint, "request": body, "keyFingerprint": req.KeyFingerprint})
 	}
 	if backend == "" {
-		return errors.New("enroll: требуется «--backend or backendUrl in enrollment-request.json»")
+		return errors.New("Для регистрации узла укажите --backend или backendUrl в enrollment-request.json")
 	}
 	if err := bridgeEndpointSecure02812(backend); err != nil {
 		return err
 	}
 	if token == "" {
-		return errors.New("enroll: требуется «--token or LAUNCHER_TOKEN»")
+		return errors.New("Для регистрации узла укажите --token или переменную LAUNCHER_TOKEN")
 	}
 	payload, err := httpJSONWithAuth("POST", backend+endpoint, body, token)
 	if err != nil && !rotate {

@@ -57,7 +57,7 @@ func hostServiceFile02811(scope, name string) (string, error) {
 
 func hostUnitValue02811(value string) (string, error) {
 	if value == "" || strings.ContainsAny(value, "\n\r\x00") {
-		return "", errors.New("Пустое значение: «or multiline value forbidden in systemd unit»")
+		return "", errors.New("Пустое или многострочное значение в службе systemd запрещено")
 	}
 	// Экранируйте и спецификаторы systemd, и синтаксис аргументов в кавычках; shell не участвует.
 	value = strings.ReplaceAll(value, "%", "%%")
@@ -68,7 +68,7 @@ func hostUnitValue02811(value string) (string, error) {
 
 func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 	if !hostServiceName02811.MatchString(spec.Name) {
-		return "", errors.New("Некорректное значение: «service name»")
+		return "", errors.New("Некорректное имя службы")
 	}
 	if spec.Component != "host" && spec.Component != "remote" {
 		return "", errors.New("Некорректный компонент")
@@ -142,7 +142,7 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 	}
 	if spec.Scope == "system" {
 		if spec.User == "" || spec.User == "root" || spec.User == "0" || !hostServiceName02811.MatchString(spec.Group) {
-			return "", errors.New("system service: требуется «an explicitly selected non-root --service-user»")
+			return "", errors.New("Для системной службы необходимо явно указать непривилегированного пользователя через --service-user")
 		}
 		unit += "User=" + spec.User + "\nGroup=" + spec.Group + "\nProtectSystem=strict\nProtectHome=read-only\nPrivateTmp=yes\nProtectKernelTunables=yes\nProtectKernelModules=yes\nProtectControlGroups=yes\nCapabilityBoundingSet=\nAmbientCapabilities=\nReadWritePaths=" + root + "\n"
 	}
@@ -164,7 +164,7 @@ func hostServiceSystemctl02811(scope string, args ...string) error {
 
 func hostServiceAbsoluteFile02811(input string) (string, error) {
 	if input == "" {
-		return "", errors.New("Отсутствует: «required file path»")
+		return "", errors.New("Не указан обязательный путь к файлу")
 	}
 	path, err := filepath.Abs(input)
 	if err != nil {
@@ -187,12 +187,12 @@ func hostServiceAbsoluteFile02811(input string) (string, error) {
 func hostServiceValidateIdentity02811(spec hostServiceSpec02811) error {
 	if spec.Scope != "system" {
 		if os.Geteuid() == 0 {
-			return errors.New("корневой каталог: запрещено «install a user-scoped service»")
+			return errors.New("Нельзя устанавливать пользовательскую службу из корневого каталога")
 		}
 		return nil
 	}
 	if os.Geteuid() != 0 {
-		return errors.New("system service installation: требуется «root; no implicit privilege escalation»")
+		return errors.New("Для установки системной службы требуются права root; автоматическое повышение привилегий запрещено")
 	}
 	if !hostServiceName02811.MatchString(spec.User) {
 		return errors.New("Параметр --service-user должен указывать существующего непривилегированного пользователя")
@@ -222,7 +222,7 @@ func hostServiceValidateIdentity02811(spec hostServiceSpec02811) error {
 	}
 	stat, ok := fi.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != uint32(uid) {
-		return errors.New("Для корневой каталог сервера требуется: «owned by the unprivileged service account»")
+		return errors.New("Корневой каталог сервера должен принадлежать непривилегированной учётной записи службы")
 	}
 	return nil
 }
@@ -235,7 +235,7 @@ func hostServiceHandle02811(args []string) error {
 	switch action {
 	case "install", "uninstall", "start", "stop", "restart", "status":
 	default:
-		return fmt.Errorf("Неизвестное значение: «service action» %q", action)
+		return fmt.Errorf("Неизвестное действие со службой: %q", action)
 	}
 	scope := flagValue(args, "--scope", "user")
 	name := flagValue(args, "--name", "host")
@@ -368,7 +368,7 @@ func hostServiceHandle02811(args []string) error {
 		}
 		stat, ok := keyInfo.Sys().(*syscall.Stat_t)
 		if !ok || stat.Uid != uint32(uid) || keyInfo.Mode().Perm()&0400 == 0 {
-			return errors.New("remote TLS private key: требуется «readable and owned by the selected non-root service account»")
+			return errors.New("Закрытый ключ TLS должен быть доступен для чтения и принадлежать выбранной непривилегированной учётной записи службы")
 		}
 	}
 	if spec.Scope == "system" {

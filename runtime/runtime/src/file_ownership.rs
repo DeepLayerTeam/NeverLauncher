@@ -107,10 +107,10 @@ pub fn validate_policy(m: &Manifest) -> Result<(), String> {
     }
     for (i, r) in m.file_rules.iter().enumerate() {
         if !valid_path(&r.pattern, true) || !valid_ownership(&r.ownership) { return Err(format!("Некорректное правило обработки файлов: {i}")) }
-        if !matches!(r.action.as_str(), "include" | "exclude" | "verify") { return Err(format!("Неизвестное значение: «file rule action: {}»", r.action)) }
+        if !matches!(r.action.as_str(), "include" | "exclude" | "verify") { return Err(format!("Неизвестное действие правила обработки файла: {}", r.action)) }
         if (r.action == "include" && !matches!(r.ownership.as_str(), "managed" | "required")) ||
            (r.action == "verify" && matches!(r.ownership.as_str(), "user-owned" | "generated")) ||
-           (r.action == "exclude" && !matches!(r.ownership.as_str(), "user-owned" | "generated")) { return Err(format!("Некорректное значение: «rule ownership: {}»",r.pattern)) }
+           (r.action == "exclude" && !matches!(r.ownership.as_str(), "user-owned" | "generated")) { return Err(format!("Некорректная принадлежность файла в правиле: {}",r.pattern)) }
         if r.action == "include" && protected(r.pattern.strip_suffix("/**").unwrap_or(&r.pattern)) { return Err(format!("Правило включения затрагивает защищённые данные: {}",r.pattern)) }
         if m.file_rules[..i].iter().any(|prev| overlap(&prev.pattern, &r.pattern)) { return Err(format!("Пересекающиеся правила: {}",r.pattern)) }
         for f in &m.files { if matches(&r.pattern,&f.path) {
@@ -258,10 +258,10 @@ pub fn validate_download_targets(m: &Manifest) -> Result<(), String> {
         if !valid_path(&f.path, false) { return Err(format!("Небезопасный путь к управляемому файлу: {}", f.path)); }
         if !matches!(effective_ownership(f), "required" | "managed" | "optional") { continue }
         let decoded = hex::decode(&f.sha256).map_err(|_| format!("Некорректное значение: «SHA-256: {}»",f.path))?;
-        if decoded.len() != 32 {return Err(format!("Некорректное значение: «SHA-256 length: {}»",f.path))}
-        let url = reqwest::Url::parse(&f.url).map_err(|e| format!("Некорректное значение: «download URL {}»: {e}",f.path))?;
+        if decoded.len() != 32 {return Err(format!("Некорректная длина SHA-256 для файла: {}",f.path))}
+        let url = reqwest::Url::parse(&f.url).map_err(|e| format!("Некорректный URL загрузки файла {}: {e}",f.path))?;
         if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
-            return Err(format!("Небезопасное значение: «download URL: {}»",f.path));
+            return Err(format!("Небезопасный URL загрузки файла: {}",f.path));
         }
     }
     Ok(())

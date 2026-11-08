@@ -284,7 +284,7 @@ mod imp {
             for (path,sha) in pins {
                 let canonical_path=canonical_or_absolute(&path)?;
                 if !canonical_path.starts_with(&canonical) || sha.len()!=64 || !sha.bytes().all(|b|b.is_ascii_hexdigit()) {
-                    return Err("Некорректное значение: «Guard Windows native pinned identity»".into());
+                    return Err("Некорректный закреплённый идентификатор нативного Guard для Windows".into());
                 }
                 let normalized=normalize_path(&canonical_path);
                 if self.signed_game_natives.insert(normalized,sha).is_some() {
@@ -386,7 +386,7 @@ mod imp {
         ack[8..12].copy_from_slice(&SENSOR_PROTOCOL_VERSION.to_le_bytes());
         ack[12..16].copy_from_slice(&pid.to_le_bytes());
         let mut mac = HmacSha256::new_from_slice(&secret)
-            .map_err(|_| "Ошибка: «Module Guard arm HMAC initialization»".to_string())?;
+            .map_err(|_| "Ошибка инициализации HMAC при активации Module Guard".to_string())?;
         mac.update(MODULE_GUARD_ARM_DOMAIN);
         mac.update(&SENSOR_PROTOCOL_VERSION.to_le_bytes());
         mac.update(&pid.to_le_bytes());
@@ -394,11 +394,11 @@ mod imp {
         server
             .write_all(&ack)
             .await
-            .map_err(|err| format!("Ошибка: «Module Guard arm acknowledgement write»: {err}"))?;
+            .map_err(|err| format!("Ошибка записи подтверждения активации Module Guard: {err}"))?;
         server
             .flush()
             .await
-            .map_err(|err| format!("Ошибка: «Module Guard arm acknowledgement flush»: {err}"))?;
+            .map_err(|err| format!("Ошибка сброса подтверждения активации Module Guard: {err}"))?;
         ack.zeroize();
 
         // Agent_OnLoad не может вернуться, пока внутрипроцессный
@@ -618,7 +618,7 @@ mod imp {
         }
         let continuous_pre_digest = continuous_digest_from_event(&continuous_ready_event)?;
         if continuous_pre_digest != hex::encode(continuous_chain) {
-            return Err("Несовпадение: «Guard Continuous Guard startup event-chain»".to_string());
+            return Err("Не совпадает цепочка событий при запуске непрерывного контроля Guard".to_string());
         }
         continuous_chain = advance_continuous_event_chain(continuous_chain, &continuous_ready_packet);
         ready_chain = advance_event_chain(
@@ -996,7 +996,7 @@ mod imp {
                 }
                 MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT => {
                     if event.flags != CONTINUOUS_GUARD_VERSION || event.size_of_image != 0 {
-                        Err("Несовпадение: «Guard Continuous Guard heartbeat metadata»".to_string())
+                        Err("Не совпадают метаданные сигнала активности непрерывного контроля Guard".to_string())
                     } else if event.base_address != guard_sequence {
                         Err(format!(
                             "Непрерывная защита Guard: нарушение последовательности Guard; ожидалось {guard_sequence}, получено {}",
@@ -1006,7 +1006,7 @@ mod imp {
                         match continuous_digest_from_event(&event) {
                             Err(err) => Err(err),
                             Ok(digest) if digest != hex::encode(continuous_chain_before) => {
-                                Err("Несовпадение: «Guard Continuous Guard event-chain cross-check»".to_string())
+                                Err("Не совпадают результаты перекрёстной проверки цепочки событий непрерывного контроля Guard".to_string())
                             }
                             Ok(digest) => {
                                 module_hash = digest;
@@ -1369,13 +1369,13 @@ mod imp {
         expected_sequence: u64,
     ) -> Result<ParsedEvent, String> {
         if &packet[..8] != MODULE_EVENT_MAGIC {
-            return Err("Несовпадение: «Module Guard event magic»".to_string());
+            return Err("Не совпадает сигнатура события Module Guard".to_string());
         }
         let protocol = u32::from_le_bytes(packet[8..12].try_into().expect("получить пакет фиксированной длины"));
         let pid = u32::from_le_bytes(packet[12..16].try_into().expect("получить пакет фиксированной длины"));
         let sequence = u64::from_le_bytes(packet[16..24].try_into().expect("получить пакет фиксированной длины"));
         if protocol != SENSOR_PROTOCOL_VERSION || pid != expected_pid {
-            return Err("Несовпадение: «Module Guard event protocol/PID»".to_string());
+            return Err("Не совпадает протокол или PID события Module Guard".to_string());
         }
         if sequence != expected_sequence {
             return Err(format!(
@@ -1383,12 +1383,12 @@ mod imp {
             ));
         }
         let mut mac = HmacSha256::new_from_slice(secret)
-            .map_err(|_| "Ошибка: «Module Guard event HMAC initialization»".to_string())?;
+            .map_err(|_| "Ошибка инициализации HMAC события Module Guard".to_string())?;
         mac.update(MODULE_EVENT_DOMAIN);
         mac.update(&packet[..MODULE_EVENT_PREFIX_LEN]);
         let expected = mac.finalize().into_bytes();
         if !bool::from(expected[..].ct_eq(&packet[MODULE_EVENT_PREFIX_LEN..])) {
-            return Err("Несовпадение: «Module Guard event HMAC»".to_string());
+            return Err("Не совпадает HMAC события Module Guard".to_string());
         }
 
         if packet[46] != 0 || packet[47] != 0 {
@@ -1611,7 +1611,7 @@ mod imp {
         packet[24..32].copy_from_slice(&sensor_sequence.to_le_bytes());
         packet[32..64].copy_from_slice(&event_chain);
         let mut mac = HmacSha256::new_from_slice(secret)
-            .map_err(|_| "Ошибка: «Continuous Guard ACK HMAC initialization»".to_string())?;
+            .map_err(|_| "Ошибка инициализации HMAC подтверждения непрерывного контроля Guard".to_string())?;
         mac.update(CONTINUOUS_GUARD_ACK_DOMAIN);
         mac.update(&packet[..CONTINUOUS_GUARD_ACK_PREFIX_LEN]);
         packet[CONTINUOUS_GUARD_ACK_PREFIX_LEN..]
@@ -1619,11 +1619,11 @@ mod imp {
         server
             .write_all(&packet)
             .await
-            .map_err(|err| format!("Ошибка: «Continuous Guard ACK write»: {err}"))?;
+            .map_err(|err| format!("Ошибка записи подтверждения непрерывного контроля Guard: {err}"))?;
         server
             .flush()
             .await
-            .map_err(|err| format!("Ошибка: «Continuous Guard ACK flush»: {err}"))?;
+            .map_err(|err| format!("Ошибка сброса буфера подтверждения непрерывного контроля Guard: {err}"))?;
         packet.zeroize();
         Ok(())
     }

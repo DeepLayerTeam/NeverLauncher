@@ -545,7 +545,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			return releaseCompatibilityCertification{}, fmt.Errorf("Повторяющаяся цель совместимости: %s", id)
 		}
 		if !allowedLoaders[target.Loader] {
-			return releaseCompatibilityCertification{}, fmt.Errorf("Не поддерживается: «loader in compatibility target» %s: %s", id, target.Loader)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Неподдерживаемый загрузчик для целевой конфигурации совместимости %s: %s", id, target.Loader)
 		}
 		if strings.TrimSpace(target.Minecraft) == "" || strings.TrimSpace(target.OS) == "" || strings.TrimSpace(target.Arch) == "" {
 			return releaseCompatibilityCertification{}, fmt.Errorf("Неполные данные о целевой совместимости: %s", id)
@@ -686,7 +686,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					}
 				}
 				if count != 1 {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Actual Client E2E II 0.16.10: требуется «one matching-server target for Minecraft» %s", minecraft)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Для E2E-проверки реального клиента II 0.16.10 требуется целевой сервер, соответствующий Minecraft %s", minecraft)
 				}
 			}
 		}
@@ -853,7 +853,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				forgeJava[target.JavaMajor] = true
 			}
 			if forgeCount != len(forgeModern0173) {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3: требуется «exactly %d processor-based release targets; got» %d", len(forgeModern0173), forgeCount)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Forge Modern 0.17.3: требуется ровно %d целевых релизов с процессорной установкой, получено %d", len(forgeModern0173), forgeCount)
 			}
 			for minecraft, javaMajor := range forgeModern0173 {
 				target, ok := forgeTargets[minecraft]
@@ -975,11 +975,11 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 					}
 					seen[key] = true
 					if target.JavaMajor != anchor.JavaMajor || target.Scope != "client" || target.LoaderVersion != "latest-stable" {
-						return releaseCompatibilityCertification{}, fmt.Errorf("Для кроссплатформенные загрузчики 0.17.9 %s %s требуется «Java %d scope=client loaderVersion=latest-stable on» %s", loader, anchor.Minecraft, anchor.JavaMajor, key)
+						return releaseCompatibilityCertification{}, fmt.Errorf("Для кроссплатформенного загрузчика 0.17.9 %s %s необходима Java %d с параметрами scope=client и loaderVersion=latest-stable на платформе %s", loader, anchor.Minecraft, anchor.JavaMajor, key)
 					}
 				}
 				if count != len(expectedPlatforms) || len(seen) != len(expectedPlatforms) {
-					return releaseCompatibilityCertification{}, fmt.Errorf("Для кроссплатформенные загрузчики 0.17.9 %s %s требуется «%d platform targets; got» %d", loader, anchor.Minecraft, len(expectedPlatforms), count)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Для кроссплатформенного загрузчика 0.17.9 %s %s требуется %d целевых платформ, получено %d", loader, anchor.Minecraft, len(expectedPlatforms), count)
 				}
 			}
 		}
@@ -1386,7 +1386,7 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 		fmt.Sprint(stored.JavaMajors) != fmt.Sprint(expected.JavaMajors) ||
 		fmt.Sprint(stored.JREBuilds) != fmt.Sprint(expected.JREBuilds) ||
 		strings.Join(stored.Scopes, "\x00") != strings.Join(expected.Scopes, "\x00") {
-		return errors.New("Несовпадение: «COMPATIBILITY_CERTIFICATION target/loader/vanilla/java coverage»")
+		return errors.New("Не совпадает покрытие платформ, загрузчиков, Vanilla или Java в COMPATIBILITY_CERTIFICATION")
 	}
 	if compatibilityReleaseCertificate01711Required(ver) {
 		if err := verifyLoaderCompatibilityReleaseCertificate01711(dir, ver); err != nil {

@@ -53,10 +53,10 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			low := strings.ToLower(key)
 			switch low {
 			case "dsn", "password", "secret", "clientsecret", "clientsecretfile", "secretfile", "keyfile", "certfile", "cafile", "privatekey", "accesstoken", "refreshtoken", "token", "hmacsecret", "connectionstring":
-				return fmt.Errorf("Запрещено: «inline secrets or secret file paths are»: %s", key)
+				return fmt.Errorf("Секреты в конфигурации и пути к файлам секретов запрещены: %s", key)
 			}
 			if strings.Contains(low, "secret") && !strings.HasSuffix(low, "secretenv") {
-				return fmt.Errorf("Запрещено: «secret field»: %s", key)
+				return fmt.Errorf("Поле с секретом запрещено: %s", key)
 			}
 			var nested map[string]json.RawMessage
 			if len(raw) > 0 && raw[0] == '{' && json.Unmarshal(raw, &nested) == nil {
@@ -90,7 +90,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			return err
 		}
 		if cfg.DSNEnv == "" || cfg.DSN != "" {
-			return errors.New("Для SQL требуется «dsnEnv only»")
+			return errors.New("Для SQL разрешён только параметр dsnEnv")
 		}
 	case "http":
 		var cfg httpconnector.Config
@@ -98,7 +98,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			return err
 		}
 		if cfg.HMAC.SecretEnv == "" || cfg.HMAC.SecretFile != "" {
-			return errors.New("Для HTTP требуется «hmac.secretEnv only»")
+			return errors.New("Для HTTP разрешён только параметр hmac.secretEnv")
 		}
 	case "oidc":
 		var cfg oidcconnector.Config
@@ -106,7 +106,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			return err
 		}
 		if cfg.ClientSecretFile != "" {
-			return errors.New("Не поддерживается: «OIDC secret files are»")
+			return errors.New("Файлы секретов OIDC не поддерживаются")
 		}
 	case "java":
 		var cfg javaauthconnector.Config
@@ -122,7 +122,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			return err
 		}
 		if cfg.ClientSecretFile != "" {
-			return errors.New("Не поддерживается: «Microsoft secret files are»")
+			return errors.New("Файлы секретов Microsoft не поддерживаются")
 		}
 	}
 	return nil
@@ -242,7 +242,7 @@ func (s Server) syncManagedProviders02910(ctx context.Context) error {
 	return s.Federation.WithManagedSync(func() error {
 		reader, ok := store.(repository.ActiveManagedProviderReader02910)
 		if !ok {
-			return errors.New("Недоступно: «active provider reader»")
+			return errors.New("Источник активных провайдеров недоступен")
 		}
 		active, err := reader.ListActiveManagedProviders02910(ctx)
 		if err != nil {

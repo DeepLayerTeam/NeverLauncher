@@ -45,7 +45,7 @@ type modrinthProject0274 struct {
 
 func modrinthID0274(v string) error {
 	if len(v) < 1 || len(v) > 64 {
-		return errors.New("Некорректное значение: «Modrinth id length»")
+		return errors.New("Недопустимая длина идентификатора Modrinth")
 	}
 	for _, r := range v {
 		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-') {
@@ -87,7 +87,7 @@ func modrinthFetch0274(ctx context.Context, client *http.Client, base, endpoint 
 		return err
 	}
 	if err = dec.Decode(new(any)); !errors.Is(err, io.EOF) {
-		return errors.New("Неожиданное значение: «extra Modrinth metadata»")
+		return errors.New("Обнаружены неожиданные дополнительные метаданные Modrinth")
 	}
 	return nil
 }
@@ -113,7 +113,7 @@ func modrinthSelectProjectVersion0274(ctx context.Context, client *http.Client, 
 		return "", err
 	}
 	if len(versions) > 3000 {
-		return "", errors.New("Превышен допустимый размер: «Modrinth project version list»")
+		return "", errors.New("Превышен допустимый размер списка версий проекта Modrinth")
 	}
 	eligible := make([]modrinthVersion0274, 0, len(versions))
 	for _, v := range versions {
@@ -125,7 +125,7 @@ func modrinthSelectProjectVersion0274(ctx context.Context, client *http.Client, 
 		}
 	}
 	if len(eligible) == 0 {
-		return "", fmt.Errorf("Отсутствует: «compatible pinned Modrinth version for» %s", project)
+		return "", fmt.Errorf("Не найдена совместимая зафиксированная версия Modrinth для %s", project)
 	}
 	sort.Slice(eligible, func(i, j int) bool {
 		if eligible[i].DatePublished == eligible[j].DatePublished {
@@ -175,7 +175,7 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 			return err
 		}
 		if v.ID != id || modrinthID0274(v.ProjectID) != nil {
-			return fmt.Errorf("Некорректное значение: «Modrinth version/project identity»: %s", id)
+			return fmt.Errorf("Некорректная связь версии и проекта Modrinth: %s", id)
 		}
 		if !modrinthContains0274(v.GameVersions, plan.MinecraftVersion) || !modrinthContains0274(v.Loaders, plan.Loader) {
 			return fmt.Errorf("Версия Modrinth %s несовместима с закреплённой конфигурацией %s/%s", id, plan.MinecraftVersion, plan.Loader)
@@ -224,7 +224,7 @@ func resolveModrinthMods0274(ctx context.Context, base string, rootVersion strin
 		}
 		if selected < 0 {
 			if len(v.Files) != 1 {
-				return fmt.Errorf("Для «Modrinth version» %s требуется «manual selection among files»", id)
+				return fmt.Errorf("Для версии Modrinth %s необходимо вручную выбрать файл", id)
 			}
 			selected = 0
 		}

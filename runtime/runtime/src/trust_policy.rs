@@ -27,14 +27,14 @@ fn parse_utc(timestamp: &str) -> Result<i64,String> {
     let x=timestamp.as_bytes();
     if x.len()!=20 || x[4]!=b'-' || x[7]!=b'-' || x[10]!=b'T' || x[13]!=b':' || x[16]!=b':' || x[19]!=b'Z' {return Err("Временная метка доверия должна иметь канонический формат YYYY-MM-DDTHH:MM:SSZ".into())}
     let num=|from:usize,to:usize| -> Result<i64,String> {
-        let b=&x[from..to];if !b.iter().all(u8::is_ascii_digit) {return Err("Некорректное значение: «trust timestamp digit»".into())}
+        let b=&x[from..to];if !b.iter().all(u8::is_ascii_digit) {return Err("Некорректная цифра в отметке времени политики доверия".into())}
         std::str::from_utf8(b).unwrap().parse::<i64>().map_err(|e|e.to_string())
     };
     let (y,m,d,h,min,sec)=(num(0,4)?,num(5,7)?,num(8,10)?,num(11,13)?,num(14,16)?,num(17,19)?);
-    if y<1970 || !(1..=12).contains(&m) || h>23 || min>59 || sec>59 {return Err("Некорректное значение: «trust timestamp fields»".into())}
+    if y<1970 || !(1..=12).contains(&m) || h>23 || min>59 || sec>59 {return Err("Некорректные поля отметки времени политики доверия".into())}
     let leap=y%4==0&&(y%100!=0||y%400==0);
     let days=[31,if leap {29}else{28},31,30,31,30,31,31,30,31,30,31];
-    if d<1 || d>days[(m-1) as usize] {return Err("Некорректное значение: «trust timestamp day»".into())}
+    if d<1 || d>days[(m-1) as usize] {return Err("Некорректный день в отметке времени политики доверия".into())}
     // Количество дней от гражданской даты по пролептическому григорианскому календарю относительно эпохи Unix.
     let yy=y-i64::from(m<=2);let era=yy.div_euclid(400);let yoe=yy-era*400;
     let mp=m+if m>2 {-3}else{9};let doy=(153*mp+2)/5+d-1;
@@ -51,7 +51,7 @@ fn verify_signature(key_hex:&str,payload:&[u8],sig_hex:&str)->Result<(),String>{
 fn read_policy(root_key:&str)->Result<(Policy,String),String>{
     // Выбор пути не выбирает корень доверия: он выбирает только байты, проверенные
     // отдельным закреплённым корневым ключом вызывающей стороны.
-    let path=std::env::var("LAUNCHER_GAME_TRUST_POLICY_FILE").map_err(|_|"Требуется: «delegated game trust policy path»".to_string())?;
+    let path=std::env::var("LAUNCHER_GAME_TRUST_POLICY_FILE").map_err(|_|"Не указан путь к делегированной политике доверия игры".to_string())?;
     let path=Path::new(&path);
     let meta=fs::symlink_metadata(path).map_err(|e|e.to_string())?;
     if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>128*1024 {return Err("Небезопасный файл политики доверия игры".into())}
@@ -59,16 +59,16 @@ fn read_policy(root_key:&str)->Result<(Policy,String),String>{
     let env:Envelope=serde_json::from_slice(&raw).map_err(|e|e.to_string())?;
     if env.schema_version!="1.0" {return Err("Неизвестное значение: конверт политики доверия".into())}
     let payload=STANDARD.decode(&env.payload).map_err(|e|e.to_string())?;
-    if payload.len()>96*1024 {return Err("Превышен допустимый размер: «trust policy payload»".into())}
+    if payload.len()>96*1024 {return Err("Данные политики доверия превышают допустимый размер".into())}
     let mut signed=DOMAIN_SEPARATION.to_vec();signed.extend_from_slice(&payload);
     verify_signature(root_key,&signed,&env.root_signature)?;
     let p:Policy=serde_json::from_slice(&payload).map_err(|e|e.to_string())?;
-    if p.schema_version!="1.0" || p.domain!=DOMAIN || p.epoch==0 || p.keys.is_empty() || p.keys.len()>128 {return Err("Некорректное значение: «trust policy domain/version/keys»".into())}
+    if p.schema_version!="1.0" || p.domain!=DOMAIN || p.epoch==0 || p.keys.is_empty() || p.keys.len()>128 {return Err("Некорректный домен, версия или ключи политики доверия".into())}
     let issued=parse_utc(&p.issued_at)?;let expires=parse_utc(&p.expires_at)?;let current=now()?;
     if issued>current+300 || expires<=current || expires<=issued || expires-issued>90*86400 {return Err("Политика доверия заморожена, просрочена или имеет недопустимый срок действия".into())}
     let mut seen=std::collections::HashSet::new();
     for k in &p.keys {
-        if k.id.is_empty() || k.id.len()>100 || !["game","component","bootstrap","release"].contains(&k.role.as_str()) || !["active","verify-only","revoked"].contains(&k.status.as_str()) {return Err("Некорректное значение: «trust role/key status»".into())}
+        if k.id.is_empty() || k.id.len()>100 || !["game","component","bootstrap","release"].contains(&k.role.as_str()) || !["active","verify-only","revoked"].contains(&k.status.as_str()) {return Err("Некорректная роль или состояние ключа доверия".into())}
         if hex::decode(&k.public_key).map_err(|e|e.to_string())?.len()!=32 || !seen.insert(k.public_key.to_ascii_lowercase()) {return Err("Повторяющийся или некорректный ключ доверия".into())}
         let start=parse_utc(&k.not_before)?;if start>expires{return Err("Ключ доверия начинает действовать после истечения срока политики".into())}
         if k.status=="verify-only" {let end=parse_utc(&k.verify_until)?;if end<=start || end>expires || end-start>90*86400 {return Err("Некорректное значение: ограниченный период пересечения действия ключей".into())}}
@@ -93,7 +93,7 @@ pub fn verify_manifest(manifest:&Manifest,root_key:&str,signer_hex:&str,signed_a
         if signed<parse_utc(&k.not_before)? {return Err("Подпись игры создана до делегирования полномочий".into())}
         if k.status=="verify-only" {
             let end=parse_utc(&k.verify_until)?;
-            if signed>=end || current>=end {return Err("Истёк срок действия: «game signer overlap has»".into())}
+            if signed>=end || current>=end {return Err("Истёк период одновременного действия подписывающих ключей игры".into())}
         }
         return Ok(())
     }
@@ -108,7 +108,7 @@ fn floor(root:&Path)->Result<Option<Watermark>,String>{
         match fs::symlink_metadata(&f) {
             Ok(m)=>{if !m.is_file() || m.len()>4096 {return Err("Повреждена метка эпохи доверия игры".into())}
                 let current:Watermark=serde_json::from_slice(&fs::read(&f).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
-                if current.epoch==0 || current.digest.len()!=64 || current.root_sha256.len()!=64 {return Err("Некорректное значение: «game trust watermark»".into())}
+                if current.epoch==0 || current.digest.len()!=64 || current.root_sha256.len()!=64 {return Err("Некорректная контрольная отметка доверия игры".into())}
                 if let Some(ref prev)=best {if current.epoch==prev.epoch && current.digest!=prev.digest {return Err("Обнаружено противоречие в политике доверия игры".into())}}
                 if best.as_ref().is_none_or(|v|current.epoch>v.epoch){best=Some(current)}
             },

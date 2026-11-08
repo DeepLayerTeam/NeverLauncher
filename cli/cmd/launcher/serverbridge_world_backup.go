@@ -73,7 +73,7 @@ func worldBackupHandle02810(args []string) error {
 	}
 	if action == "gate-recover" {
 		if flagValue(args, "--confirm", "") != "stale-gate" {
-			return errors.New("gate-recover: требуется «--confirm stale-gate; reconcile Host Supervisor/JVM first»")
+			return errors.New("Для gate-recover требуется --confirm stale-gate; предварительно согласуйте состояние диспетчера хоста и JVM")
 		}
 		return worldBackupHostGateRecover04110(root)
 	}
@@ -145,10 +145,10 @@ func worldBackupHandle02810(args []string) error {
 		if action == "restore" {
 			dest := flagValue(args, "--destination", "")
 			if dest == "" {
-				return errors.New("Для восстановление требуется «--destination (new, non-existing directory)»")
+				return errors.New("Для восстановления укажите --destination (новый, ещё не существующий каталог)")
 			}
 			if flagValue(args, "--confirm", "") != id {
-				return errors.New("Для восстановление требуется «--confirm matching the backup ID»")
+				return errors.New("Для восстановления подтвердите идентификатор резервной копии через --confirm")
 			}
 			if err = worldBackupRestore02810(root, dir, m, filepath.Join(dir, id), dest); err != nil {
 				return err

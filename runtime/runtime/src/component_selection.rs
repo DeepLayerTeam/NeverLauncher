@@ -64,22 +64,22 @@ pub fn export_from_installed_02410(manifest:&Manifest,preset:Option<&str>)->Resu
 
 pub fn parse_import_02410(data:&str)->Result<PortableSelection02410,String>{
     if data.len()>MAX_SELECTION_BYTES || data.is_empty(){return Err("JSON выбора компонентов пуст или превышает лимит размера".into())}
-    let mut portable:PortableSelection02410=serde_json::from_str(data).map_err(|e|format!("Некорректное значение: «selection JSON»: {e}"))?;
-    if portable.schema_version!="1.0" {return Err("Не поддерживается: «selection format»".into())}
+    let mut portable:PortableSelection02410=serde_json::from_str(data).map_err(|e|format!("Некорректный JSON выбора компонентов: {e}"))?;
+    if portable.schema_version!="1.0" {return Err("Неподдерживаемый формат выбора компонентов".into())}
     for s in [&portable.project_id,&portable.profile_id,&portable.channel] {
-        if s.is_empty()||s.len()>128||s.bytes().any(|b|b<32||b==127){return Err("Некорректное значение: «selection profile identity»".into())}
+        if s.is_empty()||s.len()>128||s.bytes().any(|b|b<32||b==127){return Err("Некорректный идентификатор профиля в наборе выбранных компонентов".into())}
     }
     if portable.source_version.len()>128||portable.source_catalog_digest.len()!=64||
        !portable.source_catalog_digest.bytes().all(|b|b.is_ascii_hexdigit())||
        portable.source_preset.len()>MAX_CHOICE_BYTES || portable.source_preset.bytes().any(|b|b<32||b==127) {
-        return Err("Некорректное значение: «selection provenance»".into());
+        return Err("Некорректные сведения об источнике выбора компонентов".into());
     }
     portable.selected_ids=sorted_ids(portable.selected_ids)?;
     Ok(portable)
 }
 
 pub fn migrate_02410(source:&PortableSelection02410,target:&Manifest)->Result<SelectionMigration02410,String>{
-    if source.schema_version!="1.0" {return Err("Некорректное значение: «portable selection»".into())}
+    if source.schema_version!="1.0" {return Err("Некорректные переносимые настройки выбора компонентов".into())}
     let canonical=sorted_ids(source.selected_ids.clone())?;
     if (source.project_id.as_str(),source.profile_id.as_str(),source.channel.as_str()) !=
        (target.project_id.as_str(),target.profile_id.as_str(),target.channel.as_str()){

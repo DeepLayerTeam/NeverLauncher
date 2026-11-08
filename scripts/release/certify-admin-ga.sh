@@ -103,5 +103,5 @@ payload = {
 }
 result = root / 'dist/ga-certification/admin-0220.json'
 result.write_text(json.dumps(payload, indent=2, sort_keys=True)+'\n')
-print(f'Admin GA certification PASS for exact source commit {sys.argv[1]}')
+print(f'Сертификация Admin GA успешно пройдена для точного коммита исходников {sys.argv[1]}')
 PY

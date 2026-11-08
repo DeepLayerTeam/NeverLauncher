@@ -325,7 +325,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 		return model.ServerBridgeRuntimeTransition{}, err
 	}
 	if protocolVersion != 3 {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("runtime identity: требуется «ServerBridge protocol v3»")
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("Для идентификации Runtime требуется протокол ServerBridge v3")
 	}
 	id = strings.TrimSpace(id)
 	kind = strings.ToLower(strings.TrimSpace(kind))
@@ -572,7 +572,7 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 		return model.ServerBridgeEventAppendResult{}, err
 	}
 	if !strings.EqualFold(strings.TrimSpace(cursorRuntime), runtimeID) {
-		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("Несовпадение: «%w: event cursor runtime»", ErrConflict)
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: курсор событий не соответствует Runtime", ErrConflict)
 	}
 	inserted := 0
 	var previousBatchSequence int64
@@ -692,7 +692,7 @@ func (r *SQLRepository) CreateServerBridgeJoinTicket(ctx context.Context, j mode
 		return model.ServerBridgeJoinTicket{}, fmt.Errorf("Учётная запись узла ServerBridge неактивна")
 	}
 	if projectID != "" && projectID != j.ProjectID {
-		return model.ServerBridgeJoinTicket{}, fmt.Errorf("Несовпадение: «server project binding»")
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("Не совпадает привязка сервера к проекту")
 	}
 	if profileID != "" && profileID != j.ProfileID {
 		return model.ServerBridgeJoinTicket{}, fmt.Errorf("Несовпадение: «привязка профиля сервера»")
@@ -751,7 +751,7 @@ func (r *SQLRepository) ConsumeServerBridgeJoinTicket(ctx context.Context, id st
 	// FOR SHARE конфликтует с FOR UPDATE записывающей транзакции.
 	var admissionNode string
 	if err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, redemption.NodeID).Scan(&admissionNode); err != nil {
-		return model.ServerBridgeJoinTicket{}, fmt.Errorf("Недоступно: «%w: node admission»: %v", ErrConflict, err)
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("%w: допуск узла недоступен: %v", ErrConflict, err)
 	}
 	q := `UPDATE server_bridge_join_tickets_v2 AS j
 SET status='consumed',consumed_at=$6,redeemed_identity_epoch=$3,redeemed_key_fingerprint=$4,redeemed_nonce_hash=$5,redeemed_by_ip=$7,online_mode_verified=$8
@@ -1029,7 +1029,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	// Передачи управления устаревшего v2 не подтверждают текущую пропускную способность маршрутизации. После
 	// установки ограничения оператором разрешены только передачи v3, привязанные к Runtime.
 	if targetOperatorCapacity.Valid && !routingV3 {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: operator capacity: требуется «runtime-bound routing»", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: для расчёта ёмкости оператора требуется маршрутизация, привязанная к Runtime", ErrConflict)
 	}
 	if routingV3 {
 		if len(targetRuntimeID) != 64 || targetRuntimeEpoch < 1 || targetRouteRevision < 1 || len(targetRouteDigest) != 64 || targetRouteSignature == "" ||
@@ -1076,10 +1076,10 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		return model.ServerBridgeHandoff{}, fmt.Errorf("Текущий прокси не подтвердил вход через исходный узел")
 	}
 	if targetProject != "" && targetProject != sourceJoin.ProjectID {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("Несовпадение: «target project binding»")
+		return model.ServerBridgeHandoff{}, fmt.Errorf("Не совпадает привязка целевого узла к проекту")
 	}
 	if targetProfile != "" && targetProfile != sourceJoin.ProfileID {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("Несовпадение: «target profile binding»")
+		return model.ServerBridgeHandoff{}, fmt.Errorf("Не совпадает привязка целевого узла к профилю")
 	}
 
 	h.Username = sourceJoin.Username
@@ -1113,7 +1113,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: v3 handoff: требуется «сеанс игрока, привязанный к среде выполнения»", ErrConflict)
 	}
 	if expectedCorrelation != "" && !lifecycleTransfer {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: player session transfer: требуется «v3 runtime-bound source and target»", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: для передачи сеанса игрока нужны источник и назначение, привязанные к Runtime по протоколу v3", ErrConflict)
 	}
 	if lifecycleTransfer {
 		h.SessionCorrelationID = strings.ToLower(strings.TrimSpace(sourceJoin.SessionCorrelationID))
@@ -1182,7 +1182,7 @@ func (r *SQLRepository) ConsumeServerBridgeHandoff(ctx context.Context, id strin
 	// захватывайте блокировку узла, чтобы избежать цикла.
 	var admissionNode string
 	if err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, redemption.NodeID).Scan(&admissionNode); err != nil {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("Недоступно: «%w: node admission»: %v", ErrConflict, err)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: допуск узла недоступен: %v", ErrConflict, err)
 	}
 	q := `UPDATE server_bridge_handoffs_v2 h SET status='consumed' ,consumed_at=$5,redeemed_nonce_hash=$4,redeemed_by_ip=$6 WHERE h.id=$1 AND h.target_node_id=$2 AND h.status='active' AND h.expires_at>$5 AND h.target_identity_epoch=$3 AND h.target_key_fingerprint=$7 AND EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=h.session_id AND a.user_id=h.user_id AND a.status='active' AND a.expires_at>$5 AND a.binding_epoch=h.binding_epoch) AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=h.target_node_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$7 AND (n.operator_capacity_max IS NULL OR (h.target_runtime_id<>'' AND n.operator_capacity_max>0 AND n.routing_players_online<n.operator_capacity_max)) AND (h.target_runtime_id='' OR (n.runtime_id=h.target_runtime_id AND n.runtime_epoch=h.target_runtime_epoch AND n.routing_state='ready' AND n.routing_accepting=TRUE AND n.routing_health IN ('healthy','degraded') AND n.last_heartbeat_at>$5::timestamptz-interval '90 seconds' AND n.routing_observed_at>$5::timestamptz-interval '90 seconds' AND (n.routing_capacity_max=0 OR n.routing_players_online<n.routing_capacity_max) AND (n.operator_capacity_max IS NULL OR (n.operator_capacity_max>0 AND n.routing_players_online<n.operator_capacity_max))))) RETURNING id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id,transfer_sequence,identity_realm,official_proof,source_online_mode_verified`
 	h, err := scanServerBridgeHandoff(tx.QueryRowContext(ctx, q, strings.TrimSpace(id), redemption.NodeID, redemption.IdentityEpoch, redemption.NonceHash, now.UTC(), strings.TrimSpace(redemption.RemoteIP), redemption.KeyFingerprint))
@@ -1495,7 +1495,7 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 		return model.ServerBridgeControlCommand{}, false, err
 	}
 	if !c.ExpiresAt.After(now) {
-		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("Истёк срок действия: «%w: control command already»", ErrConflict)
+		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: срок действия управляющей команды уже истёк", ErrConflict)
 	}
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(195, hashtext($1 || ':' || $2 || ':' || $3))`, c.ServerID, c.RequestedBy, c.IdempotencyKey); err != nil {
 		return model.ServerBridgeControlCommand{}, false, err
@@ -1674,7 +1674,7 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 		return model.ServerBridgeControlCommand{}, err
 	}
 	if current.ServerID != serverID || current.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(current.RuntimeID, runtimeID) || current.DeliverySequence != deliverySequence || current.LeaseOwner != leaseOwner || current.LeaseToken != leaseToken {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("Несовпадение: «%w: control acknowledgement lease»", ErrConflict)
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: не совпадает срок аренды подтверждения управляющей команды", ErrConflict)
 	}
 	// Агент уже надёжно завершил работу, но его ACK может прийти после истечения исходной аренды или
 	// согласования при чтении. Сохраните исходную идентичность аренды (проверенную выше); не выдавайте новое

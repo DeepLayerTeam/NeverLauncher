@@ -103,7 +103,7 @@ func gaUniqueJSON0361(raw []byte) error {
 				}
 				name, ok := key.(string)
 				if !ok || seen[name] {
-					return fmt.Errorf("Обнаружен дубликат: «or non-string GA JSON field» %v", key)
+					return fmt.Errorf("Повторяющееся поле JSON для GA или значение не строкового типа: %v", key)
 				}
 				seen[name] = true
 				if err := parse(); err != nil {
@@ -165,7 +165,7 @@ func gaFileSHA0361(path string) (string, error) {
 		return "", err
 	}
 	if !st.Mode().IsRegular() || st.Size() <= 0 {
-		return "", fmt.Errorf("Отсутствует: «or unsafe release artifact»: %s", path)
+		return "", fmt.Errorf("Отсутствует или небезопасен артефакт релиза: %s", path)
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -200,7 +200,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 		return nil
 	}
 	if strings.ContainsAny(version, "-+") {
-		return errors.New("GA 0.36.1+ BLOCKED: release: требуется «stable SemVer»")
+		return errors.New("Выпуск GA 0.36.1+ заблокирован: требуется стабильная версия SemVer")
 	}
 	if !gaCommit0361.MatchString(commit) {
 		return errors.New("Для GA требуется точный SHA исходников в манифесте релиза")
@@ -208,7 +208,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	evidence := strings.TrimSpace(os.Getenv("LAUNCHER_GA_EVIDENCE_DIR"))
 	keyFile := strings.TrimSpace(os.Getenv("LAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE"))
 	if evidence == "" || keyFile == "" {
-		return errors.New("Требуется: «GA 0.36.1+ BLOCKED: independent evidence and pinned operator key»")
+		return errors.New("Выпуск GA 0.36.1+ заблокирован: необходимы независимые доказательства и закреплённый ключ оператора")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, keyFile); err != nil {
 		return err
@@ -219,7 +219,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	}
 	keyHex := strings.TrimSpace(string(pubRaw))
 	if len(keyHex) != 64 {
-		return errors.New("operator GA key: требуется «32-byte raw public key hex»")
+		return errors.New("Ключ оператора GA должен содержать 32 байта открытого ключа в шестнадцатеричном виде")
 	}
 	keyBytes, err := hex.DecodeString(keyHex)
 	if err != nil {
@@ -268,7 +268,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 		return err
 	}
 	if string(storedApproval) != string(approvalRaw) || strings.TrimSpace(string(storedSig)) != strings.TrimSpace(string(signatureRaw)) {
-		return errors.New("«staged signed approval» не совпадает с «operator evidence»")
+		return errors.New("Подписанное предварительное разрешение не соответствует доказательствам оператора")
 	}
 	receiptRaw, err := gaRead0361(filepath.Join(dir, "GA_VERIFIED_TARGETS.json"), 1<<20)
 	if err != nil {

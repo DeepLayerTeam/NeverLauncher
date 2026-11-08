@@ -198,7 +198,7 @@ func remoteSecureDir0284(dir string) error {
 		return err
 	}
 	if !fi.IsDir() || fi.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("Каталог состояния удалённого сервиса: требуется «a private real directory:» %s", dir)
+		return fmt.Errorf("Для состояния удалённого сервиса требуется существующий защищённый каталог: %s", dir)
 	}
 	return nil
 }
@@ -208,7 +208,7 @@ func remoteCheckFile0284(path string) error {
 		return err
 	}
 	if !fi.Mode().IsRegular() || fi.Mode().Perm()&0077 != 0 {
-		return fmt.Errorf("remote secret/state: требуется «a private regular file:» %s", path)
+		return fmt.Errorf("Секреты и состояние удалённого сервиса должны храниться в защищённом обычном файле: %s", path)
 	}
 	return nil
 }
@@ -297,20 +297,20 @@ func remoteLoad0284(root string) (remoteIdentity0284, error) {
 		return i, err
 	}
 	if i.Version != 1 || len(i.Key) != 32 || len(i.NodeID) != 32 {
-		return i, errors.New("Некорректное значение: «remote node identity»")
+		return i, errors.New("Некорректный идентификатор удалённого узла")
 	}
 	return i, nil
 }
 func remoteParseSources0284(values []string) ([]*net.IPNet, error) {
 	if len(values) == 0 {
-		return nil, errors.New("Требуется: «source CIDR allowlist»")
+		return nil, errors.New("Необходимо настроить список разрешённых исходных сетей CIDR")
 	}
 	networks := make([]*net.IPNet, 0, len(values))
 	for _, v := range values {
 		for _, part := range strings.Split(v, ",") {
 			s := strings.TrimSpace(part)
 			if s == "" {
-				return nil, errors.New("Пустое значение: «source CIDR»")
+				return nil, errors.New("Исходная сеть CIDR не задана")
 			}
 			_, n, err := net.ParseCIDR(s)
 			if err != nil {
@@ -378,7 +378,7 @@ func remoteTokenDecode0284(id remoteIdentity0284, token string, now time.Time) (
 	}
 	for _, scope := range c.Scopes {
 		if !remoteScopes0284[scope] {
-			return c, errors.New("Неизвестное значение: «token scope»")
+			return c, errors.New("Неизвестная область действия токена")
 		}
 	}
 	if _, err = remoteParseSources0284(c.Sources); err != nil {
@@ -388,14 +388,14 @@ func remoteTokenDecode0284(id remoteIdentity0284, token string, now time.Time) (
 }
 func remoteIssue0284(id remoteIdentity0284, subject string, scopes, sources []string, ttl time.Duration, now time.Time) (string, error) {
 	if subject == "" || len(subject) > 128 || strings.ContainsAny(subject, "\n\r\t") {
-		return "", errors.New("Некорректное значение: «token subject»")
+		return "", errors.New("Некорректный субъект токена")
 	}
 	if ttl < time.Second || ttl > remoteMaxTTL0284 || len(scopes) == 0 {
 		return "", errors.New("Токен должен содержать области доступа и срок действия от 1 секунды до 15 минут")
 	}
 	for _, s := range scopes {
 		if !remoteScopes0284[s] {
-			return "", fmt.Errorf("Неизвестное значение: «host-level scope» %q", s)
+			return "", fmt.Errorf("Неизвестная область разрешений хоста %q", s)
 		}
 	}
 	if _, err := remoteParseSources0284(sources); err != nil {
@@ -486,7 +486,7 @@ func remoteUnresolvedCommand04112(dir string) (bool, error) {
 	}
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") || len(entry.Name()) != 69 {
-			return false, fmt.Errorf("Неожиданное значение: «command journal entry»: %s", entry.Name())
+			return false, fmt.Errorf("Неожиданная запись журнала команд: %s", entry.Name())
 		}
 		path := filepath.Join(dir, "commands", entry.Name())
 		receipt, err := remoteReadReceipt0284(path)
@@ -496,7 +496,7 @@ func remoteUnresolvedCommand04112(dir string) (bool, error) {
 		if receipt.KeyHash != strings.TrimSuffix(entry.Name(), ".json") || receipt.Digest == "" || receipt.Subject == "" ||
 			(receipt.Action != "start" && receipt.Action != "stop" && receipt.Action != "restart") ||
 			(receipt.State != "succeeded" && receipt.State != "indeterminate") {
-			return false, errors.New("Некорректное значение: «command journal entry; manual recovery required»")
+			return false, errors.New("Повреждена запись журнала команд; требуется ручное восстановление")
 		}
 		if receipt.State == "indeterminate" {
 			return true, nil
@@ -573,7 +573,7 @@ func remoteHostExecute0284(root, dir, action string) (json.RawMessage, error) {
 	case "restart":
 		err = restartServerBridgeHost01910(args)
 	default:
-		return nil, errors.New("Не поддерживается: «remote operation»")
+		return nil, errors.New("Неподдерживаемая удалённая операция")
 	}
 	if err != nil {
 		return nil, err
@@ -1017,7 +1017,7 @@ func remoteHandle0284(args []string) error {
 		defer cancel()
 		return remoteServeManaged0428(ctx, server, listener)
 	default:
-		return fmt.Errorf("Неизвестное значение: «remote subcommand»: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда удалённого управления: %s", args[0])
 	}
 }
 func remoteReadTokenFile0284(path string) (string, error) {
@@ -1082,7 +1082,7 @@ func remoteCall0284(args []string) error {
 		// другим хостом либо с новым ключом идемпотентности после неопределённого результата ввода-вывода.
 		key := flagValue(args, "--idempotency-key", "")
 		if !remoteIdempotency0284.MatchString(key) {
-			return errors.New("receipt recovery: требуется «the original --idempotency-key (16-128 safe characters)»")
+			return errors.New("Для восстановления квитанции нужен исходный --idempotency-key (от 16 до 128 допустимых символов)")
 		}
 		method = http.MethodGet
 		path = "/v1/host/receipts/" + key
@@ -1095,7 +1095,7 @@ func remoteCall0284(args []string) error {
 			return errors.New("Для изменяющих операций нужен --idempotency-key (от 16 до 128 допустимых символов)")
 		}
 	} else {
-		return errors.New("Не поддерживается: «remote action (status, start, stop, restart, receipt)»")
+		return errors.New("Неподдерживаемое удалённое действие (доступны: status, start, stop, restart, receipt)")
 	}
 	request, err := http.NewRequest(method, url+path, body)
 	if err != nil {
@@ -1136,7 +1136,7 @@ func remoteServeManaged0428(ctx context.Context, server *http.Server, listener n
 	if err := remoteServiceReady0498(); err != nil {
 		_ = server.Close()
 		<-finished
-		return fmt.Errorf("Ошибка: «remote systemd readiness»: %w", err)
+		return fmt.Errorf("Ошибка проверки готовности удалённого сервиса systemd: %w", err)
 	}
 	watchdogCtx, stopWatchdog := context.WithCancel(context.Background())
 	defer stopWatchdog()

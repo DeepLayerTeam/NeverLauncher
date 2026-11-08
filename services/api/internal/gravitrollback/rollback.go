@@ -70,13 +70,13 @@ type Result struct {
 
 func ValidatePlan(p PlanInput) error {
 	if !id.MatchString(p.ProfileID) || !id.MatchString(p.Channel) || p.ExpectedRevision < 1 || len(p.EvidenceReference) < 8 || len(p.EvidenceReference) > 256 || strings.ContainsAny(p.EvidenceReference, "\r\n\x00") || !sha.MatchString(p.EvidenceSHA256) {
-		return errors.New("Некорректное значение: «rollback scope, revision or evidence»")
+		return errors.New("Некорректная область, ревизия или подтверждающие данные отката")
 	}
 	return nil
 }
 func ValidateCommit(c CommitInput) error {
 	if !id.MatchString(c.ProfileID) || !id.MatchString(c.Channel) || c.ExpectedRevision < 1 || !sha.MatchString(c.PlanSHA256) || !c.SourceWriterFenced || !c.NeverWriterFenced || !sha.MatchString(c.CurrentEvidenceSHA256) {
-		return errors.New("rollback commit: требуется «matching plan and both independently fenced writers»")
+		return errors.New("Для подтверждения отката нужны соответствующий план и оба независимо заблокированных процесса записи")
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 	}
 	checked, err := gr.Evaluate(rehearsal)
 	if err != nil || !checked.Ready || checked.RunID != runID {
-		return Result{}, errors.New("Требуется: «verified MIG10 baseline»")
+		return Result{}, errors.New("Требуется проверенная исходная точка MIG10")
 	}
 	currentDigest, err := gr.SnapshotDigest(input.Current)
 	if err != nil {
@@ -102,7 +102,7 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 	test.TargetSnapshotSHA256 = currentDigest
 	compared, err := gr.Evaluate(test)
 	if err != nil {
-		return Result{}, fmt.Errorf("Некорректное значение: «current snapshot»: %w", err)
+		return Result{}, fmt.Errorf("Некорректный текущий снимок состояния: %w", err)
 	}
 	blockers := append([]string{}, compared.Blockers...)
 	// Количество и идентичности источника должны сохраняться. Новые игроки после
@@ -115,7 +115,7 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 	sourceDigest := ""
 	if len(blockers) > 0 && input.ReconciledSource != nil {
 		if !sha.MatchString(input.ReconciliationEvidenceSHA256) {
-			return Result{}, errors.New("Требуется: «reconciliation evidence SHA-256»")
+			return Result{}, errors.New("Требуется SHA-256 подтверждающих данных согласования")
 		}
 		sourceDigest, err = gr.SnapshotDigest(*input.ReconciledSource)
 		if err != nil {
@@ -130,7 +130,7 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 		pair.TargetSnapshotSHA256 = currentDigest
 		verified, e := gr.Evaluate(pair)
 		if e != nil {
-			return Result{}, fmt.Errorf("Некорректное значение: «reconciled source snapshot»: %w", e)
+			return Result{}, fmt.Errorf("Некорректный согласованный снимок исходных данных: %w", e)
 		}
 		if verified.Ready {
 			blockers = nil

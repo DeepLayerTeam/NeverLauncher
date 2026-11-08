@@ -138,12 +138,12 @@ fn validate_release(release: &Release, key: &str) -> Result<(), String> {
     file_ownership::validate_download_targets(&release.manifest)?;
     let plan=resolved_download_0246::resolve(&release.manifest,release.preset.as_deref())?;
     if let Some(digest)=&release.plan_sha256 {
-        if digest!=&plan.sha256 { return Err("Несовпадение: «installed resolved plan identity»".into()); }
+        if digest!=&plan.sha256 { return Err("Не совпадает идентификатор установленного плана запуска".into()); }
     }
     let mut seen = BTreeSet::new();
     for p in &release.installed {
         if !plan.selected_paths.contains(p) || !seen.insert(p) {
-            return Err(format!("Некорректное значение: «release ownership record»: {p}"));
+            return Err(format!("Некорректная запись о принадлежности файлов релизу: {p}"));
         }
     }
     // Manifest v3 требует полного выбранного набора, включая необязательные
@@ -195,7 +195,7 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
     let old: BTreeSet<_> = j.previous.as_ref().map(|p| p.installed.iter().map(String::as_str).collect()).unwrap_or_default();
     let new: BTreeSet<_> = j.next.installed.iter().map(String::as_str).collect();
     let all: BTreeSet<_> = old.union(&new).copied().collect();
-    if j.entries.len() != all.len() { return Err("Несовпадение: «release journal path count»".into()); }
+    if j.entries.len() != all.len() { return Err("Не совпадает количество путей в журнале обновления релиза".into()); }
     for (entry, signed_path) in j.entries.iter().zip(all) {
         if entry.path != signed_path || entry.new_sha256.is_some() != new.contains(signed_path) {
             return Err("Журнал релиза содержит неподписанные пути".into());
@@ -204,7 +204,7 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
             if digest.len() != 64 || !digest.bytes().all(|b| b.is_ascii_hexdigit()) { return Err("Некорректное значение: «хеш резервной копии»".into()); }
         }
         if let Some(ref digest) = entry.new_sha256 {
-            if expected(&j.next, &entry.path).is_none_or(|(sha, _)| !sha.eq_ignore_ascii_case(digest)) { return Err("Несовпадение: «journal target digest»".into()); }
+            if expected(&j.next, &entry.path).is_none_or(|(sha, _)| !sha.eq_ignore_ascii_case(digest)) { return Err("Контрольная сумма целевого файла в журнале не совпадает".into()); }
         }
         let path = safe_join(root, &entry.path)?;
         file_ownership::ensure_no_symlinks(root, &path)?;
@@ -218,7 +218,7 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
 // ранее активный релиз точно совпадает с релизом, установленным этой точкой.
 fn rollback_checkpoint(root: &Path, completed: &Journal, key: &str) -> Result<Option<Journal>, String> {
     if completed.state != "complete" {
-        return Err("rollback checkpoint: требуется «a completed switch»".into());
+        return Err("Для контрольной точки отката необходимо завершить переключение релиза".into());
     }
     let Some(previous) = completed.previous.as_ref() else {
         // При чистой установке откатываться не к чему.
@@ -452,7 +452,7 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
             return Err("Выбранный план отличается от установленного: сначала установите выбранный пресет".into());
         }
     }
-    if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("«active client release» не совпадает с «signed manifest»".into())}
+    if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("Действующий релиз клиента не совпадает с подписанным манифестом".into())}
     let actual=crate::component_catalog_0241::active_files(manifest,active.preset.as_deref())?;
     if wanted!=actual {return Err("Выбранный набор компонентов не установлен; сначала установите этот набор".into())}
     // Два набора могут содержать одинаковые файлы, но разные подписанные действия
@@ -472,10 +472,10 @@ pub fn require_installed_preset_0245(manifest:&Manifest,root:&Path)->Result<Opti
     let active=pointer(root)?.active.ok_or("Для действий с подписанными компонентами необходим установленный активный релиз")?;
     let expected=manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
     let actual=active.manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
-    if expected!=actual{return Err("«signed component actions» не совпадает с «installed release»".into())}
+    if expected!=actual{return Err("Подписанный план действий с компонентами не соответствует установленному релизу".into())}
     if let Some(ref digest)=active.plan_sha256 {
         if resolved_download_0246::resolve(manifest,active.preset.as_deref())?.sha256!=*digest {
-            return Err("Несовпадение: «installed signed action plan identity»".into());
+            return Err("Не совпадает идентификатор установленного подписанного плана действий".into());
         }
     }
     Ok(active.preset)
@@ -659,7 +659,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         // резервные копии без изменений. Следующий запуск повторит восстановление до выполнения игры.
         match recover_locked(root, key) {
             Ok(()) => Err(format!("Переключение релиза клиента не удалось; предыдущая установка восстановлена: {err}")),
-            Err(recovery) => Err(format!("Ошибка: «client switch»: {err}; recovery pending: {recovery}")),
+            Err(recovery) => Err(format!("Ошибка переключения клиента: {err}; восстановление ещё не завершено: {recovery}")),
         }
     } else { Ok(()) }
 }
@@ -814,9 +814,9 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
     file_ownership::validate_download_targets(manifest)?;
     let plan=resolved_download_0246::resolve(manifest,preset.as_deref())?;
     if plan.files.is_empty() {return Err("Подготовленный набор не содержит файлов для установки".into())}
-    let source=source.canonicalize().map_err(|e|format!("Недоступно: «verified source»: {e}"))?;
+    let source=source.canonicalize().map_err(|e|format!("Проверенный источник недоступен: {e}"))?;
     fs::create_dir_all(root).map_err(|e|format!("Создание корневого каталога Runtime: {e}"))?;
-    let root=root.canonicalize().map_err(|e|format!("Недоступно: «runtime root»: {e}"))?;
+    let root=root.canonicalize().map_err(|e|format!("Корневой каталог Runtime недоступен: {e}"))?;
     if root.starts_with(&source) || source.starts_with(&root) {
         return Err("Источник и корневой каталог транзакционного Runtime не должны пересекаться".into());
     }
@@ -824,7 +824,7 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
     release_generations::check(&root,manifest)?;
     crate::trust_policy::check(&root,manifest,key)?;
     if pointer(&root)?.active.is_some() {
-        return Err("offline staged adoption: требуется «a new, empty runtime release root»".into());
+        return Err("Для автономного применения подготовленной сборки требуется новый пустой корневой каталог релиза Runtime".into());
     }
     // Эксклюзивная блокировка переключения удерживается при фиксации; ни неучтённый
     // рабочий файл, ни изменённый подготовленный файл нельзя незаметно принять.
@@ -872,7 +872,7 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
         let mut j = last_known_good(&root)?.ok_or("Отсутствует последняя заведомо исправная версия клиента")?;
         verify_journal(&root, &j, &key)?;
         if j.previous.is_none() {
-            return Err("Отсутствует: «previous working client release to roll back to»".into());
+            return Err("Отсутствует предыдущий работоспособный релиз клиента для отката".into());
         }
         // Во время восстановления повреждённые управляемые байты могли быть сохранены в резервную копию,
         // чтобы пережить сбой неудачной попытки исправления. Эти байты НЕ подходят как
@@ -1689,7 +1689,7 @@ pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,pre
         "schemaVersion":"1.0","projectId":&manifest.project_id,"profileId":&manifest.profile_id,
         "channel":&manifest.channel,"release":&manifest.version,"files":&files
     })).map_err(|e|e.to_string())?;
-    if index.len()>1024*1024{return Err("Превышен допустимый размер: «user conflict index»".into());}
+    if index.len()>1024*1024{return Err("Индекс конфликтов пользовательских файлов превышает допустимый размер".into());}
     let index_path=archive.join("index.json");
     let mut file=fs::OpenOptions::new().write(true).create_new(true).open(&index_path).map_err(|e|e.to_string())?;
     file.write_all(&index).and_then(|_|file.sync_all()).map_err(|e|e.to_string())?;

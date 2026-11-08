@@ -80,7 +80,7 @@ func verifyGravBatchDigest0492(b gravBatch0492) error {
 }
 func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string) error {
 	if source == "" || mapping == "" {
-		return errors.New("dry-run-all: требуется «--source and --mapping»")
+		return errors.New("Для dry-run-all необходимы параметры --source и --mapping")
 	}
 	uri, err := url.Parse(endpoint)
 	if err != nil {
@@ -97,7 +97,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return err
 	}
 	if !mf.Mode().IsRegular() || mf.Size() < 2 || mf.Size() > 12288 {
-		return errors.New("Для сопоставление требуется: «a regular JSON file at most 12 KiB»")
+		return errors.New("Для сопоставления нужен обычный JSON-файл размером не более 12 КиБ")
 	}
 	raw, err := os.ReadFile(mapping)
 	if err != nil {
@@ -143,7 +143,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Size() < 1 || st.Size() > 512<<20 {
-		return errors.New("Источник: требуется «regular ZIP of 1..512 MiB»")
+		return errors.New("Источник должен быть обычным ZIP-архивом размером от 1 до 512 МиБ")
 	}
 	req, err := http.NewRequest("POST", endpoint, sourceFile)
 	if err != nil {
@@ -164,7 +164,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		return err
 	}
 	if len(body) > 16<<20 {
-		return errors.New("Превышен допустимый размер: «dry-run response»")
+		return errors.New("Ответ предварительной проверки превышает допустимый размер")
 	}
 	if res.StatusCode != 200 {
 		return fmt.Errorf("Пробный запуск всех миграций вернул HTTP %d: %s", res.StatusCode, string(body))
@@ -175,7 +175,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	}
 	current := value.Data
 	if current.Format != "launcher.gravit-multi-profile-dry-run.v1" || len(current.BatchSHA256) != 64 || len(current.SourceSHA256) != 64 || len(current.TargetSHA256) != 64 || current.ProfileCount != len(rows) || (current.Status != "blocked" && current.Status != "manual") {
-		return errors.New("Некорректное значение: «backend dry-run report»")
+		return errors.New("Некорректный отчёт предварительной проверки Backend")
 	}
 	if err = verifyGravBatchDigest0492(current); err != nil {
 		return err
@@ -194,7 +194,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 			return err
 		}
 		if !stat.Mode().IsRegular() || stat.Size() > 16<<20 {
-			return errors.New("Некорректное значение: «prior dry-run report»")
+			return errors.New("Некорректный отчёт предыдущей предварительной проверки")
 		}
 		existing, err := io.ReadAll(io.LimitReader(file, 16<<20+1))
 		if err != nil {
@@ -202,7 +202,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 		}
 		var previous gravBatchResponse0492
 		if json.Unmarshal(existing, &previous) != nil || verifyGravBatchDigest0492(previous.Data) != nil || previous.Data.Format != current.Format || previous.Data.BatchSHA256 != current.BatchSHA256 || previous.Data.SourceSHA256 != current.SourceSHA256 || previous.Data.TargetSHA256 != current.TargetSHA256 || previous.Data.ProfileCount != current.ProfileCount {
-			return errors.New("Обнаружено изменение: «STALE dry-run: source, profile mapping, target or dependencies»")
+			return errors.New("Результат предварительной проверки устарел: изменились источник, сопоставление профилей, целевая система или зависимости")
 		}
 	}
 	// Сохраняйте полный отчёт по каждому профилю, а не только сводку, в закрытом хранилище.
