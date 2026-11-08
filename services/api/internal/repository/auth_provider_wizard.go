@@ -198,7 +198,7 @@ func ValidateManagedProviderDraft02910(v ManagedProviderRevision02910) error {
 		return errors.New("Некорректная конфигурация")
 	}
 	if len(v.Reason) < 3 || len(v.Reason) > 500 || strings.ContainsAny(v.Reason, "\r\n\x00") {
-		return errors.New("Некорректное значение: «reason»")
+		return errors.New("Некорректная причина изменения поставщика авторизации")
 	}
 	return nil
 }

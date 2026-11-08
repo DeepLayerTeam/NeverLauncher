@@ -49,7 +49,7 @@ func modrinthID0274(v string) error {
 	}
 	for _, r := range v {
 		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-') {
-			return fmt.Errorf("Некорректное значение: «Modrinth id» %q", v)
+			return fmt.Errorf("Некорректный идентификатор Modrinth %q", v)
 		}
 	}
 	return nil

@@ -146,7 +146,7 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
         .map(|value| value.parse::<u64>().map_err(|_| "--max-runtime-seconds должен быть целым числом секунд".to_string()))
         .transpose()?;
     let server_port = optional_flag(args, "--matching-server-port")
-        .map(|value| value.parse::<u16>().map_err(|_| "Некорректное значение: «matching server port»".to_string()))
+        .map(|value| value.parse::<u16>().map_err(|_| "Некорректный порт соответствующего игрового сервера".to_string()))
         .transpose()?;
     // При проверке Runtime необходимо запускать именно установленный подписанный
     // пресет, а не выбор, случайно оставшийся активным после предыдущего запуска.
@@ -171,10 +171,10 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
         }
         let raw = std::fs::read(&path).map_err(|_| "Не удалось прочитать файл учётных данных")?;
         Some(serde_json::from_slice::<MinecraftLaunchCredentials>(&raw)
-             .map_err(|_| "Некорректное значение: «Minecraft credential identity»")?)
+             .map_err(|_| "Некорректный идентификатор учётных данных Minecraft")?)
     } else { None };
     if creds.is_some() && server_port.is_none() {
-        return Err("authenticated validation: требуется «a matching server»".into());
+        return Err("Для проверки с авторизацией требуется соответствующий игровой сервер".into());
     }
     let mut result = launch_with_timeout_matching_authenticated(
         &manifest, &root, optional_flag(args, "--java"), optional_flag(args, "--username"),

@@ -87,7 +87,7 @@ func Detect(cfg config.Config) (Plan, error) {
 		p.Mode = Standard
 		p.Reasons = append(p.Reasons, "Репозиторий PostgreSQL; конфигурация высокой доступности не завершена или отключена")
 	default:
-		return p, fmt.Errorf("Не поддерживается: «repository driver %q: no fallback to memory»", p.Repository)
+		return p, fmt.Errorf("Неподдерживаемый драйвер репозитория %q: переход на хранение в памяти запрещён", p.Repository)
 	}
 
 	switch p.Mode {

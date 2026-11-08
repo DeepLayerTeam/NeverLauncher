@@ -46,7 +46,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		m.SchemaVersion = extensioncontract.ManifestSchemaVersion
 	}
 	if m.SchemaVersion != extensioncontract.ManifestSchemaVersion {
-		return model.ExtensionManifest{}, "", fmt.Errorf("Не поддерживается: «extension schemaVersion %q; expected» %s", m.SchemaVersion, extensioncontract.ManifestSchemaVersion)
+		return model.ExtensionManifest{}, "", fmt.Errorf("Неподдерживаемая версия схемы расширения %q; ожидается %s", m.SchemaVersion, extensioncontract.ManifestSchemaVersion)
 	}
 	if !extensionID0201.MatchString(m.ID) {
 		return model.ExtensionManifest{}, "", fmt.Errorf("Некорректное значение: ID расширения %q", m.ID)
@@ -125,7 +125,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 	}
 	m.Sandbox, err = extensionpolicy.Validate(m.Sandbox)
 	if err != nil {
-		return model.ExtensionManifest{}, "", fmt.Errorf("Некорректное значение: «signed sandbox policy»: %w", err)
+		return model.ExtensionManifest{}, "", fmt.Errorf("Некорректная подписанная политика изоляции: %w", err)
 	}
 
 	deps := make([]model.ExtensionDependency, 0, len(m.Dependencies))
@@ -137,7 +137,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 			return model.ExtensionManifest{}, "", fmt.Errorf("Некорректное значение: зависимость ID %q", dep.ID)
 		}
 		if dep.ID == m.ID {
-			return model.ExtensionManifest{}, "", fmt.Errorf("расширение: запрещено «depend on itself»")
+			return model.ExtensionManifest{}, "", fmt.Errorf("Расширение не может зависеть от самого себя")
 		}
 		if dep.Version == "" || len(dep.Version) > 128 {
 			return model.ExtensionManifest{}, "", fmt.Errorf("Для зависимость %s требуется ограничение версии", dep.ID)
@@ -156,7 +156,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		conflict.ID = strings.ToLower(strings.TrimSpace(conflict.ID))
 		conflict.Version = strings.TrimSpace(conflict.Version)
 		if !extensionID0201.MatchString(conflict.ID) || conflict.ID == m.ID {
-			return model.ExtensionManifest{}, "", fmt.Errorf("Некорректное значение: «conflict id» %q", conflict.ID)
+			return model.ExtensionManifest{}, "", fmt.Errorf("Некорректный идентификатор конфликта %q", conflict.ID)
 		}
 		if conflict.Version == "" || len(conflict.Version) > 128 {
 			return model.ExtensionManifest{}, "", fmt.Errorf("Для конфликт %s требуется ограничение версии", conflict.ID)
@@ -265,7 +265,7 @@ func normalizeExtensionInstall0201(in model.ExtensionInstall) (model.ExtensionIn
 	if item.Scope == "global" {
 		item.ScopeID = ""
 	} else if item.ScopeID == "" {
-		return model.ExtensionInstall{}, fmt.Errorf("установка расширения проекта: требуется «scopeId»")
+		return model.ExtensionInstall{}, fmt.Errorf("При установке расширения проекта необходимо указать scopeId")
 	}
 	if item.Source == "" {
 		item.Source = "local"
@@ -551,7 +551,7 @@ func scanExtensionVersion0201(scanner interface{ Scan(...any) error }) (model.Ex
 	}
 	normalized, digest, err := normalizeExtensionManifest0201(item.Manifest)
 	if err != nil {
-		return model.ExtensionVersion{}, fmt.Errorf("Некорректное значение: «persisted extension manifest %s@%s»: %w", item.ExtensionID, item.Version, err)
+		return model.ExtensionVersion{}, fmt.Errorf("Некорректный сохранённый манифест расширения %s@%s: %w", item.ExtensionID, item.Version, err)
 	}
 	if normalized.ID != item.ExtensionID || normalized.Version != item.Version || normalized.SchemaVersion != item.SchemaVersion || normalized.API != item.API || digest != item.ManifestSHA256 {
 		return model.ExtensionVersion{}, fmt.Errorf("Не совпадает контрольная сумма сохранённого манифеста расширения %s@%s", item.ExtensionID, item.Version)
@@ -985,7 +985,7 @@ func normalizeCLIContributions0209(c *model.ExtensionCLIContributions) error {
 	}
 	c.Namespace = strings.ToLower(strings.TrimSpace(c.Namespace))
 	if !validAdminContributionID0208(c.Namespace) {
-		return fmt.Errorf("Некорректное значение: «cli namespace» %q", c.Namespace)
+		return fmt.Errorf("Некорректное пространство имён CLI %q", c.Namespace)
 	}
 	if len(c.Commands) == 0 || len(c.Commands) > 64 {
 		return fmt.Errorf("Для дополнений CLI необходимо от 1 до 64 команд")

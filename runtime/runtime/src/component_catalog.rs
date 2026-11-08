@@ -326,12 +326,12 @@ fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
     for c in &cat.categories{if !valid_id(&c.id)||!label(&c.name,&c.description)||categories.insert(c.id.as_str(),c).is_some(){return Err(format!("Некорректная или повторяющаяся категория {}",c.id))}}
     let mut groups=HashMap::new();
     for g in &cat.groups{if !valid_id(&g.id)||!label(&g.name,&g.description)||groups.insert(g.id.as_str(),g).is_some(){return Err(format!("Некорректная или повторяющаяся группа {}",g.id))}}
-    for id in categories.keys(){let mut seen=HashSet::new();let mut cur=*id;while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("Цикл или превышение глубины категорий: {id}"))}cur=categories.get(cur).ok_or(format!("Отсутствует: «category» {cur}"))?.parent_id.as_str()}}
-    for id in groups.keys(){let mut seen=HashSet::new();let mut cur=*id;let mut category="";while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("Цикл или превышение глубины групп: {id}"))}let g=groups.get(cur).ok_or(format!("Отсутствует: «group» {cur}"))?;if !g.category_id.is_empty(){if !categories.contains_key(g.category_id.as_str())||(!category.is_empty()&&category!=g.category_id){return Err(format!("Категория группы не совпадает: {id}"))}category=&g.category_id}cur=g.parent_id.as_str()}}
+    for id in categories.keys(){let mut seen=HashSet::new();let mut cur=*id;while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("Цикл или превышение глубины категорий: {id}"))}cur=categories.get(cur).ok_or(format!("Не найдена категория {cur}"))?.parent_id.as_str()}}
+    for id in groups.keys(){let mut seen=HashSet::new();let mut cur=*id;let mut category="";while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("Цикл или превышение глубины групп: {id}"))}let g=groups.get(cur).ok_or(format!("Не найдена группа {cur}"))?;if !g.category_id.is_empty(){if !categories.contains_key(g.category_id.as_str())||(!category.is_empty()&&category!=g.category_id){return Err(format!("Категория группы не совпадает: {id}"))}category=&g.category_id}cur=g.parent_id.as_str()}}
     let mut ids=HashSet::new();
     for c in &cat.components{
         if c.visible.is_none()||!label(&c.name,&c.description)||c.metadata.len()>32{return Err(format!("Некорректные метаданные или настройки видимости: {}",c.id))}
-        if !c.category_id.is_empty()&&!categories.contains_key(c.category_id.as_str()){return Err(format!("Неизвестное значение: «category {}»",c.category_id))}
+        if !c.category_id.is_empty()&&!categories.contains_key(c.category_id.as_str()){return Err(format!("Неизвестная категория {}",c.category_id))}
         if !c.group_id.is_empty(){let g=groups.get(c.group_id.as_str()).ok_or(format!("Неизвестная группа {}",c.group_id))?;if !g.category_id.is_empty()&&!c.category_id.is_empty()&&g.category_id!=c.category_id{return Err(format!("Несовпадение категории группы компонента {}",c.id))}}
         for (k,v) in &c.metadata{if !valid_id(k)||k.len()>64||v.len()>1024||v.chars().any(|ch|matches!(ch,'\0'|'\r')){return Err(format!("Некорректные метаданные компонента {}",c.id))}}
         ids.insert(c.id.as_str());
@@ -341,7 +341,7 @@ fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
         if !valid_id(&p.id)||!label(&p.name,&p.description)||!preset_ids.insert(p.id.as_str())||p.components.len()>4096{return Err(format!("Некорректный пресет {}",p.id))}
         let mut included=HashSet::new();for id in &p.components{if !ids.contains(id.as_str())||!included.insert(id){return Err(format!("Пресет {} содержит неизвестный или повторяющийся компонент {}",p.id,id))}}
     }
-    if !cat.default_preset.is_empty()&&!preset_ids.contains(cat.default_preset.as_str()){return Err("Неизвестное значение: «defaultPreset»".into())}
+    if !cat.default_preset.is_empty()&&!preset_ids.contains(cat.default_preset.as_str()){return Err("Неизвестный пресет по умолчанию (defaultPreset)".into())}
     validate_conditions_0244(cat)?;
     if matches!(cat.schema_version.as_str(),"3.0"|"4.0"|"5.0") {validate_rules_v3(cat)?;}
     Ok(())
@@ -353,7 +353,7 @@ fn parse_semver_0243(value:&str)->Result<Semver0243,String>{
     let (before_build,build)=value.split_once('+').map_or((value,None),|(a,b)|(a,Some(b)));
     if let Some(build)=build {if !valid_semver_ids_0243(build,false){return Err(format!("Некорректные метаданные сборки в версии {value:?}"))}}
     let (base,pre)=before_build.split_once('-').map_or((before_build,None),|(a,b)|(a,Some(b)));
-    let pre=if let Some(pre)=pre {if !valid_semver_ids_0243(pre,true){return Err(format!("Некорректное значение: «prerelease in» {value:?}"))}pre.split('.').map(str::to_string).collect()} else {Vec::new()};
+    let pre=if let Some(pre)=pre {if !valid_semver_ids_0243(pre,true){return Err(format!("Некорректная предварительная версия в {value:?}"))}pre.split('.').map(str::to_string).collect()} else {Vec::new()};
     let parts:Vec<_>=base.split('.').collect();
     if parts.len()!=3{return Err(format!("Некорректная семантическая версия {value:?}; ожидается формат MAJOR.MINOR.PATCH"))}
     let mut nums=[0u64;3];
@@ -397,7 +397,7 @@ fn matches_range_0243(actual:&str,expression:&str)->Result<bool,String>{
         for token in parts {
             if token=="*"{continue}
             let (op,raw)=[">=","<=",">","<","=","^","~"].iter().find_map(|op|token.strip_prefix(*op).map(|v|(*op,v))).unwrap_or(("=",token));
-            let b=parse_semver_0243(raw).map_err(|err|format!("Некорректное значение: «range» {expression:?}: {err}"))?;
+            let b=parse_semver_0243(raw).map_err(|err|format!("Некорректный диапазон версий {expression:?}: {err}"))?;
             let cmp=compare_semver_0243(&a,&b);
             let valid=match op {
                 "="=>cmp==Ordering::Equal,">"=>cmp==Ordering::Greater,">="=>cmp!=Ordering::Less,
@@ -580,9 +580,9 @@ pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<Componen
 }
 
 pub fn validate(m:&Manifest)->Result<(),String>{
-    if m.schema_version!="3.0"{if m.component_catalog.is_some(){return Err("componentCatalog: требуется «manifest v3»".into())}return Ok(())}
+    if m.schema_version!="3.0"{if m.component_catalog.is_some(){return Err("Для каталога компонентов требуется манифест v3".into())}return Ok(())}
     let cat=m.component_catalog.as_ref().ok_or("Для схемы v3 требуется подписанный componentCatalog")?;
-    if !matches!(cat.schema_version.as_str(),"1.0"|"2.0"|"3.0"|"4.0"|"5.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else if cat.schema_version=="2.0"{digest_v2(cat)}else if cat.schema_version=="3.0"{digest_v3(cat)}else if cat.schema_version=="4.0"{digest_v4(cat)}else{crate::component_actions_0245::digest_v5(cat)}){return Err("Некорректное значение: «v3 component snapshot/digest»".into())}
+    if !matches!(cat.schema_version.as_str(),"1.0"|"2.0"|"3.0"|"4.0"|"5.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else if cat.schema_version=="2.0"{digest_v2(cat)}else if cat.schema_version=="3.0"{digest_v3(cat)}else if cat.schema_version=="4.0"{digest_v4(cat)}else{crate::component_actions_0245::digest_v5(cat)}){return Err("Некорректный снимок или контрольная сумма каталога компонентов v3".into())}
     validate_topology(cat)?;
     crate::component_actions_0245::validate_actions(cat)?;
     let files:HashMap<_,_>=m.files.iter().map(|f|(f.path.to_ascii_lowercase(),f)).collect();let mut ids=HashSet::new();let mut owners=HashSet::new();

@@ -27,7 +27,7 @@ import (
 func Export(ctx context.Context, postgresDSN, target string) (out Report, err error) {
 	out = Report{Format: importVersion, PostgreSQLSchema: Schema, ReadyForBackendCutover: false}
 	if strings.TrimSpace(postgresDSN) == "" || strings.TrimSpace(target) == "" {
-		return out, errors.New("Требуется: «DSN PostgreSQL и целевая резервная копия SQLite»")
+		return out, errors.New("Требуются строка подключения PostgreSQL и путь к целевой резервной копии SQLite")
 	}
 	dest, err := filepath.Abs(target)
 	if err != nil {

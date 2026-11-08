@@ -370,13 +370,13 @@ fn resolve_canonical_targets() -> Result<(), String> {
     let ntdll = wide_null("ntdll.dll");
     let ntdll = unsafe { GetModuleHandleW(ntdll.as_ptr()) };
     if kernel32.is_null() || ntdll.is_null() {
-        return Err("механизм перехвата Guard: запрещено «resolve kernel32.dll/ntdll.dll»".to_string());
+        return Err("Механизму перехвата Guard не удалось найти kernel32.dll или ntdll.dll".to_string());
     }
     for spec in hook_specs() {
         let module = if spec.name.starts_with("Nt") { ntdll } else { kernel32 };
         let address = unsafe { GetProcAddress(module, spec.c_name.as_ptr().cast()) };
         if address.is_null() && !spec.optional {
-            return Err(format!("механизм перехвата Guard: запрещено «resolve {}»", spec.name));
+            return Err(format!("Механизму перехвата Guard не удалось найти {}", spec.name));
         }
         spec.canonical.store(address, Ordering::Release);
     }
@@ -742,7 +742,7 @@ fn enumerate_modules() -> Result<Vec<ProcessModule>, String> {
                 || info.base_of_dll.is_null()
                 || info.size_of_image == 0
             {
-                return Err("Ошибка: «Guard Hook Engine module information query»".to_string());
+                return Err("Ошибка получения сведений о модуле механизмом перехвата Guard".to_string());
             }
             let path = module_path(module)?;
             result.push(ProcessModule {

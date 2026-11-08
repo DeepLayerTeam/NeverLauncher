@@ -18,7 +18,7 @@ fn check_capacity(available: u64, required: u64) -> Result<(), String> {
 
 pub(crate) fn require_free_space(root: &Path, bytes: u64) -> Result<(), String> {
     let available = fs2::available_space(root)
-        .map_err(|e| format!("Не удалось запросить «free disk space {}:» {e}", root.display()))?;
+        .map_err(|e| format!("Не удалось определить свободное место на диске {}: {e}", root.display()))?;
     check_capacity(available, bytes)
 }
 

@@ -493,7 +493,7 @@ func executeComponents0249(args []string) error {
 	// CLI намеренно НЕ имеет параметра --permissions: утверждения из локального флага не являются серверными правами.
 	if cmd == "diff" {
 		if *old == "" || *newPath == "" {
-			return errors.New("components diff: требуется «--old and --new»")
+			return errors.New("Для сравнения компонентов необходимо указать оба параметра: --old и --new")
 		}
 		okOld := *oldPub
 		if okOld == "" {

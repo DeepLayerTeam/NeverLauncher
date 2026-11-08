@@ -28,7 +28,7 @@ pub fn identity(credentials: Option<&MinecraftLaunchCredentials>) -> Result<Game
     match c.user_type.as_str() {
         "msa" if c.auth_server_base_url.is_empty() => Ok(GameIdentity::Official),
         "mojang" if !c.auth_server_base_url.is_empty() => {
-            let url = reqwest::Url::parse(&c.auth_server_base_url).map_err(|_| "Некорректное значение: «Yggdrasil URL»")?;
+            let url = reqwest::Url::parse(&c.auth_server_base_url).map_err(|_| "Некорректный адрес сервера Yggdrasil")?;
             let loopback = url.host_str().is_some_and(|v| matches!(v,"localhost"|"127.0.0.1"|"[::1]"));
             if (url.scheme() != "https" && !(url.scheme()=="http" && loopback)) ||
                 url.username() != "" || url.password().is_some() || url.query().is_some() || url.fragment().is_some() {
@@ -54,7 +54,7 @@ fn remove_pair(args:&mut Vec<String>, key:&str) -> Result<(),String> {
     while i<args.len() {
         if args[i]==key {
             if args.get(i+1).is_none_or(|value|value.starts_with("--")) {
-                return Err(format!("Некорректный формат: «{key} in signed game arguments»"));
+                return Err(format!("Некорректное значение параметра {key} в подписанных аргументах игры"));
             }
             args.remove(i);
             args.remove(i);
@@ -76,7 +76,7 @@ fn supports_user_type(version: &str) -> bool {
 pub fn pin_game_identity(plan:&mut LaunchPlan, version:&str, credentials:Option<&MinecraftLaunchCredentials>, offline_username:&str) -> Result<(),String> {
     let mode=identity(credentials)?;
     if mode != GameIdentity::Yggdrasil && forbidden_auth_agent(&plan.jvm_args) {
-        return Err("«official/offline launches»: запрещено «redirect session authentication to Yggdrasil»".into());
+        return Err("Для официального и автономного запуска запрещено перенаправлять проверку сеанса в Yggdrasil".into());
     }
     for key in ["--username","--uuid","--accessToken","--userType","--xuid"] {
         remove_pair(&mut plan.game_args,key)?;

@@ -104,7 +104,7 @@ func Evaluate(v Report) (Report, error) {
 		return Report{}, e
 	}
 	if v.SourceSnapshotSHA256 != src || v.TargetSnapshotSHA256 != dst {
-		return Report{}, errors.New("Несовпадение: «snapshot digest»")
+		return Report{}, errors.New("Не совпадает контрольная сумма снимка")
 	}
 	blocks := []string{}
 	add := func(s string) { blocks = append(blocks, s) }

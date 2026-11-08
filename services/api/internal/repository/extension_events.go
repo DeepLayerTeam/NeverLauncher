@@ -112,7 +112,7 @@ func normalizeSubscription0206(in model.ExtensionEventSubscription) (model.Exten
 		return model.ExtensionEventSubscription{}, errors.New("область подписки: требуется глобальная область или область проекта")
 	}
 	if in.Scope == "project" && in.ScopeID == "" {
-		return model.ExtensionEventSubscription{}, errors.New("подписка проекта: требуется «scopeId»")
+		return model.ExtensionEventSubscription{}, errors.New("подписка проекта: требуется идентификатор области действия (scopeId)")
 	}
 	if !extensionPermission0201.MatchString(in.EventType) {
 		return model.ExtensionEventSubscription{}, fmt.Errorf("Некорректное значение: тип события %q", in.EventType)

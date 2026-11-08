@@ -129,7 +129,7 @@ func validName(n string, isDir bool) error {
 		return fmt.Errorf("Небезопасный объект: ZIP путь %q", n)
 	}
 	if isDir != strings.HasSuffix(n, "/") {
-		return fmt.Errorf("Некорректное значение: «ZIP directory marker» %q", n)
+		return fmt.Errorf("Некорректное значение: маркер каталога ZIP %q", n)
 	}
 	return nil
 }
@@ -365,7 +365,7 @@ func Inspect(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDige
 
 func scan(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest string, parseConfigs bool) (Inventory, error) {
 	if archiveSize < 1 || archiveSize > MaxSourceBytes || len(sourceDigest) != 64 {
-		return Inventory{}, errors.New("Некорректное значение: «source archive size/digest»")
+		return Inventory{}, errors.New("Некорректное значение: размер или контрольная сумма исходного архива")
 	}
 	// Не доверяйте хешу, предоставленному вызывающей стороной. Источник может измениться между
 	// запросами или поступить от недоверенного обработчика; закрепляйте точные байты архива.

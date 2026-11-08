@@ -69,7 +69,7 @@ func Load(now time.Time) (Policy, error) {
 	}
 	key, e := hex.DecodeString(pin)
 	if e != nil || len(key) != ed25519.PublicKeySize {
-		return out, errors.New("Некорректное значение: «pinned ServerBridge policy public key»")
+		return out, errors.New("Некорректное значение: закреплённый открытый ключ политики ServerBridge")
 	}
 	info, e := os.Lstat(path)
 	if e != nil {

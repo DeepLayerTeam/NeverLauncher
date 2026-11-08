@@ -81,7 +81,7 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	}
 	for _, c := range input.Digest {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return zero, fmt.Errorf("Некорректное значение: «blob digest»")
+			return zero, fmt.Errorf("Некорректная контрольная сумма содержимого")
 		}
 	}
 	tx, err := r.db.BeginTx(ctx, nil)

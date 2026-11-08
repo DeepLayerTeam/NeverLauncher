@@ -250,7 +250,7 @@ func normalizeProjectValidationPolicy0212(in model.ProjectValidationPolicy) (mod
 	in.ProjectID = strings.TrimSpace(in.ProjectID)
 	in.RequiredLevel = strings.ToLower(strings.TrimSpace(in.RequiredLevel))
 	if in.ProjectID == "" {
-		return model.ProjectValidationPolicy{}, errors.New("политика проверок проекта: требуется «projectId»")
+		return model.ProjectValidationPolicy{}, errors.New("Для политики проверок проекта требуется поле projectId")
 	}
 	if in.RequiredLevel == "" {
 		in.RequiredLevel = "integrity"

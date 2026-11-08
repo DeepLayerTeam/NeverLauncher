@@ -55,7 +55,7 @@ func isSafeRegular(p string) error {
 		return err
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Mode()&os.ModeSymlink != 0 {
-		return fmt.Errorf("Небезопасное значение: «SQLite file %q (require regular 0600)»", p)
+		return fmt.Errorf("Небезопасный файл SQLite %q: необходим обычный файл с правами 0600", p)
 	}
 	return nil
 }

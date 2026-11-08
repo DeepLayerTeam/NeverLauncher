@@ -55,7 +55,7 @@ func (r *Repository) AcquireDurableScopeLease(ctx context.Context, scope, owner 
 }
 func (r *Repository) RenewDurableScopeLease(ctx context.Context, scope, token string, ttl time.Duration) (out model.DurableScopeLease, err error) {
 	if !validDurableTTL(ttl) || !durableFieldsNonempty(scope, token) {
-		return out, errors.New("Некорректное значение: «renewal»")
+		return out, errors.New("Некорректное значение: продление срока аренды")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		now := durableNS()

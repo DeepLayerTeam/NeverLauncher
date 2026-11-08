@@ -248,7 +248,7 @@ pub fn collect_windows_continuous_evidence_v2(
         "Для Guard Attestation v2 требуется подтверждённое свидетельство Windows Sensor".to_string()
     })?;
     if sensor.pid != runtime_pid {
-        return Err("Несовпадение: «Guard Attestation v2 Sensor/runtime PID»".to_string());
+        return Err("Не совпадают PID датчика и среды Runtime в аттестации Guard v2".to_string());
     }
     let module = &sensor.module_guard;
     let hook = &module.hook_engine;
@@ -354,7 +354,7 @@ pub fn build_windows_attestation_v2(
     if base_attestation.challenge_id != challenge_id
         || base_attestation.challenge_sha256 != crate::attestation::challenge_sha256(challenge)
     {
-        return Err("Несовпадение: «Guard Attestation v2 base attestation challenge»".to_string());
+        return Err("Не совпадает исходный запрос проверки аттестации Guard v2".to_string());
     }
     validate_continuous_evidence_v2(&continuous_evidence, continuous_evidence.collected_at_unix_ms)?;
     let mut attestation = GuardRemoteAttestationV2 {

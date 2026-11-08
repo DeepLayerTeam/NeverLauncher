@@ -85,7 +85,7 @@ func handleDevTools03010(args []string) error {
 			return errors.New("Использование: devtools component test --jar example.jar [--isolation sandbox|process] [--ack-unconfined] [-- параметры...]")
 		}
 		if *isolation == "process" && !*ack {
-			return errors.New("Требуется: «process mode is NOT an OS sandbox: --ack-unconfined»")
+			return errors.New("Режим процесса не обеспечивает изоляцию операционной системы; для подтверждения укажите --ack-unconfined")
 		}
 		r, e := devtools.RunComponent(context.Background(), devtools.ComponentOptions{Jar: *jar, Java: *java, Isolation: *isolation, Timeout: *timeout, HeapMB: *heap, Args: appArgs})
 		if p := devtoolsPrint03010(r); p != nil {
@@ -147,5 +147,5 @@ func handleDevTools03010(args []string) error {
 		}
 		return nil
 	}
-	return fmt.Errorf("Неизвестное значение: «devtools operation» %q", strings.Join(args[:2], " "))
+	return fmt.Errorf("Неизвестная операция инструментов разработчика %q", strings.Join(args[:2], " "))
 }

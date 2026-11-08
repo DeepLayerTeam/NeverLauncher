@@ -191,7 +191,7 @@ func (s Server) completeInstallationP0(ctx context.Context) error {
 	}
 	n, _ := res.RowsAffected()
 	if n != 1 {
-		return fmt.Errorf("«installation state»: запрещено «be completed before bootstrap token is consumed»")
+		return fmt.Errorf("Нельзя завершить установку до использования токена первоначальной настройки")
 	}
 	return nil
 }
@@ -212,7 +212,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	displayName = strings.TrimSpace(displayName)
 	password = strings.TrimSpace(password)
 	if email == "" || password == "" {
-		return model.User{}, errors.New("Требуется: «email and password are»")
+		return model.User{}, errors.New("Необходимо указать адрес электронной почты и пароль")
 	}
 	if len(password) < 12 {
 		return model.User{}, errors.New("bootstrap admin password: требуется «не менее 12 символов»")

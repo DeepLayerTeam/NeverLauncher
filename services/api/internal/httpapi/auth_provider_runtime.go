@@ -237,7 +237,7 @@ func (s Server) syncManagedProviders02910(ctx context.Context) error {
 		return nil
 	}
 	if s.Federation == nil {
-		return errors.New("Недоступно: «federation»")
+		return errors.New("Федеративная авторизация недоступна")
 	}
 	return s.Federation.WithManagedSync(func() error {
 		reader, ok := store.(repository.ActiveManagedProviderReader02910)

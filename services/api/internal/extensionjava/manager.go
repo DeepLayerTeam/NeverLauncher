@@ -223,14 +223,14 @@ func ProbeRuntime(ctx context.Context, javaBinary string, requiredFeature int) (
 		}
 	} else {
 		if !filepath.IsAbs(javaBinary) {
-			return RuntimeInfo{}, errors.New("Для настроенный исполняемый файл Java требуется: «абсолютный путь»")
+			return RuntimeInfo{}, errors.New("Для настроенного исполняемого файла Java требуется абсолютный путь")
 		}
 		st, err := os.Lstat(javaBinary)
 		if err != nil {
 			return RuntimeInfo{}, err
 		}
 		if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
-			return RuntimeInfo{}, errors.New("Для настроенный исполняемый файл Java требуется: «regular, not symlink»")
+			return RuntimeInfo{}, errors.New("Настроенный исполняемый файл Java должен быть обычным файлом, а не символической ссылкой")
 		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)

@@ -27,7 +27,7 @@ func normalizeSecurityScope0207(scope, scopeID string) (string, string, error) {
 	if scope == "global" {
 		scopeID = ""
 	} else if scopeID == "" {
-		return "", "", errors.New("область безопасности проекта: требуется «scopeId»")
+		return "", "", errors.New("область безопасности проекта: требуется идентификатор области действия (scopeId)")
 	}
 	return scope, scopeID, nil
 }

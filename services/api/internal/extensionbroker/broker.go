@@ -38,7 +38,7 @@ func ParseRoots(raw string) (map[string]string, error) {
 	}
 	var extra any
 	if dec.Decode(&extra) != io.EOF {
-		return nil, errors.New("Некорректное значение: «roots JSON tail»")
+		return nil, errors.New("Некорректное значение: завершающие данные JSON со списком корневых путей")
 	}
 	if len(roots) > 64 {
 		return nil, ErrDenied

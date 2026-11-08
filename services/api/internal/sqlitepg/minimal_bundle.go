@@ -186,7 +186,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 			return m, nil, err
 		}
 		if stat.Mode().Perm() != os.FileMode(f.Mode) {
-			return m, nil, fmt.Errorf("Несовпадение: «mode»: %s", f.Path)
+			return m, nil, fmt.Errorf("Несовпадение: режим: %s", f.Path)
 		}
 		n, digest, e := digestFile0377(file)
 		if e != nil {

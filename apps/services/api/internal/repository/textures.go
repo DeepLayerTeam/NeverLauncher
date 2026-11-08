@@ -176,10 +176,10 @@ func validateTextureSelection0251(kind, skinModel, visibility string) error {
 		return fmt.Errorf("Не поддерживается: модель скина")
 	}
 	if kind == "cape" && skinModel != "classic" {
-		return fmt.Errorf("«cape»: запрещено «use slim model»")
+		return fmt.Errorf("Для плаща нельзя использовать модель скина slim")
 	}
 	if visibility != "public" && visibility != "private" && visibility != "unlisted" {
-		return fmt.Errorf("Не поддерживается: «visibility»")
+		return fmt.Errorf("Неподдерживаемый режим видимости")
 	}
 	return nil
 }

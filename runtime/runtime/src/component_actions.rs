@@ -74,14 +74,14 @@ pub fn validate_actions(cat:&ComponentCatalog)->Result<(),String> {
                         return Err(format!("{} {} ссылается на небезопасный или не принадлежащий компоненту файл {}",c.id,a.kind,a.path))
                     }
                     if !seen.insert(format!("{}:{}",a.kind,a.path.to_ascii_lowercase())){
-                        return Err(format!("Обнаружен дубликат: «action on {}»",c.id))
+                        return Err(format!("Повторное действие для компонента {}",c.id))
                     }
                 },
                 "JvmArgs"|"ClientArgs"=>{
-                    if !a.path.is_empty()||a.args.is_empty()||a.args.len()>32{return Err(format!("Некорректное значение: «{} arguments in {}»",a.kind,c.id))}
+                    if !a.path.is_empty()||a.args.is_empty()||a.args.len()>32{return Err(format!("Некорректные аргументы действия {} в компоненте {}",a.kind,c.id))}
                     for arg in &a.args {
-                        if !safe_argument(&a.kind,arg){return Err(format!("Небезопасное значение: «{} argument in {}: {}»",a.kind,c.id,arg))}
-                        if !seen.insert(format!("{}:{}",a.kind,arg)){return Err(format!("Обнаружен дубликат: «{} argument in {}»",a.kind,c.id))}
+                        if !safe_argument(&a.kind,arg){return Err(format!("Небезопасный аргумент действия {} в компоненте {}: {}",a.kind,c.id,arg))}
+                        if !seen.insert(format!("{}:{}",a.kind,arg)){return Err(format!("Повторный аргумент действия {} в компоненте {}",a.kind,c.id))}
                     }
                 },
                 _=>return Err(format!("Неподдерживаемое необязательное действие {} в компоненте {}",a.kind,c.id))

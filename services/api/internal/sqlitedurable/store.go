@@ -76,7 +76,7 @@ func Open(ctx context.Context, opt Options) (_ *Store, err error) {
 		opt.BusyTimeout = 5 * time.Second
 	}
 	if opt.BusyTimeout < time.Millisecond || opt.BusyTimeout > 60*time.Second {
-		return nil, fmt.Errorf("busy timeout: требуется «in [1ms,60s]»")
+		return nil, fmt.Errorf("Время ожидания занятой базы должно быть в пределах от 1 мс до 60 с")
 	}
 	if opt.Readers == 0 {
 		opt.Readers = DefaultReaders
@@ -208,7 +208,7 @@ func checkSQLiteSidecars(path string) error {
 			return err
 		}
 		if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0077 != 0 {
-			return fmt.Errorf("Небезопасное значение: «SQLite sidecar %q (expected regular private file)»", name)
+			return fmt.Errorf("Небезопасный вспомогательный файл SQLite %q: необходим обычный файл с ограниченными правами", name)
 		}
 	}
 	return nil

@@ -51,7 +51,7 @@ func Load(path string, now time.Time) (*Store, error) {
 		return nil, errors.New("tpm-ak-trust-roots-not-configured")
 	}
 	if !filepath.IsAbs(path) {
-		return nil, errors.New("Требуется: «tpm roots: absolute operator-controlled path»")
+		return nil, errors.New("Для корневых сертификатов TPM требуется абсолютный путь под управлением оператора")
 	}
 	fi, err := os.Lstat(path)
 	if err != nil {
@@ -100,7 +100,7 @@ func Load(path string, now time.Time) (*Store, error) {
 			return nil, err
 		}
 		if !cert.IsCA || cert.KeyUsage&x509.KeyUsageCertSign == 0 {
-			return nil, errors.New("Требуется: «tpm roots: CA signing certificate»")
+			return nil, errors.New("Для корневых сертификатов TPM требуется сертификат подписи центра сертификации")
 		}
 		fingerprint := Fingerprint(cert.Raw)
 		if fps[fingerprint] {

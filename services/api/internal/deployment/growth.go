@@ -59,7 +59,7 @@ func VerifyGrowth(ctx context.Context, cfg config.Config, plan Plan) (GrowthRepo
 		}
 		r.S3RoundTrip = true
 	} else if plan.Mode == NetworkHA {
-		return r, errors.New("Network/HA: требуется «tested shared S3»")
+		return r, errors.New("Для сетевого отказоустойчивого режима требуется проверенное общее хранилище S3")
 	}
 	r.CheckedAt = time.Now().UTC()
 	return r, nil
@@ -90,7 +90,7 @@ func verifyPostgresGrowth(ctx context.Context, dsn string) error {
 		return err
 	}
 	if strings.TrimSpace(databaseName) == "" {
-		return errors.New("Пустое значение: «PostgreSQL database identity»")
+		return errors.New("Не удалось определить имя базы данных PostgreSQL")
 	}
 	key, err := randomFenceKey()
 	if err != nil {
@@ -106,7 +106,7 @@ func verifyPostgresGrowth(ctx context.Context, dsn string) error {
 		return err
 	}
 	if !first {
-		return errors.New("Не удалось получить «first advisory transaction lock»")
+		return errors.New("Не удалось получить первую консультативную блокировку транзакции")
 	}
 	var concurrent bool
 	if err := b.QueryRowContext(ctx, "SELECT pg_try_advisory_xact_lock($1)", key).Scan(&concurrent); err != nil {
@@ -228,7 +228,7 @@ func verifyS3Growth(ctx context.Context, cfg storage.S3Config) (err error) {
 		return closeErr
 	}
 	if len(loaded) != len(payload) || sha256.Sum256(loaded) != sha256.Sum256(payload) {
-		return errors.New("Несовпадение: «cross-client S3 content or checksum»")
+		return errors.New("Не совпадает содержимое или контрольная сумма S3 между клиентами")
 	}
 	if ctx.Err() != nil {
 		return ctx.Err()

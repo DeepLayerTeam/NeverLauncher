@@ -572,7 +572,7 @@ func clientPackageSourcePath(packagePath, storageDir string, manifest ClientPack
 func verifiedCopyClientFile(src, dst string, file ClientPackageFile) error {
 	sum, size, err := hashFile(src)
 	if err != nil {
-		return fmt.Errorf("Недоступно: «%s: source»: %w", file.Path, err)
+		return fmt.Errorf("Недоступен исходный файл %s: %w", file.Path, err)
 	}
 	if size != file.Size || !strings.EqualFold(sum, file.SHA256) {
 		return fmt.Errorf("Несоответствие: %s: контрольная сумма или размер источника", file.Path)
@@ -587,7 +587,7 @@ func verifiedCopyClientFile(src, dst string, file ClientPackageFile) error {
 	}
 	sum, size, err = hashFile(dst)
 	if err != nil || size != file.Size || !strings.EqualFold(sum, file.SHA256) {
-		return fmt.Errorf("Ошибка: «%s: destination verification»", file.Path)
+		return fmt.Errorf("Ошибка проверки файла назначения %s", file.Path)
 	}
 	return nil
 }

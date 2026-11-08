@@ -107,7 +107,7 @@ func (r *MemoryRepository) AcquireExtensionUpdateLease(ctx context.Context, scop
 	_ = ctx
 	owner = strings.TrimSpace(owner)
 	if owner == "" || ttl <= 0 {
-		return false, errors.New("Требуется: «owner and positive ttl are»")
+		return false, errors.New("Необходимо указать владельца и положительный срок действия")
 	}
 	r.extensionMu.Lock()
 	defer r.extensionMu.Unlock()
@@ -253,7 +253,7 @@ func (r *SQLRepository) AcquireExtensionUpdateLease(ctx context.Context, scope, 
 	}
 	owner = strings.TrimSpace(owner)
 	if owner == "" || ttl <= 0 {
-		return false, errors.New("Требуется: «owner and positive ttl»")
+		return false, errors.New("Необходимо указать владельца и положительный срок действия")
 	}
 	var got bool
 	err = r.db.QueryRowContext(ctx, `INSERT INTO extension_update_leases(scope,scope_id,owner,expires_at) VALUES($1,$2,$3,now()+$4::interval) ON CONFLICT(scope,scope_id) DO UPDATE SET owner=EXCLUDED.owner,expires_at=EXCLUDED.expires_at WHERE extension_update_leases.expires_at<=now() OR extension_update_leases.owner=EXCLUDED.owner RETURNING true`, scope, scopeID, owner, fmt.Sprintf("%f seconds", ttl.Seconds())).Scan(&got)

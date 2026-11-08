@@ -199,7 +199,7 @@ func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 // и доверия; метод БД обеспечивает криптографические и хранилищные инварианты.
 func (r *Repository) PublishDraft(ctx context.Context, projectID, releaseID string, expectedHeadRevision int64, roots []ed25519.PublicKey, actor string) (out model.ReleaseVersion, err error) {
 	if strings.TrimSpace(actor) == "" {
-		return out, errors.New("Требуется: «actor»")
+		return out, errors.New("Требуется: инициатор операции")
 	}
 	if expectedHeadRevision < 0 {
 		return out, ErrConflict

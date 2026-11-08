@@ -445,7 +445,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
         let mut path = [0u16; MAX_MODULE_PATH];
         let count = unsafe { GetModuleFileNameW(module, path.as_mut_ptr(), path.len() as u32) } as usize;
         if count == 0 || count >= path.len() {
-            return Err(format!("защита Guard с учётом JVM: запрещено «identify» {name}"));
+            return Err(format!("Guard для JVM: не удалось определить модуль {name}"));
         }
         let loaded_path = String::from_utf16_lossy(&path[..count]).replace('/', "\\").to_ascii_lowercase();
         if loaded_path != expected_path {
@@ -456,7 +456,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
             K32GetModuleInformation(GetCurrentProcess(), module, &mut info, size_of::<ModuleInfo>() as u32)
         };
         if ok == 0 || info.size_of_image == 0 {
-            return Err(format!("защита Guard с учётом JVM: запрещено «inspect» {name}"));
+            return Err(format!("Guard для JVM: не удалось проверить модуль {name}"));
         }
         let base = info.base_of_dll as usize;
         let end = base.checked_add(info.size_of_image as usize)

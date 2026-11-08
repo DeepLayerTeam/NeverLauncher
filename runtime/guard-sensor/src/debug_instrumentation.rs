@@ -103,7 +103,7 @@ fn query_debug_indicators() -> Result<DebugIndicators, String> {
     // размера, принадлежащими вызывающему коду. Память чужих процессов не читается и не изменяется.
     let process = unsafe { GetCurrentProcess() };
     if process.is_null() {
-        return Err("«Guard Debug & Instrumentation Guard»: запрещено «obtain current process handle»".to_string());
+        return Err("Guard: не удалось получить дескриптор текущего процесса для проверки отладки и инструментирования".to_string());
     }
 
     let debugger_present = unsafe { IsDebuggerPresent() } != 0;

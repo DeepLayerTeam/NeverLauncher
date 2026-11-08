@@ -804,11 +804,11 @@ func (u *transactionalUpdater0156) readJournal(id string) (*updaterJournal0156, 
 		return nil, err
 	}
 	if journal.SchemaVersion != updaterCoreSchema0156 || journal.ID != id {
-		return nil, fmt.Errorf("Некорректное значение: «updater journal» %s", id)
+		return nil, fmt.Errorf("Некорректный журнал обновления %s", id)
 	}
 	root, err := filepath.Abs(journal.Root)
 	if err != nil || filepath.Clean(root) != u.root {
-		return nil, fmt.Errorf("Несовпадение: «updater journal %s root»", id)
+		return nil, fmt.Errorf("Не совпадает корневой каталог журнала обновления %s", id)
 	}
 	return &journal, nil
 }
@@ -866,10 +866,10 @@ func normalizeUpdaterRequest0156(files []updaterFileSpec0156, remove []string) (
 			return nil, nil, fmt.Errorf("Обнаружен дубликат: «путь средства обновления %s (%s)»", rel, previous)
 		}
 		if file.Size < 0 || len(strings.TrimSpace(file.SHA256)) != 64 {
-			return nil, nil, fmt.Errorf("Некорректное значение: «updater metadata for» %s", rel)
+			return nil, nil, fmt.Errorf("Некорректные метаданные обновления для %s", rel)
 		}
 		if _, err := hex.DecodeString(file.SHA256); err != nil {
-			return nil, nil, fmt.Errorf("Некорректное значение: «updater SHA-256 for» %s", rel)
+			return nil, nil, fmt.Errorf("Некорректная контрольная сумма SHA-256 обновления для %s", rel)
 		}
 		if len(file.Data) == 0 && file.Data == nil && strings.TrimSpace(file.Source) == "" {
 			return nil, nil, fmt.Errorf("updater source отсутствует для %s", rel)

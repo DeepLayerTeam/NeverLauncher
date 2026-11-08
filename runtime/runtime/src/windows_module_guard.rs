@@ -1817,7 +1817,7 @@ mod imp {
         }
         std::env::current_dir()
             .map(|current| current.join(&loader_path))
-            .map_err(|err| format!("модуль защиты Guard: запрещено «resolve {}:» {err}", path.display()))
+            .map_err(|err| format!("Модуль защиты Guard: не удалось определить путь {}: {err}", path.display()))
     }
 
     fn resolve_loader_path(path: &Path) -> PathBuf {

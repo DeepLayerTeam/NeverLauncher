@@ -27,7 +27,7 @@ func ValidateBackendNotice0289(recipient, body string) error {
 		return errors.New("Некорректное значение: «идентификатор пользователя-получателя»")
 	}
 	if len(strings.TrimSpace(body)) < 1 || len([]rune(body)) > 512 {
-		return errors.New("notice: требуется «1-512 characters»")
+		return errors.New("Текст уведомления должен содержать от 1 до 512 символов")
 	}
 	for _, c := range body {
 		if c < 32 && c != '\n' && c != '\t' {

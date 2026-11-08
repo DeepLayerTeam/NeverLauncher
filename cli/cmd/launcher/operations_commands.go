@@ -705,7 +705,7 @@ func installVerify(args []string) error {
 	}
 	projects, err := httpJSONWithAuth("GET", backend+"/api/v1/projects", nil, token)
 	if err != nil {
-		return fmt.Errorf("Ошибка: «install verify projects»: %w", err)
+		return fmt.Errorf("Ошибка проверки установленных проектов: %w", err)
 	}
 	checks["projects"] = projects
 	return writeOrPrintJSON(out, map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "profile": flagValue(args, "--profile", "single-server-local"), "backend": backend, "status": "verified", "checks": checks})

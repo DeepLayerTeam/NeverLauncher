@@ -27,7 +27,7 @@ func handleMigrationCutover03311(args []string) error {
 	token := backendToken(args)
 	run := flagValue(args, "--run", "")
 	if backend == "" || token == "" || run == "" {
-		return errors.New("Для переключение на новую систему требуется «--backend --token --run»")
+		return errors.New("Для переключения на новую систему необходимо указать --backend, --token и --run")
 	}
 	u, e := url.Parse(backend)
 	if e != nil {
@@ -54,7 +54,7 @@ func handleMigrationCutover03311(args []string) error {
 	case "cutover-stage":
 		rev, e := strconv.ParseInt(flagValue(args, "--head-revision", ""), 10, 64)
 		if e != nil {
-			return errors.New("stage: требуется «--head-revision (including 0)»")
+			return errors.New("Для этапа подготовки требуется --head-revision (допускается 0)")
 		}
 		body = map[string]any{"profileId": profile, "channel": channel, "releaseId": flagValue(args, "--release-id", ""), "stageId": flagValue(args, "--stage-id", ""), "expectedHeadRevision": rev}
 		endpoint += "/stage"
@@ -71,7 +71,7 @@ func handleMigrationCutover03311(args []string) error {
 		receiptPath := flagValue(args, "--fence-receipt", "")
 		var receipt sourceFenceEvidence0448
 		if receiptPath == "" {
-			return errors.New("Для активация требуется «--fence-receipt from verify-source-fence»")
+			return errors.New("Для активации необходим --fence-receipt, полученный командой verify-source-fence")
 		}
 		if e = readFenceFile0448(receiptPath, 8<<10, &receipt); e != nil {
 			return e

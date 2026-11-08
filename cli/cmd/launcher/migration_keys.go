@@ -51,7 +51,7 @@ func generateNeverMigrationKeys0336(path string) (err error) {
 		return err
 	}
 	if !dir.IsDir() || dir.Mode().Perm()&0077 != 0 {
-		return errors.New("«key output directory»: запрещено «grant access to group/others (mode 0700)»")
+		return errors.New("Каталог для сохранения ключей должен иметь права 0700 без доступа для группы и остальных пользователей")
 	}
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {

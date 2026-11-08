@@ -17,7 +17,7 @@ import (
 func (s Server) officialProviderSettings02611(ctx context.Context) (repository.OfficialProviderRevision02611, error) {
 	store, ok := s.Repo.(repository.OfficialProviderStore02611)
 	if !ok {
-		return repository.OfficialProviderRevision02611{}, errors.New("Недоступно: «official provider store»")
+		return repository.OfficialProviderRevision02611{}, errors.New("Недоступно хранилище официального поставщика авторизации")
 	}
 	v, err := store.GetOfficialProvider02611(ctx)
 	if err != nil {
@@ -85,7 +85,7 @@ func readOfficialProviderUpdate02611(w http.ResponseWriter, r *http.Request) (of
 	}
 	data.Reason = strings.TrimSpace(data.Reason)
 	if data.ExpectedRevision < 0 || len(data.Reason) < 3 || len(data.Reason) > 500 || strings.ContainsAny(data.Reason, "\r\n\x00") {
-		return data, errors.New("Некорректное значение: «revision or reason»")
+		return data, errors.New("Некорректная версия изменений или причина")
 	}
 	if err := data.Settings.Validate(); err != nil {
 		return data, err

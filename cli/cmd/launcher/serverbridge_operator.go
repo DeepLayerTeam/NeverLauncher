@@ -362,11 +362,11 @@ func bridgeRollout02812(args []string) error {
 	}
 	installationDone = true
 	if err := enrollServerBridge0199([]string{"enroll", "--server-root", root, "--backend", backend, "--token", token}); err != nil {
-		return rollback(fmt.Errorf("Ошибка: «enrollment»: %w", err))
+		return rollback(fmt.Errorf("Ошибка регистрации ServerBridge: %w", err))
 	}
 	activationStart := time.Now().UTC()
 	if err := startServerBridgeHost01910([]string{"--server-root", root}); err != nil {
-		return rollback(fmt.Errorf("Ошибка: «start»: %w", err))
+		return rollback(fmt.Errorf("Ошибка запуска ServerBridge: %w", err))
 	}
 	deadline := time.Now().Add(timeout)
 	var failure error

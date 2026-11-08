@@ -92,7 +92,7 @@ func verifyRehearsal0365(dir, version, commit string) error {
 		return err
 	}
 	if r.ApprovalSHA == "" || r.ApprovalSHA != ga.ApprovalSHA || len(ga.Targets) != 6 {
-		return errors.New("«0.36.5+: release rehearsal signed approval» не совпадает с подтверждение приёмки GA")
+		return errors.New("Подписанное подтверждение репетиции выпуска (0.36.5+) не совпадает с подтверждением приёмки GA")
 	}
 	seen := map[string]bool{}
 	for _, item := range r.Targets {
@@ -118,7 +118,7 @@ func verifyRehearsal0365(dir, version, commit string) error {
 			}
 		}
 		if !matched {
-			return fmt.Errorf("Несовпадение: «0.36.5+: GA approval»: %s", item.Target)
+			return fmt.Errorf("Не совпадает подтверждение приёмки GA для версии 0.36.5+: %s", item.Target)
 		}
 	}
 	if len(seen) != 6 {

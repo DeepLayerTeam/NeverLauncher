@@ -95,7 +95,7 @@ func (r *SQLRepository) TextureBackupRows0253(ctx context.Context, driver string
 		return nil, err
 	}
 	if driver != "local" && driver != "s3" {
-		return nil, errors.New("Некорректное значение: «driver»")
+		return nil, errors.New("Некорректный драйвер хранилища текстур")
 	}
 	rows, err := r.db.QueryContext(ctx, `SELECT digest,byte_size,storage_driver,object_key FROM texture_blobs
   WHERE status='verified' AND storage_driver=$1 ORDER BY digest`, driver)

@@ -263,7 +263,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         thread.setUncaughtExceptionHandler((t, error) -> {
             RuntimeState current = state;
             if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
-            logger.error("Ошибка: «Launcher {} Server Bridge {} worker»", displayName, role, error);
+            logger.error("Ошибка ServerBridge загрузчика {}: сбой фонового обработчика {}", displayName, role, error);
         });
         return thread;
     }

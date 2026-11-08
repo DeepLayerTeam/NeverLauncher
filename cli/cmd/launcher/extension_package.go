@@ -849,7 +849,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 		return nil, fmt.Errorf("Декодирование: launcher-package.json: %w", err)
 	}
 	if descriptor.Format != extensionPackageFormat0202 || descriptor.FormatVersion != extensionPackageFormatVersion0202 {
-		return nil, fmt.Errorf("Не поддерживается: «.nlext format %q/%q»", descriptor.Format, descriptor.FormatVersion)
+		return nil, fmt.Errorf("Неподдерживаемый формат пакета .nlext %q/%q", descriptor.Format, descriptor.FormatVersion)
 	}
 	if descriptor.BuildEpoch < 315532800 {
 		return nil, errors.New("launcher-package.json содержит некорректный buildEpoch")

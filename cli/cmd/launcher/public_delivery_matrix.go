@@ -519,7 +519,7 @@ func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPubl
 	if st, err := os.Stat(downloadDir); err == nil && st.IsDir() {
 		items, _ := os.ReadDir(downloadDir)
 		if len(items) != 0 {
-			return report, errors.New("public E2E download directory: требуется «empty»")
+			return report, errors.New("Каталог загрузки для публичного E2E-теста должен быть пустым")
 		}
 	} else if err := os.MkdirAll(downloadDir, 0o755); err != nil {
 		return report, err

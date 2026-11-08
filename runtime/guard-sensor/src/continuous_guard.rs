@@ -167,14 +167,14 @@ fn verify_guard_ack_packet(
     expected_chain: [u8; 32],
 ) -> Result<(), String> {
     if &packet[..8] != CONTINUOUS_GUARD_ACK_MAGIC {
-        return Err("Несовпадение: «Continuous Guard Guard-ACK magic»".to_string());
+        return Err("Несовпадение: сигнатура подтверждения непрерывного контроля Guard".to_string());
     }
     let version = u32::from_le_bytes(packet[8..12].try_into().expect("ACK-пакет фиксированного размера"));
     let packet_pid = u32::from_le_bytes(packet[12..16].try_into().expect("ACK-пакет фиксированного размера"));
     let guard_sequence = u64::from_le_bytes(packet[16..24].try_into().expect("ACK-пакет фиксированного размера"));
     let sensor_sequence = u64::from_le_bytes(packet[24..32].try_into().expect("ACK-пакет фиксированного размера"));
     if version != CONTINUOUS_GUARD_VERSION || packet_pid != pid {
-        return Err("Несовпадение: «Continuous Guard Guard-ACK version/PID»".to_string());
+        return Err("Несовпадение: версия или PID подтверждения непрерывного контроля Guard".to_string());
     }
     if guard_sequence != expected_guard_sequence {
         return Err(format!(
@@ -187,12 +187,12 @@ fn verify_guard_ack_packet(
         ));
     }
     if packet[32..64] != expected_chain[..] {
-        return Err("Несовпадение: «Continuous Guard Guard-ACK event-chain»".to_string());
+        return Err("Несовпадение: цепочка событий подтверждения непрерывного контроля Guard".to_string());
     }
     let mut mac = HmacSha256::new_from_slice(secret)
-        .map_err(|_| "Ошибка: «Continuous Guard Guard-ACK HMAC initialization»".to_string())?;
+        .map_err(|_| "Ошибка: инициализация HMAC подтверждения непрерывного контроля Guard".to_string())?;
     mac.update(CONTINUOUS_GUARD_ACK_DOMAIN);
     mac.update(&packet[..CONTINUOUS_GUARD_ACK_PREFIX_LEN]);
     mac.verify_slice(&packet[CONTINUOUS_GUARD_ACK_PREFIX_LEN..])
-        .map_err(|_| "Несовпадение: «Continuous Guard Guard-ACK HMAC»".to_string())
+        .map_err(|_| "Несовпадение: HMAC подтверждения непрерывного контроля Guard".to_string())
 }

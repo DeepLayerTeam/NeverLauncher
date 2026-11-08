@@ -313,7 +313,7 @@ func runGo02010(dir, sdkRoot, target string, args ...string) error {
 		defer os.Remove(modfile)
 		defer os.Remove(strings.TrimSuffix(modfile, ".mod") + ".sum")
 		if len(args) == 0 {
-			return errors.New("Отсутствует: «go command»")
+			return errors.New("Команда go не найдена в системном пути")
 		}
 		args = append([]string{args[0], "-modfile=" + filepath.Base(modfile)}, args[1:]...)
 	}

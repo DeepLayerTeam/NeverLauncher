@@ -1169,7 +1169,7 @@ func serverBridgeMigrateV30200(args []string) error {
 	}
 	targetVersion := strings.TrimSpace(flagValue(args, "--bridge-version", version))
 	if compareSemver0199(targetVersion, "0.20.0") < 0 {
-		return fmt.Errorf("ServerBridge 3 GA migration target: требуется «>= 0.20.0, got» %s", targetVersion)
+		return fmt.Errorf("Для миграции ServerBridge 3 GA требуется целевая версия не ниже 0.20.0, получена %s", targetVersion)
 	}
 
 	backend := strings.TrimRight(firstNonEmpty0199(flagValue(args, "--backend", ""), os.Getenv("LAUNCHER_BACKEND_URL")), "/")

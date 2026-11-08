@@ -152,7 +152,7 @@ pub async fn start(manifest:&Manifest,root:&Path,key:&str,mode:&str,sink:Option<
 }
 pub async fn start_with_preset(manifest: &Manifest, root: &Path, key: &str, mode: &str,
     sink: Option<ProgressSink>, preset:Option<String>) -> Result<DownloadResult, String> {
-    if !matches!(mode, "download" | "repair") { return Err("Некорректное значение: «operation mode»".into()); }
+    if !matches!(mode, "download" | "repair") { return Err("Некорректный режим операции загрузки".into()); }
     verify_manifest_signature(manifest, key)?;
     file_ownership::validate_download_targets(manifest)?;
     let resolved=crate::resolved_download_0246::resolve(manifest,preset.as_deref())?;
@@ -221,7 +221,7 @@ pub async fn resume(root: &Path, expected_pinned_key: &str, sink: Option<Progres
 }
 
 pub async fn control(root: &Path, action: &str) -> Result<(), String> {
-    if !matches!(action, "pause" | "cancel") { return Err("Некорректное значение: «download control action»".into()); }
+    if !matches!(action, "pause" | "cancel") { return Err("Некорректное действие управления загрузкой".into()); }
     let root = normalized(root).await?;
     let sender = active().lock().map_err(|_| "Блокировка реестра активных загрузок повреждена")?
         .get(&root).cloned();

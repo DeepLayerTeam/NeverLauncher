@@ -76,7 +76,7 @@ impl Default for DownloadLimits {
 impl DownloadLimits {
     fn validate(self) -> Result<Self, String> {
         if self.global == 0 || self.global > 32 || self.per_host == 0 || self.per_host > self.global {
-            return Err("Некорректное значение: «download concurrency limits (global 1..=32, per_host 1..=global)»".into());
+            return Err("Некорректные ограничения параллельных загрузок (всего от 1 до 32, на узел от 1 до общего ограничения)".into());
         }
         Ok(self)
     }

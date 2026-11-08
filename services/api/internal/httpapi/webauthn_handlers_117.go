@@ -457,7 +457,7 @@ func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, use
 
 func (s Server) startPasskeyMFAContinuation117(user model.User, provider, identityID, deviceID string, methods []string, providerToken ...string) (map[string]any, error) {
 	if s.State.Passkeys.countByUser(user.ID) == 0 {
-		return nil, errors.New("MFA policy: требуется «passkey but no passkey is registered»")
+		return nil, errors.New("Политика MFA требует ключ доступа passkey, но ни один ключ не зарегистрирован")
 	}
 	challenge, err := newChallengeBytes117()
 	if err != nil {

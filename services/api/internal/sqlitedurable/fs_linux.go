@@ -54,14 +54,14 @@ func verifyLocalPath(path string) error {
 	switch fs.Type {
 	case fsEXT4, fsXFS, fsBTRFS:
 	default:
-		return fmt.Errorf("Не поддерживается: «SQLite filesystem 0x%x: only verified local ext4/xfs/btrfs; reject overlay/NFS/SMB/tmpfs»", fs.Type)
+		return fmt.Errorf("Неподдерживаемая файловая система SQLite 0x%x: разрешены только проверенные локальные ext4/xfs/btrfs; overlay/NFS/SMB/tmpfs запрещены", fs.Type)
 	}
 	if fs.Flags&1 /* ST_RDONLY on Linux */ != 0 {
 		return errors.New("Файловая система SQLite доступна только для чтения")
 	}
 	if f, e := os.Lstat(path); e == nil {
 		if !f.Mode().IsRegular() || f.Mode()&os.ModeSymlink != 0 {
-			return errors.New("sqlite file: требуется «regular and a symlink»")
+			return errors.New("Файл SQLite должен быть обычным файлом, а не символической ссылкой")
 		}
 		if f.Mode().Perm()&0077 != 0 {
 			return fmt.Errorf("Небезопасные права %04o файла SQLite", f.Mode().Perm())
@@ -112,7 +112,7 @@ func exclusiveLock(name string) (*os.File, error) {
 	f := os.NewFile(uintptr(fd), name)
 	info, err := f.Stat()
 	if err == nil && (!info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0) {
-		err = errors.New("sqlite owner lock: требуется «regular and mode 0600»")
+		err = errors.New("Файл блокировки владельца SQLite должен быть обычным файлом с правами 0600")
 	}
 	if err == nil {
 		st, ok := info.Sys().(*syscall.Stat_t)

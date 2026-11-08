@@ -86,12 +86,12 @@ impl LiveGameGuard0506 {
         // Артефакты точки входа JVM, созданные Launcher, должны входить
 // в подписанную инвентаризацию.
         for entry in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
-            let canonical = fs::canonicalize(entry).map_err(|e| format!("Отсутствует: «live Guard classpath»: {e}"))?;
+            let canonical = fs::canonicalize(entry).map_err(|e| format!("Не удалось найти путь к классам действующего Guard: {e}"))?;
             if !pinned.contains_key(&canonical) {
                 return Err(format!("Неподписанный путь к классам Java при активном Guard: {}",canonical.display()));
             }
         }
-        if pinned.is_empty() {return Err("Пустое значение: «live Guard executable inventory»".into())}
+        if pinned.is_empty() {return Err("Список контролируемых исполняемых файлов действующего Guard пуст".into())}
         if pinned.len() > LIMIT {return Err("Превышен лимит проверки файлов при активном Guard".into())}
         #[cfg(target_os = "linux")]
         let linux_external = match signed.as_ref() {
@@ -223,7 +223,7 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         }
         if deadline.map(|d|Instant::now()>=d).unwrap_or(false) {continue}
         let check = tokio::task::spawn_blocking({let guard=guard.clone(); move ||guard.verify()}).await
-            .map_err(|e|format!("Ошибка: «live Guard watcher»: {e}"))?;
+            .map_err(|e|format!("Ошибка наблюдателя за действующим Guard: {e}"))?;
         #[cfg(target_os = "linux")]
         let check = match check { Ok(()) => guard.verify_linux_daemon().await, err => err };
         #[cfg(target_os = "macos")]

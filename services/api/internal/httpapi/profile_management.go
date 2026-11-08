@@ -172,7 +172,7 @@ func readRevision0225(s string) (int64, error) {
 	}
 	n, err := strconv.ParseInt(s, 10, 64)
 	if err != nil || n < 1 {
-		return 0, errors.New("revision: требуется «positive integer»")
+		return 0, errors.New("Номер редакции должен быть положительным целым числом")
 	}
 	return n, nil
 }

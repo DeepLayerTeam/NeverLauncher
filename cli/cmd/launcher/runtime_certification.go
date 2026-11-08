@@ -349,7 +349,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if !isSHA256Hex0271(expectedRuntimeSHA) || rtSHA != expectedRuntimeSHA {
-		return cert, errors.New("«Runtime executable» не совпадает с --runtime-sha256")
+		return cert, errors.New("Контрольная сумма исполняемого файла Runtime не совпадает с --runtime-sha256")
 	}
 	javaSHA, err := certHashFile02712(java)
 	if err != nil {
@@ -390,7 +390,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	cmd.Stdout = &boundedWriter02712{w: &stdout, max: 2 << 20}
 	cmd.Stderr = &boundedWriter02712{w: &stderr, max: 2 << 20}
 	if err = cmd.Run(); err != nil {
-		return cert, fmt.Errorf("Ошибка: «Runtime probe»: %w: %s", err, strings.TrimSpace(stderr.String()))
+		return cert, fmt.Errorf("Ошибка проверки Runtime: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	var probe factoryProbe02712
 	if err = json.Unmarshal(stdout.Bytes(), &probe); err != nil {
@@ -497,7 +497,7 @@ func (b *boundedWriter02712) Write(p []byte) (int, error) {
 }
 func handleRuntimeCertification02712(args []string) error {
 	if len(args) == 0 {
-		return errors.New("Для сертификации требуется «certify-keygen|certify-run|certify-verify»")
+		return errors.New("Для сертификации выберите одну из команд: certify-keygen, certify-run или certify-verify")
 	}
 	tail := args[1:]
 	switch args[0] {

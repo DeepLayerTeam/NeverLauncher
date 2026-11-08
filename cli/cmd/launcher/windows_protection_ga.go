@@ -62,7 +62,7 @@ func windowsProtectionGAStableVersion0190(ver string) error {
 		return fmt.Errorf("Для выпуска защиты Windows уровня GA требуется «версия 0.19.0 или новее; получено» %s", ver)
 	}
 	if strings.ContainsAny(strings.TrimSpace(ver), "-+") {
-		return fmt.Errorf("Для выпуска защиты Windows уровня GA требуется «stable immutable SemVer without prerelease/build suffix:» %q", ver)
+		return fmt.Errorf("Для выпуска защиты Windows уровня GA требуется стабильная неизменяемая версия SemVer без суффиксов предварительного выпуска и сборки: %q", ver)
 	}
 	return nil
 }
@@ -248,7 +248,7 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 		return errors.New("Несовпадение: «метаданные приёмки защиты Windows»")
 	}
 	if !strings.EqualFold(cert.SourceCommit, expected.SourceCommit) || !strings.EqualFold(cert.Repository, expected.Repository) || !strings.EqualFold(cert.RCCertificateSHA256, expected.RCCertificateSHA256) || !strings.EqualFold(cert.RCBoundarySHA256, expected.RCBoundarySHA256) || cert.RCCertificateID != expected.RCCertificateID {
-		return errors.New("Несовпадение: «Windows Protection GA RC/source binding»")
+		return errors.New("Не совпадает привязка RC и исходного выпуска защиты Windows уровня GA")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, cert.CreatedAt); err != nil {
 		return fmt.Errorf("Некорректное значение: «дата создания данных приёмки защиты Windows»: %w", err)
@@ -266,7 +266,7 @@ func verifyWindowsProtectionGA0190(dir, ver string) error {
 	}
 	for i := range expected.RequiredCapabilities {
 		if cert.RequiredCapabilities[i] != expected.RequiredCapabilities[i] {
-			return fmt.Errorf("Несовпадение: «Windows Protection GA capability #%d»", i+1)
+			return fmt.Errorf("Не совпадает возможность защиты Windows уровня GA №%d", i+1)
 		}
 	}
 	for i := range expected.Artifacts {

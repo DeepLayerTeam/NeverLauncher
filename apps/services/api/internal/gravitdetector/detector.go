@@ -511,7 +511,7 @@ func jarManifestVersionFile(ctx context.Context, entry *zip.File) (string, bool,
 	for _, f := range z.File {
 		if strings.EqualFold(f.Name, "META-INF/MANIFEST.MF") {
 			if f.UncompressedSize64 > 64<<10 {
-				return "", false, errors.New("Превышен допустимый размер: «JAR manifest»")
+				return "", false, errors.New("Превышен допустимый размер манифеста JAR")
 			}
 			data, err := readBounded(f, 64<<10)
 			if err != nil {

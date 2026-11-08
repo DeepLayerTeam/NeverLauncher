@@ -27,7 +27,7 @@ func normalizeLifecycleScope0204(scope, scopeID string) (string, string, error) 
 		scopeID = ""
 	case "project":
 		if scopeID == "" {
-			return "", "", errors.New("жизненный цикл расширения проекта: требуется «scopeId»")
+			return "", "", errors.New("Для управления жизненным циклом расширения проекта требуется идентификатор области действия (scopeId)")
 		}
 	default:
 		return "", "", errors.New("область жизненного цикла расширения: требуется глобальная область или область проекта")
@@ -69,7 +69,7 @@ func normalizeLifecycleTransition0204(in model.ExtensionLifecycleTransition) (mo
 		return model.ExtensionLifecycleTransition{}, fmt.Errorf("Некорректное значение: «операция жизненного цикла» %q", in.Operation)
 	}
 	if in.DesiredVersion == "" || !extensionSemver0201.MatchString(in.DesiredVersion) {
-		return model.ExtensionLifecycleTransition{}, errors.New("desired lifecycle version: требуется «semver»")
+		return model.ExtensionLifecycleTransition{}, errors.New("Укажите целевую версию жизненного цикла в формате SemVer")
 	}
 	if in.CurrentVersion != "" && !extensionSemver0201.MatchString(in.CurrentVersion) {
 		return model.ExtensionLifecycleTransition{}, errors.New("current lifecycle version: требуется «версия в формате SemVer или пустое значение»")
@@ -105,7 +105,7 @@ func normalizeLifecycleTransition0204(in model.ExtensionLifecycleTransition) (mo
 		in.Source = "registry"
 	}
 	if in.ExpectedGeneration < 0 {
-		return model.ExtensionLifecycleTransition{}, errors.New("«ожидаемое поколение»: запрещено «be negative»")
+		return model.ExtensionLifecycleTransition{}, errors.New("Ожидаемое поколение не может быть отрицательным")
 	}
 	return in, nil
 }
@@ -192,7 +192,7 @@ func (r *MemoryRepository) TransitionExtensionInstall(ctx context.Context, trans
 	}
 	if idx < 0 {
 		if transition.ExpectedGeneration != 0 {
-			return model.ExtensionInstall{}, fmt.Errorf("Обнаружено изменение: «%w: lifecycle generation»", ErrConflict)
+			return model.ExtensionInstall{}, fmt.Errorf("%w: изменилось поколение жизненного цикла", ErrConflict)
 		}
 		found := false
 		for _, v := range r.extensionVersions {

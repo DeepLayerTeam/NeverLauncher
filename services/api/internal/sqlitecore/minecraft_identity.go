@@ -21,7 +21,7 @@ func (a *Auth) SaveMinecraftIdentity(ctx context.Context, p model.MinecraftProfi
 	p.Name = strings.TrimSpace(p.Name)
 	p.UUID = strings.ToLower(strings.TrimSpace(p.UUID))
 	if !mcName.MatchString(p.Name) || !mcUUID.MatchString(p.UUID) || p.UserID == "" || actor == "" {
-		return p, errors.New("Требуется: «valid Minecraft name, UUID, user and actor»")
+		return p, errors.New("Необходимо указать корректные имя Minecraft, UUID, пользователя и инициатора операции")
 	}
 	p.Issuer = strings.ToLower(strings.TrimSpace(p.Issuer))
 	p.Realm = strings.ToLower(strings.TrimSpace(p.Realm))

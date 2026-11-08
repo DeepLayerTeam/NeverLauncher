@@ -200,7 +200,7 @@ func verifyStoppedSource0448(ctx context.Context, statePath, snapshotPath, expec
 		return sourceFenceEvidence0448{}, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 8<<20 || st.Size() == 0 || st.ModTime().Before(state.StoppedAt.Add(-time.Second)) {
-		return sourceFenceEvidence0448{}, errors.New("snapshot: требуется «a fresh regular export after stopping source»")
+		return sourceFenceEvidence0448{}, errors.New("После остановки исходной системы необходимо создать новый снимок в виде обычного файла экспорта")
 	}
 	if err := readFenceFile0448(snapshotPath, 8<<20, &snapshot); err != nil {
 		return sourceFenceEvidence0448{}, err
@@ -244,7 +244,7 @@ func handleMigrationFence0448(args []string) error {
 	case "fence-source":
 		state := sourceFenceState0448{Format: "never/gravit-source-stop/v1", RunID: flagValue(args, "--run", ""), ProfileID: flagValue(args, "--profile-id", ""), Channel: flagValue(args, "--channel", ""), StageID: flagValue(args, "--stage-id", ""), Unit: flagValue(args, "--unit", "")}
 		if flagValue(args, "--confirm", "") != state.RunID {
-			return errors.New("Требуется: «exact migration run confirmation»")
+			return errors.New("Требуется точное подтверждение идентификатора задачи миграции")
 		}
 		return stopSourceWriter0448(ctx, state, flagValue(args, "--output", ""), fenceSystemctl0448)
 	case "verify-source-fence":

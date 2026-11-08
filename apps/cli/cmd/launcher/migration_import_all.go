@@ -166,7 +166,7 @@ func migrationImportAll0493(args []string) error {
 	run, confirm := strings.TrimSpace(flagValue(args, "--run", "")), strings.TrimSpace(flagValue(args, "--confirm", ""))
 	source, mapping, report := flagValue(args, "--source", ""), flagValue(args, "--mapping", ""), flagValue(args, "--report", "")
 	if backend == "" || token == "" || run == "" || confirm != run || source == "" || mapping == "" || report == "" {
-		return errors.New("import-content-all: требуется «--backend --token --run --confirm (same run) --source --mapping --report»")
+		return errors.New("Для import-content-all необходимы параметры --backend, --token, --run, --confirm (тот же запуск), --source, --mapping и --report")
 	}
 	if _, err := migrationURL0493(backend); err != nil {
 		return err
