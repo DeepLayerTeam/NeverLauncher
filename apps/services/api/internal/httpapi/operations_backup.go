@@ -613,7 +613,7 @@ func (s Server) diagnosticsBundlePayload880() map[string]any {
 		"config":             map[string]any{"repositoryDriver": s.Config.RepositoryDriver, "storageDriver": s.Storage.Driver(), "metricsEnabled": s.Config.MetricsEnabled},
 		"checks":             checks,
 		"counts":             map[string]int{"projects": len(s.Repo.ListProjects()), "users": len(s.Repo.ListUsers()), "roles": len(s.Repo.ListRoles()), "auditEvents": len(s.Repo.ListAuditEvents()), "telemetryEvents": len(s.Repo.ListTelemetryEvents()), "crashReports": len(s.Repo.ListCrashReports())},
-		"recommendedActions": []string{"проверить последний backup через restore-dry-run", "проверить /ready перед релизом", "экспортировать audit hash chain перед крупной миграцией"},
+		"recommendedActions": []string{"проверить последнюю резервную копию командой restore-dry-run", "проверить /ready перед релизом", "экспортировать цепочку контрольных сумм аудита перед крупной миграцией"},
 	}
 }
 

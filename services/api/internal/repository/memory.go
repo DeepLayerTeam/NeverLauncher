@@ -21,7 +21,7 @@ var ErrConflict = errors.New("конфликт в репозитории")
 
 // ErrStableRuntimeGate0341 — непреодолимая граница защиты релиза. В 0.34.1 нет
 // аттестованного исполнителя Runtime; старого подписанного JSON недостаточно.
-var ErrStableRuntimeGate0341 = errors.New("Доступ запрещён: «stable_runtime_gate_0341: trusted staged-client/server execution is not yet available; stable publication»")
+var ErrStableRuntimeGate0341 = errors.New("Доступ запрещён: «stable_runtime_gate_0341: доверенная проверка запущенных клиента и сервера пока недоступна; публикация в стабильный канал запрещена»")
 
 func IsStableChannel0341(channel string) bool {
 	return strings.EqualFold(strings.TrimSpace(channel), "stable")

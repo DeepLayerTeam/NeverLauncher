@@ -109,7 +109,7 @@ func handleMigrationWorkflow0331(args []string) error {
 			path += "/content"
 			pp := flagValue(args, "--profile-path", "")
 			if pp == "" {
-				return errors.New("Для содержимое требуется: --profile-path profiles/name.json")
+				return errors.New("Для содержимого требуется параметр --profile-path profiles/name.json")
 			}
 			if command == "content" {
 				path += "?profilePath=" + url.QueryEscape(pp)

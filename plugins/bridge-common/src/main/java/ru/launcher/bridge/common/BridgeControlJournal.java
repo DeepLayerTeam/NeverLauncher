@@ -222,7 +222,7 @@ final class BridgeControlJournal implements AutoCloseable {
         Path tmp = path.resolveSibling(path.getFileName() + "." + java.util.UUID.randomUUID() + ".tmp");
         try {
             try (var out = Files.newOutputStream(tmp, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
-                props.store(out, "Launcher ServerBridge control journal");
+                props.store(out, "Журнал управляющих команд Launcher ServerBridge");
             }
             setOwnerOnly(tmp);
             try (var ch = FileChannel.open(tmp, StandardOpenOption.WRITE)) { ch.force(true); }

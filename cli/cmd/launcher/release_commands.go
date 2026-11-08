@@ -1243,7 +1243,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 			return fmt.Errorf("не удалось проверить %s: %w", name, err)
 		}
 		if !strings.EqualFold(actual, expected) {
-			return fmt.Errorf("checksum mismatch для %s", name)
+			return fmt.Errorf("Несовпадение контрольной суммы файла %s", name)
 		}
 		verified++
 	}
@@ -1507,7 +1507,7 @@ func releaseDescription(ver string) string {
 		"- SBOM.spdx.json, PROVENANCE.json и RELEASE_MANIFEST.json в каждом release bundle;\n"+
 		"- проверка release bundle через nl release verify;\n"+
 		"- Ed25519-подпись SHA256SUMS и отдельная signed SLSA provenance attestation с внешним trust anchor;\n"+
-		"- source package формируется только из git-tracked/allowlisted файлов и проходит secret scan.%s", ver, ver, extra)
+		"- Исходный пакет формируется только из отслеживаемых Git и разрешённых файлов, после чего проверяется на наличие секретов.%s", ver, ver, extra)
 }
 
 func buildManifest(root, project, profile, ver string) (Manifest, error) {

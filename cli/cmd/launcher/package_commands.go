@@ -212,7 +212,7 @@ func handlePipeline(args []string) error {
 		}
 		evidencePath := flagValue(args, "--evidence", "")
 		if evidencePath == "" {
-			return errors.New("команда pipeline runtime-submit требует --evidence <signed-json>")
+			return errors.New("Команда pipeline runtime-submit требует параметр --evidence <signed-json>")
 		}
 		raw, err := os.ReadFile(evidencePath)
 		if err != nil {

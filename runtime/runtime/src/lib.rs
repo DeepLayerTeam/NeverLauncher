@@ -914,7 +914,7 @@ pub async fn certify_vanilla_compatibility(
         }
         let port = matching_server_port.ok_or_else(|| "Для проверки соответствия сервера Vanilla требуется --server-port".to_string())?;
         if port == 0 {
-            return Err("Vanilla certification matching server port должен быть > 0".to_string());
+            return Err("Для сертификации Vanilla порт игрового сервера должен быть больше нуля".to_string());
         }
         if minecraft_supports_quick_play_for_resolution(&version, &resolution.inheritance_chain) {
             // Minecraft 1.20+ убрал старые параметры подключения --server/--port.
@@ -926,7 +926,7 @@ pub async fn certify_vanilla_compatibility(
             replace_or_append_arg_pair(&mut game_args, "--port", port.to_string());
         }
     } else if matching_server_port.is_some() {
-        return Err("Vanilla certification --server-port требует --server".to_string());
+        return Err("Для сертификации Vanilla параметр --server-port требует --server".to_string());
     }
 
     let mut jvm_args = resolution.jvm_args.clone();

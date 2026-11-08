@@ -64,7 +64,7 @@ func verifyDesktopPackage(dir string) error {
 		return err
 	}
 	if manifest.SchemaVersion == "" || manifest.Version == "" || len(manifest.Platforms) == 0 {
-		return errors.New("desktop package manifest неполон")
+		return errors.New("Манифест пакета Desktop неполон")
 	}
 	expectedLines := map[string]string{}
 	f, err := os.Open(filepath.Join(dir, manifest.ChecksumsFile))
@@ -84,19 +84,19 @@ func verifyDesktopPackage(dir string) error {
 	}
 	for _, item := range manifest.Platforms {
 		if item.Status != "packaged" || item.Artifact == "" || item.SHA256 == "" || item.Size <= 0 {
-			return fmt.Errorf("Некорректное значение: метаданные артефакта Desktop: %s", item.Artifact)
+			return fmt.Errorf("Некорректные метаданные артефакта Desktop: %s", item.Artifact)
 		}
 		sum, size, err := hashFile(filepath.Join(dir, item.Artifact))
 		if err != nil {
 			return err
 		}
 		if size != item.Size || !strings.EqualFold(sum, item.SHA256) {
-			return fmt.Errorf("Несовпадение: контрольная сумма и размер артефакта Desktop: %s", item.Artifact)
+			return fmt.Errorf("Контрольная сумма или размер артефакта Desktop не совпадает: %s", item.Artifact)
 		}
 		if !strings.EqualFold(expectedLines[item.Artifact], sum) {
-			return fmt.Errorf("Несовпадение: SHA256SUMS.desktop: %s", item.Artifact)
+			return fmt.Errorf("Несовпадение с SHA256SUMS.desktop для артефакта %s", item.Artifact)
 		}
 	}
-	fmt.Printf("Desktop package проверен: %d artifact(s)\n", len(manifest.Platforms))
+	fmt.Printf("Пакет Desktop проверен: артефактов — %d\n", len(manifest.Platforms))
 	return nil
 }

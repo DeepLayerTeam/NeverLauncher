@@ -678,7 +678,7 @@ public final class LauncherApiClient {
                 HttpResponse<String> response = client.send(signedRequest(method, endpoint.uri(), body), HttpResponse.BodyHandlers.ofString());
                 if (isRetryableBackendStatus(response.statusCode())) {
                     backendPool.failure(endpoint.index());
-                    last = new IOException("Backend " + endpoint.baseUrl() + " returned HTTP " + response.statusCode());
+                    last = new IOException("Сервер Backend " + endpoint.baseUrl() + " вернул код HTTP " + response.statusCode());
                     continue;
                 }
                 // Ошибки аутентификации и авторизации намеренно считаются окончательными: переключение узла не
@@ -702,7 +702,7 @@ public final class LauncherApiClient {
                 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (isRetryableBackendStatus(response.statusCode())) {
                     backendPool.failure(endpoint.index());
-                    last = new IOException("Backend " + endpoint.baseUrl() + " returned HTTP " + response.statusCode());
+                    last = new IOException("Сервер Backend " + endpoint.baseUrl() + " вернул код HTTP " + response.statusCode());
                     continue;
                 }
                 backendPool.success(endpoint.index());

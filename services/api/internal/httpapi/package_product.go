@@ -287,7 +287,7 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 	relativePath := strings.TrimSpace(firstNonEmpty(r.FormValue("path"), header.Filename))
 	if relativePath == "" {
-		writeError(w, http.StatusBadRequest, "path обязателен")
+		writeError(w, http.StatusBadRequest, "Необходимо указать путь")
 		return
 	}
 	payload, err := io.ReadAll(file)

@@ -512,7 +512,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		return releaseCompatibilityCertification{}, fmt.Errorf("Некорректное значение: COMPATIBILITY_MATRIX: %w", err)
 	}
 	if targets.SchemaVersion != "1.0" || matrix.SchemaVersion != "1.0" {
-		return releaseCompatibilityCertification{}, errors.New("compatibility evidence требует schemaVersion=1.0")
+		return releaseCompatibilityCertification{}, errors.New("Для свидетельства совместимости требуется schemaVersion=1.0")
 	}
 	ver = strings.TrimSpace(ver)
 	targetsProductVersion := strings.TrimSpace(targets.ProductVersion)
@@ -539,7 +539,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	for _, target := range targets.Targets {
 		id := strings.TrimSpace(target.ID)
 		if id == "" {
-			return releaseCompatibilityCertification{}, errors.New("compatibility target без id")
+			return releaseCompatibilityCertification{}, errors.New("Для целевой платформы совместимости не указан идентификатор")
 		}
 		if _, exists := targetByID[id]; exists {
 			return releaseCompatibilityCertification{}, fmt.Errorf("Повторяющаяся цель совместимости: %s", id)
@@ -552,10 +552,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 		if enhanced {
 			if target.JavaMajor <= 0 {
-				return releaseCompatibilityCertification{}, fmt.Errorf("target %s не содержит javaMajor", id)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Для целевой платформы %s не указано значение javaMajor", id)
 			}
 			if target.Scope != "client" && target.Scope != "integration" {
-				return releaseCompatibilityCertification{}, fmt.Errorf("target %s имеет неподдерживаемый scope=%s", id, target.Scope)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Целевая платформа %s использует неподдерживаемую область scope=%s", id, target.Scope)
 			}
 			clientLoaderAllowed := target.Loader == "vanilla" ||
 				(compatibilityFabricII0171Required(ver) && target.Loader == "fabric") ||
@@ -563,10 +563,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 				(compatibilityForgeModern0173Required(ver) && target.Loader == "forge") ||
 				(compatibilityNeoForgeII0176Required(ver) && target.Loader == "neoforge")
 			if target.Scope == "client" && !clientLoaderAllowed {
-				return releaseCompatibilityCertification{}, fmt.Errorf("target %s: client scope не разрешён для loader=%s в версии %s", id, target.Loader, ver)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Целевая платформа %s: клиентская область запрещена для загрузчика loader=%s в версии %s", id, target.Loader, ver)
 			}
 			if target.MatchingServer && !(target.Loader == "vanilla" && target.Scope == "client" && target.OS == "linux" && target.Arch == "x86_64") {
-				return releaseCompatibilityCertification{}, fmt.Errorf("target %s: matchingServer требует Vanilla client scope на linux/x86_64", id)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Целевая платформа %s: для matchingServer требуется клиентский профиль Vanilla на linux/x86_64", id)
 			}
 		}
 		targetByID[id] = target
@@ -990,7 +990,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 	for _, result := range matrix.Targets {
 		id := strings.TrimSpace(result.TargetID)
 		if _, ok := targetByID[id]; !ok {
-			return releaseCompatibilityCertification{}, fmt.Errorf("matrix содержит unexpected target: %s", id)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Матрица содержит неожиданную целевую платформу: %s", id)
 		}
 		if _, exists := resultByID[id]; exists {
 			return releaseCompatibilityCertification{}, fmt.Errorf("matrix содержит duplicate target: %s", id)
@@ -1025,10 +1025,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			return releaseCompatibilityCertification{}, fmt.Errorf("В матрице отсутствует цель: %s", id)
 		}
 		if result.SchemaVersion != "1.0" || result.ProductVersion != ver || result.Status != "passed" || result.ExitCode != 0 {
-			return releaseCompatibilityCertification{}, fmt.Errorf("target %s не имеет валидный PASS/exitCode=0", id)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Целевая платформа %s не подтверждает успешный результат (PASS, exitCode=0)", id)
 		}
 		if result.MinecraftVersion != target.Minecraft || result.Loader != target.Loader || result.LoaderSelector != target.LoaderVersion || result.OS != target.OS || result.Arch != target.Arch {
-			return releaseCompatibilityCertification{}, fmt.Errorf("target %s identity mismatch между targets и matrix", id)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Идентификатор целевой платформы %s не совпадает в списке платформ и матрице", id)
 		}
 		if enhanced {
 			if result.JavaMajor != target.JavaMajor || result.DetectedJavaMajor != target.JavaMajor || result.Scope != target.Scope || result.MatchingServer != target.MatchingServer {
@@ -1036,7 +1036,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			}
 		}
 		if result.Commit != matrix.Commit || result.RunID != matrix.RunID {
-			return releaseCompatibilityCertification{}, fmt.Errorf("target %s commit/runId не совпадает с aggregate matrix", id)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Коммит или runId целевой платформы %s не совпадает со сводной матрицей", id)
 		}
 		mandatoryChecks := legacyMandatoryChecks
 		if enhanced {
@@ -1085,7 +1085,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			loaderHardeningTargets = append(loaderHardeningTargets, id)
 		}
 		if !compatibilitySHA256RE.MatchString(result.EvidenceSHA256) {
-			return releaseCompatibilityCertification{}, fmt.Errorf("target %s не содержит валидный evidenceSha256", id)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Целевая платформа %s не содержит корректный evidenceSha256", id)
 		}
 		if compatibilityIIGa0170Required(ver) {
 			vendor := strings.TrimSpace(result.JREVendor)
@@ -1103,19 +1103,19 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 		if target.Loader == "vanilla" {
 			if strings.TrimSpace(result.ResolvedLoaderVersion) != "" {
-				return releaseCompatibilityCertification{}, fmt.Errorf("Vanilla target %s не должен иметь resolvedLoaderVersion", id)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Целевая платформа Vanilla %s не должна содержать resolvedLoaderVersion", id)
 			}
 		} else {
 			resolved := strings.ToLower(strings.TrimSpace(result.ResolvedLoaderVersion))
 			if resolved == "" || mutable[resolved] {
-				return releaseCompatibilityCertification{}, fmt.Errorf("target %s не разрешил loader в immutable version", id)
+				return releaseCompatibilityCertification{}, fmt.Errorf("Для целевой платформы %s не зафиксирована версия загрузчика", id)
 			}
 			if compatibilityLoaderResolution0177Required(ver) {
 				lockSHA := strings.ToLower(strings.TrimSpace(result.ResolutionLockSHA256))
 				sourceSHA := strings.ToLower(strings.TrimSpace(result.ResolutionSourceSHA256))
 				reproSHA := strings.ToLower(strings.TrimSpace(result.ReproducibilitySHA256))
 				if !compatibilitySHA256RE.MatchString(lockSHA) || !compatibilitySHA256RE.MatchString(sourceSHA) || !compatibilitySHA256RE.MatchString(reproSHA) {
-					return releaseCompatibilityCertification{}, fmt.Errorf("target %s не содержит полный loader resolution pinning evidence", id)
+					return releaseCompatibilityCertification{}, fmt.Errorf("Целевая платформа %s не содержит полного подтверждения закрепления версии загрузчика", id)
 				}
 				loaderPins = append(loaderPins, releaseCompatibilityLoaderPin{
 					TargetID: id, Loader: target.Loader, MinecraftVersion: target.Minecraft,

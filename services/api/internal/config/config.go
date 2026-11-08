@@ -473,7 +473,7 @@ func ValidateProduction(cfg Config) error {
 	singleNode := strings.TrimSpace(cfg.SQLiteCoordinatorPath) != ""
 	if singleNode {
 		if !filepath.IsAbs(cfg.SQLiteCoordinatorPath) {
-			problems = append(problems, "single-node SQLite coordinator path должен быть абсолютным")
+			problems = append(problems, "Путь к координатору SQLite в односерверном режиме должен быть абсолютным")
 		}
 		if cfg.ServerBridgeHARequired {
 			problems = append(problems, "SQLite single-node не поддерживает SERVERBRIDGE_HA_REQUIRED")
@@ -681,7 +681,7 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "extension events lease должен быть 2..600 секунд")
 		}
 		if cfg.ExtensionEventsHookTimeoutMilliseconds < 50 || cfg.ExtensionEventsHookTimeoutMilliseconds > 60000 {
-			problems = append(problems, "extension events hook timeout должен быть 50..60000 ms")
+			problems = append(problems, "Тайм-аут обработчика событий расширений должен составлять от 50 до 60000 мс")
 		}
 		if cfg.ExtensionEventsMaxAttempts < 1 || cfg.ExtensionEventsMaxAttempts > 100 {
 			problems = append(problems, "extension events max attempts должен быть 1..100")
@@ -704,16 +704,16 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "LAUNCHER_EXTENSION_HOST_LISTEN должен быть loopback-адресом")
 		}
 		if cfg.ExtensionHostStartupTimeoutSeconds < 1 || cfg.ExtensionHostStartupTimeoutSeconds > 300 {
-			problems = append(problems, "extension host startup timeout должен быть 1..300 секунд")
+			problems = append(problems, "Тайм-аут запуска хоста расширений должен составлять от 1 до 300 секунд")
 		}
 		if cfg.ExtensionHostHeartbeatTimeoutSeconds < 3 || cfg.ExtensionHostHeartbeatTimeoutSeconds > 600 {
-			problems = append(problems, "extension host heartbeat timeout должен быть 3..600 секунд")
+			problems = append(problems, "Тайм-аут проверки активности хоста расширений должен составлять от 3 до 600 секунд")
 		}
 		if cfg.ExtensionHostStopTimeoutSeconds < 1 || cfg.ExtensionHostStopTimeoutSeconds > 120 {
-			problems = append(problems, "extension host stop timeout должен быть 1..120 секунд")
+			problems = append(problems, "Тайм-аут остановки хоста расширений должен составлять от 1 до 120 секунд")
 		}
 		if cfg.ExtensionHostCapabilityTimeoutSeconds < 1 || cfg.ExtensionHostCapabilityTimeoutSeconds > 60 {
-			problems = append(problems, "extension host capability timeout должен быть 1..60 секунд")
+			problems = append(problems, "Тайм-аут проверки возможностей хоста расширений должен составлять от 1 до 60 секунд")
 		}
 		if cfg.ExtensionHostMaxMemoryMB < 32 || cfg.ExtensionHostMaxMemoryMB > 1048576 {
 			problems = append(problems, "extension host max memory должен быть 32..1048576 MiB")
@@ -749,7 +749,7 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "extension HTTP response limit должен быть 4096..33554432 bytes")
 		}
 		if cfg.ExtensionHTTPTimeoutSeconds < 1 || cfg.ExtensionHTTPTimeoutSeconds > 60 {
-			problems = append(problems, "extension HTTP timeout должен быть 1..60 seconds")
+			problems = append(problems, "Тайм-аут HTTP-запросов расширений должен составлять от 1 до 60 секунд")
 		}
 	}
 	driver := strings.ToLower(strings.TrimSpace(cfg.StorageDriver))

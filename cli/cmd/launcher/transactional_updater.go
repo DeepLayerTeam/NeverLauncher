@@ -327,7 +327,7 @@ func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updat
 		info, statErr := os.Lstat(dst)
 		if statErr == nil {
 			if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-				return nil, fmt.Errorf("updater target должен быть regular file: %s", rel)
+				return nil, fmt.Errorf("Целевой файл обновления должен быть обычным файлом: %s", rel)
 			}
 			touched.HadOriginal = true
 			touched.OriginalMode = uint32(info.Mode().Perm())

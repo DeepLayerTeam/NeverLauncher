@@ -412,7 +412,7 @@ impl GuardSupervisor {
             Err(_) => {
                 bootstrap_secret.zeroize();
                 let _ = child.kill().await;
-                return Err("Guard authenticated IPC handshake превысил timeout".to_string());
+                return Err("Превышено время ожидания защищённого рукопожатия Guard IPC".to_string());
             }
         };
         bootstrap_secret.zeroize();
@@ -440,7 +440,7 @@ impl GuardSupervisor {
             .await
             .map_err(|err| format!("Ошибка: «запрос к Windows Protection Core»: {err}"))?;
         let policy: GuardProcessPolicyReport = serde_json::from_value(policy_value)
-            .map_err(|err| format!("Guard Windows Protection Core payload повреждён: {err}"))?;
+            .map_err(|err| format!("Повреждены данные ядра защиты Guard для Windows: {err}"))?;
         validate_guard_process_policy(&handle, &policy)?;
         *state = Some(handle);
         Ok(status)
@@ -472,7 +472,7 @@ impl GuardSupervisor {
         if payload.get("pong").and_then(Value::as_bool) == Some(true) {
             Ok(())
         } else {
-            Err("Guard вернул некорректный ping response".to_string())
+            Err("Guard вернул некорректный ответ на запрос проверки связи".to_string())
         }
     }
 
@@ -497,7 +497,7 @@ impl GuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn integrity_evidence(&self) -> Result<GuardIntegrityEvidence, String> {
-        Err("Guard 0.13.4 Windows integrity evidence доступен только для Windows".to_string())
+        Err("Сведения о целостности Windows Guard 0.13.4 доступны только в Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -516,7 +516,7 @@ impl GuardSupervisor {
 
     #[cfg(not(windows))]
     pub async fn process_policy(&self) -> Result<GuardProcessPolicyReport, String> {
-        Err("Guard 0.13.4 Windows process policy доступен только для Windows".to_string())
+        Err("Политика процессов Windows Guard 0.13.4 доступна только в Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -561,7 +561,7 @@ impl GuardSupervisor {
         _challenge_id: &str,
         _challenge: &str,
     ) -> Result<GuardRemoteAttestation, String> {
-        Err("Guard 0.13.4 Guard Attestation доступен только для Windows".to_string())
+        Err("Аттестация Guard 0.13.4 доступна только в Windows".to_string())
     }
 
     #[cfg(windows)]
@@ -597,10 +597,10 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         .map_err(|err| format!("не удалось найти исполняемый файл Desktop для проверки пакета: {err}"))?;
     let current_dir = current_exe
         .parent()
-        .ok_or_else(|| "Desktop executable не имеет parent directory".to_string())?;
+        .ok_or_else(|| "Не удалось определить родительский каталог исполняемого файла Desktop".to_string())?;
     let guard_dir = guard_executable
         .parent()
-        .ok_or_else(|| "Guard executable не имеет parent directory".to_string())?;
+        .ok_or_else(|| "Не удалось определить родительский каталог исполняемого файла Guard".to_string())?;
     let current_dir = std::fs::canonicalize(current_dir)
         .map_err(|err| format!("не удалось canonicalize Desktop directory: {err}"))?;
     let guard_dir = std::fs::canonicalize(guard_dir)
@@ -774,7 +774,7 @@ async fn client_authenticate(
 
     let challenge: ServerChallenge = read_frame(&mut pipe).await?;
     if challenge.kind != "challenge" || challenge.protocol_version != GUARD_PROTOCOL_VERSION {
-        return Err("Guard IPC protocol mismatch на server challenge".to_string());
+        return Err("Несовпадение протокола Guard IPC на этапе проверки сервера".to_string());
     }
     let server_nonce = decode_hex_32(&challenge.server_nonce, "serverNonce")?;
     let handshake = HandshakeContext {
@@ -875,7 +875,7 @@ async fn send_command_with_payload(
     {
         Ok(result) => result,
         Err(_) => Err(format!(
-            "Guard IPC command {command} превысил timeout"
+            "Превышено время ожидания команды Guard IPC: {command}"
         )),
     }
 }
@@ -931,7 +931,7 @@ async fn send_command_inner(
         Err(payload
             .get("error")
             .and_then(Value::as_str)
-            .unwrap_or("Guard отклонил IPC command")
+            .unwrap_or("Guard отклонил команду IPC")
             .to_string())
     }
 }
@@ -1204,7 +1204,7 @@ pub(crate) fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServe
 pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Result<(), String> {
     validate_pipe_endpoint(&endpoint)?;
     if parent_pid == 0 {
-        return Err("Guard parent PID должен быть > 0".to_string());
+        return Err("PID родительского процесса Guard должен быть больше нуля".to_string());
     }
     let guard_pid = std::process::id();
     let protection_core = ensure_windows_protection_core()?;
@@ -1267,7 +1267,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
             }
             Err(_) => {
                 bootstrap_secret.zeroize();
-                return Err("Guard IPC client не подключился до timeout".to_string());
+                return Err("Клиент Guard IPC не подключился за отведённое время".to_string());
             }
         }
 

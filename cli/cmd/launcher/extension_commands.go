@@ -315,15 +315,15 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный target %q", t.Kind)
 		}
 		if _, ok := seenTargets[t.Kind]; ok {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("target %q указан повторно", t.Kind)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("Цель %q указана повторно", t.Kind)
 		}
 		seenTargets[t.Kind] = struct{}{}
 		if t.Entrypoint == "" || filepath.IsAbs(t.Entrypoint) || strings.Contains(t.Entrypoint, "\\") {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("target %s содержит некорректный entrypoint", t.Kind)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("Цель %s содержит некорректную точку входа", t.Kind)
 		}
 		clean := filepath.ToSlash(filepath.Clean(t.Entrypoint))
 		if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.HasPrefix(clean, "/") {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("target %s entrypoint должен быть относительным путём внутри extension", t.Kind)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("Точка входа цели %s должна быть относительным путём внутри расширения", t.Kind)
 		}
 		t.Entrypoint = clean
 	}

@@ -101,7 +101,7 @@ func embedDeviceTrustCertification(out, matrixPath, targetsPath, ver, expectedCo
 		return errors.New("Не указан путь к матрице доверия устройств")
 	}
 	if strings.TrimSpace(targetsPath) == "" {
-		return errors.New("device trust targets path пуст")
+		return errors.New("Не указан путь к списку целевых платформ доверия к устройствам")
 	}
 	matrixRaw, err := os.ReadFile(matrixPath)
 	if err != nil {
@@ -170,7 +170,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 	for _, target := range targets.Targets {
 		id := strings.TrimSpace(target.ID)
 		if id == "" {
-			return releaseDeviceTrustCertification{}, errors.New("Device Trust target без id")
+			return releaseDeviceTrustCertification{}, errors.New("Для целевой платформы Device Trust не указан идентификатор")
 		}
 		if _, exists := targetByID[id]; exists {
 			return releaseDeviceTrustCertification{}, fmt.Errorf("Обнаружен дубликат: цель Device Trust: %s", id)
@@ -194,7 +194,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 		}
 		for check := range baseline {
 			if !checks[check] {
-				return releaseDeviceTrustCertification{}, fmt.Errorf("target %s ослабляет Device Trust Release: missing %s", id, check)
+				return releaseDeviceTrustCertification{}, fmt.Errorf("Целевая платформа %s нарушает требования выпуска Device Trust: отсутствует проверка %s", id, check)
 			}
 		}
 		targetByID[id] = target
@@ -212,7 +212,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 	}
 	for _, osName := range []string{"linux", "windows", "macos"} {
 		if !requiredNativeOS[osName] {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust Release требует required native target для %s", osName)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Для выпуска Device Trust требуется обязательная нативная целевая платформа %s", osName)
 		}
 	}
 
@@ -220,7 +220,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 	for _, result := range matrix.Targets {
 		id := strings.TrimSpace(result.TargetID)
 		if _, ok := targetByID[id]; !ok {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust matrix содержит unexpected target: %s", id)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Матрица Device Trust содержит неожиданную целевую платформу: %s", id)
 		}
 		if _, exists := resultByID[id]; exists {
 			return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust matrix содержит duplicate target: %s", id)
@@ -235,13 +235,13 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 	for id, target := range targetByID {
 		result := resultByID[id]
 		if result.SchemaVersion != "1.0" || result.ProductVersion != ver || result.Status != "passed" || result.ExitCode != 0 {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust target %s не имеет валидный PASS/exitCode=0", id)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Целевая платформа Device Trust %s не подтверждает успешный результат (PASS, exitCode=0)", id)
 		}
 		if result.Kind != target.Kind || result.OS != target.OS || result.Arch != target.Arch || strings.TrimSpace(result.RuntimeArch) == "" {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust target %s identity mismatch между targets и matrix", id)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Идентификатор целевой платформы Device Trust %s не совпадает в списке и матрице", id)
 		}
 		if result.Commit != matrix.Commit || result.RunID != matrix.RunID {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust target %s commit/runId не совпадает с aggregate matrix", id)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Коммит или runId целевой платформы Device Trust %s не совпадает со сводной матрицей", id)
 		}
 		for _, check := range target.RequiredChecks {
 			if result.Checks == nil || result.Checks[check] != true {
@@ -249,11 +249,11 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 			}
 		}
 		if !deviceTrustSHA256RE.MatchString(strings.ToLower(result.EvidenceSHA256)) {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust target %s не содержит валидный evidenceSha256", id)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Целевая платформа Device Trust %s не содержит корректный evidenceSha256", id)
 		}
 		if target.Kind == "protocol-e2e" {
 			if result.Claims == nil || result.Claims["repository"] != "postgresql" || result.Claims["vendorHardwareProvenance"] != "not-verified" || result.Claims["privateKeyServerExposed"] != false || result.Claims["deviceTrustRelease"] != ver {
-				return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust protocol target %s содержит неверные release/security claims", id)
+				return releaseDeviceTrustCertification{}, fmt.Errorf("Протокольная целевая платформа Device Trust %s содержит некорректные утверждения о выпуске и безопасности", id)
 			}
 		} else {
 			foundLimitation := false
@@ -264,10 +264,10 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 				}
 			}
 			if !foundLimitation {
-				return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust native target %s скрывает headless CI limitation", id)
+				return releaseDeviceTrustCertification{}, fmt.Errorf("Нативная целевая платформа Device Trust %s скрывает ограничения CI без графического интерфейса", id)
 			}
 			if result.Claims == nil || result.Claims["deviceTrustRelease"] != ver {
-				return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust native target %s не привязан к release %s", id, ver)
+				return releaseDeviceTrustCertification{}, fmt.Errorf("Нативная целевая платформа Device Trust %s не привязана к выпуску %s", id, ver)
 			}
 		}
 		passedIDs = append(passedIDs, id)

@@ -1266,7 +1266,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		tmp := dst + ".nlpart"
 		if info, err := os.Lstat(tmp); err == nil && (info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular()) {
 			src.Close()
-			return nil, fmt.Errorf("native temp path имеет небезопасный тип: %s", tmp)
+			return nil, fmt.Errorf("Временный путь нативного компонента имеет небезопасный тип: %s", tmp)
 		}
 		out, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 		if err != nil {
@@ -1505,7 +1505,7 @@ func parseVanillaTargets(raw string) ([]vanillaTarget, error) {
 	for _, part := range parts {
 		fields := strings.Split(strings.TrimSpace(part), "/")
 		if len(fields) != 2 {
-			return nil, fmt.Errorf("некорректный --target %q, ожидается os/arch", part)
+			return nil, fmt.Errorf("Некорректное значение --target %q: ожидается формат os/arch", part)
 		}
 		target, err := normalizeVanillaTarget(vanillaTarget{OS: fields[0], Arch: fields[1]})
 		if err != nil {

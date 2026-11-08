@@ -91,7 +91,7 @@ func (s Server) evaluatePublishReadiness0385(ctx context.Context, lookup package
 			add("stable-runtime-ineligible", release.ID, "Обязательная runtime-сертификация не пройдена.", "Обновите результаты проверки обязательных targets.")
 		}
 	} else if err := s.validatePublishEvidenceContext0213(ctx, lookup); err != nil {
-		add("runtime-policy-unsatisfied", release.ID, err.Error(), "Выполните обязательные проверки политики, загрузите проверенное runtime evidence и повторите проверку.")
+		add("runtime-policy-unsatisfied", release.ID, err.Error(), "Выполните обязательные проверки политики, загрузите проверенное свидетельство Runtime и повторите проверку.")
 	}
 	result.Eligible = len(result.Blockers) == 0
 	return result

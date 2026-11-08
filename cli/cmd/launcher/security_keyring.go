@@ -211,7 +211,7 @@ func ensurePublicKeyNotRevoked(registryDir, publicKeyPath string) error {
 func securityAttest(args []string) (map[string]any, error) {
 	path := flagValue(args, "--path", "")
 	if path == "" {
-		return nil, errors.New("security attest требует --path <PROVENANCE.json или artifact>")
+		return nil, errors.New("Для команды security attest требуется --path <PROVENANCE.json или артефакт>")
 	}
 	privateKeyPath := flagValue(args, "--private-key", os.Getenv("LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE"))
 	if privateKeyPath == "" {

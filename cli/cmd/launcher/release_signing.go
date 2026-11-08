@@ -192,7 +192,7 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 		return errors.New("Некорректный формат подписи Ed25519")
 	}
 	if !ed25519.Verify(publicKey, data, signature) {
-		return errors.New("Ed25519 verification failed для SHA256SUMS")
+		return errors.New("Проверка подписи Ed25519 файла SHA256SUMS не пройдена")
 	}
 	if err := verifyDetachedFileWithKey(filepath.Join(dir, "PROVENANCE.json"), filepath.Join(dir, "PROVENANCE.json.sig"), publicKey); err != nil {
 		return fmt.Errorf("Подтверждение происхождения SLSA: %w", err)

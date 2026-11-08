@@ -117,16 +117,16 @@ func secureClientDestination(root, relative string) (string, error) {
 			return "", fmt.Errorf("Чтение сведений о пути клиента %s: %w", current, statErr)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return "", fmt.Errorf("client path содержит symlink: %s", filepath.Join(parts[:i+1]...))
+			return "", fmt.Errorf("Путь к клиенту содержит символическую ссылку: %s", filepath.Join(parts[:i+1]...))
 		}
 		if i < len(parts)-1 && !info.IsDir() {
-			return "", fmt.Errorf("client path parent не является каталогом: %s", current)
+			return "", fmt.Errorf("Родительская часть пути к клиенту не является каталогом: %s", current)
 		}
 	}
 	destination := filepath.Join(absoluteRoot, filepath.FromSlash(relative))
 	rel, err := filepath.Rel(absoluteRoot, destination)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
-		return "", fmt.Errorf("client path вышел за root: %s", relative)
+		return "", fmt.Errorf("Путь к клиенту выходит за пределы корневого каталога: %s", relative)
 	}
 	return destination, nil
 }

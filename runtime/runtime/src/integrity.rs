@@ -807,8 +807,8 @@ mod linux_impl {
     fn security(pid: u32) -> Result<LinuxProcessSecurityEvidence, String> {
         let status=proc_status(pid)?;
         Ok(LinuxProcessSecurityEvidence {
-            uid: status_u32(&status,"Uid:").ok_or_else(|| "Uid missing".to_string())?,
-            gid: status_u32(&status,"Gid:").ok_or_else(|| "Gid missing".to_string())?,
+            uid: status_u32(&status,"Uid:").ok_or_else(|| "Не найден идентификатор пользователя (Uid)".to_string())?,
+            gid: status_u32(&status,"Gid:").ok_or_else(|| "Не найден идентификатор группы (Gid)".to_string())?,
             no_new_privs: status_u32(&status,"NoNewPrivs:")==Some(1),
             seccomp_mode: status_u32(&status,"Seccomp:").unwrap_or(0),
             dumpable_disabled: if pid==std::process::id() { unsafe { libc::prctl(libc::PR_GET_DUMPABLE,0,0,0,0)==0 } } else { true },

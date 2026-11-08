@@ -428,7 +428,7 @@ func ensureExtensionEntrypointsPresent0202(manifest CanonicalExtensionManifest02
 	}
 	for _, target := range manifest.Targets {
 		if _, ok := present[target.Entrypoint]; !ok {
-			return fmt.Errorf("target %s entrypoint %q отсутствует в payload", target.Kind, target.Entrypoint)
+			return fmt.Errorf("Для цели %s точка входа %q отсутствует в содержимом пакета", target.Kind, target.Entrypoint)
 		}
 	}
 	return nil
@@ -625,7 +625,7 @@ func validateExtensionSBOM0203(data []byte, manifest CanonicalExtensionManifest0
 	}
 	pkg := doc.Packages[0]
 	if pkg.SPDXID != pkgID || pkg.Name != manifest.Name || pkg.VersionInfo != manifest.Version || pkg.DownloadLocation != "NOASSERTION" || !pkg.FilesAnalyzed || pkg.LicenseConcluded != "NOASSERTION" || pkg.LicenseDeclared != "NOASSERTION" {
-		return errors.New("SBOM.spdx.json package метаданные не соответствуют манифесту")
+		return errors.New("Метаданные пакета SBOM.spdx.json не соответствуют манифесту")
 	}
 	if len(doc.Files) != len(payload.Files) || len(doc.Relationships) != len(payload.Files)+1 {
 		return errors.New("SBOM.spdx.json file/relationship count не соответствует payload")
@@ -693,23 +693,23 @@ func validateExtensionArchivePath0202(name string) error {
 		return errors.New("Путь к архиву должен быть относительным путём POSIX")
 	}
 	if path.Clean(name) != name || name == "." || name == ".." || strings.HasPrefix(name, "../") || strings.Contains(name, "/../") || strings.HasSuffix(name, "/") {
-		return errors.New("archive path содержит traversal/неcanonical компоненты")
+		return errors.New("Путь внутри архива содержит выход за пределы каталога или некорректные компоненты")
 	}
 	for _, segment := range strings.Split(name, "/") {
 		if segment == "" || segment == "." || segment == ".." || len(segment) > 255 {
-			return errors.New("archive path содержит некорректный segment")
+			return errors.New("Путь внутри архива содержит некорректный сегмент")
 		}
 		if strings.HasSuffix(segment, ".") || strings.HasSuffix(segment, " ") || strings.Contains(segment, ":") {
-			return errors.New("archive path несовместим с Windows-safe extraction")
+			return errors.New("Путь внутри архива небезопасен при распаковке в Windows")
 		}
 		for _, r := range segment {
 			if r < 0x20 {
-				return errors.New("archive path содержит control character")
+				return errors.New("Путь внутри архива содержит управляющий символ")
 			}
 		}
 		base := strings.ToUpper(strings.TrimSuffix(segment, path.Ext(segment)))
 		if base == "CON" || base == "PRN" || base == "AUX" || base == "NUL" || (len(base) == 4 && (strings.HasPrefix(base, "COM") || strings.HasPrefix(base, "LPT")) && base[3] >= '1' && base[3] <= '9') {
-			return fmt.Errorf("archive path использует зарезервированное Windows-имя %q", segment)
+			return fmt.Errorf("Путь внутри архива использует зарезервированное имя Windows: %q", segment)
 		}
 	}
 	return nil
@@ -717,7 +717,7 @@ func validateExtensionArchivePath0202(name string) error {
 
 func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0202, error) {
 	if strings.ToLower(filepath.Ext(packagePath)) != ".nlext" {
-		return nil, errors.New("extension package должен иметь расширение .nlext")
+		return nil, errors.New("Файл пакета расширения должен иметь расширение .nlext")
 	}
 	reader, err := zip.OpenReader(packagePath)
 	if err != nil {
@@ -881,7 +881,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 		return nil, err
 	}
 	if !bytes.Equal(descriptorBytes, expectedDescriptorBytes) {
-		return nil, errors.New("launcher-package.json/immutable package identity не соответствует содержимому .nlext")
+		return nil, errors.New("Неизменяемый идентификатор пакета в launcher-package.json не соответствует содержимому .nlext")
 	}
 	analysis.Descriptor = descriptor
 	analysis.DescriptorBytes = descriptorBytes
@@ -996,7 +996,7 @@ func ensureExtensionEntrypointsInPackage0202(manifest CanonicalExtensionManifest
 	}
 	for _, target := range manifest.Targets {
 		if _, ok := present[target.Entrypoint]; !ok {
-			return fmt.Errorf("target %s entrypoint %q отсутствует в packaged payload", target.Kind, target.Entrypoint)
+			return fmt.Errorf("Для цели %s точка входа %q отсутствует в упакованном содержимом", target.Kind, target.Entrypoint)
 		}
 	}
 	return nil
@@ -1182,7 +1182,7 @@ func verifyExtensionPackage0202(packagePath, publicKeyPath string, allowUnsigned
 		}
 		sig, _ := base64.StdEncoding.DecodeString(analysis.Signature.Signature)
 		if !ed25519.Verify(publicKey, extensionSigningMessage0202(analysis.Descriptor.PackageIdentity), sig) {
-			return nil, errors.New("Ed25519 verification failed для .nlext package identity")
+			return nil, errors.New("Проверка подписи Ed25519 идентификатора пакета .nlext не пройдена")
 		}
 		status = "signature-verified"
 	}

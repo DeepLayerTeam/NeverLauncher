@@ -278,7 +278,7 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 	}
 	timeout, err := time.ParseDuration(flagValue(args, "--processor-timeout", "10m"))
 	if err != nil || timeout < time.Second || timeout > time.Hour {
-		return forgeMaterializeOptions{}, errors.New("--processor-timeout должен быть от 1s до 1h")
+		return forgeMaterializeOptions{}, errors.New("Параметр --processor-timeout должен быть в диапазоне от 1 секунды до 1 часа")
 	}
 	sandbox := strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process")))
 	if sandbox != "process" && sandbox != "required" {
@@ -1392,7 +1392,7 @@ func inspectForgeInstaller(installerPath string) (installerBundle, error) {
 	// процессорного установщика незаметно создаст неработоспособный клиент.
 	if profile.Minecraft == "1.12.2" && len(profile.Processors) == 0 && len(profile.Data) == 0 {
 		if strings.TrimSpace(profile.Path) == "" {
-			return installerBundle{}, errors.New("Forge 1.12.2 empty-processor installer не содержит path для universal JAR")
+			return installerBundle{}, errors.New("Установщик Forge 1.12.2 без процессоров не содержит путь к универсальному JAR")
 		}
 		bundle.Legacy = true
 		bundle.LegacyMode = "legacy-v2-empty-processors"

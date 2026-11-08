@@ -714,14 +714,14 @@ func verifyLaunchPlanStrict850(payload map[string]any) map[string]any {
 	}
 	for _, cp := range asStringSlice(payload["classpath"]) {
 		if strings.Contains(cp, "*") {
-			errs = append(errs, "classpath содержит wildcard: "+cp)
+			errs = append(errs, "Путь к классам содержит подстановочный символ: "+cp)
 		}
 		if strings.Contains(cp, "..") {
-			errs = append(errs, "classpath содержит небезопасный сегмент: "+cp)
+			errs = append(errs, "Путь к классам содержит небезопасный сегмент: "+cp)
 		}
 	}
 	if len(asStringSlice(payload["classpath"])) == 0 {
-		errs = append(errs, "classpath пуст")
+		errs = append(errs, "Путь к классам не задан")
 	}
 	if payload["assetObjects"] == nil {
 		warnings = append(warnings, "asset index не приложен; запуск возможен только после отдельной загрузки assets")

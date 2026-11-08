@@ -262,12 +262,12 @@ func (s Server) packageRuntimeEvidence0212(w http.ResponseWriter, r *http.Reques
 	}
 	manifestDigest, err := manifestDigest0212(lookup.Release.Manifest)
 	if err != nil || e.ManifestDigest != manifestDigest {
-		writeError(w, http.StatusConflict, "runtime evidence не привязано к текущему package manifest")
+		writeError(w, http.StatusConflict, "Свидетельство Runtime не привязано к текущему манифесту пакета")
 		return
 	}
 	integrity, err := s.Repo.LatestIntegrityCheck(r.Context(), lookup.Release.ID)
 	if err != nil || integrity.Result != "passed" || integrity.ManifestDigest != manifestDigest {
-		writeError(w, http.StatusConflict, "runtime evidence принимается только после integrity PASS текущего manifest")
+		writeError(w, http.StatusConflict, "Свидетельство Runtime принимается только после успешной проверки целостности текущего манифеста")
 		return
 	}
 	if len(e.EvidenceHashes) == 0 {
@@ -301,12 +301,12 @@ func (s Server) packageRuntimeEvidence0212(w http.ResponseWriter, r *http.Reques
 		if x, e2 := base64.StdEncoding.DecodeString(strings.TrimSpace(req.Signature)); e2 == nil {
 			sig = x
 		} else {
-			writeError(w, http.StatusBadRequest, "runtime evidence signature должна быть base64/base64url")
+			writeError(w, http.StatusBadRequest, "Подпись свидетельства Runtime должна быть закодирована в base64 или base64url")
 			return
 		}
 	}
 	if !ed25519.Verify(pub, canonical, sig) {
-		writeError(w, http.StatusUnauthorized, "runtime evidence signature недействительна")
+		writeError(w, http.StatusUnauthorized, "Подпись свидетельства Runtime недействительна")
 		return
 	}
 	digest := sha256.Sum256(canonical)
@@ -319,7 +319,7 @@ func (s Server) packageRuntimeEvidence0212(w http.ResponseWriter, r *http.Reques
 	stored, err := s.Repo.SaveRuntimeValidation(r.Context(), result)
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
-			writeError(w, http.StatusConflict, "runtime evidence run/target уже использовано")
+			writeError(w, http.StatusConflict, "Комбинация запуска и целевой платформы в свидетельстве Runtime уже использована")
 			return
 		}
 		writeError(w, http.StatusInternalServerError, err.Error())

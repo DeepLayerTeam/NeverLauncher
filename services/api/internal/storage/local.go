@@ -140,14 +140,14 @@ func safeSegment(value, name string) (string, error) {
 func safeRelativePath(value string) (string, error) {
 	value = strings.TrimSpace(filepath.ToSlash(value))
 	if value == "" || value == "." {
-		return "", errors.New("path обязателен")
+		return "", errors.New("Необходимо указать путь")
 	}
 	if strings.HasPrefix(value, "/") || strings.Contains(value, "\\") {
-		return "", errors.New("path должен быть относительным POSIX-путём")
+		return "", errors.New("Путь должен быть относительным и соответствовать формату POSIX")
 	}
 	clean := filepath.ToSlash(filepath.Clean(value))
 	if clean == "." || strings.HasPrefix(clean, "../") || clean == ".." || strings.Contains(clean, "/../") {
-		return "", errors.New("path выходит за пределы хранилища")
+		return "", errors.New("Путь выходит за пределы хранилища")
 	}
 	return clean, nil
 }

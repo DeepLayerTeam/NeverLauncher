@@ -304,7 +304,7 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 		return
 	}
 	if !isWindowsDevicePlatform0134(device.Platform) {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation v2 continuous evidence поддерживает только Windows trusted device")
+		writeError(w, http.StatusPreconditionFailed, "Непрерывная аттестация Guard v2 поддерживается только для доверенных устройств Windows")
 		return
 	}
 	policySchema, protocolVersion, requireAuthenticode, err := policy.metadataForPlatform0140(device.Platform)

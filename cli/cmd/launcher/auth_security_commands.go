@@ -242,7 +242,7 @@ func supplyChainSecurityModel() map[string]any {
 			{"id": "sbom", "status": "required", "message": "релиз содержит SPDX/CycloneDX SBOM metadata"},
 			{"id": "provenance", "status": "required", "message": "релиз содержит SLSA-compatible provenance metadata"},
 			{"id": "revocation", "status": "required", "message": "отозванные ключи и артефакты блокируются до установки"},
-			{"id": "safe-extraction", "status": "required", "message": "архивы распаковываются только через safe path validation"},
+			{"id": "safe-extraction", "status": "required", "message": "архивы распаковываются только после проверки безопасности путей"},
 			{"id": "rollback-protection", "status": "required", "message": "manifest и release bundle защищены от отката на уязвимую версию"},
 		},
 	}

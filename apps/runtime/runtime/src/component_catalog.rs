@@ -566,7 +566,7 @@ pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<Componen
     let selected_ids:Vec<_>=cat.components.iter().filter(|c|selected.contains(&c.id)).map(|c|c.id.clone()).collect();
     for c in &cat.components {
         if !selected.contains(&c.id){continue}
-        let reason=if c.required {"Required: обязательный компонент".to_owned()}
+        let reason=if c.required {"Обязательный компонент".to_owned()}
         else if roots.contains(&c.id){"Выбран пользователем или пресетом".to_owned()}
         else {
             let parents:Vec<_>=cat.components.iter().filter(|parent|selected.contains(&parent.id)&&parent.dependencies.iter().any(|d|d.id==c.id)).map(|p|p.name.as_str()).collect();

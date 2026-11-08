@@ -625,7 +625,7 @@ func (s Server) adminFileUpload(w http.ResponseWriter, r *http.Request) {
 		relativePath = header.Filename
 	}
 	if relativePath == "" {
-		writeError(w, http.StatusBadRequest, "path обязателен")
+		writeError(w, http.StatusBadRequest, "Необходимо указать путь")
 		return
 	}
 	executable, targetOS, metadataErr := releaseFileMetadata(r)

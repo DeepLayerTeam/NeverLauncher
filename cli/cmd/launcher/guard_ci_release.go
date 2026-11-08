@@ -143,7 +143,7 @@ func GuardReleasePolicyV2Required0140(ver string) bool {
 
 func embedGuardCICertification(out, matrixPath, targetsPath, ver, expectedCommit string) error {
 	if strings.TrimSpace(matrixPath) == "" || strings.TrimSpace(targetsPath) == "" {
-		return errors.New("Guard CI matrix/targets path пуст")
+		return errors.New("Не указан путь к матрице или списку целевых платформ Guard CI")
 	}
 	matrixRaw, err := os.ReadFile(matrixPath)
 	if err != nil {
@@ -151,7 +151,7 @@ func embedGuardCICertification(out, matrixPath, targetsPath, ver, expectedCommit
 	}
 	targetsRaw, err := os.ReadFile(targetsPath)
 	if err != nil {
-		return fmt.Errorf("Чтение: цели Guard CI: %w", err)
+		return fmt.Errorf("Ошибка чтения целевых платформ Guard CI: %w", err)
 	}
 	certification, err := validateGuardCIEvidence(matrixRaw, targetsRaw, ver, expectedCommit)
 	if err != nil {
@@ -210,16 +210,16 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		return releaseGuardCICertification{}, fmt.Errorf("Некорректное значение: GUARD_CI_MATRIX: %w", err)
 	}
 	if targets.SchemaVersion != "1.0" || matrix.SchemaVersion != "1.0" {
-		return releaseGuardCICertification{}, errors.New("Guard CI evidence требует schemaVersion=1.0")
+		return releaseGuardCICertification{}, errors.New("Для свидетельства Guard CI требуется schemaVersion=1.0")
 	}
 	if strings.TrimSpace(ver) == "" || targets.ProductVersion != ver || matrix.ProductVersion != ver {
 		return releaseGuardCICertification{}, fmt.Errorf("Guard CI: версии продукта не совпадают: релиз=%s, платформы=%s, матрица=%s", ver, targets.ProductVersion, matrix.ProductVersion)
 	}
 	if matrix.Status != "passed" || len(matrix.Errors) != 0 {
-		return releaseGuardCICertification{}, errors.New("Guard CI matrix не имеет fail-closed status=passed")
+		return releaseGuardCICertification{}, errors.New("Матрица Guard CI не подтверждает обязательный успешный статус status=passed")
 	}
 	if strings.TrimSpace(matrix.Repository) == "" || strings.TrimSpace(matrix.Commit) == "" || strings.TrimSpace(matrix.RunID) == "" {
-		return releaseGuardCICertification{}, errors.New("Guard CI matrix не содержит repository/commit/runId")
+		return releaseGuardCICertification{}, errors.New("В матрице Guard CI отсутствуют repository, commit или runId")
 	}
 	if strings.TrimSpace(expectedCommit) != "" && matrix.Commit != strings.TrimSpace(expectedCommit) {
 		return releaseGuardCICertification{}, fmt.Errorf("Guard CI: коммит матрицы не совпадает: ожидается=%s, фактически=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
@@ -259,11 +259,11 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		}
 		for check := range commonChecks {
 			if !checks[check] {
-				return releaseGuardCICertification{}, fmt.Errorf("target %s ослабляет Guard certification: missing %s", id, check)
+				return releaseGuardCICertification{}, fmt.Errorf("Целевая платформа %s нарушает требования сертификации Guard: отсутствует проверка %s", id, check)
 			}
 		}
 		if !checks[osCheck[osName]] {
-			return releaseGuardCICertification{}, fmt.Errorf("target %s ослабляет platform Guard gate: missing %s", id, osCheck[osName])
+			return releaseGuardCICertification{}, fmt.Errorf("Целевая платформа %s не проходит обязательную проверку Guard: отсутствует %s", id, osCheck[osName])
 		}
 		targetByID[id] = target
 		if target.Required {
@@ -273,17 +273,17 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 	}
 	for _, osName := range []string{"linux", "windows", "macos"} {
 		if !requiredOS[osName] {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard release certification требует required target для %s", osName)
+			return releaseGuardCICertification{}, fmt.Errorf("Для сертификации выпуска Guard требуется обязательная целевая платформа %s", osName)
 		}
 	}
 
 	resultByID := map[string]releaseGuardCIResult{}
 	for _, result := range matrix.Targets {
 		if _, ok := targetByID[result.TargetID]; !ok {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI matrix содержит unexpected target: %s", result.TargetID)
+			return releaseGuardCICertification{}, fmt.Errorf("Матрица Guard CI содержит неожиданную целевую платформу: %s", result.TargetID)
 		}
 		if _, exists := resultByID[result.TargetID]; exists {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI matrix содержит duplicate target: %s", result.TargetID)
+			return releaseGuardCICertification{}, fmt.Errorf("Матрица Guard CI содержит повторяющуюся целевую платформу: %s", result.TargetID)
 		}
 		resultByID[result.TargetID] = result
 	}
@@ -298,10 +298,10 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 	for id, target := range targetByID {
 		result := resultByID[id]
 		if result.SchemaVersion != "1.0" || result.ProductVersion != ver || result.Status != "passed" || result.ExitCode != 0 {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не имеет валидный PASS/exitCode=0", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Целевая платформа Guard CI %s не подтверждает успешный результат (статус PASS, exitCode=0)", id)
 		}
 		if result.Runner != target.Runner || result.OS != target.OS || result.Arch != target.Arch || strings.TrimSpace(result.RuntimeArch) == "" || result.Repository != matrix.Repository || result.Commit != matrix.Commit || result.RunID != matrix.RunID {
-			return releaseGuardCICertification{}, fmt.Errorf("Несоответствие: Guard CI цель %s identity/commit/runId", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Несоответствие идентификатора, коммита или runId целевой платформы Guard CI %s", id)
 		}
 		for _, check := range target.RequiredChecks {
 			if result.Checks == nil || result.Checks[check] != true {
@@ -309,16 +309,16 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 			}
 		}
 		if !guardCISHA256RE.MatchString(strings.ToLower(result.EvidenceSHA256)) {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не содержит valid evidenceSha256", id)
+			return releaseGuardCICertification{}, fmt.Errorf("В данных целевой платформы Guard CI %s отсутствует корректный evidenceSha256", id)
 		}
 		if fmt.Sprint(result.Claims["guardProtocolVersion"]) != "4" || fmt.Sprint(result.Claims["releaseCertification"]) != ver || fmt.Sprint(result.Claims["ciSigningMode"]) != target.CISigningMode || fmt.Sprint(result.Claims["vendorSigningProvenance"]) != "not-certified-by-ci" {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s содержит неверные release/security claims", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Целевая платформа Guard CI %s содержит некорректные утверждения о выпуске и безопасности", id)
 		}
 		if GuardReleasePolicyV2Required0140(ver) && (fmt.Sprint(result.Claims["releasePolicySchema"]) != "2.0" || result.Claims["releaseIdentityAuthenticated"] != true) {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает Guard 0.14 release identity", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Целевая платформа Guard CI %s не подтверждает идентификатор выпуска Guard 0.14", id)
 		}
 		if result.Claims["packageManifestBound"] != true || result.Claims["artifactSetComplete"] != true {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает package manifest/artifact set", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Целевая платформа Guard CI %s не подтверждает манифест пакета или набор артефактов", id)
 		}
 		limitationFound := false
 		for _, limitation := range result.Limitations {

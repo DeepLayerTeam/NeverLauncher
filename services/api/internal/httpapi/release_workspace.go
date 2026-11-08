@@ -58,7 +58,7 @@ func (s Server) draftBinding0218(w http.ResponseWriter, r *http.Request, d repos
 	if d.PackageID != "" {
 		lookup, err := s.lookupPackage(d.PackageID)
 		if err != nil || lookup.Release.ID != d.PackageID || lookup.Release.ProjectID != d.ProjectID || lookup.Release.ProfileID != d.ProfileID || lookup.Release.Channel != d.Channel || lookup.Release.Version != d.Version || (d.MinecraftVersion != "" && lookup.Release.Manifest.Minecraft.Version != d.MinecraftVersion) || (d.Loader != "" && lookup.Release.Manifest.Minecraft.Loader != d.Loader) {
-			writeError(w, 409, "package не соответствует выбранным проекту/профилю/каналу/версии")
+			writeError(w, 409, "Пакет не соответствует выбранным проекту, профилю, каналу или версии")
 			return false
 		}
 	}
