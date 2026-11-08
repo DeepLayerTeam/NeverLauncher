@@ -322,7 +322,7 @@ def main(argv=None) -> int:
     try:
         result = run(doc(args.config, private=True), args.evidence_dir)
         print("ПРОВЕРКИ РАБОТАЮЩЕЙ СИСТЕМЫ ПРОЙДЕНЫ (это не одобрение GA):", result["migrationChecks"],
-              "migration E2E and", result["moduleCheckCount"], "module checks")
+              "миграционных E2E-проверок и", result["moduleCheckCount"], "проверок модулей")
         return 0
     except (Blocked, OSError, KeyError, TypeError, ValueError, RuntimeError) as exc:
         print("BLOCKED: " + str(exc), file=sys.stderr)

@@ -97,7 +97,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
                     respond(exchange,422,Map.of("code","HOOK_REJECTED","error","Хук политики отклонил операцию или завершился ошибкой"));
                 }else respond(exchange,422,Map.of("error",cause.getClass().getSimpleName()));
             }
-            catch(InterruptedException ex){Thread.currentThread().interrupt();future.cancel(true);respond(exchange,503,Map.of("error","interrupted"));}
+            catch(InterruptedException ex){Thread.currentThread().interrupt();future.cancel(true);respond(exchange,503,Map.of("error","Выполнение прервано"));}
             finally{pending.remove(future);}
         }catch(Exception e){try{respond(exchange,400,Map.of("error","Недопустимый обратный вызов"));}catch(IOException ignored){}}finally{exchange.close();}
     }
@@ -137,7 +137,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
     }
     private static void respond(HttpExchange exchange,int status,Object object)throws IOException {
         byte[] bytes=Json.encode(object).getBytes(StandardCharsets.UTF_8);
-        if(bytes.length>MAX_BODY){status=500;bytes="{\"error\":\"response too large\"}".getBytes(StandardCharsets.UTF_8);}
+        if(bytes.length>MAX_BODY){status=500;bytes="{\"error\":\"Ответ превышает допустимый размер\"}".getBytes(StandardCharsets.UTF_8);}
         exchange.getResponseHeaders().set("Content-Type","application/json");
         exchange.sendResponseHeaders(status,bytes.length);try(OutputStream out=exchange.getResponseBody()){out.write(bytes);}
     }

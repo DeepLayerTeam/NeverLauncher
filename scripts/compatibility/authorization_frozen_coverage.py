@@ -236,7 +236,7 @@ def validate_hashes(doc: dict) -> None:
         actual = sha256_file(path)
         if actual != expected:
             fail(
-                f"Зафиксированные исходники изменились: {rel}: lock={expected} actual={actual}; run seal only after review"
+                f"Зафиксированные исходники изменились: {rel}: lock={expected} actual={actual}; выполняйте фиксацию seal только после проверки"
             )
 
 

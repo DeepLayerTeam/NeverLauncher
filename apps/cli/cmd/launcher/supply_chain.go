@@ -152,7 +152,7 @@ func dependencySBOM(sourceRoot, ver string) (map[string]any, error) {
 		"documentNamespace": "https://launcher.local/spdx/" + strings.ReplaceAll(ver, "/", "-") + "/" + time.Now().UTC().Format("20060102T150405.000000000Z"),
 		"creationInfo":      map[string]any{"created": time.Now().UTC().Format(time.RFC3339Nano), "creators": []string{"Инструмент: Launcher CLI " + version}},
 		"packages":          packages, "relationships": relationships,
-		"dependencyResolution": map[string]any{"go": "прямые и транзитивные зависимости go.mod", "npm": "package-lock.json complete package graph", "cargo": "Полный граф зависимостей из Cargo.lock при наличии; иначе — объявленные зависимости из Cargo.toml", "gradle": "координаты Maven, объявленные в build.gradle.kts"},
+		"dependencyResolution": map[string]any{"go": "прямые и транзитивные зависимости go.mod", "npm": "полный граф зависимостей из package-lock.json", "cargo": "Полный граф зависимостей из Cargo.lock при наличии; иначе — объявленные зависимости из Cargo.toml", "gradle": "координаты Maven, объявленные в build.gradle.kts"},
 	}, nil
 }
 

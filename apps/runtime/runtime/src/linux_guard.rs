@@ -458,7 +458,7 @@ async fn serve_commands(
                 }
             }
             "shutdown" => (true, json!({"shutdown": true}).to_string(), true),
-            _ => (false, "unsupported command".into(), false),
+            _ => (false, "Неподдерживаемая команда".into(), false),
         };
 
         let mac = response_mac(&key, sequence, &request.request_id, ok, &payload);

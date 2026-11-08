@@ -144,7 +144,7 @@ func handleExtension0201(args []string) error {
 			ID:            "ru.example.launcher.extension",
 			Name:          "Пример расширения Launcher",
 			Version:       "1.0.0",
-			Publisher:     "Example Publisher",
+			Publisher:     "Пример издателя",
 			API:           ExtensionsAPIVersion0210,
 			Targets:       []CanonicalExtensionTarget0201{{Kind: target, Entrypoint: sdkEntrypoint(target)}},
 			Permissions:   []string{"release:read"},

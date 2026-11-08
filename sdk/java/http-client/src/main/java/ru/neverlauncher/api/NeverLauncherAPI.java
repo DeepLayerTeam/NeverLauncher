@@ -110,7 +110,7 @@ public final class NeverLauncherAPI {
                               HttpRequest.BodyPublisher requestBody, String contentType,
                               OutputStream destination, long limit, String idempotencyKey)
             throws IOException, InterruptedException {
-        Objects.requireNonNull(destination, "response destination");
+        Objects.requireNonNull(destination, "путь назначения для ответа");
         if (limit == 0) limit = MAX_STREAM;
         if (limit < 1 || limit > MAX_STREAM) throw new IllegalArgumentException("Некорректное ограничение потока");
         if (!allowedRoute(path) || path.contains("?") || path.contains("#") || path.contains("..") || path.startsWith("//"))

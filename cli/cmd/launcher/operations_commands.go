@@ -491,7 +491,7 @@ func loaderCompatibility(loader string) map[string]any {
 		"requiresInstallerMerge":  loader == "forge" || loader == "neoforge",
 		"supportsOptionalMods":    true,
 		"profileFields":           []string{"loader", "loaderVersion", "minecraftVersion", "mainClass", "libraries", "classpath", "jvmArgs", "gameArgs"},
-		"metadataInputs":          []string{"--version-json", "--metadata", "--installer-profile", "--asset-index", "runtime forge/neoforge: official installer.jar + Maven metadata"},
+		"metadataInputs":          []string{"--version-json", "--metadata", "--installer-profile", "--asset-index", "runtime forge/neoforge: официальный installer.jar и метаданные Maven"},
 	}
 }
 

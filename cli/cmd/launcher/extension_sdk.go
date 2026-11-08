@@ -60,7 +60,7 @@ func extensionTargets02010(args []string) ([]string, error) {
 		}
 	}
 	if len(out) == 0 {
-		return nil, errors.New("Требуется: «at least one target»")
+		return nil, errors.New("Необходимо указать хотя бы одну цель расширения")
 	}
 	sort.Strings(out)
 	return out, nil
@@ -74,7 +74,7 @@ func extensionInit02010(args []string) error {
 	out := filepath.Clean(flagValue(args, "--out", "launcher-extension"))
 	id := strings.ToLower(strings.TrimSpace(flagValue(args, "--id", "ru.example.launcher.extension")))
 	name := strings.TrimSpace(flagValue(args, "--name", "расширение Launcher"))
-	publisher := strings.TrimSpace(flagValue(args, "--publisher", "Example Publisher"))
+	publisher := strings.TrimSpace(flagValue(args, "--publisher", "Пример издателя"))
 	if st, err := os.Stat(out); err == nil && st.IsDir() {
 		entries, _ := os.ReadDir(out)
 		if len(entries) > 0 && !flagBool(args, "--force", false) {

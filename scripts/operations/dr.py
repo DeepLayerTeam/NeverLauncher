@@ -889,7 +889,7 @@ def snapshot(
             "serviceStateAtBackup": {key: states.get(key, "absent") for key in (
                 ("api", "api-b", "worker-a", "worker-b", "admin", "nginx")
                 if "network-ha" in COMPOSE_PROFILES else ("api", "admin", "nginx"))},
-            "coordinatorIntegrity": "sqlite integrity_check + coord_meta schema version" if "network-ha" not in COMPOSE_PROFILES else "not-used",
+            "coordinatorIntegrity": "проверка целостности SQLite (integrity_check) и версии схемы coord_meta" if "network-ha" not in COMPOSE_PROFILES else "not-used",
         }
         (stage / "manifest.json").write_text(json.dumps(result, indent=2) + "\n")
         verify_snapshot(stage)
@@ -1136,7 +1136,7 @@ def restore_fresh(
         "source": manifest["sourceProject"],
         "target": project,
         "rtoSeconds": round(time.monotonic() - started, 3),
-        "dataChecks": "snapshot SHA-256, archive member safety, pg_restore transaction",
+        "dataChecks": "проверка SHA-256 снимка, безопасных путей в архиве и транзакции pg_restore",
         "credentials": "передаётся извне через окружение целевой системы",
         "applicationVerified": False,
         "serverbridgeFenced": "network-ha" in COMPOSE_PROFILES,
