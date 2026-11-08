@@ -2,11 +2,11 @@
 
 ## Требования
 
-- Go 1.23.x — версия runner в основном CI (модули указывают минимум Go 1.22).
+- Go 1.23.x — версия среды выполнения заданий в основном CI (модули указывают минимум Go 1.22).
 - Python 3 для контрактов, верификации и матриц.
-- Node.js/npm, TypeScript и Vite для `apps/admin` и `apps/desktop` (ориентируйтесь на lockfiles).
+- Node.js/npm, TypeScript и Vite для `apps/admin` и `apps/desktop` (ориентируйтесь на файлы фиксации зависимостей).
 - Rust/Cargo и системные зависимости Tauri для Desktop/Runtime/Guard.
-- JDK, Gradle и Gradle-plugin toolchains для серверных Java-мостов; корневой Gradle wrapper в текущем архиве отсутствует.
+- JDK, Gradle и необходимые инструменты сборки серверных Java-мостов; корневой сценарий запуска Gradle в текущем архиве отсутствует.
 - Docker Compose/PostgreSQL/Redis — для интеграционных сценариев.
 
 ## Команды, подтверждённые репозиторием
@@ -24,7 +24,7 @@ python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
 (cd runtime/runtime && cargo test)
 ```
 
-Отдельный native build: `cd apps/desktop/src-tauri && cargo build` (не равен сборке установочного пакета). Проверки разных платформ могут требовать оборудования, подписывающих ключей и upstream-загрузок.
+Отдельная нативная сборка: `cd apps/desktop/src-tauri && cargo build` (не равна сборке установочного пакета). Проверки разных платформ могут требовать оборудования, ключей подписи и загрузок из исходных проектов.
 
 ## Backend и настройка
 
@@ -33,7 +33,7 @@ python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
 ## Качество изменений
 
 1. Делайте узкий PR с проверяемым результатом и тестами.
-2. Изменения API сопровождайте обновлением canonical OpenAPI и регрессионными тестами.
+2. Изменения API сопровождайте обновлением основной спецификации OpenAPI и регрессионными тестами.
 3. Перед PR проверяйте `scripts/version/manage.py check`, `scripts/contracts/validate-openapi.py`, релевантные Go/Rust/TypeScript-тесты и автономные проверки допуска.
 4. Не утверждайте успешность всей кроссплатформенной матрицы по локальному Linux-тесту.
 5. Для выпуска следуйте `scripts/release/preflight.sh`; `LAUNCHER_PREFLIGHT_STRICT=1` может требовать учётные данные, реального исходного сервиса и свидетельств CI.
