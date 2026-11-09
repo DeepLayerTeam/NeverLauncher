@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { statusRuDesktop } from "./status-ru";
 import {
   identity0356,
   validExtension0356,
@@ -460,7 +461,7 @@ export function DesktopExtensions0209({
               >
                 {item.name}
                 <small>
-                  {item.version} · {item.scope}
+                  {item.version} · {item.scope === "global" ? "глобально" : item.scope === "project" ? "проект" : statusRuDesktop(item.scope)}
                   {item.scopeId ? `/${item.scopeId}` : ""}
                 </small>
               </button>

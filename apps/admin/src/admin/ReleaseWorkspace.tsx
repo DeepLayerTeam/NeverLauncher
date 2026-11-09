@@ -1260,7 +1260,7 @@ export function ReleaseWorkspace({
             <ul>
               {report.runtime.map((r, i) => (
                 <li key={i}>
-                  {r.targetId}: {r.result} (фактический клиент:{" "}
+                  {r.targetId}: {statusRu(r.result)} (фактический клиент:{" "}
                   {String(r.actualClient)}, вход на сервер: {String(r.serverJoin)})
                 </li>
               ))}

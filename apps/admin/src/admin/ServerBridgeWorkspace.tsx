@@ -453,7 +453,7 @@ export function ServerBridgeWorkspace({
         );
       if (
         !window.confirm(
-          `Зарегистрировать ${request.id} (${request.kind}) в проекте ${projectId}?\nОтпечаток открытого ключа Ed25519: ${request.keyFingerprint}\nПриватный ключ должен остаться на хосте.`,
+          `Зарегистрировать ${request.id} (тип: ${statusRu(request.kind)}) в проекте ${projectId}?\nОтпечаток открытого ключа Ed25519: ${request.keyFingerprint}\nПриватный ключ должен остаться на хосте.`,
         )
       )
         return;
@@ -841,7 +841,7 @@ export function ServerBridgeWorkspace({
                 {node.runtimeCapabilities?.filter((c) =>
                   c.startsWith("adapter."),
                 ).length ?? 0}{" "}
-                заявлено узлом; последнее подписанное runtime-состояние:{" "}
+                заявлено узлом; последнее подписанное состояние среды выполнения:{" "}
                 {timeLabel(node.runtimeLastSeenAt)}. Это не сертификат Minecraft
                 E2E.
               </dd>
@@ -1232,8 +1232,8 @@ export function ServerBridgeWorkspace({
                 supportsControlCapability(node, a.type, clock),
             ) && (
               <p className="bridgeAttention">
-                Нет разрешённых операций, подтверждённых свежими runtime
-                capabilities этого адаптера.
+                Нет разрешённых операций, подтверждённых актуальными сведениями
+                о возможностях среды выполнения этого адаптера.
               </p>
             )}
           <form
@@ -1392,7 +1392,7 @@ export function ServerBridgeWorkspace({
           )}
           <p className="muted">
             Каждая команда требует собственное право gameserver:*. Backend
-            проверяет RBAC, MFA (fresh ≤ 5 минут), runtime identity и allowlist.
+            проверяет права доступа, недавнюю многофакторную аутентификацию (не старше 5 минут), идентичность среды выполнения и список разрешённых действий.
             Право broadcast не даёт доступа к shutdown, Backend или Host.
             Shell-доступ не используется.
           </p>
@@ -1512,11 +1512,10 @@ export function ServerBridgeWorkspace({
           ]}
         />
         <p className="muted">
-          Журнал: последние 100 серверных команд. pending и queued означают ожидание;
-          leased — передача исполнителю без подтверждения ACK; accepted — команда
-          принята или запланирована; executed — вызов выполнен без проверки
-          результата; succeeded — результат подтверждён состоянием платформы;
-          failed — ошибка, indeterminate — результат не определён.
+          Журнал: последние 100 серверных команд. «Ожидает» (pending, queued) означает ожидание;
+          «Передано исполнителю» (leased) — передачу без подтверждения; «Принято» (accepted) — принятую или запланированную команду;
+          «Выполнено» (executed) — вызов без проверки результата; «Успешно» (succeeded) — подтверждённый результат;
+          «Ошибка» (failed) — сбой; «Результат неизвестен» (indeterminate) — отсутствие достоверного итога.
         </p>
       </section>
       <details className="advanced">

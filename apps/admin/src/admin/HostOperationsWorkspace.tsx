@@ -318,8 +318,8 @@ export function HostOperationsWorkspace04111({
     >
       <h3>Управление хостом · JVM · {serverName}</h3>
       <p className="muted">
-        Backend → PostgreSQL journal → TLS RemoteControl → Host Supervisor → OS
-        JVM. Сигнал состояния игрового сервера проверяется отдельно. Команды требуют свежей MFA
+        Сервер → журнал PostgreSQL → удалённое управление по TLS → супервизор хоста → JVM в ОС.
+        Состояние игрового сервера проверяется отдельно. Команды требуют недавней многофакторной проверки
         и глобального <code>host:process</code>.
       </p>
       {error && (
@@ -343,8 +343,8 @@ export function HostOperationsWorkspace04111({
         <dd>
           {host
             ? host.processAlive
-              ? "Запущена (OS-проверка)"
-              : "Процесс не обнаружен (OS-проверка)"
+              ? "Запущена (проверка средствами ОС)"
+              : "Процесс не обнаружен (проверка средствами ОС)"
             : "неизвестно"}
         </dd>
         <dt>Супервизор</dt>
@@ -425,7 +425,7 @@ export function HostOperationsWorkspace04111({
       {current && (
         <article className="subcard" aria-live="polite">
           <h4>
-            Операция {current.action}: <code>{current.id}</code>
+            Операция {statusRu(current.action)}: <code>{current.id}</code>
           </h4>
           <p
             className={
@@ -440,7 +440,7 @@ export function HostOperationsWorkspace04111({
             <dt>Удалённое управление</dt>
             <dd>
               {current.remoteNodeId || "—"} ·{" "}
-              {current.remoteReceipt?.state || "без receipt"}
+              {current.remoteReceipt?.state ? statusRu(current.remoteReceipt.state) : "без квитанции"}
             </dd>
             <dt>Создано / обновлено</dt>
             <dd>
@@ -450,8 +450,8 @@ export function HostOperationsWorkspace04111({
             <dd>{current.error || "—"}</dd>
             <dt>До / после</dt>
             <dd>
-              {current.hostBefore?.status?.observedStatus || "неизвестно"} /{" "}
-              {current.hostAfter?.status?.observedStatus || "неизвестно"}
+              {statusRu(current.hostBefore?.status?.observedStatus)} /{" "}
+              {statusRu(current.hostAfter?.status?.observedStatus)}
             </dd>
           </dl>
           <button disabled={busy} onClick={() => void reconcile(current)}>
@@ -484,7 +484,7 @@ export function HostOperationsWorkspace04111({
                   <td>
                     <code>{op.id}</code>
                   </td>
-                  <td>{op.action}</td>
+                  <td>{statusRu(op.action)}</td>
                   <td>{statusRu(op.status)}</td>
                   <td>{datetime(op.updatedAt)}</td>
                   <td>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { GuardPolicyOperations05011 } from "./GuardPolicyOperations05011";
 import { requestJSON } from "../api/client";
+import { statusRu } from "./status-ru";
 
 type PlayerEvent = { code: string; count: number };
 type SupportReport = {
@@ -125,7 +126,7 @@ export function SupportDiagnostics03510({
               aria-pressed={v.id === selected}
               onClick={() => setSelected(v.id)}
             >
-              {v.receivedAt} · {v.report.os} · {v.report.stage} ·{" "}
+              {v.receivedAt} · {v.report.os} · {statusRu(v.report.stage)} ·{" "}
               {v.id.slice(0, 8)}
             </button>
           </li>

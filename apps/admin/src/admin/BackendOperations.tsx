@@ -165,7 +165,7 @@ export function BackendOperations0289({
       );
     } catch (e) {
       setError(
-        `${String(e)}. Исход команды может быть неизвестен: не создавайте новый ключ до проверки supervisor и аудита.`,
+        `${String(e)}. Исход команды может быть неизвестен: не создавайте новый ключ до проверки диспетчера процессов и журнала аудита.`,
       );
     } finally {
       setBusy(false);
@@ -225,11 +225,11 @@ export function BackendOperations0289({
           <h3>Контролируемый перезапуск</h3>
           <p className="muted">
             Только при наличии внешнего диспетчера служб и PostgreSQL-журнала.
-            Требуется свежая phishing-resistant MFA. Повтор не должен создавать
+            Требуется недавняя многофакторная проверка, устойчивая к фишингу. Повтор не должен создавать
             новую команду.
           </p>
           <label className="field">
-            Точное подтверждение: <code>ПЕРЕЗАПУСТИТЬ {status.instanceId}</code>
+            Точное подтверждение (введите команду как указано): <code>RESTART {status.instanceId}</code>
             <input
               value={confirmation}
               onChange={(e) => setConfirmation(e.target.value)}
@@ -245,7 +245,7 @@ export function BackendOperations0289({
             }
             onClick={() => void restart()}
           >
-            Запросить graceful restart
+            Запросить корректный перезапуск
           </button>
         </>
       ) : (

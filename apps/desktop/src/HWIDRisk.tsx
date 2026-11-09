@@ -35,7 +35,7 @@ export function HWIDRisk0299({ backendUrl, token, deviceId }: Props) {
   return <section className="panel" aria-label="Риск HWID">
     <h4>HWID: добровольная оценка риска и восстановление</h4>
     <p>Локально хешируется ограниченный системный сигнал. Исходные идентификаторы не отправляются. Это изменяемый, подделываемый риск-сигнал, а не доказательство личности. Сам по себе он не вызывает бан. Данные наблюдения хранятся до 30 дней; отправка только по нажатию кнопки.</p>
-    <p>Устройство: {deviceId}; состояние: <strong>{status?.state || 'неизвестно'}</strong>{status?.expiresAt ? `; срок хранения до ${new Date(status.expiresAt).toLocaleString()}` : ''}</p>
+    <p>Устройство: {deviceId}; состояние: <strong>{statusRuDesktop(status?.state)}</strong>{status?.expiresAt ? `; срок хранения до ${new Date(status.expiresAt).toLocaleString()}` : ''}</p>
     <div className="toolbar inline">
       <button disabled={busy} onClick={() => void run(async () => { const signal = await invoke<string>('hardware_risk_signal_0299'); await request('/observe', 'POST', { signal }); }, 'Наблюдение принято.')}>Добровольно проверить окружение</button>
       <button disabled={busy} onClick={() => void run(() => request('/confirm', 'POST', {}), 'Новое оборудование подтверждено.')}>Подтвердить замену (проверка ключом доступа)</button>

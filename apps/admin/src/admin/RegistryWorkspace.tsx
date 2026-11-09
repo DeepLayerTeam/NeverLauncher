@@ -221,8 +221,8 @@ export function RegistryWorkspace({
     if (item.scopeId) params.set("scopeId", item.scopeId);
     if (
       !confirmAction(
-        `Host ${action}: ${item.extensionId}`,
-        `${item.scope}:${item.scopeId || "global"} · изменение runtime процесса`,
+        `Управление процессом расширения: ${statusRu(action)} — ${item.extensionId}`,
+        `Область действия: ${statusRu(item.scope)}${item.scopeId ? `/${item.scopeId}` : ""} · изменение процесса расширения`,
       )
     )
       return cancelledOperation;
@@ -370,7 +370,7 @@ export function RegistryWorkspace({
     if (
       !confirmAction(
         `Установить ${item.extensionId}@${item.version}`,
-        `Scope: ${extensionScope}:${extensionScopeId || "global"}; проверка signature и stage выполняются Backend`,
+        `Область действия: ${statusRu(extensionScope)}${extensionScopeId ? `/${extensionScopeId}` : ""}; сервер проверит подпись и этап установки`,
       )
     )
       return cancelledOperation;
@@ -394,8 +394,8 @@ export function RegistryWorkspace({
   ) {
     if (
       !confirmAction(
-        `${action}: ${item.extensionId}`,
-        `Scope: ${item.scope}:${item.scopeId || "global"}; версия: ${item.currentVersion || "—"}; необратимые эффекты проверяйте в аудите`,
+        `${statusRu(action)}: ${item.extensionId}`,
+        `Область действия: ${statusRu(item.scope)}${item.scopeId ? `/${item.scopeId}` : ""}; версия: ${item.currentVersion || "—"}; необратимые последствия проверяйте в журнале аудита`,
       )
     )
       return cancelledOperation;
@@ -415,14 +415,14 @@ export function RegistryWorkspace({
 
   async function updateInstalledExtension(item: ExtensionInstallView) {
     const version = window.prompt(
-      `Новая версия ${item.extensionId} (оставьте пустым для stable channel)`,
+      `Новая версия ${item.extensionId} (оставьте поле пустым для стабильного канала)`,
       "",
     );
     if (
       version === null ||
       !confirmAction(
         `Обновить ${item.extensionId}`,
-        `Целевая версия: ${version.trim() || "stable"}; область действия: ${item.scope}:${item.scopeId || "global"}`,
+        `Целевая версия: ${version.trim() || "стабильный канал"}; область действия: ${statusRu(item.scope)}${item.scopeId ? `/${item.scopeId}` : ""}`,
       )
     )
       return cancelledOperation;

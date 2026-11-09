@@ -37,7 +37,7 @@ export function GravitImportPanel({backendUrl,token,projectId,onChanged}:{backen
  }
  async function commit(){if(!source||!report?.ready)return;setBusy(true);setError('');
   try {const value=await post<Imported>('import-gravit',{...payload(),sourceSha256:report.sourceSha256,channel,version:releaseVersion});setCreated(value);await onChanged()}
-  catch(e){setError(`${String(e)}. При сетевой ошибке проверьте список профилей и workspace перед повторной попыткой.`)}finally{setBusy(false)}
+  catch(e){setError(`${String(e)}. При сетевой ошибке проверьте список профилей и рабочую область перед повторной попыткой.`)}finally{setBusy(false)}
  }
  function downloadReport(){if(!report)return;const body=JSON.stringify(report,null,2)+'\n';const u=URL.createObjectURL(new Blob([body],{type:'application/json'}));
   try{const a=document.createElement('a');a.href=u;a.download=`gravit-import-${id||'profile'}.report.json`;a.click()}finally{setTimeout(()=>URL.revokeObjectURL(u),1000)}

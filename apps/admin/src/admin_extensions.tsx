@@ -734,9 +734,9 @@ export function AdminExtensions({
         <div>
           <h2>Расширения панели управления</h2>
           <p className="muted">
-            Интерфейсы расширений работают только в изолированном iframe. Скрипт extension
+            Интерфейсы расширений работают только в изолированном встроенном фрейме. Скрипт расширения
             не включается в основной пакет React; данные доступны только через
-            typed permission-aware RPC.
+            типизированный RPC с проверкой разрешений.
           </p>
         </div>
         <button onClick={refresh} disabled={loading}>
@@ -747,7 +747,7 @@ export function AdminExtensions({
       {operationResult && (
         <article className="subcard" role="status">
           <strong>
-            {operationResult.action}: {operationResult.target}
+            {extensionActionRu(operationResult.action)}: {operationResult.target}
           </strong>
           <p>
             Сервер вернул ответ. Актуальное состояние показано в списке

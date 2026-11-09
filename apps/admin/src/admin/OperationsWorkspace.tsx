@@ -170,7 +170,7 @@ export function OperationsWorkspace({
     }
     if (recovery && !recoverable) return;
     if (action === "execute" && !recovery && !validation?.valid) {
-      setError("Сначала выполните validate.");
+      setError("Сначала выполните проверку операции.");
       return;
     }
     if (
@@ -336,7 +336,7 @@ export function OperationsWorkspace({
     projectId,
   ]);
   async function modifyJob(action: "cancel" | "retry") {
-    if (!job || !window.confirm(`${action} для операции ${job.id}?`)) return;
+    if (!job || !window.confirm(`${action === "cancel" ? "Отменить" : "Повторить"} операцию ${job.id}?`)) return;
     setBusy(true);
     setError("");
     try {
