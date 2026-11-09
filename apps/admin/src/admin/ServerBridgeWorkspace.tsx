@@ -453,7 +453,7 @@ export function ServerBridgeWorkspace({
         );
       if (
         !window.confirm(
-          `Зарегистрировать ${request.id} (${request.kind}) в проекте ${projectId}?\nПубличный Ed25519 fingerprint: ${request.keyFingerprint}\nПриватный ключ должен остаться на хосте.`,
+          `Зарегистрировать ${request.id} (${request.kind}) в проекте ${projectId}?\nОтпечаток открытого ключа Ed25519: ${request.keyFingerprint}\nПриватный ключ должен остаться на хосте.`,
         )
       )
         return;
@@ -747,8 +747,8 @@ export function ServerBridgeWorkspace({
                   : "неизвестно (устаревшая телеметрия)"}
               </span>
               <small>
-                Protocol {n.protocolVersion || "unknown"} ·{" "}
-                {state.state === "fresh" ? "Телеметрия актуальна" : state.reason}
+                Протокол {n.protocolVersion || "неизвестен"} ·{" "}
+                {state.state === "fresh" ? "Телеметрия актуальна" : statusRu(state.reason)}
               </small>
             </button>
           );
@@ -765,8 +765,8 @@ export function ServerBridgeWorkspace({
           </p>
           <p role="status">
             {selectedNodeState?.label || "Нет данных"}; пульс:{" "}
-            {selectedNodeState?.heartbeat || "unknown"}; телеметрия:{" "}
-            {selectedNodeState?.telemetry || "unknown"}.
+            {statusRu(selectedNodeState?.heartbeat)}; телеметрия:{" "}
+            {statusRu(selectedNodeState?.telemetry)}.
           </p>
           {node.profileId && !boundToProfile && (
             <p className="bridgeAttention">
@@ -807,7 +807,7 @@ export function ServerBridgeWorkspace({
               </dd>
               <dt>Состояние</dt>
               <dd>
-                {statusRu(node.status)} · {node.runtimeTransition || "переход неизвестен"}
+                {statusRu(node.status)} · {statusRu(node.runtimeTransition)}
               </dd>
               <dt>Протокол</dt>
               <dd>
@@ -927,14 +927,14 @@ export function ServerBridgeWorkspace({
               </dd>
             </dl>
             <p className="muted">
-              Protocol v3 сообщает число игроков, а не список ников. Для
-              kick/ban имя вводится вручную.
+              Протокол v3 передаёт количество игроков, но не их имена. Для
+              исключения или блокировки игрока имя вводится вручную.
             </p>
           </article>
         </div>
       )}
       <section className="bridgeSection" aria-label="Панель серверной сети">
-        <h3>Сеть · Topology & Admission</h3>
+        <h3>Сеть · топология и управление допуском</h3>
         <p className="muted">
           PostgreSQL: подписанное состояние узлов + независимая политика доступа
           оператора. Маршрутизация обновляется узлами, журнал команд отдельно
@@ -1109,7 +1109,7 @@ export function ServerBridgeWorkspace({
                         setFields((f) => ({ ...f, enabled: true }));
                       }}
                     >
-                      Подготовить drain
+                      Подготовить запрет новых подключений
                     </button>
                     <button
                       type="button"
@@ -1126,7 +1126,7 @@ export function ServerBridgeWorkspace({
                         setFields((f) => ({ ...f, enabled: true }));
                       }}
                     >
-                      Подготовить maintenance
+                      Подготовить режим обслуживания
                     </button>
                     <button
                       type="button"
@@ -1139,22 +1139,22 @@ export function ServerBridgeWorkspace({
                         setFields((f) => ({ ...f, enabled: false }));
                       }}
                     >
-                      Подготовить возврат из drain
+                      Подготовить возобновление подключений
                     </button>
                   </div>
                 )}
                 <p className="muted">
-                  Команды drain/maintenance исполняются через форму ниже с многофакторной проверкой,
-                  повторной отправки и подтверждения моста (ACK). Ограничение нагрузки применяется непосредственно
-                  к маршрутам и handoff через PostgreSQL, не меняет max-players
-                  в Minecraft и не отключает существующих игроков.
+                  Команды ограничения подключений и обслуживания выполняются через форму ниже
+                  с многофакторной проверкой и подтверждением серверного моста (ACK).
+                  Ограничение нагрузки применяется к маршрутам и передаче соединений через PostgreSQL,
+                  не изменяя параметр max-players в Minecraft и не отключая текущих игроков.
                 </p>
               </>
             )}
-            <h4>Маршруты proxy → backend</h4>
+            <h4>Маршруты: прокси → игровой сервер</h4>
             {projectRoutes.length === 0 ? (
               <p className="muted">
-                Для узла нет доступных связей или наблюдений topology.
+                Для узла нет доступных связей или сведений о топологии.
               </p>
             ) : (
               <div className="bridgeNetworkTable">
@@ -1180,7 +1180,7 @@ export function ServerBridgeWorkspace({
                           <span
                             className={`badge ${e.status === "active" && snapshotFresh ? "ok" : "warn"}`}
                           >
-                            {snapshotFresh ? e.status : "устаревший снимок"}
+                            {snapshotFresh ? statusRu(e.status) : "устаревший снимок"}
                           </span>
                         </td>
                         <td>
@@ -1320,7 +1320,7 @@ export function ServerBridgeWorkspace({
                 />
                 <span>
                   {fields.enabled ? "Включить" : "Выключить"}{" "}
-                  {kind === "server.drain" ? "drain" : "maintenance"}
+                  {kind === "server.drain" ? "ограничение новых подключений" : "режим обслуживания"}
                 </span>
               </label>
             )}
@@ -1357,7 +1357,7 @@ export function ServerBridgeWorkspace({
           {pending && (
             <div className="bridgePending">
               <p className="bridgeAttention">
-                Запрос {pending.type} для {pending.serverId} не получил
+                Запрос {actions.find((action) => action.type === pending.type)?.label ?? pending.type} для {pending.serverId} не получил
                 подтверждённого ответа. Идемпотентный ключ сохранён в этой
                 сессии.
               </p>
@@ -1413,7 +1413,7 @@ export function ServerBridgeWorkspace({
           </div>
           <dl className="bridgeFacts">
             <dt>Команда</dt>
-            <dd>{selectedCommand.type}</dd>
+            <dd>{actions.find((action) => action.type === selectedCommand.type)?.label ?? selectedCommand.type}</dd>
             <dt>Сервер / среда выполнения</dt>
             <dd>
               {selectedCommand.serverId} / эпоха {selectedCommand.runtimeEpoch}

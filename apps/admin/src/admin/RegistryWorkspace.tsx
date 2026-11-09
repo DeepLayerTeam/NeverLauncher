@@ -745,13 +745,13 @@ export function RegistryWorkspace({
               </div>
               <p>{item.manifest?.description || "Без описания"}</p>
               <p className="muted">
-                Launcher {item.compatibility?.minLauncher || "any"} →{" "}
-                {item.compatibility?.maxLauncher || "any"} · OS{" "}
-                {(item.compatibility?.supportedOs ?? []).join(", ") || "any"} ·
-                arch{" "}
+                Версия Launcher: от {item.compatibility?.minLauncher || "любой"} до{" "}
+                {item.compatibility?.maxLauncher || "любой"} · ОС:{" "}
+                {(item.compatibility?.supportedOs ?? []).join(", ") || "любая"} ·
+                архитектура:{" "}
                 {(item.compatibility?.supportedArchitectures ?? []).join(
                   ", ",
-                ) || "any"}
+                ) || "любая"}
               </p>
               <p className="registryIdentity">
                 <code>{item.artifact.packageIdentity}</code>

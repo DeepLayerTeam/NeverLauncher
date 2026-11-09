@@ -1355,10 +1355,10 @@ export function MigrationCenter0331({
             void refresh(e.target.value).catch((err) => setError(String(err)));
           }}
         >
-          <option value="">Выберите run</option>
+          <option value="">Выберите запуск миграции</option>
           {runs.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.id} · {statusRu(item.status)} · {item.step}
+              {item.id} · {statusRu(item.status)} · {statusRu(item.step)}
             </option>
           ))}
         </select>
@@ -1619,7 +1619,7 @@ export function MigrationCenter0331({
                       .slice(0, 50)
                       .map((row) => (
                         <li key={`${row.provider}:${row.sourceId}:${row.uuid}`}>
-                          {row.username} ({row.uuid}): {row.reason || row.state}
+                          {row.username} ({row.uuid}): {statusRu(row.reason || row.state)}
                         </li>
                       ))}
                   </ul>
@@ -2075,7 +2075,7 @@ export function MigrationCenter0331({
                   </button>
                   {bridgeStatus0446 && (
                     <p role="status">
-                      Узел {bridgeStatus0446.serverId}: {statusRu(bridgeStatus0446.state)} ({bridgeStatus0446.reason}).
+                      Узел {bridgeStatus0446.serverId}: {statusRu(bridgeStatus0446.state)} ({statusRu(bridgeStatus0446.reason)}).
                       Даже при online требуется игровая репетиция login/join перед переключением.
                     </p>
                   )}

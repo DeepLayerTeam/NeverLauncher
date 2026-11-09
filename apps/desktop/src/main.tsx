@@ -6328,31 +6328,31 @@ function AuthPanel({
                 </small>
                 <small>
                   отпечаток ключа: {device.keyFingerprint.slice(0, 20)}… ·
-                  аттестация: {device.attestationState || "не выполнена"}
+                  аттестация: {statusRuDesktop(device.attestationState)}
                 </small>
                 <small>
                   Доверие к устройству: стандартный профиль{" "}
                   <strong>
-                    {device.trustAssessment?.profileDecisions?.standard
-                      ?.result ?? "unknown"}
+                    {statusRuDesktop(device.trustAssessment?.profileDecisions?.standard
+                      ?.result)}
                   </strong>{" "}
                   · строгий профиль{" "}
                   <strong>
-                    {device.trustAssessment?.profileDecisions?.strict?.result ??
-                      "unknown"}
+                    {statusRuDesktop(device.trustAssessment?.profileDecisions?.strict?.result)}
                   </strong>{" "}
                   · подтверждение удалённого происхождения{" "}
-                  {device.trustAssessment?.remoteHardwareProvenance ??
-                    "not-verified"}
+                  {statusRuDesktop(device.trustAssessment?.remoteHardwareProvenance)}
                 </small>
                 <small>
                   Строгий профиль:{" "}
-                  {device.trustAssessment?.profileDecisions?.strict?.reasonCodes?.join(
-                    ", ",
+                  {device.trustAssessment?.profileDecisions?.strict?.reasonCodes?.map(statusRuDesktop).join(
+                    "; ",
                   ) || "нет проверенного заключения"}{" "}
                   · восстановление:{" "}
                   {device.trustAssessment?.profileDecisions?.strict
-                    ?.recoveryAction ?? "не определено"}
+                    ?.recoveryAction
+                    ? statusRuDesktop(device.trustAssessment.profileDecisions.strict.recoveryAction)
+                    : "не определено"}
                 </small>
                 {device.status === "revoked" && (
                   <small>

@@ -170,14 +170,14 @@ export class ServerBridgeClient {
 export type BridgeLifecycle = 'queued' | 'dispatched' | 'delivered' | 'accepted' | 'executed' | 'verified' | 'failed' | 'indeterminate';
 export function commandLifecycle(raw: string): { lifecycle: BridgeLifecycle; label: string; terminal: boolean; deliveryConfirmed: boolean } {
   switch (raw.toLowerCase()) {
-    case 'pending': return { lifecycle: 'queued', label: 'В очереди (queued)', terminal: false, deliveryConfirmed: false };
-    case 'leased': return { lifecycle: 'dispatched', label: 'Передано на обработку (dispatched, ACK ещё нет)', terminal: false, deliveryConfirmed: false };
+    case 'pending': return { lifecycle: 'queued', label: 'В очереди', terminal: false, deliveryConfirmed: false };
+    case 'leased': return { lifecycle: 'dispatched', label: 'Передано на обработку (подтверждение ещё не получено)', terminal: false, deliveryConfirmed: false };
     case 'delivered': return { lifecycle: 'delivered', label: 'Доставлено (ожидается исполнение)', terminal: false, deliveryConfirmed: true };
     case 'accepted': return { lifecycle: 'accepted', label: 'Агент принял / запланировал действие; эффект не подтверждён', terminal: true, deliveryConfirmed: true };
     case 'executed': return { lifecycle: 'executed', label: 'Вызов на платформе выполнен; эффект не проверен', terminal: true, deliveryConfirmed: true };
     case 'succeeded': return { lifecycle: 'verified', label: 'Результат проверен чтением состояния игрового сервера', terminal: true, deliveryConfirmed: true };
-    case 'failed': return { lifecycle: 'failed', label: 'Ошибка исполнения (Bridge ACK)', terminal: true, deliveryConfirmed: true };
-    case 'unsupported': return { lifecycle: 'failed', label: 'Команда не поддерживается (Bridge ACK)', terminal: true, deliveryConfirmed: true };
+    case 'failed': return { lifecycle: 'failed', label: 'Ошибка исполнения (подтверждена серверным мостом)', terminal: true, deliveryConfirmed: true };
+    case 'unsupported': return { lifecycle: 'failed', label: 'Команда не поддерживается (подтверждено серверным мостом)', terminal: true, deliveryConfirmed: true };
     case 'expired': return { lifecycle: 'indeterminate', label: 'Срок команды истёк; выполнение не подтверждено', terminal: true, deliveryConfirmed: false };
     case 'indeterminate': return { lifecycle: 'indeterminate', label: 'Результат неопределён', terminal: true, deliveryConfirmed: false };
     default: return { lifecycle: 'indeterminate', label: `Неизвестный статус: ${raw || 'отсутствует'}`, terminal: false, deliveryConfirmed: false };
@@ -186,7 +186,7 @@ export function commandLifecycle(raw: string): { lifecycle: BridgeLifecycle; lab
 
 export function telemetryState(node: ServerBridgeNode, now = Date.now()): { state: 'fresh' | 'stale' | 'unknown'; reason: string; ageSeconds: number | null } {
   const t = node.telemetry;
-  if (!t || !Number.isFinite(t.sampledAtUnixMillis) || !t.sampledAtUnixMillis) return { state: node.telemetryState === 'stale' ? 'stale' : 'unknown', reason: node.telemetryState === 'stale' ? 'Последний снимок устарел (Backend)' : 'Telemetry ещё не получена', ageSeconds: null };
+  if (!t || !Number.isFinite(t.sampledAtUnixMillis) || !t.sampledAtUnixMillis) return { state: node.telemetryState === 'stale' ? 'stale' : 'unknown', reason: node.telemetryState === 'stale' ? 'Последний снимок серверной части устарел' : 'Телеметрия ещё не получена', ageSeconds: null };
   const age = now - t.sampledAtUnixMillis;
   if (age < -30_000) return { state: 'unknown', reason: 'Время узла отличается от сервера/браузера', ageSeconds: null };
   const seconds = Math.max(0, Math.floor(age / 1000));

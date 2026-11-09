@@ -55,6 +55,11 @@ export function statusRu(value: string | null | undefined): string {
     verified_with_warnings: "Проверено с предупреждениями", 
     unknown_version: "Неизвестная версия", mismatch: "Не совпадает",
     matched: "Совпадает", mismatch_detected: "Обнаружено несоответствие",
+    connected: "Подключено", disconnected: "Отключено",
+    "not-verified": "Не проверено", "not-available": "Недоступно",
+    "not-configured": "Не настроено", "in-review": "На рассмотрении",
+    "waiting-for-approval": "Ожидает согласования",
+    unknown_error: "Неизвестная ошибка", "no-data": "Нет данных",
   };
   return labels[value.toLowerCase()] ?? value;
 }
