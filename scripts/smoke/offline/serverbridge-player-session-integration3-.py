@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = tuple(map(int, (ROOT / "VERSION").read_text().strip().split(".")[:3]))
 if version < (0, 19, 7):
     raise SystemExit(
-        f"Player Session Integration 3 gate: требуется VERSION >= 0.19.7, получено {version}"
+        f"Player Session Integration 3: требуется версия не ниже 0.19.7, получено {version}"
     )
 required = [
     "services/api/internal/repository/server_bridge_player_sessions_0197.go",

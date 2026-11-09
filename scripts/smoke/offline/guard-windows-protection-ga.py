@@ -26,7 +26,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 19, 0):
-    raise SystemExit(f"Windows Protection GA gate: требуется «>=0.19.0, got» {version}")
+    raise SystemExit(f"Windows Protection GA: требуется версия не ниже 0.19.0, получено {version}")
 
 impl = read("cli/cmd/launcher/windows_protection_ga_0190.go")
 require(

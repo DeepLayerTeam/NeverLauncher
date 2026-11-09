@@ -17,7 +17,7 @@ def require(text, needles, label):
 version = read("VERSION").strip()
 parts = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if parts < (0, 19, 10):
-    raise SystemExit(f"ServerBridge Host gate: требуется «VERSION>=0.19.10, got» {version}")
+    raise SystemExit(f"ServerBridge Host: требуется версия не ниже 0.19.10, получено {version}")
 
 provision = read("cli/cmd/launcher/serverbridge_provisioning_0199.go")
 host = read("cli/cmd/launcher/serverbridge_host_01910.go")

@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 1):
-    raise SystemExit(f"Fabric Compatibility II: требуется «VERSION>=0.17.1, got» {version}")
+    raise SystemExit(f"Fabric Compatibility II: требуется версия не ниже 0.17.1, получено {version}")
 
 
 def read(rel: str) -> str:
@@ -83,7 +83,7 @@ fabric_rows = [
 ]
 if len(fabric_rows) != len(expected):
     raise SystemExit(
-        f"Fabric 0.17.1: требуется ровно {len(expected)} required targets, получено {len(fabric_rows)}"
+        f"Fabric 0.17.1: требуется ровно {len(expected)} обязательных целевых конфигураций, получено {len(fabric_rows)}"
     )
 by_version: dict[str, dict] = {}
 for row in fabric_rows:

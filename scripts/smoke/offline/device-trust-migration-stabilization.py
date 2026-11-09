@@ -29,7 +29,7 @@ try:
 except ValueError as exc:
     raise SystemExit(f"Некорректное значение VERSION: {version}") from exc
 if version_tuple < (0, 12, 10):
-    raise SystemExit(f"Версия: требуется «>= 0.12.10, got» {version}")
+    raise SystemExit(f"Версия: требуется версия не ниже 0.12.10, получено {version}")
 
 migration_api = read(
     "services/api/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql"

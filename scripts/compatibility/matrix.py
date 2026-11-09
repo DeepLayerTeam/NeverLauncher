@@ -971,7 +971,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         unknown = sorted(set(raw) - allowed_target_keys)
         if unknown:
             die(
-                f"target #{index + 1}: неизвестные поля запрещены: {', '.join(unknown)}"
+                f"Целевая конфигурация №{index + 1}: неизвестные поля запрещены: {', '.join(unknown)}"
             )
         target_id = str(raw.get("id", "")).strip()
         minecraft = str(raw.get("minecraft", "")).strip()
@@ -1679,7 +1679,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
         product_version = str(result.get("productVersion", ""))
         if product_version != targets_doc["productVersion"]:
             errors.append(
-                f"{target_id}: ожидалось значение productVersion {targets_doc['productVersion']}, got {product_version}"
+                f"{target_id}: ожидалось значение productVersion {targets_doc['productVersion']}, получено {product_version}"
             )
         result_errors = verify_result(
             target, result, commit=args.commit, run_id=args.run_id

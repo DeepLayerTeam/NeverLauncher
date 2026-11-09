@@ -11,7 +11,7 @@ core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 4):
     raise SystemExit(
-        f"Notarized macOS x64+ARM64 gate: требуется VERSION >= 0.15.4, получено {VERSION}"
+        f"Notarized macOS x64+ARM64: требуется версия не ниже 0.15.4, получено {VERSION}"
     )
 
 

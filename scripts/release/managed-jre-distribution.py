@@ -167,7 +167,7 @@ def download_exact(
         got = digest.hexdigest()
         if written != expected_size or got != expected_sha256:
             die(
-                f"JRE archive checksum/size: несоответствие — {got}/{written}, expected {expected_sha256}/{expected_size}"
+                f"Несовпадение хеша и размера архива JRE: получено {got}/{written}, ожидалось {expected_sha256}/{expected_size}"
             )
         os.replace(part, path)
     finally:
@@ -194,23 +194,23 @@ def validate_binary(platform: str, arch: str, data: bytes) -> None:
         machine = struct.unpack_from("<H", data, peoff + 4)[0]
         expected = 0x8664 if arch == "x64" else 0xAA64
         if machine != expected:
-            die(f"bin/java.exe: архитектура PE=0x{machine:04x}, expected 0x{expected:04x}")
+            die(f"bin/java.exe: архитектура PE=0x{machine:04x}, ожидалось 0x{expected:04x}")
         return
     if platform == "linux":
         if len(data) < 20 or data[:4] != b"\x7fELF" or data[4] != 2 or data[5] != 1:
-            die("bin/java не является 64-битным ELF с порядком байтов little-endian")
+            die("bin/java не является 64-битным ELF с порядком байтов от младшего к старшему")
         machine = struct.unpack_from("<H", data, 18)[0]
         expected = 62 if arch == "x64" else 183
         if machine != expected:
-            die(f"bin/java: архитектура ELF={machine}, expected {expected}")
+            die(f"bin/java: архитектура ELF={machine}, ожидалось {expected}")
         return
     if platform == "macos":
         if len(data) < 32 or data[:4] != b"\xcf\xfa\xed\xfe":
-            die("bin/java не является одноплатформенным 64-битным Mach-O с порядком байтов little-endian")
+            die("bin/java не является одноплатформенным 64-битным Mach-O с порядком байтов от младшего к старшему")
         cpu = struct.unpack_from("<I", data, 4)[0]
         expected = 0x01000007 if arch == "x64" else 0x0100000C
         if cpu != expected:
-            die(f"bin/java: тип процессора Mach-O=0x{cpu:08x}, expected 0x{expected:08x}")
+            die(f"bin/java: тип процессора Mach-O=0x{cpu:08x}, ожидалось 0x{expected:08x}")
         return
     die(f"неподдерживаемая платформа {platform}")
 

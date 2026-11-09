@@ -10,7 +10,7 @@ core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 8):
     raise SystemExit(
-        f"Release Verification v2 gate: требуется VERSION >= 0.15.8, получено {VERSION}"
+        f"Release Verification v2: требуется версия не ниже 0.15.8, получено {VERSION}"
     )
 
 

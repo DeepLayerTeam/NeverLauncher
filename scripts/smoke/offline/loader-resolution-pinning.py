@@ -8,7 +8,7 @@ version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 7):
     raise SystemExit(
-        f"Loader Resolution & Pinning: требуется VERSION >= 0.17.7, получено {version}"
+        f"Loader Resolution & Pinning: требуется версия не ниже 0.17.7, получено {version}"
     )
 
 

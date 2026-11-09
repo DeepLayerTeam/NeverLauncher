@@ -25,7 +25,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 6):
     raise SystemExit(
-        f"Windows production hardening gate: требуется версия >= 0.13.6, получено {version}"
+        f"Windows production hardening: требуется версия >= 0.13.6, получено {version}"
     )
 
 policy = read("runtime/runtime/src/windows_policy.rs")

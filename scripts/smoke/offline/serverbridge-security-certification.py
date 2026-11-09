@@ -19,7 +19,7 @@ version = read("VERSION").strip()
 base = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if base < (0, 19, 12):
     raise SystemExit(
-        f"Security & Certification gate: требуется VERSION >= 0.19.12, получено {version}"
+        f"Security & Certification: требуется версия не ниже 0.19.12, получено {version}"
     )
 security = read("services/api/internal/httpapi/server_bridge_security_01912.go")
 identity = read("services/api/internal/httpapi/server_bridge_identity_0142.go")

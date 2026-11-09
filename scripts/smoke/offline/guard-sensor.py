@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[Launcher] Guard Sensor 0.18.2 gate: {label}: отсутствует {missing}"
+            f"[Launcher] Guard Sensor 0.18.2: проверка — {label}: отсутствует {missing}"
         )
 
 
@@ -74,8 +74,8 @@ def main() -> int:
         "защищённый запуск лаунчера с запретом при ошибке",
     )
     for label, body, count in [
-        ("direct runtime launch paths", runtime, 2),
-        ("supervised runtime launch path", supervisor, 1),
+        ("прямые способы запуска Runtime", runtime, 2),
+        ("запуск Runtime под управлением супервизора", supervisor, 1),
     ]:
         if body.count("prepare_sensor_command(&mut command)") < count:
             raise SystemExit(

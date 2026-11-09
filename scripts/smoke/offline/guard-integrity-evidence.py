@@ -24,7 +24,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 2):
-    raise SystemExit(f"Guard integrity evidence gate: требуется «>=0.13.2, got» {version}")
+    raise SystemExit(f"Guard integrity evidence: требуется версия не ниже 0.13.2, получено {version}")
 
 cargo = read("runtime/runtime/Cargo.toml")
 require(

@@ -25,7 +25,7 @@ try:
 except ValueError as exc:
     raise SystemExit(f"Некорректное значение VERSION: {version}") from exc
 if version_tuple < (0, 12, 8):
-    raise SystemExit(f"Версия: требуется «>= 0.12.8, got» {version}")
+    raise SystemExit(f"Версия: требуется версия не ниже 0.12.8, получено {version}")
 
 handler = read("services/api/internal/httpapi/device_key_recovery_0128.go")
 repo = read("services/api/internal/repository/devices_0121.go")

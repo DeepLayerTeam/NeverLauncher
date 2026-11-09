@@ -9,7 +9,7 @@ def read(rel: str) -> str:
     path = ROOT / rel
     if not resource_exists(ROOT, rel):
         raise SystemExit(
-            f"Minecraft/ServerBridge trust enforcement gate failed:: отсутствует {rel}"
+            f"Minecraft/ServerBridge trust enforcement: проверка не пройдена — отсутствует {rel}"
         )
     return resource_read_text(ROOT, rel)
 
@@ -19,7 +19,7 @@ def require(rel: str, needles: list[str]) -> None:
     for needle in needles:
         if needle not in text:
             raise SystemExit(
-                f"Minecraft/ServerBridge trust enforcement gate failed: {rel}: отсутствует {needle!r}"
+                f"Minecraft/ServerBridge trust enforcement: проверка не пройдена — {rel}: отсутствует {needle!r}"
             )
 
 

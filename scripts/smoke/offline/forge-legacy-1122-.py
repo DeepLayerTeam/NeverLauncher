@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 4):
-    raise SystemExit(f"Forge Legacy 1.12.2: требуется «VERSION>=0.17.4, got» {version}")
+    raise SystemExit(f"Forge Legacy 1.12.2: требуется версия не ниже 0.17.4, получено {version}")
 
 
 def read(rel: str) -> str:

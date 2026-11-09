@@ -86,7 +86,7 @@ def load_targets(path: Path) -> dict[str, Any]:
         unknown = sorted(set(raw) - allowed)
         if unknown:
             die(
-                f"target #{index + 1}: неизвестные поля запрещены: {', '.join(unknown)}"
+                f"Целевая конфигурация №{index + 1}: неизвестные поля запрещены: {', '.join(unknown)}"
             )
         target_id = str(raw.get("id", "")).strip()
         kind = str(raw.get("kind", "")).strip()

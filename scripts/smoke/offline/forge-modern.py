@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 3):
-    raise SystemExit(f"Forge Modern: требуется «VERSION>=0.17.3, got» {version}")
+    raise SystemExit(f"Forge Modern: требуется версия не ниже 0.17.3, получено {version}")
 
 
 def read(rel: str) -> str:
@@ -47,7 +47,7 @@ forge_rows = [
 ]
 if len(forge_rows) != len(expected):
     raise SystemExit(
-        f"Forge Modern 0.17.3: требуется ровно {len(expected)} required targets, получено {len(forge_rows)}"
+        f"Forge Modern 0.17.3: требуется ровно {len(expected)} обязательных целевых конфигураций, получено {len(forge_rows)}"
     )
 by_version: dict[str, dict] = {}
 for row in forge_rows:

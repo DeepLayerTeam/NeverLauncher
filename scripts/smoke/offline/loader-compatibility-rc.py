@@ -12,7 +12,7 @@ core = tuple(
 )
 if core < (0, 17, 11):
     raise SystemExit(
-        f"Loader Compatibility RC: требуется VERSION >= 0.17.11, получено {version}"
+        f"Loader Compatibility RC: требуется версия не ниже 0.17.11, получено {version}"
     )
 
 

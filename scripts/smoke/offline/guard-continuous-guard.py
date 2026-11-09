@@ -16,7 +16,7 @@ def require(text: str, rel: str, values: list[str]) -> None:
     missing = [value for value in values if value not in text]
     if missing:
         raise SystemExit(
-            f"[Launcher] Continuous Guard 0.18.9 gate: {rel}: отсутствует {missing}"
+            f"[Launcher] Continuous Guard 0.18.9: проверка — {rel}: отсутствует {missing}"
         )
 
 

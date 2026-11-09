@@ -29,7 +29,7 @@ try:
 except ValueError as exc:
     raise SystemExit(f"Некорректное значение VERSION: {version}") from exc
 if version_tuple < (0, 12, 9):
-    raise SystemExit(f"Версия: требуется «>= 0.12.9, got» {version}")
+    raise SystemExit(f"Версия: требуется версия не ниже 0.12.9, получено {version}")
 
 targets_path = ROOT / "device-trust/targets.json"
 targets = json.loads(read("device-trust/targets.json"))

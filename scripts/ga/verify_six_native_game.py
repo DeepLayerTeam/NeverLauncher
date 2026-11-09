@@ -66,7 +66,7 @@ def verify(root: Path, package_id: str, version: str, commit: str, run_id: str) 
     names = {f.name for f in root.iterdir()}
     expected = {f'v10-native-{os}-{arch}-gui-{run_id}' for os, arch in TARGETS.values()}
     if names != expected:
-        raise ValueError('Необходимы шесть каталогов артефактов нативного интерфейса; отсутствуют=' + str(sorted(expected - names)) + ' extra=' + str(sorted(names - expected)))
+        raise ValueError('Необходимы шесть каталогов артефактов нативного интерфейса; отсутствуют=' + str(sorted(expected - names)) + ' лишние=' + str(sorted(names - expected)))
     outputs = []
     for target in TARGETS:
         osname, arch = TARGETS[target]

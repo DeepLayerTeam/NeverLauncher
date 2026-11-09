@@ -243,7 +243,7 @@ def local_compat_observe_0516(directory, project):
     for role in ("api", "worker"):
         ready = (running.get(role) or {}).get("readiness") or {}
         if not (ready.get("versionVerified") is True and ready.get("version") in ("0.51.5", "0.51.6", "0.51.7")):
-            raise DeploymentError("Не поддерживается или не проверена действующая версия /ready для" + role)
+            raise DeploymentError("Не поддерживается или не проверена действующая версия /ready для " + role)
     if running["api"]["readiness"]["version"] != running["worker"]["readiness"]["version"]:
         raise DeploymentError("На одном хосте версии работающих API и рабочего процесса не совпадают")
     container = running["api"]["containerId"]

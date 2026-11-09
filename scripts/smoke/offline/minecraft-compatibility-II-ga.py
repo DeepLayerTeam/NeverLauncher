@@ -9,7 +9,7 @@ version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(p) for p in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 0):
     raise SystemExit(
-        f"Minecraft Compatibility II GA: требуется VERSION >= 0.17.0, получено {version}"
+        f"Minecraft Compatibility II GA: требуется версия не ниже 0.17.0, получено {version}"
     )
 
 

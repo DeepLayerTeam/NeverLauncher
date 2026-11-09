@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[Launcher] Thread & Process Integrity 0.18.6 gate: {label}: отсутствует {missing}"
+            f"[Launcher] Thread & Process Integrity 0.18.6: проверка — {label}: отсутствует {missing}"
         )
 
 

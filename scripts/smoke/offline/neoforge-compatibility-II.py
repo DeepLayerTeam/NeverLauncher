@@ -10,7 +10,7 @@ version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 6):
     raise SystemExit(
-        f"NeoForge Compatibility II: требуется VERSION >= 0.17.6, получено {version}"
+        f"NeoForge Compatibility II: требуется версия не ниже 0.17.6, получено {version}"
     )
 
 
@@ -60,7 +60,7 @@ rows = [
 ]
 if len(rows) != len(expected):
     raise SystemExit(
-        f"NeoForge Compatibility II 0.17.6: требуется ровно {len(expected)} catalogue targets, получено {len(rows)}"
+        f"NeoForge Compatibility II 0.17.6: требуется ровно {len(expected)} конфигураций каталога, получено {len(rows)}"
     )
 by_version: dict[str, dict] = {}
 for row in rows:
@@ -72,7 +72,7 @@ for row in rows:
     by_version[minecraft] = row
 if set(by_version) != set(expected):
     raise SystemExit(
-        f"NeoForge Compatibility II 0.17.6 grid: несоответствие — missing={sorted(set(expected) - set(by_version))} extra={sorted(set(by_version) - set(expected))}"
+        f"NeoForge Compatibility II 0.17.6 матрица: несоответствие — отсутствуют={sorted(set(expected) - set(by_version))} лишние={sorted(set(by_version) - set(expected))}"
     )
 for minecraft, java_major in expected.items():
     row = by_version[minecraft]
@@ -215,5 +215,5 @@ require(
 )
 
 print(
-    f"NeoForge Compatibility II 0.17.6 gate: OK (целей каталога: {len(rows)}; обязательных: {len(rows) - len(blocked)}; не сертифицировано: {len(blocked)}; 1.20.1..26.2, Java 17/21/25)"
+    f"NeoForge Compatibility II 0.17.6: проверка — OK (целей каталога: {len(rows)}; обязательных: {len(rows) - len(blocked)}; не сертифицировано: {len(blocked)}; 1.20.1..26.2, Java 17/21/25)"
 )

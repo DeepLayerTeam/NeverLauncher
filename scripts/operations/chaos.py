@@ -171,7 +171,7 @@ def poll(check, expected: bool, limit: float, name: str) -> float:
             if not expected:
                 return round(monotonic() - start, 3)
         time.sleep(0.5)
-    raise dr.DrillError(f"{name} не достиг состояния {'healthy' if expected else 'failed'} за {limit} с")
+    raise dr.DrillError(f"{name} не достиг состояния {'работоспособен' if expected else 'сбой'} за {limit} с")
 
 
 def public_ready(url: str) -> bool:

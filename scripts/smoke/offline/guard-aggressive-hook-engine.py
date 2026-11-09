@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: {label}: отсутствует {missing}"
+            f"[Launcher] Aggressive Hook Engine I 0.18.4: проверка — {label}: отсутствует {missing}"
         )
 
 

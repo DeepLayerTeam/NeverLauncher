@@ -16,7 +16,7 @@ def require(text: str, rel: str, values: list[str]) -> None:
     missing = [value for value in values if value not in text]
     if missing:
         raise SystemExit(
-            f"[Launcher] JVM-Aware Protection 0.18.8 gate: {rel}: отсутствует {missing}"
+            f"[Launcher] JVM-Aware Protection 0.18.8: проверка — {rel}: отсутствует {missing}"
         )
 
 

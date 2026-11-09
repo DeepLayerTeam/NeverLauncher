@@ -23,7 +23,7 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 if triple(VERSION) < (0, 15, 11):
     raise SystemExit(
-        f"Production Release Candidate gate: требуется VERSION >= 0.15.11, получено {VERSION}"
+        f"Production Release Candidate: требуется версия не ниже 0.15.11, получено {VERSION}"
     )
 
 impl = (ROOT / "cli/cmd/launcher/production_release_candidate_01511.go").read_text(

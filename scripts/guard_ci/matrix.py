@@ -108,7 +108,7 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"Целевая конфигурация №{index + 1} должна быть объектом")
         unknown = sorted(set(raw) - allowed)
         if unknown:
-            die(f"target #{index + 1}: неизвестные поля: {', '.join(unknown)}")
+            die(f"Целевая конфигурация №{index + 1}: неизвестные поля: {', '.join(unknown)}")
         target_id = str(raw.get("id", "")).strip()
         os_name = str(raw.get("os", "")).strip().lower()
         arch = str(raw.get("arch", "")).strip().lower()
@@ -199,7 +199,7 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
         die("Обнаружено несоответствие версии или схемы манифеста пакета")
     if manifest.get("platform") != expected_platform:
         die(
-            f"Платформа манифеста пакета не совпадает; ожидалась {expected_platform!r}, got {manifest.get('platform')!r}"
+            f"Платформа манифеста пакета не совпадает; ожидалась {expected_platform!r}, получено {manifest.get('platform')!r}"
         )
     if int(manifest.get("GuardProtocolVersion", 0)) != 4:
         die("Манифест пакета не требует протокол Guard v4")
@@ -354,14 +354,14 @@ def verify_result(
             digest = str(item.get("sha256", "")).lower()
             size = item.get("size")
             if not name or Path(name).name != name or name in names:
-                errors.append(f"artifact {role} имеет небезопасное или повторяющееся имя")
+                errors.append(f"Артефакт {role} имеет небезопасное или повторяющееся имя")
             names.add(name)
             if (
                 not SHA256_RE.fullmatch(digest)
                 or not isinstance(size, int)
                 or size <= 0
             ):
-                errors.append(f"artifact {role} имеет недопустимый хеш или размер")
+                errors.append(f"Артефакт {role} имеет недопустимый хеш или размер")
     claims = result.get("claims")
     if not isinstance(claims, dict):
         errors.append("Отсутствуют утверждения проверки")
@@ -421,7 +421,7 @@ def command_result(args: argparse.Namespace) -> int:
     for role, path in paths.items():
         if path.name != expected_names[role]:
             die(
-                f"{target['id']}: неканоническое значение {role} Имя артефакта: ожидалось {expected_names[role]!r}, got {path.name!r}"
+                f"{target['id']}: неканоническое значение {role} имя артефакта: ожидалось {expected_names[role]!r}, получено {path.name!r}"
             )
     artifacts = {role: artifact_record(path) for role, path in paths.items()}
     meta = verify_package_metadata(target, artifacts, args.manifest, args.allowlist)

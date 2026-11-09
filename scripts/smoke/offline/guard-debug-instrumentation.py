@@ -9,7 +9,7 @@ def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
         raise SystemExit(
-            f"[Launcher] Debug & Instrumentation Guard 0.18.7 gate:: отсутствует {rel}"
+            f"[Launcher] Debug & Instrumentation Guard 0.18.7: отсутствует {rel}"
         )
     return path.read_text(encoding="utf-8")
 
@@ -18,7 +18,7 @@ def require(text: str, rel: str, values: list[str]) -> None:
     missing = [value for value in values if value not in text]
     if missing:
         raise SystemExit(
-            f"[Launcher] Debug & Instrumentation Guard 0.18.7 gate: {rel}: отсутствует {missing}"
+            f"[Launcher] Debug & Instrumentation Guard 0.18.7: проверка — {rel}: отсутствует {missing}"
         )
 
 

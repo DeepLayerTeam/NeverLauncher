@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 2):
-    raise SystemExit(f"Quilt Compatibility II: требуется «VERSION>=0.17.2, got» {version}")
+    raise SystemExit(f"Quilt Compatibility II: требуется версия не ниже 0.17.2, получено {version}")
 
 
 def read(rel: str) -> str:
@@ -47,7 +47,7 @@ quilt_rows = [
 ]
 if len(quilt_rows) != len(expected):
     raise SystemExit(
-        f"Quilt 0.17.2: требуется ровно {len(expected)} catalogue targets, получено {len(quilt_rows)}"
+        f"Quilt 0.17.2: требуется ровно {len(expected)} конфигураций каталога, получено {len(quilt_rows)}"
     )
 by_version: dict[str, dict] = {}
 for row in quilt_rows:
@@ -193,5 +193,5 @@ require(
 )
 
 print(
-    f"Quilt Compatibility II 0.17.2 gate: OK ({len(quilt_rows)} catalogue targets; {len(quilt_rows) - len(blocked)} required, {len(blocked)}: не сертифицировано; 1.14..26.3, Java 8/16/17/21/25)"
+    f"Quilt Compatibility II 0.17.2: проверка — OK ({len(quilt_rows)} конфигураций каталога; {len(quilt_rows) - len(blocked)} обязательных; {len(blocked)}: не сертифицировано; 1.14..26.3, Java 8/16/17/21/25)"
 )

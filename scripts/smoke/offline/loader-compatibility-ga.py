@@ -11,7 +11,7 @@ core = tuple(
     int(part) for part in version.split("-", 1)[0].split("+", 1)[0].split(".")[:3]
 )
 if core < (0, 18, 0):
-    raise SystemExit(f"приёмка совместимости загрузчиков: требуется «VERSION>=0.18.0, got» {version}")
+    raise SystemExit(f"приёмка совместимости загрузчиков: требуется версия не ниже 0.18.0, получено {version}")
 
 
 def read(rel: str) -> str:
