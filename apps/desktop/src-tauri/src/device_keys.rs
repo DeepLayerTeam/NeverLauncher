@@ -74,7 +74,7 @@ pub struct DeviceSignatureResult {
 fn normalize_backend_url(value: &str) -> Result<String, String> {
     let value = value.trim().trim_end_matches('/').to_ascii_lowercase();
     if value.is_empty() {
-        return Err("Backend URL обязателен для device key storage".into());
+        return Err("Для хранения ключа устройства необходимо указать URL сервера".into());
     }
     let secure = value.starts_with("https://");
     let loopback_http = value.strip_prefix("http://").map(|rest| {
@@ -96,7 +96,7 @@ fn normalize_backend_url(value: &str) -> Result<String, String> {
 fn normalize_user_id(value: &str) -> Result<String, String> {
     let value = value.trim();
     if value.is_empty() || value.len() > 160 {
-        return Err("userId обязателен для device key storage".into());
+        return Err("Для хранения ключа устройства необходимо указать userId".into());
     }
     Ok(value.to_string())
 }
@@ -176,10 +176,10 @@ fn validate_software_record(record: &mut SecureDeviceKeyRecord) -> Result<Signin
         return Err("software device key record имеет некорректный algorithm/binding".into());
     }
     let mut seed = hex::decode(record.private_seed_hex.trim())
-        .map_err(|_| "device key seed в OS secure storage повреждён".to_string())?;
+        .map_err(|_| "Исходные данные ключа устройства в защищённом хранилище ОС повреждены".to_string())?;
     if seed.len() != 32 {
         seed.zeroize();
-        return Err("device key seed в OS secure storage имеет неверную длину".into());
+        return Err("Исходные данные ключа устройства в защищённом хранилище ОС имеют неверную длину".into());
     }
     let mut seed_array = [0u8; 32];
     seed_array.copy_from_slice(&seed);
@@ -218,7 +218,7 @@ fn hardware_signer(label: &str) -> Result<(SignerHandle, String), String> {
     // не считаются аппаратно привязанной идентификацией. Для них допустим только
     // существующий резервный механизм Ed25519 и защищённого хранилища ОС.
     if !is_hardware_backend_kind(&provider) {
-        return Err(format!("platform signer backend {provider} не является hardware-isolated"));
+        return Err(format!("Средство подписи платформы {provider} не обеспечивает аппаратную изоляцию"));
     }
     Ok((signer, provider))
 }
@@ -232,7 +232,7 @@ fn validate_hardware_record(record: &SecureDeviceKeyRecord) -> Result<(SignerHan
     }
     let (signer, provider) = hardware_signer(&record.hardware_label)?;
     if !record.hardware_provider.is_empty() && provider != record.hardware_provider {
-        return Err(format!("hardware provider изменился: saved={} current={provider}", record.hardware_provider));
+        return Err(format!("Аппаратный провайдер изменился: сохранённый={} текущий={provider}", record.hardware_provider));
     }
     let public = signer.public_key(&record.hardware_label)
         .map_err(|e| format!("не удалось получить hardware public key: {e}"))?;
@@ -270,12 +270,12 @@ fn load_record(backend_url: &str, user_id: &str) -> Result<Option<SecureDeviceKe
     match entry.get_password() {
         Ok(mut secret) => {
             let parsed = serde_json::from_str::<SecureDeviceKeyRecord>(&secret)
-                .map_err(|e| format!("device key record в OS secure storage повреждён: {e}"));
+                .map_err(|e| format!("Запись ключа устройства в защищённом хранилище ОС повреждена: {e}"));
             secret.zeroize();
             parsed.map(Some)
         }
         Err(keyring::v1::Error::NoEntry) => Ok(None),
-        Err(e) => Err(format!("не удалось прочитать device key из OS secure storage: {e}")),
+        Err(e) => Err(format!("Не удалось прочитать ключ устройства из защищённого хранилища ОС: {e}")),
     }
 }
 
@@ -411,7 +411,7 @@ fn validate_device_signing_payload(payload: &str, user_id: &str) -> Result<(), S
         || lines[3] != format!("user={}", user_id)
         || lines[4].strip_prefix("device=").unwrap_or("").is_empty()
         || lines[5].strip_prefix("session=").unwrap_or("").is_empty() {
-        return Err("device signing payload не совпадает с ожидаемой canonical identity/session binding".into());
+        return Err("Данные подписи устройства не соответствуют ожидаемой канонической привязке учётной записи и сеанса".into());
     }
     Ok(())
 }
@@ -443,7 +443,7 @@ fn validate_device_attestation_payload(payload: &str, user_id: &str, record: &Se
         || lines[11].strip_prefix("challenge-expires-at=").unwrap_or("").is_empty()
         || lines[12].strip_prefix("attestation-valid-until=").unwrap_or("").is_empty()
     {
-        return Err("device attestation payload не совпадает с зарегистрированной hardware identity/session/freshness binding".into());
+        return Err("Данные аттестации устройства не соответствуют зарегистрированной привязке оборудования, сеанса и актуальности проверки".into());
     }
     Ok(())
 }
@@ -495,14 +495,14 @@ fn guard_attestation_device_payload(
     let challenge = challenge.trim();
     let challenge_expires_at = challenge_expires_at.trim();
     if session_id.is_empty() || session_id.len() > 256 || *binding_epoch < 1 {
-        return Err("Guard Attestation session binding недействителен".into());
+        return Err("Привязка сеанса аттестации Guard недействительна".into());
     }
     if launcher_version.is_empty() || launcher_version.len() > 64
         || challenge_id.is_empty() || challenge_id.len() > 160
         || challenge.is_empty() || challenge.len() > 4096
         || challenge_expires_at.is_empty() || challenge_expires_at.len() > 80
     {
-        return Err("Guard Attestation challenge/release metadata недействительны".into());
+        return Err("Данные запроса аттестации Guard или метаданные релиза недействительны".into());
     }
     let attestation_sha256 = require_hex_sha256("attestationSha256", attestation_sha256)?;
     let evidence_sha256 = require_hex_sha256("evidenceSha256", evidence_sha256)?;
@@ -597,7 +597,7 @@ fn guard_attestation_v2_device_payload(
         || challenge_expires_at.is_empty() || challenge_expires_at.len() > 80
         || request.runtime_pid == 0
     {
-        return Err("Guard Attestation v2 challenge/runtime metadata недействительны".into());
+        return Err("Данные запроса аттестации Guard v2 или метаданные среды выполнения недействительны".into());
     }
     let attestation_sha256 = require_hex_sha256("attestationSha256", &request.attestation_sha256)?;
     let continuous_evidence_sha256 = require_hex_sha256("continuousEvidenceSha256", &request.continuous_evidence_sha256)?;
@@ -686,13 +686,13 @@ fn session_refresh_payload(user_id: &str, session_id: &str, device_id: &str, bin
     let session_id = session_id.trim();
     let device_id = device_id.trim();
     if session_id.is_empty() || session_id.len() > 256 || device_id.is_empty() || device_id.len() > 160 {
-        return Err("session/device binding для refresh недействителен".into());
+        return Err("Привязка сеанса и устройства для обновления токена недействительна".into());
     }
     if binding_epoch < 1 {
         return Err("bindingEpoch для refresh должен быть >= 1".into());
     }
     if refresh_token.is_empty() || refresh_token.len() > 4096 {
-        return Err("refresh token имеет недопустимый размер".into());
+        return Err("Токен обновления имеет недопустимый размер".into());
     }
     let digest = hex::encode(Sha256::digest(refresh_token.as_bytes()));
     Ok(format!(
@@ -780,7 +780,7 @@ fn validate_device_replacement_payload(payload: &str, user_id: &str) -> Result<V
         || !lines[11].starts_with("new-provider=")
         || lines[12].strip_prefix("issued-at=").unwrap_or("").is_empty()
         || lines[13].strip_prefix("expires-at=").unwrap_or("").is_empty() {
-        return Err("replacement payload identity/freshness fields повреждены".into());
+        return Err("Поля идентификатора и актуальности в данных замены повреждены".into());
     }
     Ok(lines)
 }
@@ -869,7 +869,7 @@ pub fn commit_staged_device_key(backend_url: &str, user_id: &str, device_id: &st
     staged.device_id = Some(device_id.to_string());
     save_record(backend_url, &user, &staged)?;
     let entry = staged_keyring_entry(backend_url, &user)?;
-    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => {}, Err(e) => return Err(format!("replacement committed, но staged metadata cleanup failed: {e}")) }
+    match entry.delete_credential() { Ok(()) | Err(keyring::v1::Error::NoEntry) => {}, Err(e) => return Err(format!("Замена зафиксирована, но не удалось очистить временные метаданные: {e}")) }
     if let Some(old_record) = old {
         if old_record.key_binding == "hardware" && !old_record.hardware_label.is_empty() && old_record.hardware_label != staged.hardware_label {
             if let Ok((signer, _)) = hardware_signer(&old_record.hardware_label) {
@@ -935,7 +935,7 @@ pub fn delete_device_key(backend_url: &str, user_id: &str) -> Result<(), String>
     let entry = keyring_entry(backend_url, user_id)?;
     match entry.delete_credential() {
         Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()),
-        Err(e) => Err(format!("не удалось удалить device key metadata из OS secure storage: {e}")),
+        Err(e) => Err(format!("Не удалось удалить метаданные ключа устройства из защищённого хранилища ОС: {e}")),
     }
 }
 

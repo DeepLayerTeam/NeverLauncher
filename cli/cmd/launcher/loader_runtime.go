@@ -306,7 +306,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	upstreamProfileSHA256 := sha256HexBytes(profileBytes)
 	var profile loaderVersionProfile
 	if err := json.Unmarshal(profileBytes, &profile); err != nil {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile JSON повреждён: %w", loader, err)
+		return loaderMaterializeResult{}, fmt.Errorf("JSON профиля загрузчика %s повреждён: %w", loader, err)
 	}
 	if profile.ID == "" {
 		profile.ID = fmt.Sprintf("%s-loader-%s-%s", loader, selectedLoader, vanilla.MinecraftVersion)
@@ -318,13 +318,13 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		profile.InheritsFrom = vanilla.MinecraftVersion
 	}
 	if profile.InheritsFrom != vanilla.MinecraftVersion {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile inheritsFrom=%s, ожидался %s", loader, profile.InheritsFrom, vanilla.MinecraftVersion)
+		return loaderMaterializeResult{}, fmt.Errorf("Профиль загрузчика %s: inheritsFrom=%s, ожидалось %s", loader, profile.InheritsFrom, vanilla.MinecraftVersion)
 	}
 	if profile.MainClass == "" {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит mainClass", loader)
+		return loaderMaterializeResult{}, fmt.Errorf("Профиль загрузчика %s не содержит поле mainClass", loader)
 	}
 	if len(profile.Libraries) == 0 {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит libraries", loader)
+		return loaderMaterializeResult{}, fmt.Errorf("Профиль загрузчика %s не содержит раздел libraries", loader)
 	}
 	if selectedEntry.Loader.Maven != "" && !profileHasLibrary(profile.Libraries, selectedEntry.Loader.Maven) {
 		return loaderMaterializeResult{}, fmt.Errorf("Профиль %s не содержит выбранный артефакт загрузчика %s", loader, selectedEntry.Loader.Maven)
@@ -336,7 +336,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 	intermediary := selectedEntry.Intermediary.Maven
 	noMappingSentinel := loader == "fabric" && strings.HasPrefix(vanilla.MinecraftVersion, "26.") && intermediary == "net.fabricmc:intermediary:0.0.0"
 	if intermediary != "" && !noMappingSentinel && !profileHasLibrary(profile.Libraries, intermediary) {
-		return loaderMaterializeResult{}, fmt.Errorf("%s profile не содержит intermediary artifact %s", loader, intermediary)
+		return loaderMaterializeResult{}, fmt.Errorf("Профиль загрузчика %s не содержит промежуточный артефакт %s", loader, intermediary)
 	}
 	if profile.Type == "" {
 		profile.Type = "release"

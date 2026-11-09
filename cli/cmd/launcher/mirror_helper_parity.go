@@ -123,7 +123,7 @@ func mirrorCopyVerified0274(ctx context.Context, dst string, a mirrorArtifact027
 		}
 		if !st.Mode().IsRegular() {
 			tmp.Close()
-			return 0, errors.New("source-file должен указывать на обычный файл")
+			return 0, errors.New("Параметр source-file должен указывать на обычный файл")
 		}
 		reader, err = os.Open(a.File)
 	} else {

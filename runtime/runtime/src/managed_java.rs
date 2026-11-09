@@ -496,7 +496,7 @@ async fn install_managed_java_archive(
         .join(format!("{platform_os}-{platform_arch}"));
     fs::create_dir_all(&platform_dir)
         .await
-        .map_err(|err| format!("не удалось создать platform runtime dir: {err}"))?;
+        .map_err(|err| format!("Не удалось создать каталог среды выполнения для платформы: {err}"))?;
 
     // Привяжите идентичность установленного Runtime к точному проверенному дайджесту пакета. Разные подписанные выпуски с одинаковым читаемым именем должны сосуществовать, сохраняя предыдущую исправную JVM как последнюю работоспособную для отката.
     let release_component = format!("{}-{}", safe_release_component(release_name), &checksum[..16]);
@@ -1104,7 +1104,7 @@ fn validate_extracted_symlinks(root: &Path) -> Result<(), String> {
             if metadata.file_type().is_symlink() {
                 let resolved = std::fs::canonicalize(&path).map_err(|err| format!("Символическая ссылка Runtime {}: {err}", path.display()))?;
                 if !resolved.starts_with(&canonical_root) {
-                    return Err(format!("runtime archive содержит внешний symlink: {}", path.display()));
+                    return Err(format!("Архив среды выполнения содержит символическую ссылку за пределы каталога: {}", path.display()));
                 }
             } else if metadata.is_dir() {
                 stack.push(path);
@@ -1487,11 +1487,11 @@ fn java_property<'a>(text: &'a str, key: &str) -> Option<&'a str> {
 fn safe_record_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
     let rel = Path::new(relative);
     if rel.is_absolute() || relative.is_empty() {
-        return Err("runtime record содержит небезопасный java path".to_string());
+        return Err("Запись среды выполнения содержит небезопасный путь к Java".to_string());
     }
     for component in rel.components() {
         if !matches!(component, Component::Normal(_)) {
-            return Err("runtime record содержит traversal java path".to_string());
+            return Err("Запись среды выполнения содержит путь к Java с выходом за пределы каталога".to_string());
         }
     }
     let candidate = root.join(rel);
@@ -1501,7 +1501,7 @@ fn safe_record_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
         let canonical_candidate = std::fs::canonicalize(&candidate)
             .map_err(|err| format!("Определение канонического пути Java в Runtime: {err}"))?;
         if !canonical_candidate.starts_with(&canonical_root) {
-            return Err("runtime record java path вышел за Managed Java root через symlink".to_string());
+            return Err("Путь к Java в записи среды выполнения выходит за пределы управляемой Java через символическую ссылку".to_string());
         }
     }
     Ok(candidate)
@@ -1592,7 +1592,7 @@ fn normalize_adoptium_arch(value: &str) -> String {
 fn normalize_distribution(value: &str) -> Result<String, String> {
     match value.trim().to_ascii_lowercase().as_str() {
         "" | "any" | "managed" | "adoptium" | "temurin" => Ok("temurin".to_string()),
-        "system" => Err("distribution=system не является Managed Java runtime".to_string()),
+        "system" => Err("Значение distribution=system не обозначает управляемую среду выполнения Java".to_string()),
         other => Err(format!("Managed Java distribution {other} не поддерживается в {}", env!("CARGO_PKG_VERSION"))),
     }
 }
@@ -1606,7 +1606,7 @@ fn normalize_sha256(value: &str) -> Result<String, String> {
 }
 
 fn validate_https_url(value: &str) -> Result<(), String> {
-    let url = Url::parse(value).map_err(|err| format!("некорректный runtime URL: {err}"))?;
+    let url = Url::parse(value).map_err(|err| format!("Некорректный URL среды выполнения: {err}"))?;
     if url.scheme() != "https"
         || url.host_str().is_none()
         || !url.username().is_empty()

@@ -143,7 +143,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 		return releaseDeviceTrustCertification{}, errors.New("Матрица доверия устройств не содержит подтверждённого статуса status=passed с блокировкой по умолчанию")
 	}
 	if strings.TrimSpace(matrix.Repository) == "" || strings.TrimSpace(matrix.Commit) == "" || strings.TrimSpace(matrix.RunID) == "" {
-		return releaseDeviceTrustCertification{}, errors.New("Device Trust matrix не содержит repository/commit/runId")
+		return releaseDeviceTrustCertification{}, errors.New("Матрица доверия устройств не содержит полей repository/commit/runId")
 	}
 	if strings.TrimSpace(expectedCommit) != "" && matrix.Commit != strings.TrimSpace(expectedCommit) {
 		return releaseDeviceTrustCertification{}, fmt.Errorf("Не совпадает коммит матрицы доверия устройств: ожидался=%s, фактический=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
@@ -208,7 +208,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 		}
 	}
 	if len(requiredIDs) == 0 || requiredProtocol == 0 {
-		return releaseDeviceTrustCertification{}, errors.New("Device Trust Release требует required PostgreSQL protocol target")
+		return releaseDeviceTrustCertification{}, errors.New("Релизная проверка доверия устройств требует обязательную цель проверки протокола PostgreSQL")
 	}
 	for _, osName := range []string{"linux", "windows", "macos"} {
 		if !requiredNativeOS[osName] {
@@ -223,7 +223,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 			return releaseDeviceTrustCertification{}, fmt.Errorf("Матрица Device Trust содержит неожиданную целевую платформу: %s", id)
 		}
 		if _, exists := resultByID[id]; exists {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("Device Trust matrix содержит duplicate target: %s", id)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Матрица доверия устройств содержит повторяющуюся цель: %s", id)
 		}
 		resultByID[id] = result
 	}
