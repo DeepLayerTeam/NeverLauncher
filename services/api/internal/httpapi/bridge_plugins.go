@@ -166,7 +166,7 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 	}
 	decision := s.validateBridgePluginMeasurement0135(server, req.ServerType, req.PluginVersion, req.PluginSHA256)
 	if err := s.State.ServerBridge.setIntegrityMeasurement0135(serverID, decision); err != nil {
-		writeError(w, http.StatusServiceUnavailable, "ServerBridge PostgreSQL state недоступен")
+		writeError(w, http.StatusServiceUnavailable, "Состояние ServerBridge в PostgreSQL недоступно")
 		return
 	}
 	if !decision.Allowed {
@@ -187,7 +187,7 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusConflict, "serverbridge_runtime_conflict")
 			return
 		}
-		writeError(w, http.StatusServiceUnavailable, "ServerBridge heartbeat/runtime state не сохранён")
+		writeError(w, http.StatusServiceUnavailable, "Не удалось сохранить сигнал активности и состояние среды выполнения ServerBridge")
 		return
 	}
 	if telemetryEnabled {
@@ -198,7 +198,7 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusConflict, "serverbridge_telemetry_conflict")
 				return
 			}
-			writeError(w, http.StatusServiceUnavailable, "ServerBridge telemetry state не сохранён")
+			writeError(w, http.StatusServiceUnavailable, "Не удалось сохранить состояние телеметрии ServerBridge")
 			return
 		}
 	}
@@ -209,7 +209,7 @@ func (s Server) serverBridgeHeartbeat(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusConflict, "serverbridge_routing_conflict")
 				return
 			}
-			writeError(w, http.StatusServiceUnavailable, "ServerBridge routing state не сохранён")
+			writeError(w, http.StatusServiceUnavailable, "Не удалось сохранить состояние маршрутизации ServerBridge")
 			return
 		}
 	}

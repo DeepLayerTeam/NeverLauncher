@@ -42,27 +42,27 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось прочитать provider credential")
+		writeError(w, http.StatusInternalServerError, "Не удалось прочитать учётные данные провайдера")
 		return
 	}
 	plain, err := s.decryptProviderCredential116(credential)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "provider credential не может быть расшифрован")
+		writeError(w, http.StatusInternalServerError, "Не удалось расшифровать учётные данные провайдера")
 		return
 	}
 	if err := s.Federation.RevokeProviderCredential(r.Context(), providerID, identity.Subject, plain); err != nil {
 		if errors.Is(err, federation.ErrCapabilityUnsupported) {
-			writeError(w, http.StatusNotImplemented, "provider не поддерживает server-side revoke; Never session не изменена")
+			writeError(w, http.StatusNotImplemented, "Провайдер не поддерживает отзыв учётных данных на сервере; сеанс Never сохранён")
 			return
 		}
-		writeError(w, http.StatusBadGateway, "provider logout/revoke завершился ошибкой; Never session не изменена")
+		writeError(w, http.StatusBadGateway, "Не удалось выполнить выход или отзыв учётных данных провайдера; сеанс Never сохранён")
 		return
 	}
 	if err := store.DeleteProviderCredentialByIdentity(claims.Sub, identity.ID); err != nil && !errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusInternalServerError, "provider credential revoked, но локальная credential запись не удалена")
+		writeError(w, http.StatusInternalServerError, "Учётные данные провайдера отозваны, но не удалось удалить их локальную запись")
 		return
 	}
 	now := time.Now().UTC()
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-provider-logout-" + now.Format("20060102150405.000000000"), Actor: claims.Email, Action: "auth:provider:logout", Target: providerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "provider-logged-out", "provider": providerID, "neverSessionRevoked": false, "note": "provider logout и Never session logout являются отдельными действиями"}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "provider-logged-out", "provider": providerID, "neverSessionRevoked": false, "note": "Выход из учётной записи провайдера не завершает сеанс Never"}})
 }

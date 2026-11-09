@@ -45,7 +45,7 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if release.Status == "published" {
-		writeError(w, http.StatusConflict, "published manifest immutable; создайте новую версию")
+		writeError(w, http.StatusConflict, "Опубликованный манифест нельзя изменять; создайте новую версию")
 		return
 	}
 	var req versionManifestRequest

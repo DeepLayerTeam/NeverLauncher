@@ -215,7 +215,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 		return model.User{}, errors.New("Необходимо указать адрес электронной почты и пароль")
 	}
 	if len(password) < 12 {
-		return model.User{}, errors.New("bootstrap admin password: требуется «не менее 12 символов»")
+		return model.User{}, errors.New("Для первоначального пароля администратора требуется не менее 12 символов")
 	}
 	userID := "admin-" + strings.NewReplacer("@", "-", ".", "-", "+", "-").Replace(strings.ToLower(email))
 	now := time.Now().UTC()

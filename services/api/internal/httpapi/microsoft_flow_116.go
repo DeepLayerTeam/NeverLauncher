@@ -43,7 +43,7 @@ func (s Server) authMicrosoftLinkBegin116(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if _, ok := s.microsoftConnector116(providerID); !ok {
-		writeError(w, http.StatusNotFound, "Microsoft provider не найден")
+		writeError(w, http.StatusNotFound, "Провайдер Microsoft не найден")
 		return
 	}
 	if user, err := s.Repo.GetUser(claims.Sub); err != nil || user.Status != "active" {
@@ -61,13 +61,13 @@ func (s Server) authMicrosoftLinkBegin116(w http.ResponseWriter, r *http.Request
 	}
 	tx, err := s.openOIDCTransaction115(sealed)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось подготовить Microsoft linking transaction")
+		writeError(w, http.StatusInternalServerError, "Не удалось подготовить операцию привязки учётной записи Microsoft")
 		return
 	}
 	tx.LinkUserID = claims.Sub
 	sealed, err = s.sealOIDCTransaction115(tx)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось защитить Microsoft linking transaction")
+		writeError(w, http.StatusInternalServerError, "Не удалось защитить операцию привязки учётной записи Microsoft")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
@@ -92,7 +92,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if _, ok := s.microsoftConnector116(providerID); !ok {
-		writeError(w, http.StatusNotFound, "Microsoft provider не найден")
+		writeError(w, http.StatusNotFound, "Провайдер Microsoft не найден")
 		return
 	}
 	var req oidcCompleteRequest115
@@ -101,7 +101,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 	}
 	tx, err := s.openOIDCTransaction115(req.Transaction)
 	if err != nil || tx.LinkUserID == "" || tx.LinkUserID != claims.Sub || tx.ProviderID != providerID || req.State == "" || req.State != tx.State || strings.TrimSpace(req.Code) == "" {
-		writeError(w, http.StatusUnauthorized, "Microsoft linking transaction недействителен или истёк")
+		writeError(w, http.StatusUnauthorized, "Операция привязки учётной записи Microsoft недействительна или срок её действия истёк")
 		return
 	}
 	if !s.claimBrowserTransaction0525(w, r, tx) {
@@ -117,7 +117,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 	identity, err := s.Federation.LinkAuthenticatedIdentity(claims.Sub, providerID, proof)
 	if err != nil {
 		if authconnector.CodeOf(err) == authconnector.ErrConflict || errors.Is(err, repository.ErrConflict) {
-			writeError(w, http.StatusConflict, "Microsoft identity уже связана с другой учётной записью")
+			writeError(w, http.StatusConflict, "Учётная запись Microsoft уже привязана к другому пользователю")
 			return
 		}
 		s.writeOIDCError115(w, err)
@@ -164,15 +164,15 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 	credential, err := store.GetProviderCredentialByIdentity(claims.Sub, selected.ID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			writeError(w, http.StatusNotFound, "provider credential не найден")
+			writeError(w, http.StatusNotFound, "Учётные данные провайдера не найдены")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "не удалось прочитать provider credential")
+		writeError(w, http.StatusInternalServerError, "Не удалось прочитать учётные данные провайдера")
 		return
 	}
 	plain, err := s.decryptProviderCredential116(credential)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "provider credential повреждён или не может быть расшифрован")
+		writeError(w, http.StatusInternalServerError, "Учётные данные провайдера повреждены или не могут быть расшифрованы")
 		return
 	}
 	refreshed, err := s.Federation.RefreshProviderCredential(r.Context(), providerID, plain, credential.Subject)
@@ -182,7 +182,7 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 	}
 	issuer, issuerErr := model.CanonicalAuthIssuer(providerID, refreshed.Identity.Issuer)
 	if issuerErr != nil || issuer != selected.Issuer || strings.TrimSpace(refreshed.Identity.Subject) != selected.Subject {
-		writeError(w, http.StatusConflict, "provider refresh изменил issuer или subject; credential не обновлён")
+		writeError(w, http.StatusConflict, "При обновлении учётных данных провайдера изменились издатель (issuer) или субъект (subject); данные не обновлены")
 		return
 	}
 	identity, err := s.Federation.RefreshLinkedIdentity(claims.Sub, providerID, selected.ID, refreshed)
@@ -196,7 +196,7 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 		return
 	}
 	if err := s.saveProviderCredential116(user, identity, refreshed.ProviderToken, true); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить rotated provider credential")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить обновлённые учётные данные провайдера")
 		return
 	}
 	now := time.Now().UTC()
@@ -230,7 +230,7 @@ func (s Server) authProviderCredentialDelete116(w http.ResponseWriter, r *http.R
 		return
 	}
 	if err := store.DeleteProviderCredentialByIdentity(claims.Sub, selected.ID); err != nil && !errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusInternalServerError, "не удалось удалить provider credential")
+		writeError(w, http.StatusInternalServerError, "Не удалось удалить учётные данные провайдера")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "provider-credential-deleted", "provider": providerID}})
@@ -245,7 +245,7 @@ func (s Server) authMicrosoftLogoutURL116(w http.ResponseWriter, r *http.Request
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	connector, ok := s.microsoftConnector116(providerID)
 	if !ok {
-		writeError(w, http.StatusNotFound, "Microsoft provider не найден")
+		writeError(w, http.StatusNotFound, "Провайдер Microsoft не найден")
 		return
 	}
 	linked := false
@@ -256,7 +256,7 @@ func (s Server) authMicrosoftLogoutURL116(w http.ResponseWriter, r *http.Request
 		}
 	}
 	if !linked {
-		writeError(w, http.StatusForbidden, "Microsoft provider не связан с текущей учётной записью")
+		writeError(w, http.StatusForbidden, "Провайдер Microsoft не привязан к текущей учётной записи")
 		return
 	}
 	var req microsoftLogoutRequest116
@@ -267,7 +267,7 @@ func (s Server) authMicrosoftLogoutURL116(w http.ResponseWriter, r *http.Request
 	}
 	logout, ok := connector.(interface{ ProviderLogoutURL(string) (string, error) })
 	if !ok {
-		writeError(w, http.StatusNotImplemented, "Microsoft provider не поддерживает front-channel logout")
+		writeError(w, http.StatusNotImplemented, "Провайдер Microsoft не поддерживает выход через браузер")
 		return
 	}
 	logoutURL, err := logout.ProviderLogoutURL(req.PostLogoutRedirectURI)
@@ -277,6 +277,6 @@ func (s Server) authMicrosoftLogoutURL116(w http.ResponseWriter, r *http.Request
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion, "toolVersion": s.Version, "provider": providerID, "logoutUrl": logoutURL,
-		"note": "provider logout отделён от Never session logout",
+		"note": "Выход из учётной записи провайдера и завершение сеанса Never — разные действия",
 	}})
 }

@@ -671,7 +671,7 @@ pub fn verify_windows_authenticode_trust(path: &std::path::Path) -> Result<(), S
 
 #[cfg(not(windows))]
 pub fn verify_windows_authenticode_trust(_path: &std::path::Path) -> Result<(), String> {
-    Err("Authenticode trust verification доступен только на Windows".to_string())
+    Err("Проверка доверия Authenticode доступна только в Windows".to_string())
 }
 
 #[cfg(windows)]

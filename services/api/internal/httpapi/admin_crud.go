@@ -70,7 +70,7 @@ func (s Server) adminCRUDStatus(w http.ResponseWriter, r *http.Request) {
 		"schemaVersion": apiContractVersion,
 		"toolVersion":   s.Version,
 		"status":        "product-crud-ready",
-		"summary":       "Admin UI использует реальные v5 CRUD endpoints для проектов, профилей, каналов и пользователей; write-actions закрыты RBAC и пишут audit events.",
+		"summary":       "Панель администратора использует действующие маршруты API v5 для создания, чтения, изменения и удаления проектов, профилей, каналов и пользователей. Изменения защищены ролевым управлением доступом и фиксируются в журнале аудита.",
 		"counts":        map[string]int{"projects": len(projects), "profiles": len(profiles), "channels": len(channels), "versions": len(versions), "users": len(s.Repo.ListUsers()), "auditEvents": len(s.Repo.ListAuditEvents())},
 		"writeEndpoints": []string{
 			"POST /api/v1/admin/projects",

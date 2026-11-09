@@ -593,7 +593,7 @@ pub async fn load_manifest(url: &str, pinned_public_key: &str) -> Result<Manifes
         .await
         .map_err(|err| format!("не удалось запросить манифест: {err}"))?;
     if !response.status().is_success() {
-        return Err(format!("backend вернул статус {}", response.status()));
+        return Err(format!("Сервер вернул статус {}", response.status()));
     }
     let manifest = response
         .json::<Manifest>()
@@ -606,7 +606,7 @@ pub async fn load_manifest(url: &str, pinned_public_key: &str) -> Result<Manifes
 pub fn verify_manifest_signature(manifest: &Manifest, pinned_public_key: &str) -> Result<SignatureCheckResult, String> {
     let pinned = pinned_public_key.trim();
     if pinned.is_empty() {
-        return Err("pinned Ed25519 public key обязателен; trust-on-first-use запрещён".to_string());
+        return Err("Требуется закреплённый публичный ключ Ed25519; доверие при первом использовании запрещено".to_string());
     }
     let signature_info = manifest
         .signature
