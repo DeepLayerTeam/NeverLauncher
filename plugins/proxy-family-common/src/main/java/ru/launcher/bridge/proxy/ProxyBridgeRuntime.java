@@ -96,7 +96,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         current.api.publishEvent("server.startup", Map.of("platform", platformId));
         current.api.publishEvent("server.ready", Map.of("platform", platformId));
         logger.info("Launcher " + displayName + " Bridge " + BridgeDefaults.VERSION +
-            " enabled; serverId=" + current.config.serverId +
+            " запущен; serverId=" + current.config.serverId +
             "; nodeKeyFingerprint=" + current.identity.fingerprint() +
             "; nodePublicKey=" + current.identity.publicKeyBase64Url() +
             "; sha256=" + shortHash(current.pluginSha256) +
@@ -364,7 +364,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         lastHeartbeatOK = ok;
         lastHeartbeatAt = Instant.now();
         if (previousAt == null || previous != ok) {
-            if (ok) logger.info("Launcher " + displayName + " Bridge heartbeat=true serverId=" + current.config.serverId);
+            if (ok) logger.info("Launcher " + displayName + " Bridge: связь установлена; heartbeat=true serverId=" + current.config.serverId);
             else logger.warning("Launcher " + displayName + " Bridge heartbeat=false serverId=" + current.config.serverId + " reason=rejected_or_unavailable");
         }
     }

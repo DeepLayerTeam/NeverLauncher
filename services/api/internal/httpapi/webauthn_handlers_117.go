@@ -443,7 +443,7 @@ func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, use
 		if err := s.commitPendingProviderCredential0296(user, provider, identityID, pendingCredential[0]); err != nil {
 			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")
 			_ = s.flushPersistenceState950("passkey-provider-credential-failed")
-			writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
+			writeError(w, http.StatusInternalServerError, "Не удалось безопасно сохранить учётные данные провайдера")
 			return
 		}
 	}

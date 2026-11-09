@@ -101,7 +101,7 @@ public final class LauncherFabricBridge implements ModInitializer {
 
         RuntimeState current = state;
         current.api.publishEvent("server.startup", Map.of("platform", PLATFORM));
-        LOGGER.info("Launcher Fabric Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; asyncLoginGate=true; clientModRequired=false",
+        LOGGER.info("Мост Launcher Fabric ServerBridge {} запущен; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; asyncLoginGate=true; clientModRequired=false",
             BridgeDefaults.VERSION,
             current.config.serverId,
             current.identity.fingerprint(),
@@ -447,9 +447,9 @@ public final class LauncherFabricBridge implements ModInitializer {
         lastHeartbeatAt = Instant.now();
         if (previousAt == null || previous != ok) {
             if (ok) {
-                LOGGER.info("Launcher Fabric Server Bridge heartbeat=true serverId={}", current.config.serverId);
+                LOGGER.info("Мост Launcher Fabric ServerBridge: связь установлена; heartbeat=true serverId={}", current.config.serverId);
             } else {
-                LOGGER.warn("Launcher Fabric Server Bridge heartbeat=false serverId={} reason=rejected_or_unavailable", current.config.serverId);
+                LOGGER.warn("Мост Launcher Fabric ServerBridge: нет связи; heartbeat=false serverId={} reason=rejected_or_unavailable", current.config.serverId);
             }
         }
     }

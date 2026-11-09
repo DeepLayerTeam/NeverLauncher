@@ -84,7 +84,7 @@ func (s Server) serverBridgeCreateHandoff0148(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if req.Username == "" || req.TargetServer == "" {
-		writeError(w, http.StatusBadRequest, "username и targetServer обязательны")
+		writeError(w, http.StatusBadRequest, "Поля username и targetServer обязательны")
 		return
 	}
 	playerSessionV3 := req.ProtocolVersion >= serverBridgeProtocolV3 && bridgeFeatureContains0196(req.Features, serverBridgeFeaturePlayerSessionV3)
@@ -148,7 +148,7 @@ func (s Server) serverBridgeTopology0148(w http.ResponseWriter, r *http.Request)
 		// Не раскрывайте внутренние сведения SQL в ответе клиенту, но
 		// сохраняйте первопричину в серверных журналах для CI и эксплуатации.
 		log.Printf("Ошибка: «чтение топологии ServerBridge из PostgreSQL»: %v", err)
-		writeError(w, http.StatusServiceUnavailable, "ServerBridge PostgreSQL topology недоступна")
+		writeError(w, http.StatusServiceUnavailable, "Топология ServerBridge в PostgreSQL недоступна")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{

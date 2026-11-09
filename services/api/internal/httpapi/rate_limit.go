@@ -145,7 +145,7 @@ func (s Server) withRateLimit(next http.Handler) http.Handler {
 		if err != nil {
 			if s.State.RateLimitFailClosed {
 				w.Header().Set("Retry-After", "1")
-				writeError(w, http.StatusServiceUnavailable, "rate limiter временно недоступен")
+				writeError(w, http.StatusServiceUnavailable, "Ограничитель частоты запросов временно недоступен")
 				return
 			}
 			w.Header().Set("X-RateLimit-Backend", "degraded")

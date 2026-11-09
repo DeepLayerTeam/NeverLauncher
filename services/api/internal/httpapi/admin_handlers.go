@@ -33,7 +33,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	identifier := strings.TrimSpace(firstNonEmpty(req.Identifier, req.Email))
 	if identifier == "" || req.Password == "" {
-		writeError(w, http.StatusBadRequest, "identifier/email и пароль обязательны")
+		writeError(w, http.StatusBadRequest, "Необходимо указать идентификатор или адрес электронной почты и пароль")
 		return
 	}
 	providerID, routeErr := s.Federation.RoutePasswordProvider(req.ProviderID, identifier)
@@ -41,7 +41,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(routeErr, federation.ErrRoutingDenied) || errors.Is(routeErr, federation.ErrRoutingRequired) {
 			writeError(w, http.StatusForbidden, "выберите разрешённого провайдера авторизации")
 		} else {
-			writeError(w, http.StatusBadRequest, "auth provider недоступен")
+			writeError(w, http.StatusBadRequest, "Провайдер авторизации недоступен")
 		}
 		return
 	}
@@ -58,7 +58,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		s.audit(r, identifier, "admin:login:failed", "admin-panel")
 		status := federationHTTPStatus112(authErr)
 		if status >= 500 {
-			writeError(w, status, "auth provider временно недоступен")
+			writeError(w, status, "Провайдер авторизации временно недоступен")
 			return
 		}
 		if status == http.StatusForbidden {
@@ -66,11 +66,11 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if status == http.StatusBadRequest {
-			writeError(w, status, "auth provider не поддерживает password login")
+			writeError(w, status, "Провайдер авторизации не поддерживает вход по паролю")
 			return
 		}
 		if status == http.StatusConflict {
-			writeError(w, status, "external identity конфликтует с существующей учётной записью; требуется явное связывание")
+			writeError(w, status, "Внешняя учётная запись конфликтует с существующей учётной записью; требуется явное связывание")
 			return
 		}
 		writeError(w, http.StatusUnauthorized, "неверный email или пароль")
@@ -91,7 +91,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 	if mfa.NeedPasskey {
 		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, "admin-panel", mfa.Methods, result.ProviderToken)
 		if err != nil {
-			writeError(w, http.StatusForbidden, "MFA policy требует зарегистрированный passkey")
+			writeError(w, http.StatusForbidden, "Политика MFA требует зарегистрированный ключ доступа")
 			return
 		}
 		s.audit(r, user.Email, "admin:login:passkey-required", result.Provider.ID)
@@ -114,7 +114,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		if err := s.saveProviderCredential116(user, result.Identity, result.ProviderToken, false); err != nil {
 			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")
 			_ = s.flushPersistenceState950("admin-provider-credential-failed")
-			writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
+			writeError(w, http.StatusInternalServerError, "Не удалось безопасно сохранить учётные данные провайдера")
 			return
 		}
 	}
@@ -165,7 +165,7 @@ func (s Server) adminLogout(w http.ResponseWriter, r *http.Request) {
 	}
 	s.State.AuthSessions.revoke(claims.SessionID, "admin-logout")
 	s.audit(r, claims.Email, "admin:logout", claims.SessionID)
-	writeJSON(w, http.StatusOK, map[string]string{"status": "logged-out", "sessionId": claims.SessionID, "message": "серверная сессия отозвана; удалите access/refresh token на клиенте"})
+	writeJSON(w, http.StatusOK, map[string]string{"status": "logged-out", "sessionId": claims.SessionID, "message": "Серверная сессия отозвана; удалите токены доступа и обновления на клиенте"})
 }
 
 // validateProjectMemberships0387 запрещает роли проекта ссылаться на неизвестного
@@ -220,7 +220,7 @@ func (s Server) adminUserCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Email = strings.TrimSpace(req.Email)
 	if req.Email == "" || req.RoleID == "" || req.Password == "" {
-		writeError(w, http.StatusBadRequest, "email, roleId и password обязательны")
+		writeError(w, http.StatusBadRequest, "Необходимо указать поля email, roleId и password")
 		return
 	}
 	if len(req.Password) < 12 {
@@ -709,7 +709,7 @@ func (s Server) adminProjectImport(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else if !s.authorizeClaims(r, claims, "project:write", "", "project", projectID).Allowed {
-		writeError(w, http.StatusForbidden, "создание нового проекта требует глобального project:write")
+		writeError(w, http.StatusForbidden, "Для создания нового проекта необходимо глобальное разрешение project:write")
 		return
 	}
 	if err := s.Repo.ImportProject(payload); err != nil {

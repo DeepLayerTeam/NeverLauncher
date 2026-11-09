@@ -1731,7 +1731,7 @@ func serverBridgeControlStringMapEqual0195(a, b map[string]string) bool {
 func (r *SQLRepository) reconcileControlRead0285(ctx context.Context, serverID, commandID string) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET
 status=CASE WHEN status='leased' THEN 'indeterminate' ELSE 'expired' END,
-error=CASE WHEN status='leased' THEN 'delivered command lost lease/runtime before ACK' ELSE 'Срок действия истёк до доставки' END,
+error=CASE WHEN status='leased' THEN 'Доставленная команда потеряла аренду или среду выполнения до подтверждения' ELSE 'Срок действия истёк до доставки' END,
 updated_at=now(),completed_at=now(),lease_until=NULL
 WHERE ($1='' OR server_id=$1) AND ($2='' OR id=$2) AND (status='pending' AND expires_at<=now() OR status='leased' AND ((lease_until IS NULL OR lease_until<=now()) OR expires_at<=now()
 OR NOT EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=server_id AND n.status='active' AND n.runtime_epoch=server_bridge_control_commands_v3.runtime_epoch AND n.runtime_id=server_bridge_control_commands_v3.runtime_id)))`, serverID, commandID)

@@ -6121,11 +6121,11 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         )
 
 if errors:
-    print("[Launcher] Проверка политики репозитория: FAILED", file=sys.stderr)
+    print("[Launcher] Проверка политики репозитория: ОШИБКА", file=sys.stderr)
     for item in errors:
         print(f" - {item}", file=sys.stderr)
     sys.exit(1)
 
 print(
-    f"[Launcher] repository policy OK: {VERSION}; immutable releases/client/desktop/key lifecycle/SBOM/provenance production gates активны"
+    f"[Launcher] Политика репозитория соблюдена: {VERSION}; действуют промышленные проверки неизменности выпусков, клиента, Desktop, жизненного цикла ключей, перечня компонентов ПО (SBOM) и происхождения артефактов"
 )

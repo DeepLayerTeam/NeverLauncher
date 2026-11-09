@@ -60,7 +60,7 @@ func (b *boundedBuffer0209) String() string {
 	defer b.mu.Unlock()
 	s := b.b.String()
 	if b.truncated {
-		s += "\n[output truncated by Launcher]"
+		s += "\n[вывод обрезан Launcher]"
 	}
 	return s
 }

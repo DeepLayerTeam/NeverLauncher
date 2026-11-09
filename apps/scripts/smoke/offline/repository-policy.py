@@ -6127,5 +6127,5 @@ if errors:
     sys.exit(1)
 
 print(
-    f"[Launcher] repository policy OK: {VERSION}; immutable releases/client/desktop/key lifecycle/SBOM/provenance production gates активны"
+    f"[Launcher] Политика репозитория соблюдена: {VERSION}; действуют промышленные проверки неизменности выпусков, клиента, Desktop, жизненного цикла ключей, перечня компонентов ПО (SBOM) и происхождения артефактов"
 )

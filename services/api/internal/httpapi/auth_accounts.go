@@ -92,7 +92,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(routeErr, federation.ErrRoutingRequired) || errors.Is(routeErr, federation.ErrRoutingDenied) {
 			writeError(w, http.StatusForbidden, "выберите разрешённого провайдера авторизации")
 		} else {
-			writeError(w, http.StatusBadRequest, "выбранный auth provider недоступен или не поддерживает вход по паролю")
+			writeError(w, http.StatusBadRequest, "выбранный Провайдер авторизации недоступен или не поддерживает вход по паролю")
 		}
 		return
 	}
@@ -107,7 +107,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		_ = s.flushPersistenceState950("auth-login-failed")
 		status := federationHTTPStatus112(authErr)
 		if status >= 500 {
-			writeError(w, status, "auth provider временно недоступен")
+			writeError(w, status, "Провайдер авторизации временно недоступен")
 			return
 		}
 		if status == http.StatusForbidden {
@@ -115,11 +115,11 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if status == http.StatusBadRequest {
-			writeError(w, status, "auth provider не поддерживает password login")
+			writeError(w, status, "Провайдер авторизации не поддерживает вход по паролю")
 			return
 		}
 		if status == http.StatusConflict {
-			writeError(w, status, "external identity конфликтует с существующей учётной записью; требуется явное связывание")
+			writeError(w, status, "Внешняя учётная запись конфликтует с существующей учётной записью; требуется явное связывание")
 			return
 		}
 		writeError(w, http.StatusUnauthorized, "неверный email или пароль")
@@ -141,7 +141,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 	if mfa.NeedPasskey {
 		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, deviceID, mfa.Methods, result.ProviderToken)
 		if err != nil {
-			writeError(w, http.StatusForbidden, "MFA policy требует зарегистрированный passkey")
+			writeError(w, http.StatusForbidden, "Политика MFA требует зарегистрированный ключ доступа")
 			return
 		}
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-passkey-required-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:mfa:passkey-required", Target: result.Provider.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -158,7 +158,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(result.ProviderToken) != "" {
 		if err := s.saveProviderCredential116(user, result.Identity, result.ProviderToken, false); err != nil {
 			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")
-			writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
+			writeError(w, http.StatusInternalServerError, "Не удалось безопасно сохранить учётные данные провайдера")
 			return
 		}
 	}

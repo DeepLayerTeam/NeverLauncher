@@ -245,7 +245,7 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 	if current.Status == model.DurableJobStatusRunning && !current.LeaseExpiresAt.After(now) && current.AttemptCount > 0 {
 		// Закройте брошенную попытку перед блокировкой прежнего работника и назначением
 		// нового. Иначе статус running сделает восстановление после перезапуска неоднозначным.
-		if _, err := tx.ExecContext(ctx, `UPDATE durable_job_attempts SET status='failed',error='lease expired; recovered by another worker',finished_at=$3 WHERE job_id=$1 AND attempt=$2 AND status='running'`, current.ID, current.AttemptCount, now); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE durable_job_attempts SET status='failed',error='Срок аренды задания истёк; его восстановил другой обработчик',finished_at=$3 WHERE job_id=$1 AND attempt=$2 AND status='running'`, current.ID, current.AttemptCount, now); err != nil {
 			return model.DurableJob{}, err
 		}
 	}

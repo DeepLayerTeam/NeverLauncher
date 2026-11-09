@@ -131,7 +131,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 	}
 	if strings.TrimSpace(proof.ProviderToken) != "" {
 		if err := s.saveProviderCredential116(user, identity, proof.ProviderToken, false); err != nil {
-			writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
+			writeError(w, http.StatusInternalServerError, "Не удалось безопасно сохранить учётные данные провайдера")
 			return
 		}
 	}

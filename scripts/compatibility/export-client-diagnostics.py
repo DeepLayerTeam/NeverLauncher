@@ -61,7 +61,7 @@ def export(runtime: Path, destination: Path) -> None:
             "Журнал сертификации ещё не создан (сбой мог произойти до запуска JVM)."
         )
     for index, path in enumerate(found[:MAX_LOGS], start=1):
-        output.append(f"--- certification {index}, last {MAX_BYTES} bytes ---")
+        output.append(f"--- журнал проверки {index}, последние {MAX_BYTES} байт ---")
         output.append(redacted_tail(path))
 
     # Нативные падения JVM иногда не оставляют ни Java-исключения, ни
@@ -87,7 +87,7 @@ def export(runtime: Path, destination: Path) -> None:
     native_reports = [p for p in native_reports if p.is_file() and not p.is_symlink()]
     native_reports.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     for index, path in enumerate(native_reports[:MAX_NATIVE_REPORTS], start=1):
-        output.append(f"--- native crash report {index}, last {MAX_BYTES} bytes ---")
+        output.append(f"--- отчёт о сбое нативного кода {index}, последние {MAX_BYTES} байт ---")
         output.append(redacted_tail(path))
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text("\n".join(output) + "\n", encoding="utf-8")

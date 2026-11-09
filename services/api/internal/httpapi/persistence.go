@@ -242,7 +242,7 @@ func (s Server) flushPersistenceState950(reason string) error {
 
 func (p persistenceSQL950) open() (*sql.DB, error) {
 	if strings.TrimSpace(p.dsn) == "" {
-		return nil, errors.New("database dsn пуст")
+		return nil, errors.New("Строка подключения к базе данных (DSN) пуста")
 	}
 	driver := strings.TrimSpace(p.driverName)
 	if driver == "" {

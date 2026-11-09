@@ -125,7 +125,7 @@ impl ProcessSupervisor {
         let client_release_lease = crate::transactional_release::acquire_launch_lease(manifest, root, pinned_public_key).await?;
         let checks = check_files(manifest, root).await?;
         if checks.iter().any(|item| item.status != "ok") {
-            return Err("launch заблокирован: client files не прошли integrity check".to_string());
+            return Err("Запуск заблокирован: файлы клиента не прошли проверку целостности".to_string());
         }
 
         let mut plan = if let Some(credentials) = credentials.as_ref() {
@@ -179,7 +179,7 @@ impl ProcessSupervisor {
         writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
         writeln!(log_file, "--- вывод процесса ---").map_err(|e| e.to_string())?;
         log_file.flush().map_err(|e| e.to_string())?;
-        let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
+        let stdout_file = log_file.try_clone().map_err(|e| format!("Не удалось продублировать дескриптор журнала Runtime: {e}"))?;
 
         let mut command = tokio::process::Command::new(&plan.java_executable);
         command.current_dir(Path::new(&plan.working_directory));
@@ -273,11 +273,11 @@ impl ProcessSupervisor {
         #[cfg(not(target_os = "macos"))]
         let macos_process_policy = None;
         #[cfg(windows)]
-        let launch_message = "Runtime запущен под supervision с Windows process policy enforcement";
+        let launch_message = "Runtime запущен под наблюдением с применением политики процессов Windows";
         #[cfg(target_os = "linux")]
-        let launch_message = "Runtime запущен под supervision с Linux process policy enforcement";
+        let launch_message = "Runtime запущен под наблюдением с применением политики процессов Linux";
         #[cfg(target_os = "macos")]
-        let launch_message = "Runtime запущен под supervision с macOS process policy enforcement";
+        let launch_message = "Runtime запущен под наблюдением с применением политики процессов macOS";
         #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
         let launch_message = "Runtime запущен под supervision";
         let id = format!("runtime-{started_at}-{}", pid.unwrap_or(0));

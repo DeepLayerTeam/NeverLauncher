@@ -135,7 +135,7 @@ func gameplayTrustPermanentFailure0127(reason string) bool {
 func (s Server) writeGameplayTrustRequirement0127(w http.ResponseWriter, decision gameplayTrustDecision0127) {
 	writeJSON(w, http.StatusPreconditionRequired, map[string]any{"error": map[string]any{
 		"code":            http.StatusPreconditionRequired,
-		"message":         "Minecraft/ServerBridge trust policy не выполнена",
+		"message":         "Политика доверия Minecraft/ServerBridge не соблюдена",
 		"reason":          decision.Reason,
 		"trustPolicy":     decision.Policy,
 		"trustedDeviceId": decision.TrustedDeviceID,

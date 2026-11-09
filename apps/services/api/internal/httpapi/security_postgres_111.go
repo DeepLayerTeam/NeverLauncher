@@ -54,7 +54,7 @@ func (p *securityPostgres111) saveMFA(userID string, rec mfaRecord) error {
 	pending := encryptString950(p.secret, rec.PendingSecret)
 	active := encryptString950(p.secret, rec.ActiveSecret)
 	if rec.PendingSecret != "" && pending == "" {
-		return errors.New("не удалось зашифровать pending TOTP secret")
+		return errors.New("Не удалось зашифровать ожидающий подтверждения секрет TOTP")
 	}
 	if rec.ActiveSecret != "" && active == "" {
 		return errors.New("не удалось зашифровать active TOTP secret")

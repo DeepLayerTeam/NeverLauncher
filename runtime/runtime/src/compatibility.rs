@@ -296,7 +296,7 @@ pub async fn resolve_compatibility(
         let full_path = safe_join(root, &relative_path)?;
         let bytes = fs::read(&full_path)
             .await
-            .map_err(|err| format!("не удалось прочитать Minecraft metadata {}: {err}", full_path.display()))?;
+            .map_err(|err| format!("Не удалось прочитать метаданные Minecraft {}: {err}", full_path.display()))?;
         let mut metadata: VersionMetadata = serde_json::from_slice(&bytes)
             .map_err(|err| format!("Метаданные Minecraft {} повреждены: {err}", relative_path))?;
         if metadata.id.trim().is_empty() {
@@ -323,12 +323,12 @@ pub async fn resolve_compatibility(
     let environment = CompatibilityEnvironment::current(context.features.clone());
     let merged = merge_layers(&layers, &environment)?;
     if merged.main_class.trim().is_empty() {
-        return Err("resolved Minecraft metadata не содержит mainClass".to_string());
+        return Err("Разрешённые метаданные Minecraft не содержат mainClass".to_string());
     }
 
     let (libraries, natives, mut classpath) = resolve_libraries(&merged.libraries, &environment)?;
     if merged.client_version_id.trim().is_empty() {
-        return Err("resolved Minecraft metadata не содержит downloads.client".to_string());
+        return Err("Разрешённые метаданные Minecraft не содержат downloads.client".to_string());
     }
     let client_version_id = safe_component(&merged.client_version_id)?;
     let client_jar = format!("versions/{client_version_id}/{client_version_id}.jar");
@@ -592,7 +592,7 @@ fn merge_layers(
         merged.libraries = preferred;
     }
     if merged.id.trim().is_empty() {
-        return Err("resolved Minecraft metadata не содержит id".to_string());
+        return Err("Разрешённые метаданные Minecraft не содержат id".to_string());
     }
     Ok(merged)
 }
@@ -1003,7 +1003,7 @@ fn rules_allow(rules: &[Rule], environment: &CompatibilityEnvironment) -> Result
             match rule.action.as_str() {
                 "allow" => allowed = true,
                 "disallow" => allowed = false,
-                other => return Err(format!("неподдерживаемое Mojang rule action: {other}")),
+                other => return Err(format!("Неподдерживаемое действие правила Mojang: {other}")),
             }
         }
     }
@@ -1057,7 +1057,7 @@ fn substitute(value: &str, variables: &HashMap<String, String>) -> Result<String
             let key = &tail[..end_rel];
             let replacement = variables
                 .get(key)
-                .ok_or_else(|| format!("неизвестный Minecraft placeholder ${{{key}}}"))?;
+                .ok_or_else(|| format!("Неизвестная подстановка Minecraft ${{{key}}}"))?;
             out.push_str(replacement);
             index += 2 + end_rel + 1;
             continue;
@@ -1117,7 +1117,7 @@ fn strip_classpath_pair(args: &mut Vec<String>) -> Result<(), String> {
     while index < args.len() {
         if args[index] == "-cp" || args[index] == "-classpath" {
             if index + 1 >= args.len() {
-                return Err("JVM arguments содержат classpath flag без значения".to_string());
+                return Err("В аргументах JVM отсутствует значение параметра classpath".to_string());
             }
             args.drain(index..=index + 1);
             continue;
@@ -1173,7 +1173,7 @@ fn maven_path_internal(name: &str, override_classifier: Option<&str>) -> Result<
     let extension = coordinate_and_ext.next().unwrap_or("jar");
     let parts = coordinate.split(':').collect::<Vec<_>>();
     if parts.len() < 3 || parts[0].is_empty() || parts[1].is_empty() || parts[2].is_empty() {
-        return Err(format!("некорректная Maven coordinate: {name}"));
+        return Err(format!("Некорректные координаты Maven: {name}"));
     }
     let classifier = override_classifier.or_else(|| parts.get(3).copied());
     let group = parts[0].replace('.', "/");
@@ -1217,14 +1217,14 @@ pub fn normalize_relative_path(path: &str) -> Result<String, String> {
 fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
     let normalized = normalize_relative_path(relative)?;
     let root_meta = std::fs::symlink_metadata(root)
-        .map_err(|err| format!("compatibility root {} недоступен: {err}", root.display()))?;
+        .map_err(|err| format!("Корневой каталог совместимости {} недоступен: {err}", root.display()))?;
     if root_meta.file_type().is_symlink() || !root_meta.is_dir() {
-        return Err(format!("compatibility root не должен быть symlink/файлом: {}", root.display()));
+        return Err(format!("Корневой путь совместимости не должен быть символической ссылкой или файлом: {}", root.display()));
     }
     let mut current = root.to_path_buf();
     for component in Path::new(&normalized).components() {
         let Component::Normal(value) = component else {
-            return Err(format!("небезопасный compatibility path: {relative}"));
+            return Err(format!("Небезопасный путь совместимости: {relative}"));
         };
         current.push(value);
         match std::fs::symlink_metadata(&current) {

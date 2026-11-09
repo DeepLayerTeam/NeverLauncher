@@ -381,7 +381,7 @@ impl GuardSupervisor {
         if let Err(err) = stdin.write_all(&bootstrap_secret).await {
             bootstrap_secret.zeroize();
             let _ = child.kill().await;
-            return Err(format!("не удалось передать Guard bootstrap secret: {err}"));
+            return Err(format!("Не удалось передать секрет начальной настройки Guard: {err}"));
         }
         if let Err(err) = stdin.shutdown().await {
             bootstrap_secret.zeroize();
@@ -573,7 +573,7 @@ impl GuardSupervisor {
         let _ = send_command(&mut handle, "shutdown").await;
         match timeout(Duration::from_secs(2), handle.child.wait()).await {
             Ok(Ok(_)) => Ok(()),
-            Ok(Err(err)) => Err(format!("не удалось дождаться Guard shutdown: {err}")),
+            Ok(Err(err)) => Err(format!("Не удалось дождаться завершения Guard: {err}")),
             Err(_) => {
                 handle
                     .child
@@ -602,9 +602,9 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         .parent()
         .ok_or_else(|| "Не удалось определить родительский каталог исполняемого файла Guard".to_string())?;
     let current_dir = std::fs::canonicalize(current_dir)
-        .map_err(|err| format!("не удалось canonicalize Desktop directory: {err}"))?;
+        .map_err(|err| format!("Не удалось получить канонический путь каталога Desktop: {err}"))?;
     let guard_dir = std::fs::canonicalize(guard_dir)
-        .map_err(|err| format!("не удалось canonicalize Guard directory: {err}"))?;
+        .map_err(|err| format!("Не удалось получить канонический путь каталога Guard: {err}"))?;
     if current_dir != guard_dir {
         return Err("Не пройдена проверка пакета Guard: Guard должен находиться рядом с Desktop".to_string());
     }
@@ -1197,7 +1197,7 @@ pub(crate) fn create_secure_pipe_server(endpoint: &str) -> Result<NamedPipeServe
     unsafe {
         let _ = LocalFree(security_descriptor);
     }
-    result.map_err(|err| format!("не удалось создать hardened Guard named pipe {endpoint}: {err}"))
+    result.map_err(|err| format!("Не удалось создать защищённый именованный канал Guard {endpoint}: {err}"))
 }
 
 #[cfg(windows)]
@@ -1295,7 +1295,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
             Ok(Err(err)) => last_auth_error = Some(err),
             Err(_) => {
                 last_auth_error = Some(
-                    "authenticated IPC handshake превысил per-client timeout".to_string(),
+                    "Истекло время ожидания аутентифицированного IPC-рукопожатия для клиента".to_string(),
                 );
             }
         }
@@ -1594,7 +1594,7 @@ async fn serve_authenticated_session(
 #[cfg(any(windows, test))]
 fn validate_pipe_endpoint(endpoint: &str) -> Result<(), String> {
     if !endpoint.starts_with(GUARD_PIPE_PREFIX) {
-        return Err("Guard IPC endpoint имеет запрещённый namespace".to_string());
+        return Err("Конечная точка Guard IPC использует запрещённое пространство имён".to_string());
     }
     let suffix = &endpoint[GUARD_PIPE_PREFIX.len()..];
     if suffix.is_empty()
@@ -1855,7 +1855,7 @@ pub fn validate_guard_path(path: &Path) -> Result<(), String> {
         .ok_or_else(|| "Путь к исполняемому файлу Guard не содержит имени файла".to_string())?;
     if !name.eq_ignore_ascii_case(guard_executable_name()) {
         return Err(format!(
-            "Guard executable должен называться {}, получено {name}",
+            "Исполняемый файл Guard должен называться {}, получено {name}",
             guard_executable_name()
         ));
     }

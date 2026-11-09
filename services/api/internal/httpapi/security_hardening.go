@@ -223,7 +223,7 @@ func (s Server) authTOTPDisable(w http.ResponseWriter, r *http.Request) {
 	var req totpVerifyRequest902
 	_ = json.NewDecoder(r.Body).Decode(&req)
 	if s.State.Passkeys != nil && s.State.Passkeys.policy(claims.Sub) == mfaRequired117 && s.State.Passkeys.countByUser(claims.Sub) == 0 {
-		writeError(w, http.StatusConflict, "MFA policy REQUIRED требует сохранить хотя бы один активный MFA method")
+		writeError(w, http.StatusConflict, "Политика MFA REQUIRED требует сохранить хотя бы один активный способ многофакторной аутентификации")
 		return
 	}
 	if !s.State.Security.disableTOTP(claims.Sub, req.Code) {
@@ -267,7 +267,7 @@ func (s Server) authRecoveryCodeConsume(w http.ResponseWriter, r *http.Request) 
 	}
 	user, ok := s.findUserByEmail(strings.ToLower(strings.TrimSpace(req.Email)))
 	if !ok || !verifyPassword(req.Password, user.PasswordHash) || !s.State.Security.consumeRecoveryCode(user.ID, req.Code) {
-		writeError(w, http.StatusUnauthorized, "recovery code отклонён")
+		writeError(w, http.StatusUnauthorized, "Резервный код восстановления отклонён")
 		return
 	}
 	_ = s.flushPersistenceState950("recovery-consumed")
@@ -289,7 +289,7 @@ func (s Server) authPasswordResetRequest(w http.ResponseWriter, r *http.Request)
 	}
 	token, rec, err := s.State.Security.createOneTimeToken(user.ID, user.Email, "password-reset", passwordResetTTL)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать reset token")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать токен сброса")
 		return
 	}
 	_ = s.flushPersistenceState950("password-reset-request")
@@ -309,7 +309,7 @@ func (s Server) authPasswordResetConfirm(w http.ResponseWriter, r *http.Request)
 	}
 	rec, ok := s.State.Security.consumeOneTimeToken(req.Token, "password-reset")
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "reset token недействителен или истёк")
+		writeError(w, http.StatusUnauthorized, "Токен сброса недействителен или срок его действия истёк")
 		return
 	}
 	user, err := s.Repo.SetUserPassword(rec.UserID, hashPassword(req.Password))
@@ -337,7 +337,7 @@ func (s Server) authEmailVerificationRequest(w http.ResponseWriter, r *http.Requ
 	}
 	token, rec, err := s.State.Security.createOneTimeToken(user.ID, user.Email, "email-verification", emailVerificationTTL)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать verification token")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать токен подтверждения")
 		return
 	}
 	_ = s.flushPersistenceState950("email-verification-request")
@@ -353,7 +353,7 @@ func (s Server) authEmailVerificationConfirm(w http.ResponseWriter, r *http.Requ
 	}
 	rec, ok := s.State.Security.consumeOneTimeToken(req.Token, "email-verification")
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "verification token недействителен или истёк")
+		writeError(w, http.StatusUnauthorized, "Токен подтверждения недействителен или срок его действия истёк")
 		return
 	}
 	s.State.Security.setEmailVerified(rec.UserID, true)

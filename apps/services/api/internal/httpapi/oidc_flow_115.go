@@ -193,7 +193,7 @@ func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, 
 	if mfa.NeedPasskey {
 		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, deviceID, mfa.Methods, result.ProviderToken)
 		if err != nil {
-			writeError(w, http.StatusForbidden, "MFA policy требует зарегистрированный passkey")
+			writeError(w, http.StatusForbidden, "Политика MFA требует зарегистрированный ключ доступа")
 			return
 		}
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-passkey-required-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:mfa:passkey-required", Target: result.Provider.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -215,7 +215,7 @@ func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, 
 			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")
 			_ = s.flushPersistenceState950("oidc-provider-credential-failed")
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-provider-credential-failed-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:provider-credential:failed", Target: result.Provider.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-			writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
+			writeError(w, http.StatusInternalServerError, "Не удалось безопасно сохранить учётные данные провайдера")
 			return
 		}
 	}
@@ -236,7 +236,7 @@ func (s Server) writeOIDCError115(w http.ResponseWriter, err error) {
 	case http.StatusForbidden:
 		writeError(w, status, "учётная запись недоступна или identity не связана")
 	case http.StatusConflict:
-		writeError(w, status, "external identity конфликтует с существующей учётной записью; требуется явное связывание")
+		writeError(w, status, "Внешняя учётная запись конфликтует с существующей учётной записью; требуется явное связывание")
 	case http.StatusServiceUnavailable:
 		writeError(w, status, "OIDC provider временно недоступен")
 	default:

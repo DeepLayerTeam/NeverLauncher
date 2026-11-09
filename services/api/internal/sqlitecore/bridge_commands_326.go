@@ -70,10 +70,10 @@ func (r *Repository) HeartbeatBridgeRuntime(ctx context.Context, b BridgeRuntime
 		if e == nil && b.Epoch > epoch {
 			// Если узел перезапустился во время выполнения команд, нельзя предполагать, что доставка не
 			// состоялась.
-			if _, e = q.ExecContext(ctx, `UPDATE bridge_commands SET status='indeterminate',completed_at=?,updated_at=?,failure='runtime superseded without acknowledgement' WHERE node_id=? AND status='leased'`, ns(now), ns(now), b.Proof.NodeID); e != nil {
+			if _, e = q.ExecContext(ctx, `UPDATE bridge_commands SET status='indeterminate',completed_at=?,updated_at=?,failure='Среда выполнения заменена без подтверждения' WHERE node_id=? AND status='leased'`, ns(now), ns(now), b.Proof.NodeID); e != nil {
 				return e
 			}
-			if _, e = q.ExecContext(ctx, `UPDATE bridge_commands SET status='expired',completed_at=?,updated_at=?,failure='runtime superseded before delivery' WHERE node_id=? AND status='pending'`, ns(now), ns(now), b.Proof.NodeID); e != nil {
+			if _, e = q.ExecContext(ctx, `UPDATE bridge_commands SET status='expired',completed_at=?,updated_at=?,failure='Среда выполнения заменена до доставки' WHERE node_id=? AND status='pending'`, ns(now), ns(now), b.Proof.NodeID); e != nil {
 				return e
 			}
 		}
@@ -241,10 +241,10 @@ func (r *Repository) LeaseBridgeCommand(ctx context.Context, proof NodeProof, ru
 		if actual != runtime || actualEpoch != epoch || status != "active" || nodeStatus != "active" || last < now-int64(2*time.Minute) {
 			return ErrNodeProof
 		}
-		if _, e = q.ExecContext(ctx, `UPDATE bridge_commands SET status='expired',failure='expired before dispatch',updated_at=?,completed_at=? WHERE node_id=? AND status='pending' AND expires_at<=?`, now, now, node, now); e != nil {
+		if _, e = q.ExecContext(ctx, `UPDATE bridge_commands SET status='expired',failure='Срок действия истёк до отправки',updated_at=?,completed_at=? WHERE node_id=? AND status='pending' AND expires_at<=?`, now, now, node, now); e != nil {
 			return e
 		}
-		if _, e = q.ExecContext(ctx, `UPDATE bridge_commands SET status='indeterminate',failure='delivery ACK missing; manual reconciliation required',updated_at=?,completed_at=? WHERE node_id=? AND status='leased' AND lease_until<=?`, now, now, node, now); e != nil {
+		if _, e = q.ExecContext(ctx, `UPDATE bridge_commands SET status='indeterminate',failure='Отсутствует подтверждение доставки; требуется ручная сверка',updated_at=?,completed_at=? WHERE node_id=? AND status='leased' AND lease_until<=?`, now, now, node, now); e != nil {
 			return e
 		}
 		var id string

@@ -215,5 +215,5 @@ require(
 )
 
 print(
-    f"NeoForge Compatibility II 0.17.6 gate: OK ({len(rows)} catalogue targets; {len(rows) - len(blocked)} required, {len(blocked)}: не сертифицировано; 1.20.1..26.2, Java 17/21/25)"
+    f"NeoForge Compatibility II 0.17.6 gate: OK (целей каталога: {len(rows)}; обязательных: {len(rows) - len(blocked)}; не сертифицировано: {len(blocked)}; 1.20.1..26.2, Java 17/21/25)"
 )

@@ -254,7 +254,7 @@ mod windows_impl {
                 ));
             }
             if self.report.breakaway_allowed || !self.report.assigned_to_job {
-                return Err("Guard process-tree verification: требуется «Job Object без возможности выхода из него»".to_string());
+                return Err("Guard: для проверки дерева процессов необходим Job Object с запретом выхода процессов из группы".to_string());
             }
             verify_process_tree_for_job(self._job.raw(), root_pid)
         }
@@ -996,12 +996,12 @@ impl RuntimeProcessPolicyGuard {
 
 #[cfg(not(windows))]
 pub fn ensure_guard_process_policy() -> Result<GuardProcessPolicyReport, String> {
-    Err("Guard 0.13.4 Windows process policy enforcement доступен только для Windows".to_string())
+    Err("Применение политики процессов Windows в Guard 0.13.4 доступно только в Windows".to_string())
 }
 
 #[cfg(not(windows))]
 pub fn ensure_windows_production_hardening() -> Result<WindowsProductionHardeningReport, String> {
-    Err("Guard 0.13.6 Windows production hardening доступен только для Windows".to_string())
+    Err("Промышленные механизмы защиты Windows в Guard 0.13.6 доступны только в Windows".to_string())
 }
 
 #[cfg(not(windows))]
@@ -1030,7 +1030,7 @@ pub fn prepare_guard_command(_command: &mut tokio::process::Command) {}
 pub fn bind_guard_to_launcher_job(
     _child: &mut tokio::process::Child,
 ) -> Result<GuardLifetimeJob, String> {
-    Err("Guard 0.13.6 launcher lifetime Job Object доступен только для Windows".to_string())
+    Err("Управление временем жизни лаунчера через Job Object в Guard 0.13.6 доступно только в Windows".to_string())
 }
 
 #[cfg(not(windows))]

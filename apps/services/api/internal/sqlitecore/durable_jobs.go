@@ -154,7 +154,7 @@ func claimJob(ctx context.Context, q sqlitedurable.Executor, id, worker string, 
 		return j, false, nil
 	}
 	if j.Status == "running" {
-		res, e := q.ExecContext(ctx, `UPDATE durable_job_attempts SET status='expired',finished_at=?,error='worker lease expired' WHERE job_id=? AND attempt=? AND status='running'`, now, id, j.AttemptCount)
+		res, e := q.ExecContext(ctx, `UPDATE durable_job_attempts SET status='expired',finished_at=?,error='Истёк срок аренды задания обработчиком' WHERE job_id=? AND attempt=? AND status='running'`, now, id, j.AttemptCount)
 		if e != nil {
 			return j, false, e
 		}

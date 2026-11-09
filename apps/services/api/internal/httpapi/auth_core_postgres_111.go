@@ -36,7 +36,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		driver = "pgx"
 	}
 	if strings.TrimSpace(cfg.DatabaseDSN) == "" {
-		return errors.New("auth core 0.11.1 требует LAUNCHER_DATABASE_DSN")
+		return errors.New("Для модуля авторизации 0.11.1 необходимо задать LAUNCHER_DATABASE_DSN")
 	}
 	db, err := sql.Open(driver, cfg.DatabaseDSN)
 	if err != nil {
@@ -59,7 +59,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 			if err != nil {
 				return fmt.Errorf("Ошибка проверки схемы ядра аутентификации %s: %w", table, err)
 			}
-			return fmt.Errorf("auth core schema table %s отсутствует; примените database migrations", table)
+			return fmt.Errorf("В схеме модуля авторизации отсутствует таблица %s; примените миграции базы данных", table)
 		}
 	}
 	for _, column := range []string{"last_ip", "last_user_agent", "risk_state", "risk_reasons", "risk_updated_at", "device_renamed_at"} {
@@ -69,7 +69,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 			if err != nil {
 				return fmt.Errorf("Ошибка проверки схемы управления сессиями 2.0 %s: %w", column, err)
 			}
-			return fmt.Errorf("auth_sessions.%s отсутствует; примените migration 0008_session_management_2_0118.sql", column)
+			return fmt.Errorf("Отсутствует поле auth_sessions.%s; примените миграцию 0008_session_management_2_0118.sql", column)
 		}
 	}
 	for _, column := range []string{"binding_epoch", "risk_score", "risk_action", "risk_evaluated_at"} {
@@ -79,7 +79,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 			if err != nil {
 				return fmt.Errorf("Проверка схемы рисков сессий и устройств 0.12.6 %s: %w", column, err)
 			}
-			return fmt.Errorf("auth_sessions.%s отсутствует; примените migration 0015_session_device_risk_0126.sql", column)
+			return fmt.Errorf("Отсутствует поле auth_sessions.%s; примените миграцию 0015_session_device_risk_0126.sql", column)
 		}
 	}
 	state.AuthSessions.persistent = &authSessionPostgres111{db: db}

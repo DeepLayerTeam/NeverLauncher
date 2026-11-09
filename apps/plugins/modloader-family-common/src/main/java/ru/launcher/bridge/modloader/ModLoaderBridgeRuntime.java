@@ -80,7 +80,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         RuntimeState current = state;
         current.api.publishEvent("server.startup", Map.of("platform", platformId));
         current.api.publishEvent("server.ready", Map.of("platform", platformId));
-        logger.info("Launcher {} Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; runtimeId={}; asyncLoginGate=true; clientModRequired=false",
+        logger.info("Мост Launcher {} ServerBridge {} запущен; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; runtimeId={}; asyncLoginGate=true; clientModRequired=false",
             displayName, BridgeDefaults.VERSION, current.config.serverId, current.identity.fingerprint(),
             current.identity.publicKeyBase64Url(), shortHash(current.pluginSha256), current.api.runtimeId());
     }
@@ -252,8 +252,8 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         lastHeartbeatOK = ok;
         lastHeartbeatAt = Instant.now();
         if (previousAt == null || previous != ok) {
-            if (ok) logger.info("Launcher {} Server Bridge heartbeat=true serverId={}", displayName, current.config.serverId);
-            else logger.warn("Launcher {} Server Bridge: heartbeat=false, serverId={}, reason=rejected_or_unavailable", displayName, current.config.serverId);
+            if (ok) logger.info("Мост Launcher {} ServerBridge: связь установлена; heartbeat=true serverId={}", displayName, current.config.serverId);
+            else logger.warn("Мост Launcher {} ServerBridge: нет связи; heartbeat=false, serverId={}, reason=rejected_or_unavailable", displayName, current.config.serverId);
         }
     }
 

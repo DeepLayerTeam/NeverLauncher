@@ -113,7 +113,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         state.api.publishEvent("server.startup", Map.of("platform", expectedPlatform.id()));
         state.api.publishEvent("server.ready", Map.of("platform", expectedPlatform.id()));
         getLogger().info("Launcher " + expectedPlatform.displayName() + " Bridge " + BridgeDefaults.VERSION +
-            " enabled; serverId=" + state.config.serverId +
+            " запущен; serverId=" + state.config.serverId +
             "; nodeKeyFingerprint=" + state.identity.fingerprint() +
             "; sha256=" + shortHash(state.pluginSha256) +
             "; runtimeId=" + state.api.runtimeId() +
@@ -825,7 +825,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         lastHeartbeatAt = Instant.now();
         if (previousAt == null || previous != ok) {
             if (ok) {
-                getLogger().info("Launcher " + expectedPlatform.displayName() + " Bridge heartbeat=true serverId=" + state.config.serverId);
+                getLogger().info("Launcher " + expectedPlatform.displayName() + " Bridge: связь установлена; heartbeat=true serverId=" + state.config.serverId);
             } else {
                 getLogger().warning("Launcher " + expectedPlatform.displayName() + " Bridge heartbeat=false serverId=" + state.config.serverId + " reason=rejected_or_unavailable");
             }

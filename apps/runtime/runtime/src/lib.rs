@@ -1124,7 +1124,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     let _client_release_lease = transactional_release::acquire_launch_lease(manifest, root, pinned_public_key).await?;
     let checks = check_files(manifest, root).await?;
     if checks.iter().any(|item| item.status != "ok") {
-        return Err("launch заблокирован: client files не прошли integrity check".to_string());
+        return Err("Запуск заблокирован: файлы клиента не прошли проверку целостности".to_string());
     }
     let mut plan = if let Some(ref credentials) = credentials {
         create_launch_plan_with_credentials(manifest, root, java_path, Some(credentials.username.clone()), Some(credentials)).await?
@@ -1150,7 +1150,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
     writeln!(log_file, "--- вывод процесса ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
-    let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
+    let stdout_file = log_file.try_clone().map_err(|e| format!("Не удалось продублировать дескриптор журнала Runtime: {e}"))?;
     managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
     // Нативный путь (современный загрузчик): используйте тот же подписанный пакет Trusted JVM,
     // что и устаревший ClientFactory. Временная конфигурация premain должна существовать
