@@ -47,7 +47,7 @@ export function HWIDRisk0299({ backendUrl, token, deviceId }: Props) {
       <label>Причина обращения<textarea value={reason} maxLength={500} onChange={event => setReason(event.target.value)} /></label>
       <button disabled={busy || reason.trim().length < 8 || appeals.some(a => a.status === 'pending')} onClick={() => void run(async () => { await request('/appeals', 'POST', { reason: reason.trim() }); setReason(''); }, 'Обращение отправлено.')}>Отправить апелляцию</button>
     </div>}
-    {appeals.length > 0 && <div><h4>Обращения</h4>{appeals.map(a => <p key={a.id}>{a.createdAt} · {statusRuDesktop(a.status)} · {a.reason}{a.resolution ? ` · Решение: ${a.resolution}` : ''}</p>)}</div>}
+    {appeals.length > 0 && <div><h4>Обращения</h4>{appeals.map(a => <p key={a.id}>{a.createdAt} · {statusRuDesktop(a.status)} · {a.reason}{a.resolution ? ` · Решение: ${statusRuDesktop(a.resolution)}` : ''}</p>)}</div>}
     <p role="status">{message}</p>
   </section>;
 }
