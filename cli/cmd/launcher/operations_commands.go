@@ -273,7 +273,7 @@ func resolveLoaderMetadata(loader, minecraftVersion, loaderVersion, metadataPath
 	if loader == "vanilla" {
 		return LoaderMetadata{Loader: "vanilla", MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, MainClass: "net.minecraft.client.main.Main"}, "mojang-version-json", nil
 	}
-	return LoaderMetadata{}, "", fmt.Errorf("loader %s требует материализованный profile metadata или --installer-profile; builtin fallback metadata в текущей версии запрещены", loader)
+	return LoaderMetadata{}, "", fmt.Errorf("Для загрузчика %s требуются подготовленные метаданные профиля или --installer-profile; использование встроенных резервных метаданных запрещено", loader)
 }
 
 func mergeLoaderLibraries(basePlan map[string]any, metadata LoaderMetadata) ([]map[string]any, []string) {
@@ -881,8 +881,8 @@ func projectTemplates() []ProjectTemplate {
 func installProfiles() []InstallProfile {
 	return []InstallProfile{
 		{ID: "single-server-local", Title: "Один сервер с локальным хранилищем", Description: "Один экземпляр Backend/Admin на одном сервере с локальным хранилищем", Components: []string{"api", "admin", "cli", "local-storage"}, Storage: "local"},
-		{ID: "single-server-s3", Title: "Один сервер с S3", Description: "Один backend/admin с S3-compatible storage", Components: []string{"api", "admin", "cli", "s3-storage"}, Storage: "s3"},
-		{ID: "multi-project", Title: "Backend для нескольких проектов", Description: "Один backend для нескольких проектов", Components: []string{"api", "admin", "rbac", "audit"}, Storage: "local-or-s3"},
+		{ID: "single-server-s3", Title: "Один сервер с S3", Description: "Один экземпляр Backend и Admin с хранилищем, совместимым с S3", Components: []string{"api", "admin", "cli", "s3-storage"}, Storage: "s3"},
+		{ID: "multi-project", Title: "Backend для нескольких проектов", Description: "Один экземпляр Backend для нескольких проектов", Components: []string{"api", "admin", "rbac", "audit"}, Storage: "local-or-s3"},
 		{ID: "multi-tenant", Title: "Многопользовательский Backend", Description: "Изоляция арендаторов для нескольких проектов и команд", Components: []string{"api", "admin", "tenants", "rbac", "audit", "s3-storage"}, Storage: "s3"},
 		{ID: "development", Title: "Режим разработки", Description: "Локальная разработка без production-хранилища", Components: []string{"api", "admin", "desktop", "cli"}, Storage: "local"},
 		{ID: "offline", Title: "Автономный режим", Description: "Ограниченный режим без внешних registry sync", Components: []string{"desktop", "local-manifest", "diagnostics"}, Storage: "local"},

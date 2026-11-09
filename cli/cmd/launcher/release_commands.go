@@ -183,7 +183,7 @@ func handleRelease(args []string) error {
 			fmt.Println("Release publish-check пройден: Release Verification v2 + exact-commit certification + signed/notarized six-target delivery + Managed JRE + transactional updater + public matrix/E2E + Production Delivery Release + Windows Protection GA certification")
 			return nil
 		}
-		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
+		fmt.Println("Пакет выпуска полностью проверен: обязательные артефакты, SHA-256, подпись выпуска Ed25519 и подтверждение происхождения")
 		return nil
 	case "candidate-verify":
 		if len(args) < 2 {

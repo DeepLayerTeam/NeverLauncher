@@ -450,10 +450,10 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, err
 	}
 	if env.SchemaVersion != releaseSignatureSchema0158 || env.TrustDomain != releaseTrustDomain0158 || env.Algorithm != "Ed25519" || env.SignedFile != "SHA256SUMS" {
-		return releaseVerificationV2Context{}, errors.New("SHA256SUMS.sig не является Release Verification v2 envelope")
+		return releaseVerificationV2Context{}, errors.New("SHA256SUMS.sig не является подписанным пакетом проверки выпуска версии 2")
 	}
 	if env.TrustEpoch != embeddedPolicy.Epoch {
-		return releaseVerificationV2Context{}, errors.New("release signature trustEpoch не совпадает с embedded policy")
+		return releaseVerificationV2Context{}, errors.New("Эпоха доверия trustEpoch в подписи выпуска не совпадает со встроенной политикой")
 	}
 	signedAt, err := time.Parse(time.RFC3339Nano, env.SignedAt)
 	if err == nil {

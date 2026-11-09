@@ -154,7 +154,7 @@ func securityRevocations(args []string) (map[string]any, error) {
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("key %s не найден", revokeID)
+			return nil, fmt.Errorf("Ключ %s не найден", revokeID)
 		}
 		reg.TrustEpoch++
 		if err := saveKeyRegistry(dir, reg); err != nil {

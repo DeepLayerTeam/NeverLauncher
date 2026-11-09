@@ -162,7 +162,7 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 	if err := u.commitLocked(journal, req.Verify); err != nil {
 		rollbackErr := u.rollbackLocked(journal, err)
 		if rollbackErr != nil {
-			return nil, fmt.Errorf("Ошибка: транзакция %s: %v; rollback failed: %w", journal.ID, err, rollbackErr)
+			return nil, fmt.Errorf("Ошибка транзакции %s: %v; не удалось откатить изменения: %w", journal.ID, err, rollbackErr)
 		}
 		return nil, fmt.Errorf("Транзакция %s отменена с откатом: %w", journal.ID, err)
 	}

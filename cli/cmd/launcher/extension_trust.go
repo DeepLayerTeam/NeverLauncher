@@ -104,7 +104,7 @@ func handleExtensionQuarantine02012(args []string) error {
 		return writeOrPrintJSON(out, p)
 	case "release":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("quarantine release требует quarantine id")
+			return errors.New("Для снятия карантина требуется идентификатор карантинного объекта")
 		}
 		p, err := httpJSONWithAuth(http.MethodPost, backend+"/api/v1/admin/extension-quarantine/"+url.PathEscape(args[1])+"/release", map[string]any{}, token)
 		if err != nil {

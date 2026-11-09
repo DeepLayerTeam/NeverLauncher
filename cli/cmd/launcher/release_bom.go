@@ -249,7 +249,7 @@ func verifyReleaseBOM03214(dir, ver string) error {
 		return fmt.Errorf("BOM содержит некорректный JSON: %w", err)
 	}
 	if bom.Schema != 1 || bom.ProductVersion != ver {
-		return fmt.Errorf("Несовпадение: «схема или версия спецификации состава»: %d %q expected %q", bom.Schema, bom.ProductVersion, ver)
+		return fmt.Errorf("Несовпадение схемы или версии спецификации состава: схема %d, версия %q, ожидалась версия %q", bom.Schema, bom.ProductVersion, ver)
 	}
 	expectedSources := bomSources03214()
 	if len(bom.Components) != len(expectedSources) {

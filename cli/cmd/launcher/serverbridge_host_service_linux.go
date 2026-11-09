@@ -74,7 +74,7 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 		return "", errors.New("Некорректный компонент")
 	}
 	if !filepath.IsAbs(spec.Root) || !filepath.IsAbs(spec.Binary) {
-		return "", errors.New("service root and binary: требуется «абсолютный путь»")
+		return "", errors.New("Для корневого каталога службы и исполняемого файла требуются абсолютные пути")
 	}
 	root, err := hostUnitValue02811(spec.Root)
 	if err != nil {

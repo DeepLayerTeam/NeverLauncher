@@ -176,7 +176,7 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 		return fmt.Errorf("SHA256SUMS.sig не является Launcher Ed25519 signature envelope: %w", err)
 	}
 	if envelope.Algorithm != "Ed25519" || envelope.SignedFile != "SHA256SUMS" {
-		return fmt.Errorf("неподдерживаемая release signature: algorithm=%q signedFile=%q", envelope.Algorithm, envelope.SignedFile)
+		return fmt.Errorf("Неподдерживаемая подпись выпуска: алгоритм=%q, подписанный файл=%q", envelope.Algorithm, envelope.SignedFile)
 	}
 	digest := sha256.Sum256(data)
 	if !strings.EqualFold(envelope.SHA256, hex.EncodeToString(digest[:])) {

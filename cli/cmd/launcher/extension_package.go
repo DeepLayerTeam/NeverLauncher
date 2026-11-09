@@ -1165,11 +1165,11 @@ func verifyExtensionPackage0202(packagePath, publicKeyPath string, allowUnsigned
 	keyFingerprint := ""
 	if analysis.Signature == nil {
 		if !allowUnsigned {
-			return nil, errors.New(".nlext unsigned: signature.ed25519 обязателен; для integrity-only проверки используйте --allow-unsigned")
+			return nil, errors.New("Пакет .nlext не подписан: файл signature.ed25519 обязателен; для проверки только целостности используйте --allow-unsigned")
 		}
 	} else {
 		if strings.TrimSpace(publicKeyPath) == "" {
-			return nil, errors.New("signed .nlext verification требует --public-key или LAUNCHER_EXTENSION_SIGNING_PUBLIC_KEY_FILE")
+			return nil, errors.New("Для проверки подписи пакета .nlext требуется --public-key или LAUNCHER_EXTENSION_SIGNING_PUBLIC_KEY_FILE")
 		}
 		publicKey, err := loadEd25519PublicKey(publicKeyPath)
 		if err != nil {

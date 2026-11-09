@@ -1964,7 +1964,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 	}
 	if isLegacyVanillaJava8Release(minecraftVersion) {
 		if metadataMajor != 0 && metadataMajor != 8 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata Java mismatch: Legacy Vanilla требует Java 8, got %d", minecraftVersion, metadataMajor)
+			return 0, fmt.Errorf("Minecraft %s: несовпадение требований Java в метаданных Mojang: для старой версии Vanilla требуется Java 8, указана Java %d", minecraftVersion, metadataMajor)
 		}
 		return 8, nil
 	}
@@ -1973,7 +1973,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v2 требует exact Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Несовпадение: метаданные Java для Minecraft %s от Mojang: 0.17.0v2 expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Несовпадение версии Java в метаданных Mojang для Minecraft %s (0.17.0v2): ожидалась Java %d, указана Java %d", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}
@@ -1982,7 +1982,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v3 требует exact Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
-			return 0, fmt.Errorf("Несовпадение: метаданные Java для Minecraft %s от Mojang: 0.17.0v3 expected %d, got %d", minecraftVersion, expected, metadataMajor)
+			return 0, fmt.Errorf("Несовпадение версии Java в метаданных Mojang для Minecraft %s (0.17.0v3): ожидалась Java %d, указана Java %d", minecraftVersion, expected, metadataMajor)
 		}
 		return metadataMajor, nil
 	}

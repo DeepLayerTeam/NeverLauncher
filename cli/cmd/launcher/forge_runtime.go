@@ -1182,7 +1182,7 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 			}
 		}
 	}
-	return "", "", metadataURL, "", fmt.Errorf("%w после %d fresh metadata snapshots", lastSelectionErr, semanticAttempts)
+	return "", "", metadataURL, "", fmt.Errorf("%w после %d обновлений снимков метаданных", lastSelectionErr, semanticAttempts)
 }
 
 // Сравнивайте числовые компоненты релизов Maven, а не строки

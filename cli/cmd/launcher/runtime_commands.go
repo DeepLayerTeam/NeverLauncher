@@ -452,7 +452,7 @@ func runtimeMatrix740() map[string]any {
 		"clientEvidence":      []string{"package-sha256-verify", "runtime-resolved", "loader-resolution-lock-sha256", "upstream-resolution-source-sha256", "reproducibility-sha256", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "host-os-arch-exact", "loader-native-tree-sha256", "actual-client-launch"},
 		"integrationEvidence": []string{"package-sha256-verify", "ed25519-signed-manifest", "clean-runtime-sync", "java-major-exact", "jre-binary-sha256", "jre-vendor-runtime-build", "actual-client-launch", "paper-world-join", "paper-health", "session-revoke-deny", "zero-exit-code"},
 		"pending":             []string{"forge-legacy-pre-1.7.10"},
-		"note":                "0.18.0 переводит Fabric/Quilt/Forge/NeoForge и сертифицированные Forge legacy 1.7.10/1.12.2 в GA: materializers fail-closed отклоняют комбинации вне exact certified runtime surface, а release certificate криптографически связывает этот executable policy с полным 292-target evidence.",
+		"note":                "Версия 0.18.0 переводит Fabric, Quilt, Forge, NeoForge и сертифицированные старые версии Forge 1.7.10/1.12.2 в состояние готовности к выпуску: механизмы подготовки отклоняют неподтверждённые сочетания компонентов, а сертификат выпуска криптографически связывает применяемую политику с результатами проверок всех 292 целевых конфигураций.",
 	}
 }
 
@@ -668,7 +668,7 @@ func resolveVersionSummary850(vf MojangVersionFile) map[string]any {
 
 func productLaunchPlan850(minecraftVersion, loader, loaderVersion, username, gameDir, versionJSON, assetIndexPath, metadataPath, installerProfile string) (map[string]any, error) {
 	if versionJSON == "" {
-		return nil, errors.New("product runtime 0.8.8 требует --version-json; fallback launch plan запрещён")
+		return nil, errors.New("Для Runtime версии 0.8.8 требуется --version-json; резервный план запуска запрещён")
 	}
 	if loader == "" {
 		loader = "vanilla"
@@ -710,7 +710,7 @@ func verifyLaunchPlanStrict850(payload map[string]any) map[string]any {
 		errs = append(errs, "mainClass содержит placeholder")
 	}
 	if strings.Contains(strings.ToLower(fmt.Sprint(payload["status"])), "fallback") || fmt.Sprint(payload["fallbackAllowed"]) == "true" {
-		errs = append(errs, "fallback launch plan запрещён для product runtime 0.8.8")
+		errs = append(errs, "Резервный план запуска запрещён для Runtime версии 0.8.8")
 	}
 	for _, cp := range asStringSlice(payload["classpath"]) {
 		if strings.Contains(cp, "*") {
@@ -900,7 +900,7 @@ func resolveAssetIndex(index MojangAssetIndex) map[string]any {
 
 func realRuntimePlan(minecraftVersion, loader, username, gameDir, versionJSON, assetIndexPath string) (map[string]any, error) {
 	if versionJSON == "" {
-		return nil, errors.New("Compatibility Engine требует version.json; fallback launch plan запрещён")
+		return nil, errors.New("Механизму совместимости требуется version.json; резервный план запуска запрещён")
 	}
 	var vf MojangVersionFile
 	if err := loadJSONSource(versionJSON, &vf); err != nil {
