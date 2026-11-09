@@ -200,7 +200,7 @@
         <fieldset id="migration-content">
           <legend>Миграция содержимого и профилей (MIG07)</legend>
           <p>
-            Сопоставляет реальный ClientProfile и проверенные файлы ZIP с новым
+            Сопоставляет реальный ClientProfile и проверенные файлы ZIP с новой
             рабочей областью сборки. Ключи, данные авторизации и неизвестные модули не импортируются.
             Импорт можно повторять после прерывания.
           </p>
@@ -223,11 +223,11 @@
           /></label>
           <label
             >Загрузчик<select id="migration-content-loader">
-              <option>vanilla</option>
-              <option>fabric</option>
-              <option>quilt</option>
-              <option>forge</option>
-              <option>neoforge</option>
+              <option value="vanilla">Обычный клиент (без модифицированного загрузчика)</option>
+              <option value="fabric">Fabric</option>
+              <option value="quilt">Quilt</option>
+              <option value="forge">Forge</option>
+              <option value="neoforge">NeoForge</option>
             </select></label
           >
           <label

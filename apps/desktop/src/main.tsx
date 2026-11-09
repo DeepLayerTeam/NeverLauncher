@@ -1648,7 +1648,7 @@ function App() {
 
   function log(message: string) {
     setLogs((current) =>
-      [`${new Date().toLocaleTimeString()} · ${message}`, ...current].slice(
+      [`${new Date().toLocaleTimeString(ui0357.locale === "en" ? "en-US" : "ru-RU")} · ${message}`, ...current].slice(
         0,
         80,
       ),
@@ -2074,7 +2074,7 @@ function App() {
       );
     }
     setDeviceTrustStatus(
-      `Аттестация подтверждена · действует до ${new Date(data.attestationExpiresAt).toLocaleString()}`,
+      `Аттестация подтверждена · действует до ${new Date(data.attestationExpiresAt).toLocaleString(ui0357.locale === "en" ? "en-US" : "ru-RU")}`,
     );
     log(
       `Аттестация по схеме «запрос — ответ» подтверждена для ${key.deviceId}; срок действия аттестации — ${data.attestationExpiresAt}. Проверено владение зарегистрированным аппаратным ключом; происхождение ключа в TPM или Secure Enclave производителем не подтверждено.`,
@@ -6325,7 +6325,7 @@ function AuthPanel({
                   {device.platform || "платформа не указана"} ·{" "}
                   {device.clientVersion || "версия не указана"} · последний сеанс связи:{" "}
                   {device.lastSeenAt
-                    ? new Date(device.lastSeenAt).toLocaleString()
+                    ? new Date(device.lastSeenAt).toLocaleString(ui0357.locale === "en" ? "en-US" : "ru-RU")
                     : "—"}
                 </small>
                 <small>
@@ -6360,7 +6360,7 @@ function AuthPanel({
                   <small>
                     отозван:{" "}
                     {device.revokedAt
-                      ? new Date(device.revokedAt).toLocaleString()
+                      ? new Date(device.revokedAt).toLocaleString(ui0357.locale === "en" ? "en-US" : "ru-RU")
                       : "—"}{" "}
                     · {device.revokedReason || "причина не указана"}
                     {device.replacedByDeviceId

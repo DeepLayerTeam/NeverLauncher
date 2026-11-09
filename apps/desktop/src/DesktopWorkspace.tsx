@@ -430,7 +430,7 @@ export function HistoryWorkspace0353({
                 </strong>
                 <time dateTime={item.startedAt}>
                   {Number.isFinite(Date.parse(item.startedAt))
-                    ? new Date(item.startedAt).toLocaleString()
+                    ? new Date(item.startedAt).toLocaleString(document.documentElement.lang === "en" ? "en-US" : "ru-RU")
                     : "Время неизвестно"}
                 </time>
                 <span aria-hidden="true">{selected ? "−" : "+"}</span>

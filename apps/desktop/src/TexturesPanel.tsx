@@ -888,7 +888,7 @@ export function TexturesPanel0258({
                   {history.map((h) => (
                     <li key={`${h.revision}-${h.createdAt}`}>
                       #{h.revision} · {textureEventRu0258(h.event)} ·{" "}
-                      {new Date(h.createdAt).toLocaleString()}
+                      {new Date(h.createdAt).toLocaleString(document.documentElement.lang === "en" ? "en-US" : "ru-RU")}
                     </li>
                   ))}
                 </ul>

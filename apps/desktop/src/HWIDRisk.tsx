@@ -35,7 +35,7 @@ export function HWIDRisk0299({ backendUrl, token, deviceId }: Props) {
   return <section className="panel" aria-label="Риск HWID">
     <h4>HWID: добровольная оценка риска и восстановление</h4>
     <p>Локально хешируется ограниченный системный сигнал. Исходные идентификаторы не отправляются. Это изменяемый, подделываемый риск-сигнал, а не доказательство личности. Сам по себе он не вызывает бан. Данные наблюдения хранятся до 30 дней; отправка только по нажатию кнопки.</p>
-    <p>Устройство: {deviceId}; состояние: <strong>{statusRuDesktop(status?.state)}</strong>{status?.expiresAt ? `; срок хранения до ${new Date(status.expiresAt).toLocaleString()}` : ''}</p>
+    <p>Устройство: {deviceId}; состояние: <strong>{statusRuDesktop(status?.state)}</strong>{status?.expiresAt ? `; срок хранения до ${new Date(status.expiresAt).toLocaleString(document.documentElement.lang === "en" ? "en-US" : "ru-RU")}` : ''}</p>
     <div className="toolbar inline">
       <button disabled={busy} onClick={() => void run(async () => { const signal = await invoke<string>('hardware_risk_signal_0299'); await request('/observe', 'POST', { signal }); }, 'Наблюдение принято.')}>Добровольно проверить окружение</button>
       <button disabled={busy} onClick={() => void run(() => request('/confirm', 'POST', {}), 'Новое оборудование подтверждено.')}>Подтвердить замену (проверка ключом доступа)</button>
@@ -47,7 +47,7 @@ export function HWIDRisk0299({ backendUrl, token, deviceId }: Props) {
       <label>Причина обращения<textarea value={reason} maxLength={500} onChange={event => setReason(event.target.value)} /></label>
       <button disabled={busy || reason.trim().length < 8 || appeals.some(a => a.status === 'pending')} onClick={() => void run(async () => { await request('/appeals', 'POST', { reason: reason.trim() }); setReason(''); }, 'Обращение отправлено.')}>Отправить апелляцию</button>
     </div>}
-    {appeals.length > 0 && <div><h4>Обращения</h4>{appeals.map(a => <p key={a.id}>{a.createdAt} · {statusRuDesktop(a.status)} · {a.reason}{a.resolution ? ` · Решение: ${statusRuDesktop(a.resolution)}` : ''}</p>)}</div>}
+    {appeals.length > 0 && <div><h4>Обращения</h4>{appeals.map(a => <p key={a.id}>{Number.isFinite(Date.parse(a.createdAt)) ? new Date(a.createdAt).toLocaleString(document.documentElement.lang === "en" ? "en-US" : "ru-RU") : a.createdAt} · {statusRuDesktop(a.status)} · {a.reason}{a.resolution ? ` · Решение: ${statusRuDesktop(a.resolution)}` : ''}</p>)}</div>}
     <p role="status">{message}</p>
   </section>;
 }
