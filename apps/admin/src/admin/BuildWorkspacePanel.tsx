@@ -8,6 +8,15 @@ import {
   type FileDifference0384,
 } from "./build-files-0384";
 
+/** Представление категорий сравнения, без изменения формата ответа API. */
+function fileDiffRu0384(change: string): string {
+  const labels: Readonly<Record<string, string>> = {
+    added: "Добавлено", unchanged: "Без изменений",
+    modified: "Изменено", "removed-from-package": "Удалено из пакета",
+  };
+  return labels[change] ?? change;
+}
+
 interface BuildFile {
   path: string;
   size: number;
@@ -611,14 +620,14 @@ export function BuildWorkspacePanel({
               <p>
                 Ревизия сравнения {comparison.revision}:{" "}
                 {Object.entries(counts)
-                  .map(([kind, count]) => `${kind}: ${count}`)
+                  .map(([kind, count]) => `${fileDiffRu0384(kind)}: ${count}`)
                   .join(" · ") || "нет изменений"}
               </p>
               <div style={{ maxHeight: 200, overflowY: "auto" }}>
                 <ul>
                   {comparison.items.map((x) => (
                     <li key={x.path}>
-                      <code>{x.path}</code> — {x.change}
+                      <code>{x.path}</code> — {fileDiffRu0384(x.change)}
                       {x.oldSha256 && x.newSha256 && x.oldSha256 !== x.newSha256
                         ? ` (${x.oldSha256.slice(0, 10)}… → ${x.newSha256.slice(0, 10)}…)`
                         : ""}

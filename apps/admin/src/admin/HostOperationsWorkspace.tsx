@@ -409,7 +409,7 @@ export function HostOperationsWorkspace04111({
       {pending && (
         <div className="bridgePending">
           <p className="bridgeAttention">
-            Неизвестен исход исходного HTTP-запроса: {pending.action} /{" "}
+            Неизвестен результат исходного HTTP-запроса: {statusRu(pending.action)} /{" "}
             {pending.serverId}. Новый ключ создавать нельзя.
           </p>
           <button

@@ -25,6 +25,22 @@ import {
   type TextureVisibility0258,
 } from "./texture_service_0258";
 
+/** События истории текстур локализуются только при отображении. */
+function textureEventRu0258(event: string): string {
+  const labels: Readonly<Record<string, string>> = {
+    "legacy-import": "Импорт из прежней системы",
+    select: "Выбор текстуры",
+    "model-change": "Изменение модели",
+    "visibility-change": "Изменение видимости",
+    reset: "Сброс текстуры",
+    upload: "Загрузка файла",
+    import: "Импорт текстуры",
+    delete: "Удаление текстуры",
+    "gravit-import": "Импорт из GravitLauncher",
+  };
+  return labels[event] ?? event;
+}
+
 function usePrivatePNG0258(
   client: TextureServiceClient0258 | null,
   kind: TextureKind0258,
@@ -81,7 +97,7 @@ function SavedCard0258({
         className="textureImageButton0258"
         onClick={onPreview}
         disabled={!src}
-        aria-label={`Просмотреть ${item.kind} ${item.digest.slice(0, 8)}`}
+        aria-label={`Просмотреть ${item.kind === "skin" ? "скин" : "плащ"} ${item.digest.slice(0, 8)}`}
       >
         {src ? <img src={src} alt="" loading="lazy" /> : <span>PNG</span>}
       </button>
@@ -871,7 +887,7 @@ export function TexturesPanel0258({
                 <ul>
                   {history.map((h) => (
                     <li key={`${h.revision}-${h.createdAt}`}>
-                      #{h.revision} · {h.event} ·{" "}
+                      #{h.revision} · {textureEventRu0258(h.event)} ·{" "}
                       {new Date(h.createdAt).toLocaleString()}
                     </li>
                   ))}

@@ -1,4 +1,5 @@
 import { statusRuDesktop } from "./status-ru";
+import { serverKindRu } from "./desktop_experience";
 import React, { useMemo, useState } from "react";
 import {
   canSelectServer0353,
@@ -270,7 +271,7 @@ export function ServersWorkspace0353({
               {server.name} {selectedId === server.id ? "· выбран" : ""}
             </strong>
             <span>
-              {server.kind} · {statusRuDesktop(server.health)}
+              {serverKindRu(server.kind)} · {statusRuDesktop(server.health)}
               {server.minecraftVersion
                 ? ` · Minecraft ${server.minecraftVersion}`
                 : ""}

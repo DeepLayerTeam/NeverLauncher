@@ -533,7 +533,7 @@ export function ReleaseWorkspace({
       .map(([k, v]) => `${k}: ${v}`)
       .join("\n");
     if (
-      !window.confirm(`Подтвердите ${kind} в проекте ${projectId}:\n${effect}`)
+      !window.confirm(`Подтвердите ${kind === "package-publish" ? "публикацию пакета" : "откат канала"} в проекте ${projectId}:\n${effect}`)
     )
       return;
     const job = await perform(async () => {

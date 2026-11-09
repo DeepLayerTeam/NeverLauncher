@@ -60,3 +60,17 @@ export function launchPreferences(settings: LocalLaunchSettings, memory: { minim
     offline: settings.offlineEnabled,
   };
 }
+
+/** Названия типов серверов для интерфейса, без изменения значений API. */
+export function serverKindRu(kind: string): string {
+  const labels: Readonly<Record<string, string>> = {
+    vanilla: "Обычный сервер Minecraft",
+    bukkit: "Bukkit", spigot: "Spigot", paper: "Paper",
+    purpur: "Purpur", folia: "Folia", fabric: "Fabric",
+    quilt: "Quilt", forge: "Forge", neoforge: "NeoForge",
+    sponge: "Sponge", velocity: "Velocity (прокси-сервер)",
+    bungeecord: "BungeeCord (прокси-сервер)",
+    waterfall: "Waterfall (прокси-сервер)",
+  };
+  return labels[kind.trim().toLowerCase()] ?? kind;
+}

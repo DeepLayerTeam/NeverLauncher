@@ -1,4 +1,5 @@
 import { statusRuDesktop } from "./status-ru";
+import { serverKindRu } from "./desktop_experience";
 import {
   offlineLaunchSettings0358,
   offlineSelection0358,
@@ -6937,7 +6938,7 @@ function SettingsPanel({
             <option value="">{t.noServer}</option>
             {profileServers.map((server: ScopedServer) => (
               <option value={server.id} key={server.id}>
-                {server.name} ({server.kind})
+                {server.name} ({serverKindRu(server.kind)})
               </option>
             ))}
           </select>
