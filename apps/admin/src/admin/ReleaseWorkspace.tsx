@@ -936,7 +936,7 @@ export function ReleaseWorkspace({
             >
               {["vanilla", "fabric", "quilt", "forge", "neoforge"].map((x) => (
                 <option key={x} value={x}>
-                  {x}
+                  {x === "vanilla" ? "Без загрузчика" : x}
                 </option>
               ))}
             </select>
@@ -1071,7 +1071,7 @@ export function ReleaseWorkspace({
               </p>
               {packageInfo?.immutableBuild && (
                 <p role="status">
-                  Пакет создан из Build Workspace: состав файлов зафиксирован.
+                  Пакет создан в рабочей области сборки: состав файлов зафиксирован.
                   Для изменения создайте новую версию.
                 </p>
               )}

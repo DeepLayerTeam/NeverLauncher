@@ -8,6 +8,8 @@ import {
   type HistoryRow0353,
 } from "./desktop_navigation_0353";
 
+const loaderLabelRu = (loader?: string | null): string => !loader || loader === 'vanilla' ? 'Без загрузчика' : loader;
+
 type Project = { id: string; title?: string; name?: string };
 type Profile = {
   id: string;
@@ -73,7 +75,7 @@ export function BuildsWorkspace0353({
         <div>
           <h3>Сборки и профили</h3>
           <p>
-            Проекты и профили с сервера. Манифест проверяется Native Ed25519
+            Проекты и профили с сервера. Манифест проверяется нативным модулем с использованием Ed25519
             перед установкой.
           </p>
         </div>
@@ -129,7 +131,7 @@ export function BuildsWorkspace0353({
               >
                 <strong>{profile.title || profile.name || profile.id}</strong>
                 <small>
-                  {profile.loader || "vanilla"} ·{" "}
+                  {loaderLabelRu(profile.loader)} ·{" "}
                   {profile.defaultChannel || "stable"}
                 </small>
                 {profile.description && <small>{profile.description}</small>}
@@ -147,7 +149,7 @@ export function BuildsWorkspace0353({
             <small>Minecraft</small>
           </div>
           <div>
-            <strong>{manifest.minecraft.loader}</strong>
+            <strong>{loaderLabelRu(manifest.minecraft.loader)}</strong>
             <small>Загрузчик</small>
           </div>
           <div>

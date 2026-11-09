@@ -48,7 +48,7 @@ export function GuardPolicyOperations05011({canOperate}:{canOperate:boolean}){
    <label className="field">Предыдущая подписанная политика для отката<input type="file" accept=".json,application/json" disabled={!current} onChange={e=>chooseEnvelope(e.target.files?.[0],'history').catch(err=>setError(String(err)))}/></label>
   </div>
   {current&&current.expiresAt<=Math.floor(Date.now()/1000)&&<p role="alert">Срок политики истёк: её нельзя использовать для запуска, но допустимо подписать новую более высокую эпоху.</p>}
-  {current&&<p>Проверена подпись эпохи <strong>{current.epoch}</strong>; проект {current.projectId}; Minecraft {current.minecraft}; загрузчик {current.loader}; до {new Date(current.expiresAt*1000).toLocaleString("ru-RU")}; модулей {current.artifacts.length}; отозванных хешей {current.revokedDigests.length}.</p>}
+  {current&&<p>Проверена подпись эпохи <strong>{current.epoch}</strong>; проект {current.projectId}; Minecraft {current.minecraft}; загрузчик {current.loader === 'vanilla' ? 'без загрузчика' : current.loader}; до {new Date(current.expiresAt*1000).toLocaleString("ru-RU")}; модулей {current.artifacts.length}; отозванных хешей {current.revokedDigests.length}.</p>}
   {old&&<p>Историческая эпоха {old.epoch}, к восстановлению допускаются только неизменённые ранее утверждённые компоненты.</p>}
   <label className="field">Отозвать SHA-256 JAR/native (через запятую)<textarea value={digest} rows={2} onChange={e=>setDigest(e.target.value)} disabled={!canOperate}/></label>
   <label className="field">Отозвать перехватчики JVM (по одному ID в строке)<textarea value={transforms} rows={2} onChange={e=>setTransforms(e.target.value)} disabled={!canOperate}/></label>

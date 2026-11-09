@@ -1730,7 +1730,7 @@ export function MigrationCenter0331({
           <p>
             Проверяемый перенос одного Gravit ClientProfile и содержимого
             updates/&lt;dir&gt;, clients/&lt;dir&gt;, libraries/,
-            assets/ в зашифрованный Never Build Workspace. Импортёр использует
+            assets/ в зашифрованную рабочую область сборки Never. Импортёр использует
             поле <code>dir</code> Gravit ClientProfile, если оно задано;
             пользовательские файлы не копируются. Каждый запуск миграции
             закрепляет один профиль и собственный пробный запуск. Сервер не выполняет
@@ -1785,7 +1785,7 @@ export function MigrationCenter0331({
               }}
             >
               {["vanilla", "fabric", "quilt", "forge", "neoforge"].map((x) => (
-                <option key={x}>{x}</option>
+                <option key={x} value={x}>{x === "vanilla" ? "Без загрузчика" : x}</option>
               ))}
             </select>
           </label>
@@ -1896,7 +1896,7 @@ export function MigrationCenter0331({
                     disabled={busy || contentConfirm !== runId || !planMatches0442 || migrationPlan0442?.status === "blocked"}
                     onClick={() => void migrationContent0337(true)}
                   >
-                    Перенести реальные файлы в зашифрованный Build Workspace
+                    Перенести реальные файлы в зашифрованную рабочую область сборки
                   </button>
                 </>
               )}
@@ -2018,7 +2018,7 @@ export function MigrationCenter0331({
                         "waterfall",
                         "vanilla",
                       ].map((x) => (
-                        <option key={x}>{x}</option>
+                        <option key={x} value={x}>{x === "vanilla" ? "Обычный сервер Minecraft" : x}</option>
                       ))}
                     </select>
                   </label>

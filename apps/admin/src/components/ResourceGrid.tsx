@@ -29,12 +29,14 @@ function displayBooleanString(value: unknown, field: string): string | null {
   return null;
 }
 function displayScalar(value: unknown, field = ''): string {
+  if (field === 'loader' && value === 'vanilla') return 'Без загрузчика';
   const boolean = resourceBooleanRu(value) ?? displayBooleanString(value, field);
   if (boolean !== null) return boolean;
   const text = textValue(value);
   return localizedStatusFields.has(field) ? statusRu(text) : text;
 }
 function displayFacet(value: string, field: string): string {
+  if (field === 'loader' && value === 'vanilla') return 'Без загрузчика';
   if (localizedStatusFields.has(field)) return statusRu(value);
   return displayBooleanString(value, field) ?? value;
 }

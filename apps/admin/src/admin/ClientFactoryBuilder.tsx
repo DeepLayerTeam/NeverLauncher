@@ -407,7 +407,7 @@ export function ClientFactoryBuilder02710({
           </label>
           <label className="field">
             Загрузчик (закреплён за профилем)
-            <input value={configuration.loader} readOnly />
+            <input value={configuration.loader === "vanilla" ? "Без загрузчика" : configuration.loader} readOnly />
           </label>
           {source === "version" && configuration.loader !== "vanilla" && (
             <label className="field">
@@ -450,9 +450,10 @@ export function ClientFactoryBuilder02710({
             </label>
           )}
           <p className="muted">
-            Импорт исходной папки и ручной выбор файлов доступны в Build
-            Workspace ниже. Client Factory использует реальные
-            Vanilla/Fabric/Quilt/Forge/NeoForge materializers.
+            Импорт исходной папки и ручной выбор файлов доступны ниже, в
+            рабочей области сборки. Мастер сборки клиента использует
+            механизмы формирования клиентов Minecraft без загрузчика, Fabric,
+            Quilt, Forge и NeoForge.
           </p>
           <button disabled={!valid} onClick={() => setStep("preview")}>
             Предварительный план
@@ -471,7 +472,7 @@ export function ClientFactoryBuilder02710({
             </dd>
             <dt>Загрузчик профиля</dt>
             <dd>
-              {configuration.loader}{" "}
+              {configuration.loader === "vanilla" ? "Без загрузчика" : configuration.loader}{" "}
               {configuration.loader !== "vanilla" &&
                 configuration.loaderVersion}
             </dd>
@@ -481,10 +482,10 @@ export function ClientFactoryBuilder02710({
             <dd>Разрешение зависимостей → загрузки → обработка → проверка SHA-256</dd>
           </dl>
           <p className="muted">
-            Точный InstallPlan, список библиотек, natives, Java и hashes
-            вычисляются materializer во время установки и доступны после
-            верификации. Пока это предварительный план параметров, а не
-            подтверждённый lockfile.
+            Точный план установки, список библиотек, нативных компонентов Java
+            и контрольных сумм формируются при установке и доступны после
+            проверки. Пока это лишь предварительный план параметров,
+            а не подтверждённый файл зафиксированных зависимостей.
           </p>
           <div className="buttonRow">
             <button onClick={() => setStep("configure")}>Изменить</button>

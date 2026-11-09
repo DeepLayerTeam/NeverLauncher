@@ -9,6 +9,6 @@ export function validateProfile0382(form:ProfileLaunchForm0382):string {
   if(!['vanilla','fabric','quilt','forge','neoforge'].includes(form.loader))return 'Неподдерживаемый загрузчик.';
   if(!Number.isInteger(form.javaMajor) || form.javaMajor<8 || form.javaMajor>255)return 'Основная версия Java должна быть от 8 до 255.';
   if(form.loader!=='vanilla' && !/^[0-9A-Za-z][0-9A-Za-z.+_-]{0,127}$/.test(form.loaderVersion))return 'Укажите точную версию загрузчика, не latest.';
-  if(form.loader==='vanilla' && form.loaderVersion!=='')return 'Vanilla не использует версию загрузчика.';
+  if(form.loader==='vanilla' && form.loaderVersion!=='')return 'Для обычного клиента Minecraft версия загрузчика не указывается.';
   return '';
 }

@@ -5,6 +5,7 @@ import {validateProfile0382} from './profile-launch-0382';
 
 type Fields = {id:string;name:string;description:string;loader:string;preset:string;isDefault:boolean;minecraftVersion:string;loaderVersion:string;javaMajor:number};
 type Snapshot = {schemaVersion:string;revision:number;digest:string;spec:Fields};
+const loaderLabelRu = (loader: string):string => loader === 'vanilla' ? 'Без загрузчика' : loader;
 const blank = ():Fields=>({id:'',name:'',description:'',loader:'vanilla',loaderVersion:'',minecraftVersion:'',javaMajor:17,preset:'',isDefault:false});
 const fromProfile = (p:Profile):Fields=>({id:p.id,name:p.name,description:p.description||'',loader:p.loader||'vanilla',loaderVersion:p.loaderVersion||'',minecraftVersion:p.minecraftVersion||'',javaMajor:p.javaMajor||17,preset:p.preset||'',isDefault:p.isDefault});
 export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,onChanged,onCreated}: {
@@ -71,7 +72,7 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
       <label className="field">Название<input disabled={working} value={form.name} onChange={e=>edit('name',e.target.value)} /></label>
       <label className="field">Minecraft<input disabled={working} value={form.minecraftVersion} onChange={e=>edit('minecraftVersion',e.target.value.trim())} placeholder="1.21.1" /></label>
       <label className="field">Загрузчик<select disabled={working} value={form.loader} onChange={e=>{edit('loader',e.target.value);if(e.target.value==='vanilla')edit('loaderVersion','')}}>
-        {['vanilla','fabric','quilt','forge','neoforge'].map(loader=><option key={loader} value={loader}>{loader}</option>)}
+        {['vanilla','fabric','quilt','forge','neoforge'].map(loader=><option key={loader} value={loader}>{loaderLabelRu(loader)}</option>)}
       </select></label>
       {form.loader!=='vanilla'&&<label className="field">Точная версия загрузчика<input disabled={working} value={form.loaderVersion} onChange={e=>edit('loaderVersion',e.target.value.trim())} placeholder="Укажите конкретную версию" /></label>}
       <label className="field">Основная версия Java<input disabled={working} type="number" min="8" max="255" value={form.javaMajor} onChange={e=>edit('javaMajor',Number(e.target.value))} /></label>
@@ -88,7 +89,7 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
     </div>
     {selectedProfile && <section aria-label="История ревизий профиля">
       <h4>Ревизии профиля</h4><p className="muted">Восстановление не перезаписывает историю: при сохранении создаётся новая ревизия с CAS.</p>
-      <label className="field">Ревизия для восстановления<select value={restoreRevision} disabled={working} onChange={e=>setRestoreRevision(e.target.value)}><option value="">Выберите ревизию</option>{history.map(h=><option key={h.revision} value={h.revision}>r{h.revision} · {h.spec.minecraftVersion||'без версии'} · {h.spec.loader} · Java {h.spec.javaMajor||'не задана'}</option>)}</select></label>
+      <label className="field">Ревизия для восстановления<select value={restoreRevision} disabled={working} onChange={e=>setRestoreRevision(e.target.value)}><option value="">Выберите ревизию</option>{history.map(h=><option key={h.revision} value={h.revision}>r{h.revision} · {h.spec.minecraftVersion||'без версии'} · {loaderLabelRu(h.spec.loader)} · Java {h.spec.javaMajor||'не задана'}</option>)}</select></label>
       <button disabled={working||!restoreRevision} onClick={restore}>Загрузить ревизию в редактор</button>
     </section>}
     {notice && <p role="status" className="success">{notice}</p>}

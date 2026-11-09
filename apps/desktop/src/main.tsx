@@ -6497,7 +6497,7 @@ function ProfilePanel({
             onClick={() => setSelectedProfile(profile.id)}
           >
             <strong>{profile.title ?? profile.name ?? profile.id}</strong>
-            <span>{profile.loader ?? "vanilla"}</span>
+            <span>{!profile.loader || profile.loader === "vanilla" ? "Без загрузчика" : profile.loader}</span>
           </button>
         ))}
       </div>
