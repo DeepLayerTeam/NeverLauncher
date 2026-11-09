@@ -66,7 +66,7 @@ export function SessionsDevicesWorkspace({ backendUrl, token, adminAccess, onCur
   });
   const match = (value: string) => value.toLowerCase().includes(query.trim().toLowerCase());
   return <section className="card wide">
-    <div className="registryHeading"><div><h2>Сессии и устройства</h2><p className="muted">Свои сессии доступны каждому вошедшему пользователю. Административный отзыв trusted device требует users:manage и свежий дополнительную фишинг-устойчивую аутентификацию.</p></div><button disabled={!!busy} onClick={() => void perform('refresh', async () => { await refresh(); return 'Состояния обновлены.'; })}>Обновить</button></div>
+    <div className="registryHeading"><div><h2>Сессии и устройства</h2><p className="muted">Свои сессии доступны каждому вошедшему пользователю. Административный отзыв доверенного устройства требует права `users:manage` и недавней дополнительной фишинг-устойчивой аутентификации.</p></div><button disabled={!!busy} onClick={() => void perform('refresh', async () => { await refresh(); return 'Состояния обновлены.'; })}>Обновить</button></div>
     {error && <p className="error" role="alert">{error}</p>}{result && <p className="success" role="status">{result} <a href={auditHref('session')}>Посмотреть аудит</a></p>}
     <div className="dataToolbar"><label>Поиск<input type="search" value={query} onChange={e => setQuery(e.target.value)} /></label><button disabled={!!busy || sessions.length < 2} onClick={revokeOthers}>Отозвать другие сессии</button></div>
     <h3>Мои активные сессии ({sessions.length})</h3>

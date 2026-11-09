@@ -128,7 +128,7 @@ export default function PlayerMigration0339({
   }
   return (
     <section className="panel">
-      <h3>Переход с GravitLauncher — Player Migration Assistant 0.33.9</h3>
+      <h3>Переход с GravitLauncher — помощник переноса игрока 0.33.9</h3>
       <p>
         Установите Launcher только по официальной ссылке владельца проекта и
         проверьте издателя установщика. Ассистент не принимает неподписанные

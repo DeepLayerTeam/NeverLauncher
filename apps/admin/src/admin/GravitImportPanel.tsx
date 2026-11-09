@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
 
@@ -43,7 +44,7 @@ export function GravitImportPanel({backendUrl,token,projectId,onChanged}:{backen
  }
  return <section className="subcard" aria-label="Импорт ClientProfile Gravit">
   <h4>Статический импорт Gravit · 0.22.10</h4>
-  <p>Анализирует JSON ClientProfile без выполнения кода. Поддерживаемые настройки попадут в новый приватный Build Workspace. Неподдерживаемые действия, загрузчики и правила блокируют создание, а не пропускаются молча.</p>
+  <p>Анализирует JSON ClientProfile без выполнения кода. Поддерживаемые настройки попадут в новую закрытую рабочую область сборки. Неподдерживаемые действия, загрузчики и правила блокируют создание, а не пропускаются молча.</p>
   <label className="field"><span>Gravit ClientProfile (.json, без комментариев)</span><input type="file" accept=".json,application/json" onChange={e=>void loadFile(e.target.files?.[0]||null)}/></label>
   {inputFile&&<p>Источник: {inputFile.name}</p>}
   <label className="field"><span>ID нового профиля</span><input value={id} onChange={e=>setId(e.target.value)} placeholder="imported-vanilla"/></label>
@@ -53,7 +54,7 @@ export function GravitImportPanel({backendUrl,token,projectId,onChanged}:{backen
   {report&&<div role="status">
    <p><strong>{report.ready?'Все поля сопоставлены':'Требуется исправление источника или ручной перенос'}</strong>. Сопоставлено: {report.summary.mapped}; преобразовано: {report.summary.transformed}; вручную: {report.summary.manual}; заблокировано: {report.summary.blocked}</p>
    <p>SHA-256 источника: <code>{report.sourceSha256}</code></p>
-   <div style={{maxHeight:360,overflowY:'auto'}}><table><thead><tr><th>Поле</th><th>Статус</th><th>Назначение и причина</th></tr></thead><tbody>{report.fields.map((f,i)=><tr key={`${f.field}-${i}`}><td><code>{f.field}</code></td><td>{f.status}</td><td>{f.target&&<code>{f.target}</code>} {f.reason}</td></tr>)}</tbody></table></div>
+   <div style={{maxHeight:360,overflowY:'auto'}}><table><thead><tr><th>Поле</th><th>Статус</th><th>Назначение и причина</th></tr></thead><tbody>{report.fields.map((f,i)=><tr key={`${f.field}-${i}`}><td><code>{f.field}</code></td><td>{statusRu(f.status)}</td><td>{f.target&&<code>{f.target}</code>} {f.reason}</td></tr>)}</tbody></table></div>
    {report.servers.length>0&&<p>Серверы ({report.servers.length}) перечислены для ручной регистрации в ServerBridge; конфигурация доступа автоматически не переносится.</p>}
    {report.ready&&<>
     <label className="field"><span>Новая версия сборки</span><input value={releaseVersion} onChange={e=>setReleaseVersion(e.target.value)} placeholder="1.0.0"/></label>

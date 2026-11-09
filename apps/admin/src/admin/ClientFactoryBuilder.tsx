@@ -519,7 +519,7 @@ export function ClientFactoryBuilder02710({
       {current && detail && (step === "run" || step === "result") && (
         <>
           <p>
-            Задание <code>{current}</code> · <strong>{detail.job.state}</strong>{" "}
+            Задание <code>{current}</code> · <strong>{statusRu(detail.job.state)}</strong>{" "}
             · {detail.job.files} файлов
           </p>
           {!ended(detail.job.state) && (

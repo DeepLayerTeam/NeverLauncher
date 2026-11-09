@@ -485,7 +485,7 @@ export function HostOperationsWorkspace04111({
                     <code>{op.id}</code>
                   </td>
                   <td>{op.action}</td>
-                  <td>{op.status}</td>
+                  <td>{statusRu(op.status)}</td>
                   <td>{datetime(op.updatedAt)}</td>
                   <td>
                     <button

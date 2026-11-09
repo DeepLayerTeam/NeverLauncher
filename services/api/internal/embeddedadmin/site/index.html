@@ -18,7 +18,7 @@
       <section id="bootstrap" hidden>
         <h2>Создание владельца</h2>
         <p>
-          Только для новой установки. Введите одноразовый токен начальной настройки из
+          Только при первоначальной установке. Введите одноразовый токен начальной настройки из
           защищённого конфигурационного файла.
         </p>
         <form id="bootstrap-form">
@@ -180,9 +180,9 @@
         <fieldset>
           <legend>Сброс параметров безопасности и доверия (MIG06)</legend>
           <button id="migration-preview-security" type="button">
-            Проверить security reset</button
+            Проверить сброс параметров безопасности</button
           ><button id="migration-verify-security" type="button">
-            Проверить применённый reset
+            Проверить выполненный сброс
           </button>
           <label
             >Подтвердить точный идентификатор задачи<input
@@ -191,9 +191,7 @@
               placeholder="Идентификатор задачи миграции"
           /></label>
           <label
-            ><input id="migration-security-keys" type="checkbox" /> Новые
-            независимые JWT и Ed25519 ключи Never provisioned, не унаследованы
-            от Gravit</label
+            ><input id="migration-security-keys" type="checkbox" /> Новые независимые ключи JWT и Ed25519 для Never подготовлены и не унаследованы от Gravit</label
           >
           <button id="migration-activate-security" type="button">
             Отозвать старое доверие
@@ -203,7 +201,7 @@
           <legend>Миграция содержимого и профилей (MIG07)</legend>
           <p>
             Сопоставляет реальный ClientProfile и проверенные файлы ZIP с новым
-            Build Workspace. Не импортирует ключи, auth или неизвестные модули.
+            рабочей областью сборки. Ключи, данные авторизации и неизвестные модули не импортируются.
             Импорт можно повторять после прерывания.
           </p>
           <label
@@ -261,7 +259,7 @@
           <legend>Миграция модулей и ServerWrapper (MIG08)</legend>
           <p>
             Проверка JAR без исполнения, проверка исходного ZIP по MIG03, отчёт
-            по неизвестным модулям. Перенос старых ServerWrapper токенов
+            по неизвестным модулям. Перенос старых токенов ServerWrapper
             запрещён.
           </p>
           <button id="migration-modules-analyze" type="button">

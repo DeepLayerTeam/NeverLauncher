@@ -1833,7 +1833,7 @@ export function MigrationCenter0331({
           </div>
           {migrationPlan0442 && (
             <div>
-              <p>Общий план: <strong>{migrationPlan0442.status}</strong>;
+              <p>Общий план: <strong>{statusRu(migrationPlan0442.status)}</strong>;
                 совпадение с текущими полями: {planMatches0442 ? "да" : "нет, требуется новая пробная проверка"}.
                 Исходная цель: {migrationPlan0442.targetUnchanged === false ? "изменилась — повторить пробную проверку" : "актуальна"}.
                 Учётных записей: {migrationPlan0442.identities.sourceAccounts};
@@ -1907,7 +1907,7 @@ export function MigrationCenter0331({
               <p>
                 Рабочая область: <code>{contentState.workspaceId}</code>; сохранено{" "}
                 {contentState.stagedFiles}/{contentState.totalFiles} файлов;
-                состояние: {contentState.state}.
+                состояние: {statusRu(contentState.state)}.
               </p>
               <p>
                 Проверка:{" "}
@@ -1986,7 +1986,7 @@ export function MigrationCenter0331({
                     </select>
                   </label>
                   <label className="field">
-                    <span>Новый ServerBridge node ID</span>
+                    <span>Идентификатор нового узла ServerBridge</span>
                     <input
                       value={bridgeNode0338}
                       onChange={(e) => setBridgeNode0338(e.target.value)}
@@ -2075,7 +2075,7 @@ export function MigrationCenter0331({
                   </button>
                   {bridgeStatus0446 && (
                     <p role="status">
-                      Узел {bridgeStatus0446.serverId}: {bridgeStatus0446.state} ({bridgeStatus0446.reason}).
+                      Узел {bridgeStatus0446.serverId}: {statusRu(bridgeStatus0446.state)} ({bridgeStatus0446.reason}).
                       Даже при online требуется игровая репетиция login/join перед переключением.
                     </p>
                   )}
@@ -2237,7 +2237,7 @@ export function MigrationCenter0331({
                 <code>
                   {route.profileId}/{route.channel}
                 </code>{" "}
-                · {route.state} · ревизия {route.revision} · выпуск NeverLauncher{" "}
+                · {statusRu(route.state)} · ревизия {route.revision} · выпуск NeverLauncher{" "}
                 <code>{route.releaseId}</code> · исходная ревизия{" "}
                 {route.baselineRevision} · активная ревизия{" "}
                 {route.activatedRevision ?? "—"}
@@ -2377,8 +2377,8 @@ export function MigrationCenter0331({
                     rollbackPlan03312.profileId === route.profileId &&
                     rollbackPlan03312.channel === route.channel && (
                       <p>
-                        План: {rollbackPlan03312.state} (
-                        {rollbackPlan03312.mode}),{" "}
+                        План: {statusRu(rollbackPlan03312.state)} (
+                        {statusRu(rollbackPlan03312.mode)}),{" "}
                         {rollbackPlan03312.ready
                           ? "сверка пройдена"
                           : "ЗАБЛОКИРОВАНО"}
@@ -2422,7 +2422,7 @@ export function MigrationCenter0331({
           {report03313 && (
             <>
               <p>
-                Статус: <strong>{report03313.status}</strong> · SHA-256:{" "}
+                Статус: <strong>{statusRu(report03313.status)}</strong> · SHA-256:{" "}
                 <code>{report03313.reportSha256}</code>
               </p>
               <p>
@@ -2493,7 +2493,7 @@ export function MigrationCenter0331({
           )}
           {review03313 && (
             <p>
-              Зафиксировано: {review03313.status} · {review03313.reviewedBy} ·{" "}
+              Зафиксировано: {statusRu(review03313.status)} · {review03313.reviewedBy} ·{" "}
               {review03313.reviewedAt} · SHA-256 отчёта:{" "}
               <code>{review03313.report.reportSha256}</code>.
             </p>
@@ -2502,13 +2502,13 @@ export function MigrationCenter0331({
       )}
       {compatibility && (
         <article className="subcard">
-          <h3>Совместимость: {compatibility.status}</h3>
+          <h3>Совместимость: {statusRu(compatibility.status)}</h3>
           <p>
             Версия:{" "}
             {compatibility.detectedVersion ??
               compatibility.claimedVersion ??
               "не определена"}{" "}
-            ({compatibility.versionStatus}, {compatibility.versionEvidence});
+            ({statusRu(compatibility.versionStatus)}, {compatibility.versionEvidence});
             файлов: {compatibility.sourceEntries}. Переключение запрещено.
           </p>
           <p>
@@ -2526,7 +2526,7 @@ export function MigrationCenter0331({
           <ul>
             {compatibility.findings.map((finding, i) => (
               <li key={i}>
-                <strong>{finding.severity}</strong> · {finding.code} ·{" "}
+                <strong>{statusRu(finding.severity)}</strong> · {finding.code} ·{" "}
                 {finding.component} {finding.path} — {finding.message}
               </li>
             ))}
@@ -2541,7 +2541,7 @@ export function MigrationCenter0331({
         <article className="subcard" role="status">
           <p>
             <strong>Статус:</strong> {statusRu(run.status)} ·{" "}
-            <strong>Текущий шаг:</strong> {run.step} ·{" "}
+            <strong>Текущий шаг:</strong> <code>{run.step}</code> ·{" "}
             <strong>Редакция:</strong> {run.revision} · <strong>Барьер:</strong>{" "}
             {run.fence}
           </p>

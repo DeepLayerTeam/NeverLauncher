@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, requestJSON } from '../api/client';
 
@@ -136,13 +137,13 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
       <button disabled={!userId.trim() || busy || exceptionReason.trim().length < 3} onClick={saveException}>Применить исключение (многофакторная проверка)</button>
       <button disabled={!userId.trim() || busy} onClick={readPlayerHistory}>История скинов и плащей пользователя</button>
       {playerHistory.length > 0 && <table><thead><tr><th>Профиль</th><th>Тип</th><th>Действие</th><th>Ревизия</th><th>Дата</th></tr></thead><tbody>
-        {playerHistory.map((h,i) => <tr key={`${h.profileUuid}:${h.kind}:${h.revision}:${i}`}><td>{h.profileUuid}</td><td>{h.kind}</td><td>{h.event}</td><td>{h.revision}</td><td>{h.createdAt}</td></tr>)}
+        {playerHistory.map((h,i) => <tr key={`${h.profileUuid}:${h.kind}:${h.revision}:${i}`}><td>{h.profileUuid}</td><td>{h.kind === "skin" ? "Скин" : h.kind === "cape" ? "Плащ" : h.kind}</td><td>{statusRu(h.event)}</td><td>{h.revision}</td><td>{h.createdAt}</td></tr>)}
       </tbody></table>}
       <table><thead><tr><th>Пользователь</th><th>Тип</th><th>Решение</th><th>Изменено</th></tr></thead><tbody>
-        {exceptions.map(item => <tr key={item.userId + item.kind}><td><button onClick={() => { setUserId(item.userId); setKind(item.kind); setDecision(item.decision); setExceptionReason(item.reason); }}>{item.userId}</button></td><td>{item.kind}</td><td>{item.decision}</td><td>{item.updatedAt || '—'}</td></tr>)}
+        {exceptions.map(item => <tr key={item.userId + item.kind}><td><button onClick={() => { setUserId(item.userId); setKind(item.kind); setDecision(item.decision); setExceptionReason(item.reason); }}>{item.userId}</button></td><td>{item.kind === "skin" ? "Скин" : "Плащ"}</td><td>{statusRu(item.decision)}</td><td>{item.updatedAt || '—'}</td></tr>)}
       </tbody></table>
     </fieldset>
     <details><summary>История политик ({policyHistory.length})</summary><table><thead><tr><th>Ревизия</th><th>Администратор</th><th>Причина</th><th>Дата</th></tr></thead><tbody>{policyHistory.map(h => <tr key={h.id}><td>{h.revision}</td><td>{h.actorUserId}</td><td>{h.reason}</td><td>{h.createdAt}</td></tr>)}</tbody></table></details>
-    <details><summary>История исключений ({exceptionHistory.length})</summary><table><thead><tr><th>Пользователь</th><th>Тип</th><th>Изменение</th><th>Администратор / причина</th></tr></thead><tbody>{exceptionHistory.map(h => <tr key={h.id}><td>{h.userId}</td><td>{h.kind}</td><td>{h.from} → {h.to}</td><td>{h.actorUserId}: {h.reason}</td></tr>)}</tbody></table></details>
+    <details><summary>История исключений ({exceptionHistory.length})</summary><table><thead><tr><th>Пользователь</th><th>Тип</th><th>Изменение</th><th>Администратор / причина</th></tr></thead><tbody>{exceptionHistory.map(h => <tr key={h.id}><td>{h.userId}</td><td>{h.kind === "skin" ? "Скин" : "Плащ"}</td><td>{statusRu(h.from)} → {statusRu(h.to)}</td><td>{h.actorUserId}: {h.reason}</td></tr>)}</tbody></table></details>
   </section>;
 }

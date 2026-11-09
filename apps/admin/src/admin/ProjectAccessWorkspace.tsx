@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, IndeterminateApiError, requestJSON } from '../api/client';
 import { assignableRoles0387, membershipChange0387, type ProjectRole0387, type ProjectRoleUser0387 } from './project-membership-0387';
@@ -77,7 +78,7 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
     <label className="field">Пользователь
       <select value={selectedUserId} onChange={event => setSelectedUserId(event.target.value)} disabled={busy || !projectId}>
         <option value="">Выберите пользователя</option>
-        {users.map(user => <option value={user.id} key={user.id}>{user.email} · {user.status} · {user.projectRoles?.[projectId] || 'без роли'}</option>)}
+        {users.map(user => <option value={user.id} key={user.id}>{user.email} · {statusRu(user.status)} · {user.projectRoles?.[projectId] || 'без роли'}</option>)}
       </select>
     </label>
     {selectedUser && <>

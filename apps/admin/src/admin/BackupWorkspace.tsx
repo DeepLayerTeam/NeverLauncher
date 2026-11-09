@@ -61,7 +61,7 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
   const current = data?.backups?.find(item => item.backupId === selected);
   return <section className="card wide" aria-label="Резервное копирование и восстановление">
     <div className="registryHeading"><div><h2>Резервное копирование / восстановление</h2><p className="muted">Настоящие резервные копии сервера; проверка SHA-256, пробная проверка и подтверждённое восстановление. Восстановление требует повторной аутентификации, устойчивой к фишингу.</p></div><div className="buttonRow"><button disabled={!!busy} onClick={() => void run('refresh', load)}>Обновить</button><button disabled={!!busy} onClick={create}>Создать резервную копию</button></div></div>
-    <p className="muted">Состояние: {data ? statusRu(data.status) : 'загрузка'} · Режим: {data?.mode ?? '—'} · Архивов: {data?.backups?.length ?? '—'}</p>
+    <p className="muted">Состояние: {data ? statusRu(data.status) : 'загрузка'} · Режим: {data?.mode ? statusRu(data.mode) : '—'} · Архивов: {data?.backups?.length ?? '—'}</p>
     {error && <p className="error" role="alert">{error} <span className="muted">Проверьте полномочия, соединение и повторите чтение статуса. Для восстановления подтвердите вход с помощью ключа доступа.</span></p>}
     {notice && <p className="success" role="status">{notice}</p>}
     <a href={auditHref(selected || 'backup:')} >Открыть журнал резервного копирования</a>
@@ -75,7 +75,7 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
       <p>Серверный SHA-256: <code>{current.sha256}</code></p>
       <div className="buttonRow"><button disabled={!!busy} onClick={() => inspect(selected)}>Инспектировать</button><button disabled={!!busy} onClick={dryRun}>Проверить восстановимость (пробная проверка)</button><a href={auditHref(selected)}>Аудит этого архива</a></div>
       {inspection && <div><p>Файлы: {inspection.manifest.files?.length ?? 0} · PostgreSQL: {inspection.manifest.databaseDump ? 'есть' : 'нет'} · Объекты хранилища: {inspection.manifest.storageObjects}</p><p className="muted">Манифест прочитан. Для восстановления обязательно выполните пробную проверку.</p></div>}
-      {verified && <div className="subcard"><h4>Результат пробного восстановления: {statusRu(verified.status)}</h4><p>Проверено файлов: {verified.checked} · Дамп PostgreSQL: {verified.databaseDump} · Хранилище: {verified.storageObjects}</p><p className="muted">Пробное восстановление подтверждает структуру архива, но не гарантирует успешность восстановления с заменой данных при других внешних условиях.</p></div>}
+      {verified && <div className="subcard"><h4>Результат пробного восстановления: {statusRu(verified.status)}</h4><p>Проверено файлов: {verified.checked} · Дамп PostgreSQL: {statusRu(verified.databaseDump)} · Хранилище: {verified.storageObjects}</p><p className="muted">Пробное восстановление подтверждает структуру архива, но не гарантирует успешность восстановления с заменой данных при других внешних условиях.</p></div>}
       <div className="subcard">
         <h4>Восстановить данные</h4>
         <p className="muted">Доступно только после успешной пробной проверки. Сервер создаёт защитную резервную копию. Операция синхронная и не является долговременным заданием; при обрыве соединения сначала проверьте состояние и аудит, не повторяйте запрос автоматически.</p>

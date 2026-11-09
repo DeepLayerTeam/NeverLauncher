@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, {
   useCallback,
   useEffect,
@@ -1296,7 +1297,7 @@ export function ReleaseWorkspace({
             выполнения политики проверки на сервере.
           </p>
           <div role="status">
-            <strong>Фактический channel head:</strong>{" "}
+            <strong>Фактическая головная версия канала:</strong>{" "}
             {trustedHead ? (
               <>
                 r{trustedHead.revision} ·{" "}
@@ -1529,7 +1530,7 @@ export function ReleaseWorkspace({
         >
           <h3>Проверка реального результата операции</h3>
           <p>
-            Тип: <strong>{pending.intent.kind}</strong> · профиль{" "}
+            Тип: <strong>{statusRu(pending.intent.kind)}</strong> · профиль{" "}
             <code>{pending.intent.profileId}</code> · канал{" "}
             <code>{pending.intent.channel}</code>.
           </p>

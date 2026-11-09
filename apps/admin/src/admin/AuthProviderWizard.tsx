@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
 
@@ -393,7 +394,7 @@ export function AuthProviderWizard02910({
                       #{rev.revision}
                       {rev.revision === h.activeRevision ? " (активна)" : ""}
                     </td>
-                    <td>{rev.kind}</td>
+                    <td>{statusRu(rev.kind)}</td>
                     <td>{new Date(rev.createdAt).toLocaleString()}</td>
                     <td>
                       <button disabled={busy} onClick={() => choose(h, rev)}>

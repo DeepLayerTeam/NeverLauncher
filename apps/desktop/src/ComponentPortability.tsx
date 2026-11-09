@@ -227,7 +227,7 @@ export function ComponentPortability02410({
         )}
         {diff?.removedFiles.length ? (
           <details>
-            <summary>Файлы, удаляемые из managed ownership</summary>
+            <summary>Файлы, исключаемые из управляемого владения</summary>
             <p>{diff.removedFiles.join(", ")}</p>
           </details>
         ) : null}

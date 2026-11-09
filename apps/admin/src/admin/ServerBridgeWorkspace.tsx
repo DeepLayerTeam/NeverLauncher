@@ -858,7 +858,7 @@ export function ServerBridgeWorkspace({
               <dt>Обслуживание / вывод из нагрузки</dt>
               <dd>
                 {networkFresh
-                  ? `Подписанная маршрутизация: ${network?.state}; решение о допуске: ${network?.reason}`
+                  ? `Подписанная маршрутизация: ${statusRu(network?.state)}; решение о допуске: ${network?.reason}`
                   : "Не подтверждено актуальным снимком маршрутизации"}
                 . ACK команд проверяйте отдельно.
               </dd>
@@ -1007,7 +1007,7 @@ export function ServerBridgeWorkspace({
                         ? "принимает новых игроков"
                         : network.reason}
                     </span>{" "}
-                    · узел {network.state} / {network.health}
+                    · узел {statusRu(network.state)} / {statusRu(network.health)}
                   </dd>
                   <dt>Загрузка / резерв</dt>
                   <dd>

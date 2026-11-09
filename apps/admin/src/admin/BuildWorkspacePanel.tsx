@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ClientFactoryBuilder02710 } from "./ClientFactoryBuilder02710";
 import {
@@ -453,7 +454,7 @@ export function BuildWorkspacePanel({
                 {items.map((x) => (
                   <li key={x.id}>
                     <button disabled={busy} onClick={() => load(x)}>
-                      {x.id} · {x.state} · r{x.revision} · {x.files.length}{" "}
+                      {x.id} · {statusRu(x.state)} · r{x.revision} · {x.files.length}{" "}
                       файлов
                     </button>
                   </li>
@@ -494,7 +495,7 @@ export function BuildWorkspacePanel({
             canBuild={canFileWrite && workspace.state !== "built"}
           />
           <p>
-            Рабочая область: <code>{workspace.id}</code> · {workspace.state} ·
+            Рабочая область: <code>{workspace.id}</code> · {statusRu(workspace.state)} ·
             ревизия {workspace.revision} · ревизия профиля{" "}
             {workspace.profileRevision}
           </p>
@@ -515,7 +516,7 @@ export function BuildWorkspacePanel({
           {workspace.state !== "built" && (
             <>
               <label className="field">
-                Ownership загружаемых файлов
+                Правила владения загружаемыми файлами
                 <select
                   disabled={busy || !canFileWrite}
                   value={ownership}
@@ -562,13 +563,12 @@ export function BuildWorkspacePanel({
           )}
           <p aria-live="polite">
             {workspace.files.length} файлов ·{" "}
-            {workspace.files.filter((f) => f.selected).length} в последнем
-            stage. {progress}
+            {workspace.files.filter((f) => f.selected).length} на последнем этапе. {progress}
           </p>
           {scan && (
             <>
               <p>
-                Ревизия сканирования {scan.revision}: <strong>{scan.status}</strong> ·
+                Ревизия сканирования {scan.revision}: <strong>{statusRu(scan.status)}</strong> ·
                 проверено {scan.files.length}; ошибок{" "}
                 {scan.files.filter((f) => f.status !== "ok").length}
               </p>
@@ -576,7 +576,7 @@ export function BuildWorkspacePanel({
                 .filter((f) => f.status !== "ok")
                 .map((f) => (
                   <p role="alert" key={f.path}>
-                    <code>{f.path}</code>: {f.status}
+                    <code>{f.path}</code>: {statusRu(f.status)}
                   </p>
                 ))}
             </>

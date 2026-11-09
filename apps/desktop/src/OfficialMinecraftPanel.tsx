@@ -362,7 +362,7 @@ export function OfficialMinecraftPanel0257({
         <>
           <div className="officialAuthSection02610">
             <div className="officialAuthSectionHeader02610">
-              <h4>Связь с Never identity</h4>
+              <h4>Связь с учётной записью Never</h4>
               <span>
                 {linked
                   ? "Привязан"

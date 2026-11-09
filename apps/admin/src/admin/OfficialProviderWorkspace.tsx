@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
 import { validProviderPolicy02611, type OfficialProviderPolicy02611 } from './official-provider-model-02611';
@@ -51,7 +52,7 @@ export function OfficialProviderWorkspace02611({ backendUrl, token }: { backendU
       {!validProviderPolicy02611(draft) && <p className="error">Неверный идентификатор клиента или недопустимое сочетание политик.</p>}
     </> : <p className="muted">Загрузка конфигурации…</p>}
     {notice && <p className="success" role="status">{notice}</p>}{error && <p className="error" role="alert">{error}</p>}
-    {diagnostics && <><h3>Диагностика · {new Date(diagnostics.checkedAt).toLocaleString()}</h3><p>Доступность API не подтверждает одобрение приложения Minecraft Services или владение Java Edition. Внешнее разрешение: <strong>{diagnostics.appApprovalStatus}</strong>.</p>
+    {diagnostics && <><h3>Диагностика · {new Date(diagnostics.checkedAt).toLocaleString()}</h3><p>Доступность API не подтверждает одобрение приложения Minecraft Services или владение Java Edition. Внешнее разрешение: <strong>{statusRu(diagnostics.appApprovalStatus)}</strong>.</p>
       <table className="table"><thead><tr><th>Сервис</th><th>Сеть</th><th>HTTP</th></tr></thead><tbody>{diagnostics.checks.map(check => <tr key={check.service}><td>{check.service}</td><td>{check.reachable ? 'Доступен' : 'Не доступен'}</td><td>{check.httpStatus ?? '—'}</td></tr>)}</tbody></table><p className="muted">{diagnostics.note}</p></>}
     <h3>Журнал изменений настроек</h3><div className="tableScroll"><table className="table"><thead><tr><th>Ревизия</th><th>Дата</th><th>Администратор</th><th>ID клиента</th><th>Политики</th><th>Причина</th></tr></thead><tbody>{history.map(entry => <tr key={entry.revision}><td>#{entry.revision}</td><td>{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '—'}</td><td>{entry.actor}</td><td><code>{entry.settings.clientId || '—'}</code></td><td>{entry.settings.enabled ? `Браузер: ${entry.settings.browserEnabled ? 'включён' : 'выключен'}, Устройство: ${entry.settings.deviceEnabled ? 'включено' : 'выключено'}` : 'Отключено'}</td><td>{entry.reason}</td></tr>)}</tbody></table></div>
   </section>;

@@ -38,12 +38,12 @@ export function HWIDRisk0299({ backendUrl, token, deviceId }: Props) {
     <p>Устройство: {deviceId}; состояние: <strong>{status?.state || 'неизвестно'}</strong>{status?.expiresAt ? `; срок хранения до ${new Date(status.expiresAt).toLocaleString()}` : ''}</p>
     <div className="toolbar inline">
       <button disabled={busy} onClick={() => void run(async () => { const signal = await invoke<string>('hardware_risk_signal_0299'); await request('/observe', 'POST', { signal }); }, 'Наблюдение принято.')}>Добровольно проверить окружение</button>
-      <button disabled={busy} onClick={() => void run(() => request('/confirm', 'POST', {}), 'Новое оборудование подтверждено.')}>Подтвердить замену (Passkey MFA)</button>
+      <button disabled={busy} onClick={() => void run(() => request('/confirm', 'POST', {}), 'Новое оборудование подтверждено.')}>Подтвердить замену (проверка ключом доступа)</button>
       <button disabled={busy} onClick={() => void run(() => request('', 'DELETE'), 'HWID-наблюдения и обращения удалены.')}>Удалить HWID-данные</button>
       <button disabled={busy} onClick={() => void run(reload, 'Состояние обновлено.')}>Обновить статус</button>
     </div>
     {status?.state === 'changed' && <div>
-      <p>Окружение изменилось. Можно подтвердить новое оборудование с недавней phishing-resistant MFA либо подать обращение администратору. Старое устройство автоматически не блокируется.</p>
+      <p>Окружение изменилось. Можно подтвердить новое оборудование с помощью недавней фишинг-устойчивой многофакторной проверки либо подать обращение администратору. Старое устройство автоматически не блокируется.</p>
       <label>Причина обращения<textarea value={reason} maxLength={500} onChange={event => setReason(event.target.value)} /></label>
       <button disabled={busy || reason.trim().length < 8 || appeals.some(a => a.status === 'pending')} onClick={() => void run(async () => { await request('/appeals', 'POST', { reason: reason.trim() }); setReason(''); }, 'Обращение отправлено.')}>Отправить апелляцию</button>
     </div>}

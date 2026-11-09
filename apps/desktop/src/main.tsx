@@ -1,3 +1,4 @@
+import { statusRuDesktop } from "./status-ru";
 import {
   offlineLaunchSettings0358,
   offlineSelection0358,
@@ -1861,7 +1862,7 @@ function App() {
         const body = await beginResponse.json().catch(() => null);
         throw new Error(
           body?.error?.message ||
-            `${mode} begin: ${beginResponse.status} ${beginResponse.statusText}`,
+            `Начало операции «${mode}»: ${beginResponse.status} ${beginResponse.statusText}`,
         );
       }
       const beginPayload = await beginResponse.json();
@@ -1918,7 +1919,7 @@ function App() {
       if (!completeResponse.ok)
         throw new Error(
           completePayload?.error?.message ||
-            `${mode} complete: ${completeResponse.status} ${completeResponse.statusText}`,
+            `Завершение операции «${mode}»: ${completeResponse.status} ${completeResponse.statusText}`,
         );
       const data = completePayload.data ?? completePayload;
       if (!data.accessToken || !data.device?.id)
@@ -6041,7 +6042,7 @@ function AuthPanel({
 }: any) {
   return (
     <section className="panel">
-      <h3>Вход, сессия и Device Management</h3>
+      <h3>Вход, сеанс и управление устройствами</h3>
       <p>
         Launcher {DESKTOP_VERSION} регистрирует отдельную device identity,
         подтверждает владение ключом и для hardware P-256 выполняет
@@ -6313,7 +6314,7 @@ function AuthPanel({
                   {device.current ? " · текущее" : ""}
                 </strong>
                 <span>
-                  {device.status} · {device.keyAlgorithm}/{device.keyBinding}
+                  {statusRuDesktop(device.status)} · {device.keyAlgorithm}/{device.keyBinding}
                   {device.hardwareProvider
                     ? ` · ${device.hardwareProvider}`
                     : ""}
@@ -6825,7 +6826,7 @@ function DownloadPanel({
               .slice(0, 30)
               .map((f: FileCheckResult) => (
                 <li key={f.path}>
-                  {f.path}: {f.status}
+                  {f.path}: {statusRuDesktop(f.status)}
                 </li>
               ))}
           </ul>

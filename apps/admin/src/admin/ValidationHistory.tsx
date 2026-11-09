@@ -1,3 +1,4 @@
+import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from 'react';
 import { ReleaseApi, type ValidationAuditReport03412 } from '../api/release';
 
@@ -38,26 +39,26 @@ export function ValidationHistory03412({api,packageId}:Props) {
     {error && <p role="alert" className="error">{error}</p>}
     {report && <>
       <p><strong>Политика:</strong> {report.policy.requiredLevel}; стабильный выпуск: {report.coverage.stablePublishEligible?'подтверждено':'заблокировано'}; целевые платформы: {report.coverage.verified}/{report.coverage.required}.</p>
-      <p className="muted">Доказательства проверяются Backend при каждом запросе. Административная отметка certified не предусмотрена.</p>
+      <p className="muted">Доказательства проверяются сервером при каждом запросе. Администратор не может вручную присвоить статус сертификации.</p>
       {Object.keys(report.coverage.targetBlockers).length>0 && <details open><summary>Причины блокировки ({Object.keys(report.coverage.targetBlockers).length})</summary><ul>{Object.entries(report.coverage.targetBlockers).map(([target,reason])=><li key={target}><code>{target}</code>: {reason}</li>)}</ul></details>}
       <details open><summary>Попытки и решения ({events.length}{report.hasMore?' +':''})</summary>
         {events.length===0?<p>Попыток не обнаружено.</p>:<table><thead><tr><th>Время</th><th>Событие</th><th>Результат</th><th>Причина</th><th>Запуск / SHA-256</th></tr></thead><tbody>
-        {events.map(ev=><tr key={ev.id}><td>{readableTime(ev.createdAt)}</td><td>{ev.kind}</td><td>{ev.outcome}</td><td>{ev.reasonCode}</td><td>{ev.runId?<button disabled={busy} onClick={()=>void drill(ev.runId)}>{ev.runId}</button>:'—'}<p><code title={ev.payloadSha256}>{ev.payloadSha256.slice(0,20)}…</code></p></td></tr>)}
+        {events.map(ev=><tr key={ev.id}><td>{readableTime(ev.createdAt)}</td><td>{ev.kind}</td><td>{statusRu(ev.outcome)}</td><td>{ev.reasonCode}</td><td>{ev.runId?<button disabled={busy} onClick={()=>void drill(ev.runId)}>{ev.runId}</button>:'—'}<p><code title={ev.payloadSha256}>{ev.payloadSha256.slice(0,20)}…</code></p></td></tr>)}
         </tbody></table>}
         {next>0 && <button disabled={busy} onClick={()=>void load(next)}>Загрузить предыдущие события</button>}
       </details>
       {selected && <section className="subcard" aria-label="Выбранный исторический запуск">
         <div className="buttonRow"><strong>Исторический запуск {selected.runs[0]?.runId}</strong><button onClick={()=>setSelected(null)}>Закрыть</button></div>
-        {selected.runs.map(run=><ul key={run.runId}>{Object.entries(run.stages).map(([name,stage])=><li key={name}>{name}: {stage.status} · {stage.detail||'—'} {stage.evidenceSha256&&<code>{stage.evidenceSha256}</code>}</li>)}</ul>)}
-        {selected.evidence.map(ev=><p key={ev.runId}>Свидетельство: {ev.status} · SHA-256 <code>{ev.evidenceSha256}</code> · действует до {readableTime(ev.expiresAt)}</p>)}
+        {selected.runs.map(run=><ul key={run.runId}>{Object.entries(run.stages).map(([name,stage])=><li key={name}>{name}: {statusRu(stage.status)} · {stage.detail||'—'} {stage.evidenceSha256&&<code>{stage.evidenceSha256}</code>}</li>)}</ul>)}
+        {selected.evidence.map(ev=><p key={ev.runId}>Свидетельство: {statusRu(ev.status)} · SHA-256 <code>{ev.evidenceSha256}</code> · действует до {readableTime(ev.expiresAt)}</p>)}
       </section>}
       <details><summary>Запуски и стадии ({report.runs.length})</summary>
         {report.runs.map(run=><article key={run.runId} className="subcard"><strong>Запуск <code>{run.runId}</code></strong> · {readableTime(run.receivedAt)} · наблюдение (не сертификат)
-          <ul>{Object.entries(run.stages).map(([name,stage])=><li key={name}><strong>{name}</strong>: {stage.status} {stage.detail&&<span>· {stage.detail}</span>} {stage.evidenceSha256&&<code title={stage.evidenceSha256}> · SHA {stage.evidenceSha256.slice(0,16)}…</code>}</li>)}</ul>
+          <ul>{Object.entries(run.stages).map(([name,stage])=><li key={name}><strong>{name}</strong>: {statusRu(stage.status)} {stage.detail&&<span>· {stage.detail}</span>} {stage.evidenceSha256&&<code title={stage.evidenceSha256}> · SHA {stage.evidenceSha256.slice(0,16)}…</code>}</li>)}</ul>
         </article>)}
       </details>
       <details open><summary>Свидетельства проверок ({report.evidence.length})</summary>
-        {report.evidence.map(ev=><p key={ev.runId}><code>{ev.targetId||ev.runId}</code> · {ev.status} · истекает {readableTime(ev.expiresAt)} · SHA-256 <code title={ev.evidenceSha256}>{ev.evidenceSha256.slice(0,20)}…</code></p>)}
+        {report.evidence.map(ev=><p key={ev.runId}><code>{ev.targetId||ev.runId}</code> · {statusRu(ev.status)} · истекает {readableTime(ev.expiresAt)} · SHA-256 <code title={ev.evidenceSha256}>{ev.evidenceSha256.slice(0,20)}…</code></p>)}
       </details>
     </>}
   </section>;
