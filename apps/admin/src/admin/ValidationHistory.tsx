@@ -49,12 +49,12 @@ export function ValidationHistory03412({api,packageId}:Props) {
       </details>
       {selected && <section className="subcard" aria-label="Выбранный исторический запуск">
         <div className="buttonRow"><strong>Исторический запуск {selected.runs[0]?.runId}</strong><button onClick={()=>setSelected(null)}>Закрыть</button></div>
-        {selected.runs.map(run=><ul key={run.runId}>{Object.entries(run.stages).map(([name,stage])=><li key={name}>{name}: {statusRu(stage.status)} · {stage.detail||'—'} {stage.evidenceSha256&&<code>{stage.evidenceSha256}</code>}</li>)}</ul>)}
+        {selected.runs.map(run=><ul key={run.runId}>{Object.entries(run.stages).map(([name,stage])=><li key={name}><span title={name}>{statusRu(name)}</span>: {statusRu(stage.status)} · {stage.detail||'—'} {stage.evidenceSha256&&<code>{stage.evidenceSha256}</code>}</li>)}</ul>)}
         {selected.evidence.map(ev=><p key={ev.runId}>Свидетельство: {statusRu(ev.status)} · SHA-256 <code>{ev.evidenceSha256}</code> · действует до {readableTime(ev.expiresAt)}</p>)}
       </section>}
       <details><summary>Запуски и стадии ({report.runs.length})</summary>
         {report.runs.map(run=><article key={run.runId} className="subcard"><strong>Запуск <code>{run.runId}</code></strong> · {readableTime(run.receivedAt)} · наблюдение (не сертификат)
-          <ul>{Object.entries(run.stages).map(([name,stage])=><li key={name}><strong>{name}</strong>: {statusRu(stage.status)} {stage.detail&&<span>· {stage.detail}</span>} {stage.evidenceSha256&&<code title={stage.evidenceSha256}> · SHA {stage.evidenceSha256.slice(0,16)}…</code>}</li>)}</ul>
+          <ul>{Object.entries(run.stages).map(([name,stage])=><li key={name}><strong title={name}>{statusRu(name)}</strong>: {statusRu(stage.status)} {stage.detail&&<span>· {stage.detail}</span>} {stage.evidenceSha256&&<code title={stage.evidenceSha256}> · SHA {stage.evidenceSha256.slice(0,16)}…</code>}</li>)}</ul>
         </article>)}
       </details>
       <details open><summary>Свидетельства проверок ({report.evidence.length})</summary>

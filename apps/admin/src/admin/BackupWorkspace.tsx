@@ -9,6 +9,16 @@ type Inspection = { backupId: string; sha256: string; size: number; manifest: { 
 type DryRun = { status: string; backupId: string; checked: number; databaseDump: string; storageObjects: number; restoreMode: string };
 type Restore = { status: string; backupId: string; safetyBackupId: string; restored: string[] };
 
+/** Переводим только отображение восстановленных частей, не меняя ответ API. */
+function restoredPartRu(part: string): string {
+  if (part === 'database') return 'база данных PostgreSQL';
+  const storage = /^storage:(\d+)$/.exec(part);
+  return storage ? `объектов файлового хранилища: ${storage[1]}` : statusRu(part);
+}
+function restoredPartsRu(parts: string[] | undefined, fallback: string): string {
+  return parts?.length ? parts.map(restoredPartRu).join(', ') : fallback;
+}
+
 export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl: string; token: string; canRestore: boolean }) {
   const [data, setData] = useState<Status | null>(null);
   const [selected, setSelected] = useState('');
@@ -54,7 +64,7 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
     if (!window.confirm(`НЕОБРАТИМО заменить ${parts} данными из ${selected}? Сервер создаст страховочную резервную копию до изменений. Текущие данные могут быть потеряны.`)) return;
     const result = await api<Restore>(`/api/v1/operations/backups/${encodeURIComponent(selected)}/restore`, { method: 'POST', body: JSON.stringify({ confirm: confirmId, database, storage }) });
     setRestore(result); setVerified(null); setConfirmId('');
-    setNotice(`Ответ сервера: ${statusRu(result.status)}; восстановлено: ${result.restored?.join(', ') || 'неизвестно'}. Страховочная копия: ${result.safetyBackupId || 'не указан'}.`);
+    setNotice(`Ответ сервера: ${statusRu(result.status)}; восстановлено: ${restoredPartsRu(result.restored, 'неизвестно')}. Страховочная копия: ${result.safetyBackupId || 'не указан'}.`);
     try { await load(); } catch { setNotice(`Восстановление вернуло ответ «${statusRu(result.status)}»; страховочная копия ${result.safetyBackupId || 'не указан'}. Не удалось обновить список — проверьте статус в аудите.`); }
   }); }
   const filtered = (data?.backups ?? []).filter(item => item.backupId.toLowerCase().includes(search.trim().toLowerCase()));
@@ -85,7 +95,7 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
         {!canRestore && <p className="muted">Требуются глобальные права settings:manage и повторная проверка с ключом доступа.</p>}
         <button className="danger" disabled={!!busy || !canRestore || !verified || !inspection || confirmId !== selected || (!database && !storage)} onClick={executeRestore}>Выполнить подтверждённое восстановление</button>
       </div>
-      {restore && <article className="subcard"><h4>Результат восстановления: {statusRu(restore.status)}</h4><p>Затронуто: {restore.restored?.join(', ') || '—'}</p><p>Защитная копия: <code>{restore.safetyBackupId || 'не указан'}</code></p><a href={auditHref(selected)}>Проверить результат в аудите</a></article>}
+      {restore && <article className="subcard"><h4>Результат восстановления: {statusRu(restore.status)}</h4><p>Затронуто: {restoredPartsRu(restore.restored, '—')}</p><p>Защитная копия: <code>{restore.safetyBackupId || 'не указан'}</code></p><a href={auditHref(selected)}>Проверить результат в аудите</a></article>}
     </article>}
   </section>;
 }

@@ -1067,7 +1067,7 @@ export function ReleaseWorkspace({
           {form.packageId && (
             <>
               <p>
-                Статус: <strong>{packageInfo?.status || "загрузка..."}</strong>
+                Статус: <strong>{packageInfo ? statusRu(packageInfo.status) : "загрузка..."}</strong>
               </p>
               {packageInfo?.immutableBuild && (
                 <p role="status">

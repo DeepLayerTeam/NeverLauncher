@@ -49,7 +49,7 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
   async function saveRole() {
     if (!selectedUser || desiredRole === currentRole || !projectId) return;
     const next = membershipChange0387(selectedUser, projectId, desiredRole, allowed);
-    const verb = desiredRole ? `назначить ${desiredRole}` : 'удалить проектное назначение';
+    const verb = desiredRole ? `назначить роль «${statusRu(desiredRole)}»` : 'удалить проектное назначение';
     if (!window.confirm(`Для ${selectedUser.email} в проекте ${projectId}: ${verb}? Изменение отзовёт прежние сессии пользователя.`)) return;
     setBusy(true);setError('');setNotice('');
     try {
@@ -78,17 +78,17 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
     <label className="field">Пользователь
       <select value={selectedUserId} onChange={event => setSelectedUserId(event.target.value)} disabled={busy || !projectId}>
         <option value="">Выберите пользователя</option>
-        {users.map(user => <option value={user.id} key={user.id}>{user.email} · {statusRu(user.status)} · {user.projectRoles?.[projectId] || 'без роли'}</option>)}
+        {users.map(user => <option value={user.id} key={user.id}>{user.email} · {statusRu(user.status)} · {user.projectRoles?.[projectId] ? statusRu(user.projectRoles[projectId]) : 'без роли'}</option>)}
       </select>
     </label>
     {selectedUser && <>
-      <p>Глобальная роль: <strong>{selectedUser.roleId}</strong>. Текущая проектная роль: <strong>{currentRole || 'нет'}</strong>.</p>
+      <p>Глобальная роль: <strong title={selectedUser.roleId}>{statusRu(selectedUser.roleId)}</strong>. Текущая проектная роль: <strong title={currentRole}>{currentRole ? statusRu(currentRole) : 'нет'}</strong>.</p>
       {['owner','admin'].includes(selectedUser.roleId) && <p className="muted">У пользователя уже есть глобальные полномочия. Удаление projectRoles не отменяет доступ, который предоставляет глобальная роль.</p>}
       <label className="field">Роль в выбранном проекте
         <select value={desiredRole} disabled={busy || !projectId || selectedUser.status !== 'active'} onChange={event => setDesiredRole(event.target.value)}>
           <option value="">Без проектной роли (убрать назначение)</option>
-          {allowed.map(role => <option key={role.id} value={role.id}>{role.name || role.id} ({role.id})</option>)}
-          {currentRole && !allowed.some(role => role.id === currentRole) && <option value={currentRole} disabled>Назначенная роль недоступна: {currentRole}</option>}
+          {allowed.map(role => <option key={role.id} value={role.id}>{role.name || statusRu(role.id)} ({role.id})</option>)}
+          {currentRole && !allowed.some(role => role.id === currentRole) && <option value={currentRole} disabled>Назначенная роль недоступна: {statusRu(currentRole)} ({currentRole})</option>}
         </select>
       </label>
       {allowed.find(role => role.id === desiredRole) && <p className="muted">{allowed.find(role => role.id === desiredRole)?.description} · Результирующие права ограничены проектом.</p>}
