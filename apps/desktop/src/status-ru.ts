@@ -27,6 +27,16 @@ export function statusRuDesktop(value: string | null | undefined): string {
     "login-or-verify-device": "Войдите заново или подтвердите устройство",
     "use-standard-profile-or-supported-verified-device": "Используйте стандартный профиль или поддерживаемое проверенное устройство",
     "use-standard-profile-or-recover-device-with-fresh-passkey-then-reattest": "Используйте стандартный профиль либо восстановите устройство с новым ключом входа и повторите аттестацию",
+    hardware: "Аппаратная", software: "Программная",
+    normal: "Нормальный", elevated: "Повышенный", critical: "Критический",
+    initializing: "Инициализация", preparing: "Подготовка", checking: "Проверка",
+    supported: "Поддерживается", unsupported: "Не поддерживается",
+    restricted: "Ограничено", strict: "Строгий режим", standard: "Стандартный режим",
+    private: "Закрытый", public: "Открытый", automatic: "Автоматически",
+    default: "По умолчанию", local: "Локальный",
+    "privacy-by-default": "Конфиденциальность по умолчанию",
+    "proof-of-possession": "Подтверждено владение ключом", unattested: "Без аттестации",
+    active_session: "Активная сессия", "no-data": "Нет данных",
   };
   return value ? (labels[value.toLowerCase()] ?? value) : "Неизвестно";
 }

@@ -81,7 +81,7 @@ export function SessionsDevicesWorkspace({ backendUrl, token, adminAccess, onCur
     {adminAccess && <><h3>Доверенные устройства ({devices.length})</h3>
       {devices.filter(item => match(`${item.id} ${item.userId} ${item.name} ${item.status}`)).map(item => <article className="subcard" key={item.id}>
         <div className="registryHeading"><strong>{item.name || item.id}</strong><span className={`badge ${item.status === 'active' ? 'ok' : 'warn'}`}>{statusRu(item.status)}</span></div>
-        <p className="muted">Пользователь: {item.userId} · доверие: {item.trustState || 'неизвестно'} · {item.keyAlgorithm || 'ключ неизвестен'} · привязка: {item.keyBinding || 'неизвестно'} · последнее посещение: {item.lastSeenAt || '—'}</p>
+        <p className="muted">Пользователь: {item.userId} · доверие: {statusRu(item.trustState)} · алгоритм: {item.keyAlgorithm || 'неизвестен'} · привязка: {statusRu(item.keyBinding)} · последнее посещение: {item.lastSeenAt || '—'}</p>
         {item.revokedAt && <p>Отозвано: {item.revokedAt} · {item.revokedReason || 'причина не указана'}</p>}
         <p><code>{item.id}</code> · <a href={auditHref(item.id)}>Аудит устройства</a></p>
         {item.status === 'active' && <div><button disabled={!!busy} className="danger" onClick={() => { setReasonId(item.id); setReason(''); }}>Отозвать ключ устройства</button>

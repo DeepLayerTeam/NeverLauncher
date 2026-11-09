@@ -38,12 +38,12 @@ export function ValidationHistory03412({api,packageId}:Props) {
     <div className="buttonRow"><button disabled={busy} onClick={()=>void load(0)}>Обновить аудит</button></div>
     {error && <p role="alert" className="error">{error}</p>}
     {report && <>
-      <p><strong>Политика:</strong> {report.policy.requiredLevel}; стабильный выпуск: {report.coverage.stablePublishEligible?'подтверждено':'заблокировано'}; целевые платформы: {report.coverage.verified}/{report.coverage.required}.</p>
+      <p><strong>Политика:</strong> {statusRu(report.policy.requiredLevel)}; стабильный выпуск: {report.coverage.stablePublishEligible?'подтверждено':'заблокировано'}; целевые платформы: {report.coverage.verified}/{report.coverage.required}.</p>
       <p className="muted">Доказательства проверяются сервером при каждом запросе. Администратор не может вручную присвоить статус сертификации.</p>
       {Object.keys(report.coverage.targetBlockers).length>0 && <details open><summary>Причины блокировки ({Object.keys(report.coverage.targetBlockers).length})</summary><ul>{Object.entries(report.coverage.targetBlockers).map(([target,reason])=><li key={target}><code>{target}</code>: {reason}</li>)}</ul></details>}
       <details open><summary>Попытки и решения ({events.length}{report.hasMore?' +':''})</summary>
         {events.length===0?<p>Попыток не обнаружено.</p>:<table><thead><tr><th>Время</th><th>Событие</th><th>Результат</th><th>Причина</th><th>Запуск / SHA-256</th></tr></thead><tbody>
-        {events.map(ev=><tr key={ev.id}><td>{readableTime(ev.createdAt)}</td><td>{ev.kind}</td><td>{statusRu(ev.outcome)}</td><td>{ev.reasonCode}</td><td>{ev.runId?<button disabled={busy} onClick={()=>void drill(ev.runId)}>{ev.runId}</button>:'—'}<p><code title={ev.payloadSha256}>{ev.payloadSha256.slice(0,20)}…</code></p></td></tr>)}
+        {events.map(ev=><tr key={ev.id}><td>{readableTime(ev.createdAt)}</td><td title={ev.kind}>{statusRu(ev.kind)}</td><td>{statusRu(ev.outcome)}</td><td title={ev.reasonCode}>{statusRu(ev.reasonCode)}</td><td>{ev.runId?<button disabled={busy} onClick={()=>void drill(ev.runId)}>{ev.runId}</button>:'—'}<p><code title={ev.payloadSha256}>{ev.payloadSha256.slice(0,20)}…</code></p></td></tr>)}
         </tbody></table>}
         {next>0 && <button disabled={busy} onClick={()=>void load(next)}>Загрузить предыдущие события</button>}
       </details>

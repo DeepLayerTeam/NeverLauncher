@@ -20,7 +20,7 @@ const definitions: Partial<Record<SectionId, Column[]>> = {
 function displayValue(row: Item, col: Column): string {
   const value = valueAt(row, col.field);
   if (col.datetime && typeof value === 'string' && value && !Number.isNaN(Date.parse(value))) return new Date(value).toLocaleString();
-  if (col.field === 'status' || col.field === 'trustState' || col.field === 'integrityStatus') return statusRu(textValue(value));
+  if (['status', 'trustState', 'integrityStatus', 'protocolMode', 'telemetryState', 'commandType', 'action', 'riskState', 'keyBinding'].includes(col.field)) return statusRu(textValue(value));
   return textValue(value);
 }
 function details(item: Item): [string, unknown][] { return Object.entries(item).filter(([key]) => !['passwordHash', 'token', 'refreshToken'].includes(key)); }
@@ -58,7 +58,7 @@ export function ResourceGrid({ section, payload, onSelect, selectedId, columns }
     <div className="dataToolbar">
       <label>Поиск<input aria-label="Поиск по таблице" type="search" value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Поиск по видимым полям" /></label>
       {facets.length > 0 && <label>Фильтр<select aria-label="Поле фильтра" value={facetField} onChange={event => { setFacetField(event.target.value); setFacetValue(''); setPage(1); }}><option value="">Все поля</option>{facets.map(col => <option key={col.field} value={col.field}>{col.title}</option>)}</select></label>}
-      {facetField && <label>Значение<select aria-label="Значение фильтра" value={facetValue} onChange={event => { setFacetValue(event.target.value); setPage(1); }}><option value="">Любое</option>{values.map(value => <option key={value} value={value}>{["status", "trustState", "integrityStatus"].includes(facetField) ? statusRu(value) : value}</option>)}</select></label>}
+      {facetField && <label>Значение<select aria-label="Значение фильтра" value={facetValue} onChange={event => { setFacetValue(event.target.value); setPage(1); }}><option value="">Любое</option>{values.map(value => <option key={value} value={value}>{['status', 'trustState', 'integrityStatus', 'protocolMode', 'telemetryState', 'commandType', 'action', 'riskState', 'keyBinding'].includes(facetField) ? statusRu(value) : value}</option>)}</select></label>}
       <label>Строк<select aria-label="Строк на странице" value={size} onChange={event => { setSize(Number(event.target.value)); setPage(1); }}><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option></select></label>
     </div>
     {projectRows.length === 0 ? <div className="emptyState"><strong>Записей нет</strong><p>В доступном разделе пока нет объектов. Измените проект или создайте объект с помощью формы.</p></div> : sorted.length === 0 ? <div className="emptyState"><strong>Совпадений нет</strong><p>Сбросьте поиск или фильтры.</p><button onClick={() => { setSearch(''); setFacetField(''); setFacetValue(''); }}>Сбросить фильтры</button></div> : <>

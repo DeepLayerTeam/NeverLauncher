@@ -2384,7 +2384,7 @@ function App() {
     setDeviceKey(bound);
     setDeviceTrustStatus("verified");
     log(
-      `Устройство зарегистрировано: ${bound.fingerprint.slice(0, 16)}…; привязка=${bound.keyBinding}; поставщик=${bound.hardwareProvider || bound.storageBackend}; закрытый ключ не покидает защищённый нативный модуль.`,
+      `Устройство зарегистрировано: ${bound.fingerprint.slice(0, 16)}…; привязка=${statusRuDesktop(bound.keyBinding)}; поставщик=${bound.hardwareProvider || bound.storageBackend}; закрытый ключ не покидает защищённый нативный модуль.`,
     );
     const trusted = await persistTrustedAccess(session, data.accessToken);
     return attestDesktopDeviceKey(trusted, bound);
@@ -2447,7 +2447,7 @@ function App() {
       );
     setDeviceTrustStatus("verified");
     log(
-      `Владение ключом подтверждено устройством ${key.deviceId}; привязка=${key.keyBinding}; провайдер=${key.hardwareProvider || key.storageBackend}.`,
+      `Владение ключом подтверждено устройством ${key.deviceId}; привязка=${statusRuDesktop(key.keyBinding)}; провайдер=${key.hardwareProvider || key.storageBackend}.`,
     );
     const trusted = await persistTrustedAccess(session, data.accessToken);
     return attestDesktopDeviceKey(trusted, key);
@@ -5956,7 +5956,7 @@ function Overview({
         </article>
         <article className="card">
           <h3>Java</h3>
-          <strong>{javaInfo?.compatible ? "OK" : "не проверена"}</strong>
+          <strong>{javaInfo?.compatible ? "Совместима" : "не проверена"}</strong>
           <p>{javaInfo?.message ?? "Проверка Java не выполнялась."}</p>
         </article>
         <article className="card">
@@ -5973,13 +5973,13 @@ function Overview({
         </article>
         <article className="card">
           <h3>Контракт</h3>
-          <strong>{readinessContract?.status ?? "не загружен"}</strong>
+          <strong>{readinessContract ? statusRuDesktop(readinessContract.status) : "не загружен"}</strong>
           <p>Модель готовности Desktop с серверного API.</p>
         </article>
         <article className="card">
           <h3>Диагностика</h3>
-          <strong>{diagnosticsPolicy?.status ?? "не загружена"}</strong>
-          <p>{diagnosticsPolicy?.privacyMode ?? "приватность по умолчанию"}.</p>
+          <strong>{diagnosticsPolicy ? statusRuDesktop(diagnosticsPolicy.status) : "не загружена"}</strong>
+          <p>{diagnosticsPolicy ? statusRuDesktop(diagnosticsPolicy.privacyMode) : "приватность по умолчанию"}.</p>
         </article>
       </section>
       <section className="panel">
@@ -6314,7 +6314,7 @@ function AuthPanel({
                   {device.current ? " · текущее" : ""}
                 </strong>
                 <span>
-                  {statusRuDesktop(device.status)} · {device.keyAlgorithm}/{device.keyBinding}
+                  {statusRuDesktop(device.status)} · {device.keyAlgorithm}/{statusRuDesktop(device.keyBinding)}
                   {device.hardwareProvider
                     ? ` · ${device.hardwareProvider}`
                     : ""}

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
 import { recoveryAdvice } from './lifecycle';
+import { statusRu } from './status-ru';
 
 type Event = { id: string; actor: string; action: string; target: string; createdAt: string; ip?: string; userAgent?: string; correlationId?: string; reasonCode?: string; jobId?: string };
 type Result = { items: Event[]; total: number; limit: number; offset: number };
@@ -43,7 +44,7 @@ export function AuditWorkspace({ backendUrl, token }: { backendUrl: string; toke
     </form>
     {error && <p role="alert" className="error">{error}</p>}
     <p className="muted">Найдено: {result.total} · {busy ? 'Загрузка…' : `страница ${page + 1} из ${totalPages}`}</p>
-    <div className="tableScroll"><table className="table resourceTable"><thead><tr><th>Время</th><th>Инициатор</th><th>Операция</th><th>Объект</th><th>Причина / действие</th><th>Связи</th></tr></thead><tbody>{result.items.map(event => <tr key={event.id}><td>{event.createdAt}</td><td>{event.actor || '—'}</td><td>{event.action}</td><td><code>{event.target || '—'}</code></td><td>{event.reasonCode ? <><strong>{event.reasonCode}</strong><p className="muted">{reasonAdvice[event.reasonCode] || 'Проверьте подробности в журнале и статус связанной операции.'}</p></> : '—'}</td><td>{event.correlationId ? <div><a href={`#/audit?query=${encodeURIComponent(event.correlationId)}`}>Корреляция</a></div> : null}{event.jobId ? <div><a href={`#/job-monitor?job=${encodeURIComponent(event.jobId)}`}>Задание: {event.jobId}</a></div> : null}<details><summary>Технические поля</summary><pre>{JSON.stringify(event, null, 2)}</pre></details></td></tr>)}{result.items.length === 0 && <tr><td colSpan={6}>Нет событий для выбранных фильтров.</td></tr>}</tbody></table></div>
+    <div className="tableScroll"><table className="table resourceTable"><thead><tr><th>Время</th><th>Инициатор</th><th>Операция</th><th>Объект</th><th>Причина / действие</th><th>Связи</th></tr></thead><tbody>{result.items.map(event => <tr key={event.id}><td>{event.createdAt}</td><td>{event.actor || '—'}</td><td title={event.action}>{statusRu(event.action)}</td><td><code>{event.target || '—'}</code></td><td>{event.reasonCode ? <><strong title={event.reasonCode}>{statusRu(event.reasonCode)}</strong><p className="muted">{reasonAdvice[event.reasonCode] || 'Проверьте подробности в журнале и статус связанной операции.'}</p></> : '—'}</td><td>{event.correlationId ? <div><a href={`#/audit?query=${encodeURIComponent(event.correlationId)}`}>Корреляция</a></div> : null}{event.jobId ? <div><a href={`#/job-monitor?job=${encodeURIComponent(event.jobId)}`}>Задание: {event.jobId}</a></div> : null}<details><summary>Технические поля</summary><pre>{JSON.stringify(event, null, 2)}</pre></details></td></tr>)}{result.items.length === 0 && <tr><td colSpan={6}>Нет событий для выбранных фильтров.</td></tr>}</tbody></table></div>
     <div className="pager"><button disabled={page === 0 || busy} onClick={() => setPage(v => v - 1)}>Назад</button><span>Страница {page + 1} / {totalPages}</span><button disabled={(page + 1) * effectivePageSize >= result.total || busy} onClick={() => setPage(v => v + 1)}>Далее</button></div>
   </section>;
 }
