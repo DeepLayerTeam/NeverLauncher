@@ -461,7 +461,7 @@ impl IdentityManager {
             if bytes.len().saturating_add(chunk.len()) > RESPONSE_LIMIT { return Err("Official API вернул слишком большой ответ".into()); }
             bytes.extend_from_slice(&chunk);
         }
-        let payload: Value = serde_json::from_slice(&bytes).map_err(|_| "Official API вернул невалидный JSON".to_string())?;
+        let payload: Value = serde_json::from_slice(&bytes).map_err(|_| "Официальный API вернул некорректный JSON".to_string())?;
         // Немедленно удаляйте тело HTTP-ответа с секретными билетами после декодирования.
         bytes.zeroize();
         if !(200..300).contains(&status) {
@@ -524,7 +524,7 @@ impl IdentityManager {
         };
         let validated = (|| -> Result<(String, DeviceChallenge), String> {
             let ticket = result.data.get("flow").and_then(Value::as_str).filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Microsoft не вернул flow")?.to_owned();
-            let uri = result.data.get("verificationUri").and_then(Value::as_str).ok_or("Microsoft не вернул verificationUri")?;
+            let uri = result.data.get("verificationUri").and_then(Value::as_str).ok_or("Сервис Microsoft не вернул адрес подтверждения verificationUri")?;
             let url = Url::parse(uri).map_err(|_| "Некорректная ссылка Microsoft")?;
             let trusted = matches!(url.host_str(), Some("microsoft.com" | "microsoftonline.com"))
                 || url.host_str().is_some_and(|h| h.ends_with(".microsoft.com") || h.ends_with(".microsoftonline.com"));
@@ -713,7 +713,7 @@ impl IdentityManager {
                 ("/cape", Method::PUT, Some(json!({"capeId":cape_id})))
             },
             "uploadSkin" if skin.is_some() => ("/skin", Method::POST, None),
-            _ => return Err("Недопустимая операция Minecraft texture".into()),
+            _ => return Err("Недопустимая операция с текстурой Minecraft".into()),
         };
         let (response, record) = self.associated(&base, &id, access, path, method, body, skin).await?;
         let profile = Self::profile(&response.data)?;
@@ -785,7 +785,7 @@ impl IdentityManager {
         }
         let (response, record) = self.associated(&base, &id, access, "/launch-credentials", Method::POST, None, None).await?;
         if response.data.get("realm").and_then(Value::as_str) != Some("official-minecraft") { return Err("Backend вернул неофициальную игровую сессию".into()); }
-        let cred: MinecraftLaunchCredentials = serde_json::from_value(response.data.clone()).map_err(|_| "Некорректный ответ Minecraft launch credentials".to_string())?;
+        let cred: MinecraftLaunchCredentials = serde_json::from_value(response.data.clone()).map_err(|_| "Некорректный ответ с учётными данными для запуска Minecraft".to_string())?;
         if cred.user_type != "msa" || !cred.auth_server_base_url.is_empty() || !uuid_valid(&cred.uuid)
             || !cred.uuid.eq_ignore_ascii_case(&record.profile.id) || cred.username != record.profile.name
             || cred.access_token.is_empty() || cred.access_token.len() > 8192 {
@@ -1064,7 +1064,7 @@ impl IdentityManager {
             if client_info.data.get("enabled").and_then(Value::as_bool) == Some(false) || client_info.data.get("browserEnabled").and_then(Value::as_bool) == Some(false) { return Err("Вход через браузер запрещён политикой игрового провайдера".into()); }
             if !self.browser_active(&id,&state)? { return Err("Microsoft-авторизация отменена".into()); }
             let client_id = client_info.data.get("clientId").and_then(Value::as_str).filter(|v| official_browser_0263::valid_client_id(v))
-                .ok_or("Собственная Microsoft app registration отсутствует или недействительна")?;
+                .ok_or("Регистрация собственного приложения Microsoft отсутствует или недействительна")?;
             let listener = official_browser_0263::bind_loopback().await?;
             let port = listener.local_addr().map_err(|_| "Не удалось определить OAuth порт")?.port();
             let redirect = format!("http://localhost:{port}{}",official_browser_0263::CALLBACK_PATH);

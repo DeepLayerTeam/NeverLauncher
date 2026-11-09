@@ -68,7 +68,7 @@ fn read_bounded_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, String> 
     let md=fs::symlink_metadata(path).map_err(|e|format!("Отсутствует: двоичные данные устройства TPM: {e}"))?;
     if !md.file_type().is_file() || md.uid() != unsafe { libc::geteuid() } || md.len()==0 || md.len() as usize>maximum ||
        md.mode() & 0o022 != 0 {
-        return Err("Для двоичные данные ключа TPM требуется: «an owned, non-group/world-writable regular file»".into());
+        return Err("Данные ключа TPM должны находиться в обычном файле, принадлежащем текущему пользователю и недоступном для записи группе и остальным пользователям".into());
     }
     // Проверка обычного файла предотвращает прямое следование симлинку; Linux
     // O_NOFOLLOW закрывает гонку переименования в симлинк между stat и open.

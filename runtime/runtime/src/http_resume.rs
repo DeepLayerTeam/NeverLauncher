@@ -98,7 +98,7 @@ fn expected_range(response: &reqwest::Response, start: u64, total: u64) -> Resul
     let last = high.parse::<u64>().map_err(|_| "Некорректное значение: конечная позиция Content-Range")?;
     let complete = total_str.parse::<u64>().map_err(|_| "Некорректное значение: общий размер Content-Range")?;
     if first != start || last < first || complete != total || last >= total {
-        return Err(format!("Небезопасное значение: Content-Range: {value}, requested {start}-/{total}"));
+        return Err(format!("Небезопасное значение Content-Range: {value}; запрошено {start}-/{total}"));
     }
     let length = last - first + 1;
     if content_length(response)?.is_some_and(|reported| reported != length) {

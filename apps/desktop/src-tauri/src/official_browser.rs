@@ -123,17 +123,17 @@ async fn handle_connection(mut stream: TcpStream, port: u16, state: &str) -> Cal
 }
 
 pub async fn bind_loopback() -> Result<TcpListener,String> {
-    TcpListener::bind((Ipv4Addr::LOCALHOST,0)).await.map_err(|_| "Не удалось открыть локальный OAuth callback".to_string())
+    TcpListener::bind((Ipv4Addr::LOCALHOST,0)).await.map_err(|_| "Не удалось открыть локальный адрес обратного вызова OAuth".to_string())
 }
 
 pub async fn receive_callback(listener: TcpListener, state: &str, mut cancelled: watch::Receiver<bool>) -> Result<Zeroizing<String>,String> {
-    let port = listener.local_addr().map_err(|_| "OAuth callback без локального порта")?.port();
+    let port = listener.local_addr().map_err(|_| "В адресе обратного вызова OAuth отсутствует локальный порт")?.port();
     let deadline = Instant::now() + Duration::from_secs(300);
     let mut ignored = 0;
     loop {
         if *cancelled.borrow() { return Err("Вход через Microsoft отменён".into()); }
         let accepted = tokio::select! {
-            conn = listener.accept() => conn.map_err(|_| "Ошибка локального Microsoft callback")?,
+            conn = listener.accept() => conn.map_err(|_| "Ошибка локального обратного вызова Microsoft")?,
             _ = cancelled.changed() => return Err("Вход через Microsoft отменён".into()),
             _ = tokio::time::sleep_until(deadline) => return Err("Время Microsoft-авторизации истекло".into()),
         };
@@ -141,7 +141,7 @@ pub async fn receive_callback(listener: TcpListener, state: &str, mut cancelled:
         match handle_connection(accepted.0,port,state).await {
             Callback::Code(code) => return Ok(Zeroizing::new(code)),
             Callback::Declined => return Err("Вход через Microsoft отклонён".into()),
-            Callback::Irrelevant | Callback::Reject => { ignored += 1; if ignored >= 32 { return Err("Слишком много некорректных OAuth callback".into()); } }
+            Callback::Irrelevant | Callback::Reject => { ignored += 1; if ignored >= 32 { return Err("Слишком много некорректных запросов обратного вызова OAuth".into()); } }
         }
     }
 }

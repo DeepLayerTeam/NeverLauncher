@@ -211,7 +211,7 @@ const KEYRING_SERVICE: &str = "Launcher Desktop";
 
 fn auth_keyring_username(backend_url: &str) -> Result<String, String> {
     let normalized = backend_url.trim().trim_end_matches('/').to_ascii_lowercase();
-    if normalized.is_empty() { return Err("Backend URL обязателен для secure credential storage".into()); }
+    if normalized.is_empty() { return Err("Для защищённого хранения учётных данных необходим URL серверной части".into()); }
     let mut hasher = Sha256::new();
     hasher.update(normalized.as_bytes());
     Ok(format!("backend:{}", hex::encode(hasher.finalize())))
@@ -223,8 +223,8 @@ async fn store_auth_session(backend_url: String, session: SecureAuthSession) -> 
     let secret = serde_json::to_string(&session).map_err(|e| format!("не удалось сериализовать сеанс авторизации: {e}"))?;
     tokio::task::spawn_blocking(move || {
         let mut secret = secret;
-        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("secure credential store недоступен: {e}"))?;
-        let result = entry.set_password(&secret).map_err(|e| format!("не удалось сохранить auth session в OS credential store: {e}"));
+        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("Защищённое хранилище учётных данных недоступно: {e}"))?;
+        let result = entry.set_password(&secret).map_err(|e| format!("Не удалось сохранить сеанс авторизации в защищённом хранилище ОС: {e}"));
         secret.zeroize();
         result
     }).await.map_err(|e| format!("Задача безопасного хранения учётных данных завершилась ошибкой: {e}"))?
@@ -234,15 +234,15 @@ async fn store_auth_session(backend_url: String, session: SecureAuthSession) -> 
 async fn load_auth_session(backend_url: String) -> Result<Option<SecureAuthSession>, String> {
     let username = auth_keyring_username(&backend_url)?;
     tokio::task::spawn_blocking(move || {
-        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("secure credential store недоступен: {e}"))?;
+        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("Защищённое хранилище учётных данных недоступно: {e}"))?;
         match entry.get_password() {
             Ok(mut secret) => {
-                let parsed = serde_json::from_str::<SecureAuthSession>(&secret).map(Some).map_err(|e| format!("auth session в OS credential store повреждена: {e}"));
+                let parsed = serde_json::from_str::<SecureAuthSession>(&secret).map(Some).map_err(|e| format!("Сеанс авторизации в защищённом хранилище ОС повреждён: {e}"));
                 secret.zeroize();
                 parsed
             },
             Err(keyring::v1::Error::NoEntry) => Ok(None),
-            Err(e) => Err(format!("не удалось прочитать auth session из OS credential store: {e}")),
+            Err(e) => Err(format!("Не удалось прочитать сеанс авторизации из защищённого хранилища ОС: {e}")),
         }
     }).await.map_err(|e| format!("Задача безопасного хранения учётных данных завершилась ошибкой: {e}"))?
 }
@@ -251,10 +251,10 @@ async fn load_auth_session(backend_url: String) -> Result<Option<SecureAuthSessi
 async fn delete_auth_session(backend_url: String) -> Result<(), String> {
     let username = auth_keyring_username(&backend_url)?;
     tokio::task::spawn_blocking(move || {
-        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("secure credential store недоступен: {e}"))?;
+        let entry = keyring::v1::Entry::new(KEYRING_SERVICE, &username).map_err(|e| format!("Защищённое хранилище учётных данных недоступно: {e}"))?;
         match entry.delete_credential() {
             Ok(()) | Err(keyring::v1::Error::NoEntry) => Ok(()),
-            Err(e) => Err(format!("не удалось удалить auth session из OS credential store: {e}")),
+            Err(e) => Err(format!("Не удалось удалить сеанс авторизации из защищённого хранилища ОС: {e}")),
         }
     }).await.map_err(|e| format!("Задача безопасного хранения учётных данных завершилась ошибкой: {e}"))?
 }
@@ -319,19 +319,19 @@ async fn macos_trust_status_0316(backend_url: String, user_id: String) -> Result
 #[tauri::command]
 async fn sign_device_payload(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::sign_device_payload(&backend_url, &user_id, &payload))
-        .await.map_err(|e| format!("device key signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция подписи ключом устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn attest_device_payload(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::attest_device_payload(&backend_url, &user_id, &payload))
-        .await.map_err(|e| format!("device attestation signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция подписания аттестации устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn sign_session_refresh(backend_url: String, user_id: String, session_id: String, device_id: String, binding_epoch: i64, refresh_token: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::sign_session_refresh(&backend_url, &user_id, &session_id, &device_id, binding_epoch, &refresh_token))
-        .await.map_err(|e| format!("session refresh device signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция подписи обновления сеанса завершилась ошибкой: {e}"))?
 }
 
 
@@ -339,19 +339,19 @@ async fn sign_session_refresh(backend_url: String, user_id: String, session_id: 
 #[tauri::command]
 async fn stage_device_key_replacement(backend_url: String, user_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::stage_device_key_replacement(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key staging task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция подготовки ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn staged_device_key_status(backend_url: String, user_id: String) -> Result<Option<DeviceKeyInfo>, String> {
     tokio::task::spawn_blocking(move || device_keys::staged_device_key_status(&backend_url, &user_id))
-        .await.map_err(|e| format!("staged device key status task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция проверки состояния подготовленного ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn sign_staged_device_replacement(backend_url: String, user_id: String, payload: String) -> Result<DeviceSignatureResult, String> {
     tokio::task::spawn_blocking(move || device_keys::sign_staged_device_replacement(&backend_url, &user_id, &payload))
-        .await.map_err(|e| format!("staged device key signing task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция подписи подготовленным ключом устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
@@ -363,31 +363,31 @@ async fn sign_current_device_replacement(backend_url: String, user_id: String, p
 #[tauri::command]
 async fn commit_staged_device_key(backend_url: String, user_id: String, device_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::commit_staged_device_key(&backend_url, &user_id, &device_id))
-        .await.map_err(|e| format!("device key commit task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция подтверждения ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn abort_staged_device_key(backend_url: String, user_id: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || device_keys::abort_staged_device_key(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key rollback task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция отката ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn bind_device_key(backend_url: String, user_id: String, device_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::bind_device_key(&backend_url, &user_id, &device_id))
-        .await.map_err(|e| format!("device key bind task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция привязки ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn reset_device_key(backend_url: String, user_id: String) -> Result<DeviceKeyInfo, String> {
     tokio::task::spawn_blocking(move || device_keys::reset_device_key(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key reset task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция сброса ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[tauri::command]
 async fn delete_device_key(backend_url: String, user_id: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || device_keys::delete_device_key(&backend_url, &user_id))
-        .await.map_err(|e| format!("device key delete task завершилась ошибкой: {e}"))?
+        .await.map_err(|e| format!("Операция удаления ключа устройства завершилась ошибкой: {e}"))?
 }
 
 #[derive(Debug, Serialize)]
@@ -566,7 +566,7 @@ async fn load_signed_provisioning_0352()->Result<Option<signed_first_run_0352::P
 async fn load_desktop_config() -> Result<DesktopConfig, String> {
     let path = desktop_config_path()?;
     let config_existed=fs::symlink_metadata(&path).await.is_ok();
-    let mut cfg = if config_existed { serde_json::from_slice::<DesktopConfig>(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| format!("desktop config повреждён: {e}"))? } else { default_desktop_config() };
+    let mut cfg = if config_existed { serde_json::from_slice::<DesktopConfig>(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| format!("Конфигурация Desktop повреждена: {e}"))? } else { default_desktop_config() };
     cfg = normalize_desktop_config(cfg);
     validate_desktop_config_schema_0359(&cfg.schema_version)?;
     let verified=enforce_signed_binding_0352(&mut cfg,&desktop_config_dir()?)?;
@@ -583,13 +583,13 @@ async fn load_desktop_config() -> Result<DesktopConfig, String> {
     cfg.config_path = path.to_string_lossy().to_string(); Ok(cfg)
 }
 async fn save_desktop_config_impl_0352(config: DesktopConfig, complete_for_digest: Option<String>) -> Result<DesktopBindingResult, String> {
-    let path = desktop_config_path()?; let parent = path.parent().ok_or("не удалось определить каталог desktop config")?;
+    let path = desktop_config_path()?; let parent = path.parent().ok_or("Не удалось определить каталог конфигурации Desktop")?;
     fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
     let mut cfg = normalize_desktop_config(config); validate_desktop_config_schema_0359(&cfg.schema_version)?; cfg.schema_version = "1.1".into(); cfg.config_path = path.to_string_lossy().to_string();
     // Флаги завершения из renderer НЕ принимаются при сохранении настроек.
     cfg.onboarding_completed=false;
     let old=if let Ok(existing)=fs::read(&path).await {
-        let stored=serde_json::from_slice::<DesktopConfig>(&existing).map_err(|e|format!("existing Desktop config повреждён: {e}"))?;
+        let stored=serde_json::from_slice::<DesktopConfig>(&existing).map_err(|e|format!("Существующая конфигурация Desktop повреждена: {e}"))?;
         validate_desktop_config_schema_0359(&stored.schema_version)?;
         Some(stored)
     }else{None};
@@ -664,7 +664,7 @@ async fn complete_first_run_0352(config:DesktopConfig,manifest:Manifest)->Result
 async fn reset_desktop_binding() -> Result<DesktopBindingResult, String> {
     let path=desktop_config_path()?;
     if signed_first_run_0352::load(&desktop_config_dir()?)?.is_some(){
-        return Err("Подписанная привязка проекта управляется владельцем; сбросьте пользовательские параметры через Settings, а не bootstrap".into())
+        return Err("Подписанная привязка проекта управляется владельцем; сбросьте пользовательские параметры через настройки, а не через начальную конфигурацию".into())
     }
     if fs::metadata(&path).await.is_ok(){fs::remove_file(&path).await.map_err(|e|e.to_string())?;}
     let cfg=default_desktop_config();
@@ -1015,7 +1015,7 @@ async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
     let origin=reqwest::Url::parse(&cfg.backend_url).map_err(|_|"Недопустимый URL Backend")?;
     if origin.scheme()!="https" || origin.username()!="" || origin.password().is_some() ||
        origin.query().is_some() || origin.fragment().is_some() || origin.host_str().is_none() {
-        return Err("Для права доступа к компоненту требуется HTTPS-адрес Backend".into());
+        return Err("Для доступа к компоненту необходим HTTPS-адрес серверной части".into());
     }
     let session=load_auth_session(cfg.backend_url.clone()).await?.ok_or("Для доступа к компоненту требуется вход в учётную запись Never")?;
     if session.access_token.is_empty() || session.session_id.is_empty() || session.user_id.is_empty(){return Err("Неполный аутентифицированный сеанс Never".into())}
@@ -1315,7 +1315,7 @@ async fn preview_release_requirements_0359(
         }
         if (old.runtime.java.minimum_major_version,old.runtime.java.recommended_major_version,old.runtime.java.maximum_major_version)!=
            (manifest.runtime.java.minimum_major_version,manifest.runtime.java.recommended_major_version,manifest.runtime.java.maximum_major_version){
-            changes.push(format!("Допустимые версии Java (min/recommended/max): {}/{}/{} → {}/{}/{}",
+            changes.push(format!("Допустимые версии Java (минимальная/рекомендуемая/максимальная): {}/{}/{} → {}/{}/{}",
                 old.runtime.java.minimum_major_version,old.runtime.java.recommended_major_version,old.runtime.java.maximum_major_version,
                 manifest.runtime.java.minimum_major_version,manifest.runtime.java.recommended_major_version,manifest.runtime.java.maximum_major_version));
         }
@@ -1480,7 +1480,7 @@ async fn launch_minecraft_inner_0392(
         if !status.process_policy_enforced
             || status.process_policy_version != GUARD_WINDOWS_PROCESS_POLICY_VERSION
         {
-            return Err("launch заблокирован: Guard Windows runtime/process policy не enforced".to_string());
+            return Err("Запуск заблокирован: политика защиты среды выполнения и процессов Guard для Windows не применяется".to_string());
         }
         if !status.hardening_enforced
             || status.hardening_version != GUARD_WINDOWS_HARDENING_VERSION
@@ -1494,64 +1494,64 @@ async fn launch_minecraft_inner_0392(
         let process_policy = guard
             .process_policy()
             .await
-            .map_err(|err| format!("launch заблокирован: Guard Windows process policy verification failed: {err}"))?;
+            .map_err(|err| format!("Запуск заблокирован: не удалось проверить политику процессов Guard для Windows: {err}"))?;
         if !process_policy.enforced
             || process_policy.policy_version != GUARD_WINDOWS_PROCESS_POLICY_VERSION
         {
-            return Err("launch заблокирован: Guard Windows process policy report rejected".to_string());
+            return Err("Запуск заблокирован: отчёт о политике процессов Guard для Windows отклонён".to_string());
         }
         guard
             .integrity_evidence()
             .await
-            .map_err(|err| format!("launch заблокирован: Guard Windows Integrity Evidence v1 недоступен: {err}"))?;
+            .map_err(|err| format!("Запуск заблокирован: подтверждение целостности Guard v1 для Windows недоступно: {err}"))?;
     }
     #[cfg(target_os = "linux")]
     {
         let status = guard.ensure_started().await?;
         if !status.authenticated || status.state != "ready" {
-            return Err("launch заблокирован: Guard Linux boundary не authenticated/ready".to_string());
+            return Err("Запуск заблокирован: защитная граница Guard для Linux не аутентифицирована или не готова".to_string());
         }
         if !status.process_policy_enforced || status.process_policy_version != GUARD_LINUX_PROCESS_POLICY_VERSION {
-            return Err("launch заблокирован: Guard Linux runtime/process policy не enforced".to_string());
+            return Err("Запуск заблокирован: политика защиты среды выполнения и процессов Guard для Linux не применяется".to_string());
         }
         if !status.hardening_enforced || status.hardening_version != GUARD_LINUX_HARDENING_VERSION
             || !status.secure_pipe_acl || !status.lifetime_job_enforced
             || (!cfg!(debug_assertions) && !status.package_manifest_verified)
         {
-            return Err("launch заблокирован: Guard Linux production hardening verification failed".to_string());
+            return Err("Запуск заблокирован: не пройдена проверка усиленной защиты Guard для рабочей сборки Linux".to_string());
         }
         guard.ping().await?;
         let policy = guard.process_policy().await
-            .map_err(|err| format!("launch заблокирован: Guard Linux process policy verification failed: {err}"))?;
+            .map_err(|err| format!("Запуск заблокирован: не удалось проверить политику процессов Guard для Linux: {err}"))?;
         if !policy.enforced || policy.policy_version != GUARD_LINUX_PROCESS_POLICY_VERSION || policy.linux.is_none() {
-            return Err("launch заблокирован: Guard Linux process policy report rejected".to_string());
+            return Err("Запуск заблокирован: отчёт о политике процессов Guard для Linux отклонён".to_string());
         }
         guard.integrity_evidence().await
-            .map_err(|err| format!("launch заблокирован: Guard Linux Integrity Evidence v1 недоступен: {err}"))?;
+            .map_err(|err| format!("Запуск заблокирован: подтверждение целостности Guard v1 для Linux недоступно: {err}"))?;
     }
     #[cfg(target_os = "macos")]
     {
         let status = guard.ensure_started().await?;
         if !status.authenticated || status.state != "ready" {
-            return Err("launch заблокирован: Guard macOS boundary не authenticated/ready".to_string());
+            return Err("Запуск заблокирован: защитная граница Guard для macOS не аутентифицирована или не готова".to_string());
         }
         if !status.process_policy_enforced || status.process_policy_version != GUARD_MACOS_PROCESS_POLICY_VERSION {
-            return Err("launch заблокирован: Guard macOS runtime/process policy не enforced".to_string());
+            return Err("Запуск заблокирован: политика защиты среды выполнения и процессов Guard для macOS не применяется".to_string());
         }
         if !status.hardening_enforced || status.hardening_version != GUARD_MACOS_HARDENING_VERSION
             || !status.secure_pipe_acl || !status.lifetime_job_enforced
             || (!cfg!(debug_assertions) && !status.package_manifest_verified)
         {
-            return Err("launch заблокирован: Guard macOS production hardening verification failed".to_string());
+            return Err("Запуск заблокирован: не пройдена проверка усиленной защиты Guard для рабочей сборки macOS".to_string());
         }
         guard.ping().await?;
         let policy = guard.process_policy().await
-            .map_err(|err| format!("launch заблокирован: Guard macOS process policy verification failed: {err}"))?;
+            .map_err(|err| format!("Запуск заблокирован: не удалось проверить политику процессов Guard для macOS: {err}"))?;
         if !policy.enforced || policy.policy_version != GUARD_MACOS_PROCESS_POLICY_VERSION || policy.macos.is_none() {
-            return Err("launch заблокирован: Guard macOS process policy report rejected".to_string());
+            return Err("Запуск заблокирован: отчёт о политике процессов Guard для macOS отклонён".to_string());
         }
         guard.integrity_evidence().await
-            .map_err(|err| format!("launch заблокирован: Guard macOS Integrity Evidence v1 недоступен: {err}"))?;
+            .map_err(|err| format!("Запуск заблокирован: подтверждение целостности Guard v1 для macOS недоступно: {err}"))?;
     }
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     let _ = &guard;
@@ -1604,7 +1604,7 @@ async fn guard_guard_attestation(
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     {
         let _ = (request, guard);
-        return Err("Guard Attestation production implementation доступна только для Windows, Linux и macOS".to_string());
+        return Err("Проверка аттестации Guard в рабочей сборке доступна только для Windows, Linux и macOS".to_string());
     }
     #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
     {
@@ -1636,9 +1636,9 @@ async fn guard_guard_attestation(
             })
         })
         .await
-        .map_err(|e| format!("Guard Attestation device signing task завершилась ошибкой: {e}"))??;
+        .map_err(|e| format!("Операция подписи аттестации Guard ключом устройства завершилась ошибкой: {e}"))??;
         if signing.key_algorithm != "p256" || signing.key_binding != "hardware" || !signing.hardware_bound {
-            return Err("Guard Attestation signer не является hardware-bound P-256 identity".to_string());
+            return Err("Подписывающий ключ аттестации Guard не является аппаратно привязанным ключом P-256".to_string());
         }
         Ok(GuardAttestationSubmission {
             launcher_version: submission_launcher_version,
@@ -1663,7 +1663,7 @@ async fn guard_guard_attestation_v2(
     #[cfg(not(windows))]
     {
         let _ = (request, guard, supervisor);
-        Err("Guard Attestation v2 continuous evidence доступна только для Windows".to_string())
+        Err("Непрерывное подтверждение аттестации Guard v2 доступно только для Windows".to_string())
     }
     #[cfg(windows)]
     {
@@ -1672,7 +1672,7 @@ async fn guard_guard_attestation_v2(
             challenge_id, challenge, challenge_expires_at, process_id,
         } = request;
         let process_status = supervisor.status(&process_id).await
-            .map_err(|err| format!("Guard Attestation v2 runtime status недоступен: {err}"))?;
+            .map_err(|err| format!("Состояние среды выполнения для аттестации Guard v2 недоступно: {err}"))?;
         let continuous_evidence = runtime::collect_windows_continuous_evidence_v2(&process_id, &process_status)?;
         let base_attestation = guard.remote_attestation(&challenge_id, &challenge).await?;
         let attestation = runtime::build_windows_attestation_v2(
@@ -1704,7 +1704,7 @@ async fn guard_guard_attestation_v2(
             })
         })
         .await
-        .map_err(|e| format!("Guard Attestation v2 device signing task завершилась ошибкой: {e}"))??;
+        .map_err(|e| format!("Операция подписи аттестации Guard v2 ключом устройства завершилась ошибкой: {e}"))??;
         Ok(GuardAttestationV2Submission {
             launcher_version: submission_launcher_version,
             attestation,
@@ -1741,7 +1741,7 @@ fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::pa
             .join(".launcher").join("updater-helpers")
     };
     std::fs::create_dir_all(&helper_stage_root)
-        .map_err(|e| format!("не удалось подготовить updater helper staging: {e}"))?;
+        .map_err(|e| format!("Не удалось подготовить временные файлы вспомогательной программы обновления: {e}"))?;
     let stage_meta = std::fs::symlink_metadata(&helper_stage_root).map_err(|e| e.to_string())?;
     if !stage_meta.file_type().is_dir() || stage_meta.file_type().is_symlink() {
         return Err("Промежуточный каталог обновления небезопасен".into());
@@ -1814,23 +1814,23 @@ async fn install_launcher_update(
     let expected_sha256 = validate_update_sha256(&expected_sha256)?;
     let package = fs::canonicalize(PathBuf::from(package_path.trim()))
         .await
-        .map_err(|e| format!("update package недоступен: {e}"))?;
+        .map_err(|e| format!("Пакет обновления недоступен: {e}"))?;
     let package_meta = fs::symlink_metadata(&package).await.map_err(|e| e.to_string())?;
     if !package_meta.file_type().is_file() || package_meta.file_type().is_symlink() || package_meta.len() == 0 {
-        return Err("update package должен быть непустым обычным файлом, не symlink".into());
+        return Err("Пакет обновления должен быть непустым обычным файлом, а не символической ссылкой".into());
     }
 
-    let current_exe = std::env::current_exe().map_err(|e| format!("не удалось определить Desktop executable: {e}"))?;
-    let current_exe = std::fs::canonicalize(&current_exe).map_err(|e| format!("не удалось canonicalize Desktop executable: {e}"))?;
-    let bin_dir = current_exe.parent().ok_or_else(|| "Desktop executable не имеет родительского каталога".to_string())?;
+    let current_exe = std::env::current_exe().map_err(|e| format!("Не удалось определить исполняемый файл Desktop: {e}"))?;
+    let current_exe = std::fs::canonicalize(&current_exe).map_err(|e| format!("Не удалось получить канонический путь к исполняемому файлу Desktop: {e}"))?;
+    let bin_dir = current_exe.parent().ok_or_else(|| "Не найден родительский каталог исполняемого файла Desktop".to_string())?;
     let helper = if cfg!(target_os = "macos") {
-        let contents = bin_dir.parent().ok_or_else(|| "macOS Desktop executable не находится внутри Contents/MacOS".to_string())?;
+        let contents = bin_dir.parent().ok_or_else(|| "Исполняемый файл Desktop для macOS расположен вне каталога Contents/MacOS".to_string())?;
         let canonical = contents.join("Helpers").join(launcher_update_helper_name());
         if canonical.is_file() { canonical } else { bin_dir.join(launcher_update_helper_name()) }
     } else {
         bin_dir.join(launcher_update_helper_name())
     };
-    let helper_meta = std::fs::symlink_metadata(&helper).map_err(|e| format!("transactional updater helper отсутствует {}: {e}", helper.display()))?;
+    let helper_meta = std::fs::symlink_metadata(&helper).map_err(|e| format!("Не найдена вспомогательная программа транзакционного обновления {}: {e}", helper.display()))?;
     if !helper_meta.file_type().is_file() || helper_meta.file_type().is_symlink() || helper_meta.len() == 0 {
         return Err(format!("Вспомогательный процесс транзакционного обновления небезопасен: {}", helper.display()));
     }
@@ -1857,8 +1857,8 @@ async fn install_launcher_update(
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    let child = command.spawn().map_err(|e| format!("не удалось запустить transactional updater helper: {e}"))?;
-    let updater_pid = child.id().ok_or_else(|| "updater helper запущен без process id".to_string())?;
+    let child = command.spawn().map_err(|e| format!("Не удалось запустить вспомогательную программу транзакционного обновления: {e}"))?;
+    let updater_pid = child.id().ok_or_else(|| "Вспомогательная программа обновления запущена без идентификатора процесса".to_string())?;
     drop(child);
 
     // Верните результат планирования в интерфейс, затем завершите процесс, чтобы помощник мог
@@ -1873,7 +1873,7 @@ async fn install_launcher_update(
         status: "scheduled".into(),
         updater_pid,
         package_path: package.to_string_lossy().to_string(),
-        message: "Desktop/Guard/Runtime update передан внешнему transactional updater; Desktop будет перезапущен после commit".into(),
+        message: "Обновление Desktop, Guard и Runtime передано внешней программе транзакционного обновления; Desktop будет перезапущен после подтверждения изменений".into(),
     })
 }
 

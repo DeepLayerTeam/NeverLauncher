@@ -48,7 +48,7 @@ fn host_parts() -> Vec<String> { Vec::new() }
 #[tauri::command]
 pub(crate) fn hardware_risk_signal_0299() -> Result<String, String> {
     let parts = host_parts();
-    if parts.is_empty() { return Err("OS не предоставила разрешённый machine-continuity signal".into()); }
+    if parts.is_empty() { return Err("Операционная система не предоставила разрешённый сигнал непрерывности идентификации устройства".into()); }
     let mut sha = Sha256::new();
     sha.update(b"Launcher voluntary host continuity v1\0");
     for part in parts {

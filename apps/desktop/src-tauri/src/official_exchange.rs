@@ -27,7 +27,7 @@ impl ProviderError {
             Self::SlowDown => "Microsoft требует увеличить интервал проверки",
             Self::Expired => "Microsoft Device Code истёк",
             Self::Denied => "Вход Microsoft отклонён пользователем",
-            Self::InvalidGrant => "Microsoft session истекла или отозвана; войдите повторно",
+            Self::InvalidGrant => "Сеанс Microsoft истёк или отозван; войдите повторно",
             Self::AppNotAuthorized => "Регистрация Microsoft-приложения не допущена к Minecraft Services",
             Self::XboxAccount => "У Microsoft-аккаунта отсутствует доступный Xbox-профиль",
             Self::XboxRegion => "Xbox недоступен для региона этого аккаунта",
@@ -119,7 +119,7 @@ impl NativeProvider {
         let http = Client::builder().timeout(Duration::from_secs(25))
             .redirect(reqwest::redirect::Policy::none())
             .user_agent(concat!("Launcher/", env!("CARGO_PKG_VERSION")))
-            .build().map_err(|_| "Не удалось инициализировать официальный HTTP transport")?;
+            .build().map_err(|_| "Не удалось инициализировать HTTP-соединение с официальным сервисом")?;
         Ok(Self { http, microsoft: Url::parse(MICROSOFT).unwrap(), xbox: Url::parse(XBOX).unwrap(),
             xsts: Url::parse(XSTS).unwrap(), minecraft: Url::parse(MINECRAFT).unwrap() })
     }

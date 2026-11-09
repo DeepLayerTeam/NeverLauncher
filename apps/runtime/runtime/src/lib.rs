@@ -1339,7 +1339,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         if let Some(major) = resolution.java_major_version {
             if required_java > 0 && required_java != major {
                 return Err(format!(
-                    "manifest требует Java {required_java}, а Mojang metadata требует Java {major}; release должен быть пересобран"
+                    "Манифест требует Java {required_java}, а метаданные Mojang — Java {major}; выпуск необходимо пересобрать"
                 ));
             }
             required_java = major;

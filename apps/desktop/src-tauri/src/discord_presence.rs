@@ -131,7 +131,7 @@ impl Connection {
                 return Ok(session);
             }
         }
-        Err("Не получено сообщение READY от Discord IPC".into())
+        Err("От Discord IPC не получено сообщение о готовности READY".into())
     }
 
     async fn set_activity(&mut self, activity: Option<Value>) -> Result<(), String> {

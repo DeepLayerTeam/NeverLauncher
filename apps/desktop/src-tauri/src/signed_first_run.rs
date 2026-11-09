@@ -86,7 +86,7 @@ pub struct Provisioning0352 {
 }
 fn safe_file(path:&Path,max:u64)->Result<Vec<u8>,String>{
     let meta=fs::symlink_metadata(path).map_err(|e|format!("{}: {e}",path.display()))?;
-    if !meta.file_type().is_file() || meta.len()>max {return Err("Недопустимый тип или размер файла signed bootstrap".into())}
+    if !meta.file_type().is_file() || meta.len()>max {return Err("Недопустимый тип или размер файла подписанной начальной конфигурации".into())}
     fs::read(path).map_err(|e|e.to_string())
 }
 fn bytes_hex(value:&str,len:usize)->Result<Vec<u8>,String>{
@@ -181,7 +181,7 @@ fn verify_signed(raw:&[u8], policy_dir:&Path, root_hex:&str, now:OffsetDateTime)
         signed_bytes.extend_from_slice(&payload);
     }
     verify(&signed_bytes,&signing_key,&env.signature)?;
-    let cfg:Bootstrap=serde_json::from_slice(&payload).map_err(|_|"Неверная структура bootstrap config")?;
+    let cfg:Bootstrap=serde_json::from_slice(&payload).map_err(|_|"Неверная структура начальной конфигурации")?;
     if cfg.schema_version!="1.0"||!identifier(&cfg.project_id)||!identifier(&cfg.profile_id)||!identifier(&cfg.channel)||
        !https_url(&cfg.backend_url)||!valid_manifest_artifact(&cfg.manifest)||!valid_manifest_artifact(&cfg.java_manifest)||
        !cfg.targets.is_array()||cfg.targets.as_array().map(|a|a.is_empty()).unwrap_or(true)||
@@ -189,10 +189,10 @@ fn verify_signed(raw:&[u8], policy_dir:&Path, root_hex:&str, now:OffsetDateTime)
        (!cfg.server_id.is_empty()&&!identifier(&cfg.server_id))||
        (cfg.auto_enter&&(cfg.server_id.is_empty()||cfg.server_host.is_empty()||cfg.server_port==0))||
        (!cfg.server_host.is_empty() && !valid_server_host(&cfg.server_host)) {
-        return Err("Некорректный signed bootstrap payload".into())
+        return Err("Некорректные данные подписанной начальной конфигурации".into())
     }
     if env.schema_version=="2.0"&&!cfg.profile_public_key.eq_ignore_ascii_case(root_hex){
-        return Err("Delegated bootstrap требует profilePublicKey=root".into())
+        return Err("Делегированная начальная настройка требует profilePublicKey=root".into())
     }
     // Конфигурация подписана оператором; только проверенные поля имеют силу.
     if let Some(ref brand)=cfg.branding {validate_brand0355(brand)?;}

@@ -15,7 +15,7 @@ fn destination(dsn: &str) -> Result<Destination, String> {
     let u = reqwest::Url::parse(dsn).map_err(|_| "Некорректное значение: DSN Sentry".to_string())?;
     let host = u.host_str().ok_or("В DSN Sentry не указан хост")?;
     if u.scheme() != "https" && !(u.scheme() == "http" && (host == "localhost" || host == "127.0.0.1" || host == "[::1]")) {
-        return Err("Для отправка событий в Sentry требуется HTTPS".into());
+        return Err("Для отправки событий в Sentry требуется HTTPS".into());
     }
     let key = u.username();
     if key.is_empty() || u.password().is_some() || u.query().is_some() || u.fragment().is_some() { return Err("Некорректное значение: учётные данные DSN Sentry".into()); }
