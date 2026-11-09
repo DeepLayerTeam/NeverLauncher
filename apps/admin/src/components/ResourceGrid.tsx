@@ -16,6 +16,7 @@ const localizedStatusFields = new Set([
   'verificationStatus', 'deploymentState', 'releaseStatus', 'extensionStatus',
   'jobStatus', 'commandStatus', 'operationStatus', 'lifecycleState', 'sessionStatus',
   'currentState', 'desiredState', 'stage', 'phase', 'operationType', 'roleId',
+  'auditAction', 'eventType', 'reasonCode', 'failureReason', 'operationKind',
 ]);
 const localizedBooleanFields = new Set([
   'enabled', 'disabled', 'isDefault', 'protected', 'active', 'online', 'verified',

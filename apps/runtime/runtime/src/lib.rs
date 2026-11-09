@@ -772,7 +772,7 @@ pub async fn repair_client_with_preset(manifest:&Manifest,root:&Path,pinned_publ
         repaired: download.repaired,
         download,
         after,
-        message: if broken_after == 0 { "Repair завершён: клиент соответствует manifest".to_string() } else { format!("Repair завершён, но осталось проблемных файлов: {broken_after}") },
+        message: if broken_after == 0 { "Восстановление завершено: файлы клиента соответствуют манифесту".to_string() } else { format!("Восстановление завершено, но остались повреждённые или отсутствующие файлы: {broken_after}") },
     })
 }
 
@@ -1006,7 +1006,7 @@ pub async fn certify_vanilla_compatibility(
     let (status, timed_out) = match timeout(Duration::from_secs(max_runtime_seconds), child.wait()).await {
         Ok(result) => (Some(result.map_err(|err| format!("превышено время ожидания среды выполнения Vanilla: {err}"))?), false),
         Err(_) => {
-            child.kill().await.map_err(|err| format!("Vanilla runtime не удалось остановить после timeout: {err}"))?;
+            child.kill().await.map_err(|err| format!("Среду выполнения Vanilla не удалось остановить после истечения времени ожидания: {err}"))?;
             let _ = child.wait().await;
             (None, true)
         }

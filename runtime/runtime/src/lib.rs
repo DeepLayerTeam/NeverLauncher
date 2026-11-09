@@ -772,7 +772,7 @@ pub async fn repair_client_with_preset(manifest:&Manifest,root:&Path,pinned_publ
         repaired: download.repaired,
         download,
         after,
-        message: if broken_after == 0 { "Repair завершён: клиент соответствует manifest".to_string() } else { format!("Repair завершён, но осталось проблемных файлов: {broken_after}") },
+        message: if broken_after == 0 { "Восстановление завершено: файлы клиента соответствуют манифесту".to_string() } else { format!("Восстановление завершено, но остались повреждённые или отсутствующие файлы: {broken_after}") },
     })
 }
 
