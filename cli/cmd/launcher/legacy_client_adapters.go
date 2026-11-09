@@ -197,7 +197,7 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 		return nil, nil
 	}
 	if javaMajor != 8 {
-		return nil, fmt.Errorf("Для устаревший %s %s требуется: Java 8", loader, minecraft)
+		return nil, fmt.Errorf("Для устаревшего загрузчика %s (Minecraft %s) требуется Java 8", loader, minecraft)
 	}
 	parentRel := filepath.ToSlash(filepath.Join("versions", minecraft, minecraft+".json"))
 	parent, parentHash, err := readLegacyProfile0278(root, parentRel)

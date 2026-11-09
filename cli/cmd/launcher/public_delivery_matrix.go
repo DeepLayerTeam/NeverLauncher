@@ -514,7 +514,7 @@ func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPubl
 	start := time.Now().UTC()
 	report := PublicDeliveryE2EReport0159{SchemaVersion: "1.0", Product: "Launcher", MatrixURL: matrixURL, StartedAt: start.Format(time.RFC3339Nano), Status: "failed"}
 	if strings.TrimSpace(downloadDir) == "" {
-		return report, errors.New("Для открытый E2E требуется: --download-dir")
+		return report, errors.New("Для публичной сквозной проверки (E2E) требуется --download-dir")
 	}
 	if st, err := os.Stat(downloadDir); err == nil && st.IsDir() {
 		items, _ := os.ReadDir(downloadDir)
@@ -568,7 +568,7 @@ func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPubl
 	}
 	for label, candidate := range map[string]string{"корневой открытый ключ": rootPublicKey, "текущая политика доверия": currentTrustPolicy, "состояние доверия": trustState} {
 		if strings.TrimSpace(candidate) == "" {
-			return report, fmt.Errorf("Для открытый E2E требуется: внешний %s", label)
+			return report, fmt.Errorf("Для публичной сквозной проверки (E2E) требуется внешний %s", label)
 		}
 		absCandidate, err := filepath.Abs(candidate)
 		if err == nil && (absCandidate == absDownload || strings.HasPrefix(absCandidate, absDownload+string(os.PathSeparator))) {

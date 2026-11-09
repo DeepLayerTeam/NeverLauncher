@@ -81,7 +81,7 @@ func rehearsalReadLiveConfig0447(root string) (rehearsalLiveConfig0447, error) {
 	ip := net.ParseIP(host)
 	n, err := strconv.Atoi(port)
 	if ip == nil || !ip.IsLoopback() || err != nil || n <= 0 || n > 65535 {
-		return cfg, errors.New("Для RCON требуется: на числовом локальном адресе обратной связи с допустимым портом")
+		return cfg, errors.New("Для RCON требуется числовой адрес обратной связи с допустимым портом")
 	}
 	return cfg, nil
 }

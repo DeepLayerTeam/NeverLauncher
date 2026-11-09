@@ -83,7 +83,7 @@ func handleMigrationWorkflow0331(args []string) error {
 	case "list":
 		project := strings.TrimSpace(flagValue(args, "--project", ""))
 		if project == "" {
-			return errors.New("Для список требуется: --project")
+			return errors.New("Для команды list требуется --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
 	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials", "security", "preview-security", "activate-security", "content", "preview-content", "import-content", "apply-optionals", "modules", "analyze-modules", "enroll-serverbridge", "serverbridge-status":

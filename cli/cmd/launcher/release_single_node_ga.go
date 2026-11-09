@@ -35,7 +35,7 @@ func singleNodeReadBounded0330(dir, name string) ([]byte, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() <= 0 || st.Size() > 2*1024*1024 {
-		return nil, fmt.Errorf("Для «свидетельство GA» %s требуется: «непустой обычный файл размером не более 2 МиБ»", name)
+		return nil, fmt.Errorf("Для свидетельства GA %s требуется непустой обычный файл размером не более 2 МиБ", name)
 	}
 	return os.ReadFile(path)
 }

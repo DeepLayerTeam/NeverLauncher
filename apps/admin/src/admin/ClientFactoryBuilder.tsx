@@ -467,7 +467,7 @@ export function ClientFactoryBuilder02710({
             <dt>Источник</dt>
             <dd>
               {source === "modpack"
-                ? `Modpack ${modpack?.name || ""}`
+                ? `Сборка модов: ${modpack?.name || ""}`
                 : `Minecraft ${configuration.minecraft}`}
             </dd>
             <dt>Загрузчик профиля</dt>

@@ -76,7 +76,7 @@ func migrationURL0493(raw string) (*url.URL, error) {
 		return nil, err
 	}
 	if u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Host == "" || u.Hostname() == "" || (u.Scheme != "https" && !(u.Scheme == "http" && net.ParseIP(u.Hostname()) != nil && net.ParseIP(u.Hostname()).IsLoopback())) {
-		return nil, errors.New("Для серверная часть требуется: HTTPS или HTTP на IP-адресе обратной связи без учётных данных и параметров запроса")
+		return nil, errors.New("Для адреса серверной части требуется HTTPS либо HTTP на локальном IP-адресе обратной связи без учётных данных и параметров запроса")
 	}
 	return u, nil
 }

@@ -117,21 +117,21 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err = decoder.Decode(&rows); err != nil {
-		return fmt.Errorf("Некорректное значение: сопоставление: %w", err)
+		return fmt.Errorf("Некорректный формат сопоставления профилей: %w", err)
 	}
 	var trailing any
 	if decoder.Decode(&trailing) != io.EOF {
 		return errors.New("Лишние данные после карты сопоставления")
 	}
 	if len(rows) == 0 || len(rows) > 32 {
-		return errors.New("Для сопоставление требуется: 1..32 профили")
+		return errors.New("Для сопоставления требуется от 1 до 32 профилей")
 	}
 	encoded, err := json.Marshal(rows)
 	if err != nil {
 		return err
 	}
 	if len(encoded) > 12288 {
-		return errors.New("Превышен допустимый размер: сопоставление")
+		return errors.New("Карта сопоставления профилей превышает допустимый размер")
 	}
 	sourceFile, err := os.Open(source)
 	if err != nil {

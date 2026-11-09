@@ -1315,7 +1315,7 @@ export function ReleaseWorkspace({
             </button>
             {channelHeadError && (
               <p role="alert">
-                Не удалось прочитать channel head: {channelHeadError}
+                Не удалось получить текущую головную версию канала: {channelHeadError}
               </p>
             )}
           </div>
@@ -1324,8 +1324,8 @@ export function ReleaseWorkspace({
               <p>
                 <strong>Допуск промышленного Runtime V11:</strong>{" "}
                 {report?.effectivePolicy?.publishEligible
-                  ? "Все обязательные targets подтверждены"
-                  : "Публикация заблокирована до подтверждения всех обязательных targets"}{" "}
+                  ? "Все обязательные целевые платформы подтверждены"
+                  : "Публикация заблокирована до проверки всех обязательных целевых платформ"}{" "}
                 · {report?.effectivePolicy?.verifiedTargets ?? 0}/
                 {report?.effectivePolicy?.requiredTargets ?? 0} · политика{" "}
                 <code>
@@ -1405,7 +1405,7 @@ export function ReleaseWorkspace({
           <h3>История публикаций канала</h3>
           <p className="muted">
             Источник — сохранённые релизы Backend; активным считается только
-            точный releaseId из channel head. Неактивные выпуски сохраняются в
+            точный идентификатор выпуска (releaseId) из головной версии канала. Неактивные выпуски сохраняются в
             истории.
           </p>
           <div className="tableScroll">
@@ -1544,14 +1544,14 @@ export function ReleaseWorkspace({
           </p>
           {check?.phase === "confirmed" && (
             <p className="success" role="status">
-              Подтверждено Backend: channel head обновлён до ревизии{" "}
+              Сервер подтвердил обновление головной версии канала до ревизии{" "}
               {check.head?.revision}, активный пакет{" "}
               <code>{check.head?.releaseId}</code>.
             </p>
           )}
           {check?.phase === "unconfirmed" && (
             <p className="error" role="alert">
-              Нет подтверждения изменения канала: успешный job недостаточен.
+              Нет подтверждения изменения канала: успешного завершения задания недостаточно.
               Проверьте конкурирующие публикации.
             </p>
           )}
@@ -1586,7 +1586,7 @@ export function ReleaseWorkspace({
               <a
                 href={`#/job-monitor?job=${encodeURIComponent(pending.jobId)}`}
               >
-                Открыть durable job
+                Открыть фоновое задание
               </a>
             )}
             {pending.jobId && (
@@ -1602,10 +1602,10 @@ export function ReleaseWorkspace({
         </article>
       )}
       <p className="muted">
-        Порядок владельца: сборка и компоненты → подпись/validation → просмотр
-        эффекта → durable job → проверенный channel head →
-        диагностика и наблюдение → откат при необходимости. HTTP 202 не
-        является публикацией.
+        Порядок действий владельца: сборка и компоненты → подписание и проверка →
+        просмотр последствий → фоновое задание → проверенная головная версия канала →
+        диагностика и мониторинг → при необходимости откат. Ответ HTTP 202 сам по
+        себе не подтверждает публикацию.
       </p>
       <div className="buttonRow">
         <a href="#/diagnostics">Диагностика</a>
