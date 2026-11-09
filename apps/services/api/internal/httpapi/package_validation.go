@@ -247,7 +247,7 @@ func (s Server) packageRuntimeEvidence0212(w http.ResponseWriter, r *http.Reques
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректное runtime evidence: "+err.Error())
+		writeError(w, http.StatusBadRequest, "Некорректное подтверждение среды выполнения: "+err.Error())
 		return
 	}
 	e := req.Evidence
@@ -271,12 +271,12 @@ func (s Server) packageRuntimeEvidence0212(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if len(e.EvidenceHashes) == 0 {
-		writeError(w, http.StatusBadRequest, "runtime evidenceHashes не может быть пустым")
+		writeError(w, http.StatusBadRequest, "Поле runtime evidenceHashes не может быть пустым")
 		return
 	}
 	for name, digest := range e.EvidenceHashes {
 		if strings.TrimSpace(name) == "" || !validSHA256Hex0212(strings.ToLower(strings.TrimSpace(digest))) {
-			writeError(w, http.StatusBadRequest, "runtime evidenceHashes содержит невалидный SHA-256")
+			writeError(w, http.StatusBadRequest, "Поле runtime evidenceHashes содержит некорректный SHA-256")
 			return
 		}
 	}
@@ -374,7 +374,7 @@ func (s Server) projectValidationPolicyPut0212(w http.ResponseWriter, r *http.Re
 	}
 	if strings.EqualFold(strings.TrimSpace(req.RequiredLevel), "runtime") {
 		if _, err := s.runtimeValidationKeys0212(); err != nil {
-			writeError(w, http.StatusConflict, "runtime policy нельзя включить без корректного LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON: "+err.Error())
+			writeError(w, http.StatusConflict, "Политику Runtime нельзя включить без корректного LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON: "+err.Error())
 			return
 		}
 	}

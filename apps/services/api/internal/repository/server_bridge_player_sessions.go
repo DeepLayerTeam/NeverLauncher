@@ -90,7 +90,7 @@ func (r *SQLRepository) invalidatePlayerSessionRowTx0197(ctx context.Context, tx
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE session_correlation_id=$1 AND status='active'`, correlationID, now.UTC()); err != nil {
 		return false, err
 	}
-	kickReason := "Launcher session invalidated"
+	kickReason := "Сеанс Launcher аннулирован"
 	if strings.TrimSpace(reason) != "" {
 		kickReason += ": " + strings.TrimSpace(reason)
 	}

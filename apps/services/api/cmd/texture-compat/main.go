@@ -70,7 +70,7 @@ func main() {
 	flag.StringVar(&opt.UUID, "uuid", "", "UUID локального профиля Minecraft")
 	flag.BoolVar(&opt.ExpectSkin, "expect-skin", true, "требовать активный управляемый скин")
 	flag.BoolVar(&opt.ExpectCape, "expect-cape", false, "требовать активный управляемый плащ")
-	flag.BoolVar(&opt.AllowLoopbackHTTP, "allow-loopback-http", false, "permit http://127.0.0.1 for local disposable integration tests")
+	flag.BoolVar(&opt.AllowLoopbackHTTP, "allow-loopback-http", false, "разрешить http://127.0.0.1 только для локальных одноразовых интеграционных тестов")
 	flag.Parse()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

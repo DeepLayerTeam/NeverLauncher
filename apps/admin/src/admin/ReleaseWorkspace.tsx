@@ -1171,7 +1171,7 @@ export function ReleaseWorkspace({
           )}
           <p>
             Реальная цепочка: validate → Ed25519 sign → stage → integrity-check
-            → runtime evidence (при необходимости).
+            → подтверждение среды выполнения (при необходимости).
           </p>
           <div className="buttonRow">
             <button
@@ -1237,11 +1237,11 @@ export function ReleaseWorkspace({
             Устаревший проверочный запуск и загружаемые свидетельства среды выполнения v1 не дают допуска
             в stable. Для stable требуется отдельная доверенная
             ValidationEvidence v4 от независимого аттестатора с полным покрытием
-            targets.
+            целевых платформ.
           </p>
           {form.channel.toLowerCase() !== "stable" && (
             <label className="field">
-              Signed runtime evidence (JSON-файл от CI/runtime-agent)
+              Подписанное подтверждение среды выполнения (JSON-файл от CI/runtime-agent)
               <input
                 disabled={
                   busy || !canPrepare || !form.packageId || !isPassed(report)

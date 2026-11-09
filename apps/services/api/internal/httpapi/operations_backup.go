@@ -124,26 +124,27 @@ func (s Server) operationsBackupRestore(w http.ResponseWriter, r *http.Request) 
 	}
 	var req operationsBackupRestoreRequest880
 	if err := json.NewDecoder(io.LimitReader(r.Body, 64<<10)).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "restore требует JSON с confirm/database/storage")
+		writeError(w, http.StatusBadRequest, "Для восстановления требуется JSON с полями confirm/database/storage")
 		return
 	}
 	if strings.TrimSpace(req.Confirm) != backupID {
-		writeError(w, http.StatusBadRequest, "для restore поле confirm должно точно совпадать с backupId")
+		writeError(w, http.StatusBadRequest, "Для восстановления значение confirm должно точно совпадать с backupId")
 		return
 	}
 	if !req.Database && !req.Storage {
-		writeError(w, http.StatusBadRequest, "restore требует database=true и/или storage=true")
+		writeError(w, http.StatusBadRequest, "Для восстановления требуется database=true и/или storage=true")
 		return
 	}
 	unlock := s.beginMaintenanceExclusive()
 	defer unlock()
 
-	// Перед destructive restore создаётся самостоятельный safety backup в том же
-	// maintenance-window. PostgreSQL restore выполняется одной транзакцией, а
-	// local-storage переключается атомарным rename каталога.
+	// Перед восстановлением с перезаписью данных создаётся отдельная страховочная
+	// резервная копия в рамках того же окна обслуживания. Восстановление PostgreSQL
+	// выполняется одной транзакцией, а локальное хранилище переключается
+	// атомарным переименованием каталога.
 	safety, safetyErr := s.createOperationsBackup880(r.Context())
 	if safetyErr != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать обязательный safety backup перед restore: "+safetyErr.Error())
+		writeError(w, http.StatusInternalServerError, "Не удалось создать обязательную страховочную резервную копию перед восстановлением: "+safetyErr.Error())
 		return
 	}
 	safetyID, _ := safety["backupId"].(string)
@@ -159,11 +160,11 @@ func (s Server) operationsBackupRestore(w http.ResponseWriter, r *http.Request) 
 	restored := make([]string, 0, 2)
 	if req.Database {
 		if !manifest.DatabaseDump {
-			writeError(w, http.StatusBadRequest, "backup не содержит PostgreSQL dump")
+			writeError(w, http.StatusBadRequest, "Резервная копия не содержит дамп PostgreSQL")
 			return
 		}
 		if err := restorePostgresDump880(r.Context(), s.Config.DatabaseDSN, filepath.Join(workDir, "database.dump")); err != nil {
-			writeError(w, http.StatusInternalServerError, "восстановление PostgreSQL не выполнено; safety backup="+safetyID+": "+err.Error())
+			writeError(w, http.StatusInternalServerError, "Восстановление PostgreSQL не выполнено; страховочная копия="+safetyID+": "+err.Error())
 			return
 		}
 		restored = append(restored, "database")
@@ -171,7 +172,7 @@ func (s Server) operationsBackupRestore(w http.ResponseWriter, r *http.Request) 
 	if req.Storage {
 		count, err := s.restoreStorageObjects880(workDir)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "восстановление storage не выполнено; safety backup="+safetyID+": "+err.Error())
+			writeError(w, http.StatusInternalServerError, "Восстановление файлового хранилища не выполнено; страховочная копия="+safetyID+": "+err.Error())
 			return
 		}
 		restored = append(restored, fmt.Sprintf("storage:%d", count))

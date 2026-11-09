@@ -33,7 +33,7 @@ const (
 
 var (
 	ErrClosed        = errors.New("Хранилище SQLite закрыто")
-	ErrCommitUnknown = errors.New("sqlite durable commit returned an error; outcome: требуется «согласовано до повторного воспроизведения»")
+	ErrCommitUnknown = errors.New("Не удалось подтвердить фиксацию транзакции SQLite; перед повтором требуется сверить итог операции")
 	ErrPoisoned      = errors.New("Состояние транзакции SQLite неопределённо; закройте хранилище и проверьте его через новое подключение до обработки запросов")
 )
 

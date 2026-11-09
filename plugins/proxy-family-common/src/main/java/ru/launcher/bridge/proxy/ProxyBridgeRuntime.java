@@ -340,7 +340,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
             throw new IllegalStateException("Не удалось вычислить SHA-256 работающего JAR плагина");
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
-        BridgeRuntimeDescriptor descriptor = Objects.requireNonNull(runtimeDescriptorSupplier.get(), "runtime descriptor");
+        BridgeRuntimeDescriptor descriptor = Objects.requireNonNull(runtimeDescriptorSupplier.get(), "описание среды выполнения");
         LauncherApiClient api = new LauncherApiClient(config, identity, platformId, BridgeDefaults.VERSION, pluginSha256, descriptor);
         return new RuntimeState(config, identity, api, pluginSha256);
     }

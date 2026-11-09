@@ -65,7 +65,7 @@ public final class LauncherVanillaBridge implements AutoCloseable {
         if (config.requireIntegrity && !BridgeIntegrity.isSha256(artifactSha256)) throw new IllegalStateException("Не удалось вычислить SHA-256 работающего JAR моста Vanilla");
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         BridgeRuntimeDescriptor descriptor = BridgeRuntimeDescriptor.of(
-            discoverMinecraftVersion(), "vanilla", "Mojang Dedicated Server", "", "Vanilla dedicated server",
+            discoverMinecraftVersion(), "vanilla", "Mojang Dedicated Server", "", "Выделенный сервер Minecraft без модификаций",
             List.of("heartbeat.signed", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation", "telemetry.server-v1", "events.ordered-stream-v1", "control.secure-channel-v1", "sidecar.rcon", "sidecar.log-tail")
         );
         BridgeAdapterProfiles.rejectUncertifiedHybrid("vanilla", descriptor.serverBrand());

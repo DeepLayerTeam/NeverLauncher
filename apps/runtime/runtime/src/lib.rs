@@ -989,7 +989,7 @@ pub async fn certify_vanilla_compatibility(
     linux_policy::prepare_runtime_command(&mut command);
     let mut child = command.spawn().map_err(|err| format!("не удалось запустить Vanilla {version}: {err}"))?;
     let _runtime_policy = windows_policy::enforce_runtime_process(&mut child)
-        .map_err(|err| format!("Vanilla certification заблокирован runtime policy: {err}"))?;
+        .map_err(|err| format!("Сертификация Vanilla заблокирована политикой среды выполнения: {err}"))?;
     #[cfg(target_os = "linux")]
     if let Err(reason) = linux_policy::runtime_policy(&mut child) {
         if let Some(pid) = child.id() { let _ = linux_policy::terminate_runtime_process_group(pid); }

@@ -299,7 +299,7 @@ func collect(root string) (Report, error) {
 	if err != nil {
 		return Report{}, err
 	}
-	report := Report{Schema: 1, Scope: "source-wide Go AST + SQL/config/shell/Python/CI text; excludes vendored/generated binary dependencies", MethodSurface: surface, Dependencies: []File{}}
+	report := Report{Schema: 1, Scope: "анализ исходного кода Go (AST), SQL, конфигураций, shell-скриптов, Python и CI; без сторонних и сгенерированных двоичных зависимостей", MethodSurface: surface, Dependencies: []File{}}
 	ignoredDirs := map[string]bool{".git": true, "node_modules": true, "target": true, "dist": true, "build": true, "vendor": true, "__pycache__": true, ".venv": true}
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

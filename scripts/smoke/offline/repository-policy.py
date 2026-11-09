@@ -886,7 +886,7 @@ for required in ["operations/migrations/apply", "isMaintenanceOperation"]:
     if required not in maintenance_go:
         fail(f"maintenance gate не защищает migration/backup lifecycle: {required}")
 for required in [
-    "safety backup",
+    "страховочную резервную копию",
     "restoreLocalStorageAtomic880",
     "os.Rename",
     "--single-transaction",
