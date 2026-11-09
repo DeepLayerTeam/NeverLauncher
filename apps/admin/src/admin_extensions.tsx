@@ -975,20 +975,20 @@ export function AdminExtensions({
                     runtime.executionTrust === "os-isolated"
                       ? "Изолировано средствами ОС"
                       : runtime.executionTrust === "legacy-unisolated"
-                        ? "Без подтверждённой OS-изоляции"
+                        ? "Без подтверждённой изоляции ОС"
                         : "Не подтверждено"}
                   </strong>{" "}
                   · {runtime.state ? statusRu(runtime.state) : "не запущено"}
                 </p>
                 <p className="muted">
                   ОС: {runtime.osSandbox ? statusRu(runtime.osSandbox) : "не проверено"} · ресурсы:{" "}
-                  {runtime.resourceIsolation ?? "не проверено"} · сеть:{" "}
+                  {runtime.resourceIsolation ? statusRu(runtime.resourceIsolation) : "не проверено"} · сеть:{" "}
                   {runtime.networkSandbox ? statusRu(runtime.networkSandbox) : "не проверено"} · файлы:{" "}
                   {runtime.filesystemSandbox ? statusRu(runtime.filesystemSandbox) : "не проверено"}
                 </p>
                 {!!runtime.isolationReasonCodes?.length && (
                   <p className="error">
-                    Причины отказа: {runtime.isolationReasonCodes.join(", ")}
+                    Причины отказа: {runtime.isolationReasonCodes.map(statusRu).join(", ")}
                   </p>
                 )}
                 {runtime.isolationStatus === "isolated" && (

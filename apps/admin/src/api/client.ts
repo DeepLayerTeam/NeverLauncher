@@ -29,13 +29,13 @@ export async function requestJSON<T>(backendUrl: string, path: string, token?: s
     if (init.signal?.aborted) throw cause;
     const message = cause instanceof Error ? cause.message : 'Сеть недоступна';
     if (mutation) throw new IndeterminateApiError(method,
-      `Нет ответа Backend (${message}). Результат операции неизвестен: проверьте job/аудит или повторите запрос только с исходным idempotency key.`);
+      `Нет ответа сервера (${message}). Результат операции неизвестен: проверьте задание и журнал аудита. Повторять запрос можно только с прежним ключом идемпотентности.`);
     throw new ApiError(0, `Сервер недоступен (${message}). Проверьте соединение и обновите страницу.`, 'backend-unavailable');
   }
   let payload: unknown;
   try { payload = response.status === 204 ? null : await response.json(); }
   catch {
-    if (response.ok && mutation) throw new IndeterminateApiError(method, 'Сервер вернул не-JSON ответ после изменения. Результат неизвестен: проверьте аудит/job перед повтором.');
+    if (response.ok && mutation) throw new IndeterminateApiError(method, 'Сервер вернул ответ не в формате JSON после изменения данных. Результат неизвестен: перед повтором проверьте журнал аудита и задание.');
     if (response.ok) throw new ApiError(response.status, 'Сервер вернул некорректный JSON. Повторите чтение.', 'invalid-backend-response');
     throw new ApiError(response.status, `HTTP ${response.status}: Сервер вернул ответ без структурированной ошибки`, 'invalid-backend-response');
   }

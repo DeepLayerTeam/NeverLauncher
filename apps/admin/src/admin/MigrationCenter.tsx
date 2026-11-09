@@ -1912,8 +1912,8 @@ export function MigrationCenter0331({
               <p>
                 Проверка:{" "}
                 {contentState.validation || "требуется повторная проверка"}.
-                Сборка и подпись выполняются через стандартные операции Build
-                Workspace и Packages.
+                Сборка и подпись выполняются через стандартные операции
+                рабочей области сборки и управления пакетами.
               </p>
               {contentState.plan.optional && (
                 <button
@@ -1924,7 +1924,7 @@ export function MigrationCenter0331({
                   }
                   onClick={() => void applyOptionals0337()}
                 >
-                  Применить проверенный optional catalog к unsigned draft
+                  Применить проверенный каталог необязательных компонентов к неподписанному черновику
                 </button>
               )}
             </>
@@ -1937,7 +1937,7 @@ export function MigrationCenter0331({
           <p>
             Статическая проверка JAR без запуска. Неизвестные исполняемые модули
             блокируют миграцию до переноса исходников либо сертифицированного
-            адаптера. Старые ServerWrapper токены не применяются.
+            адаптера. Старые токены ServerWrapper не применяются.
           </p>
           <button
             disabled={
@@ -1966,9 +1966,9 @@ export function MigrationCenter0331({
               {modules0338.ready && modules0338.wrappers.length > 0 && (
                 <>
                   <p>
-                    Для подключения Never ServerBridge нужен новый Ed25519
-                    publicKey; private key остаётся на игровом сервере.
-                    Регистрация не завершает проверку login/join.
+                    Для подключения ServerBridge необходим новый открытый ключ
+                    Ed25519; закрытый ключ остаётся на игровом сервере.
+                    Регистрация не заменяет проверку входа и подключения к игре.
                   </p>
                   <label className="field">
                     <span>Файл ServerWrapper из отчёта</span>
@@ -2031,7 +2031,7 @@ export function MigrationCenter0331({
                     />
                   </label>
                   <label className="field">
-                    <span>Новый publicKey Ed25519 base64url</span>
+                    <span>Новый открытый ключ Ed25519 (base64url)</span>
                     <input
                       value={bridgePublicKey0338}
                       onChange={(e) => setBridgePublicKey0338(e.target.value)}
@@ -2043,12 +2043,12 @@ export function MigrationCenter0331({
                       checked={bridgeFreshKeys0338}
                       onChange={(e) => setBridgeFreshKeys0338(e.target.checked)}
                     />{" "}
-                    Независимый новый Ed25519 keypair Never, не унаследованный
+                    Новая независимая пара ключей Ed25519 для Never, не унаследованная
                     от Gravit
                   </label>
                   <label className="field">
                     <span>
-                      Введите точный run ID (требуется свежая MFA-сессия)
+                      Введите точный ID запуска (требуется новая сессия с многофакторной проверкой)
                     </span>
                     <input
                       value={bridgeConfirm0338}
@@ -2067,7 +2067,7 @@ export function MigrationCenter0331({
                     }
                     onClick={() => void enrollBridge0338()}
                   >
-                    Зарегистрировать новый ServerBridge node
+                    Зарегистрировать новый узел ServerBridge
                   </button>
                   <p>После установки ServerBridge на игровой сервер проверьте реальный подписанный сигнал состояния. Регистрация ключа не означает готовность к переключению.</p>
                   <button disabled={busy || !wrapperPath0338} onClick={() => void checkBridge0446()}>
@@ -2076,7 +2076,7 @@ export function MigrationCenter0331({
                   {bridgeStatus0446 && (
                     <p role="status">
                       Узел {bridgeStatus0446.serverId}: {statusRu(bridgeStatus0446.state)} ({statusRu(bridgeStatus0446.reason)}).
-                      Даже при online требуется игровая репетиция login/join перед переключением.
+                      Даже при подключённом узле требуется проверить вход в игру и подключение к серверу перед переключением.
                     </p>
                   )}
                 </>
@@ -2359,7 +2359,7 @@ export function MigrationCenter0331({
                     }
                     onClick={() => void rollbackAction03312("plan", route)}
                   >
-                    Plan: сверить изменения с MIG10
+                    План: сверить изменения с MIG10
                   </button>
                   <button
                     disabled={
@@ -2371,7 +2371,7 @@ export function MigrationCenter0331({
                     }
                     onClick={() => void rollbackAction03312("commit", route)}
                   >
-                    Commit: вернуть прежний Never channel head (многофакторная проверка)
+                    Подтвердить: восстановить прежний указатель канала Never (многофакторная проверка)
                   </button>
                   {rollbackPlan03312 &&
                     rollbackPlan03312.profileId === route.profileId &&
@@ -2391,7 +2391,7 @@ export function MigrationCenter0331({
               )}
               {route.state === "rolled_back" && (
                 <p>
-                  Never channel head возвращён. Gravit не перезапущен; проверьте
+                  Указатель канала Never восстановлен. Gravit не перезапущен; проверьте
                   состояние игроков и завершите внешнее переключение отдельно.
                 </p>
               )}
@@ -2403,9 +2403,9 @@ export function MigrationCenter0331({
         <article className="subcard">
           <h3>Отчёты и сертификация RC · MIG13</h3>
           <p>
-            Отчёт формируется из реальных MIG03–MIG12 receipts. Статус blocked
-            запрещает утверждение; review_required означает только необходимость
-            независимой проверки, а не production GA.
+            Отчёт формируется из реальных подтверждений этапов MIG03–MIG12.
+            Состояние blocked запрещает утверждение; review_required означает
+            необходимость независимой проверки, а не сертификацию промышленного выпуска.
           </p>
           <button
             disabled={busy}
@@ -2417,7 +2417,7 @@ export function MigrationCenter0331({
             disabled={busy}
             onClick={() => void reportAction03313("status")}
           >
-            Прочитать зафиксированный RC review
+            Прочитать зафиксированный предрелизный отчёт
           </button>
           {report03313 && (
             <>
@@ -2470,7 +2470,7 @@ export function MigrationCenter0331({
                 />
               </label>
               <label className="field">
-                <span>Подтвердите точный run ID (многофакторная проверка)</span>
+                <span>Подтвердите точный ID запуска (многофакторная проверка)</span>
                 <input
                   value={reportConfirm03313}
                   onChange={(e) => setReportConfirm03313(e.target.value)}
@@ -2487,7 +2487,7 @@ export function MigrationCenter0331({
                 }
                 onClick={() => void reportAction03313("review")}
               >
-                Зафиксировать неизменяемый RC review (не GA)
+                Зафиксировать неизменяемый предрелизный отчёт (не GA-сертификация)
               </button>
             </>
           )}
