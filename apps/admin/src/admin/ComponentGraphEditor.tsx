@@ -122,7 +122,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
       <label className="field">Группа<select value={component.groupId||''} onChange={e=>changeComponent({groupId:e.target.value||undefined})}><option value="">Без группы</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
       <TextField label="Взаимоисключающая группа" value={component.exclusiveGroup||''} onChange={exclusiveGroup=>changeComponent({exclusiveGroup})}/>
       <h5>Подписанные файлы</h5>
-      {availableFiles.map(f=><label key={f.path} className="componentEditorFile0248"><input type="checkbox" checked={component.files.includes(f.path)} onChange={e=>changeComponent({files:e.target.checked?[...component.files,f.path]:component.files.filter(p=>p!==f.path),actions:!e.target.checked?component.actions?.filter(a=>a.path!==f.path):component.actions})}/><code>{f.path}</code> ({f.size} B)</label>)}
+      {availableFiles.map(f=><label key={f.path} className="componentEditorFile0248"><input type="checkbox" checked={component.files.includes(f.path)} onChange={e=>changeComponent({files:e.target.checked?[...component.files,f.path]:component.files.filter(p=>p!==f.path),actions:!e.target.checked?component.actions?.filter(a=>a.path!==f.path):component.actions})}/><code>{f.path}</code> ({f.size} байт)</label>)}
       {!availableFiles.length&&<p className="muted">Нет доступных необязательных файлов. Загрузите их в пакет перед назначением.</p>}
       <MultiField label="Зависимости (ID [диапазон версий SemVer], по одной на строке)" value={formatRelations0248(component.dependencies)} onChange={t=>changeComponent({dependencies:parseRelations0248(t)})}/>
       <MultiField label="Конфликты (ID [диапазон версий SemVer])" value={formatRelations0248(component.conflicts)} onChange={t=>changeComponent({conflicts:parseRelations0248(t)})}/>
@@ -162,7 +162,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
    </div>
   </fieldset>
   <GravitOptionalImport02411 key={`${packageId}:${initialRevision}`} api={api} packageId={packageId} revision={initialRevision} enabled={usable} onCandidate={edit}/>
-  {showGraph&&<div className="componentEditorGraph0248"><h5>Граф зависимостей и конфликтов</h5><ul>{components.map(c=><li key={c.id}><strong>{c.id}</strong>{c.dependencies?.length?' → '+c.dependencies.map(r=>r.id+(r.versionRange?' ('+r.versionRange+')':'')).join(', '):''}{c.conflicts?.length?' · конфликтует: '+c.conflicts.map(r=>r.id).join(', '):''}{c.exclusiveGroup?' · exclusive '+c.exclusiveGroup:''}</li>)}</ul></div>}
+  {showGraph&&<div className="componentEditorGraph0248"><h5>Граф зависимостей и конфликтов</h5><ul>{components.map(c=><li key={c.id}><strong>{c.id}</strong>{c.dependencies?.length?' → '+c.dependencies.map(r=>r.id+(r.versionRange?' ('+r.versionRange+')':'')).join(', '):''}{c.conflicts?.length?' · конфликтует: '+c.conflicts.map(r=>r.id).join(', '):''}{c.exclusiveGroup?' · взаимоисключающая группа: '+c.exclusiveGroup:''}</li>)}</ul></div>}
   <button onClick={()=>setShowGraph(v=>!v)}>{showGraph?'Скрыть граф':'Показать граф'}</button>
   {localErrors.length>0&&<div role="alert" className="error"><strong>Локальные замечания:</strong><ul>{localErrors.map((x,i)=><li key={i}>{x}</li>)}</ul></div>}
   {preview&&<div className="releaseEffect" role="status"><strong>{preview.valid?'Сервер: проверка пройдена':'Сервер: каталог недопустим'}</strong><p>Ревизия r{preview.revision} · хеш <code>{preview.digest}</code></p>

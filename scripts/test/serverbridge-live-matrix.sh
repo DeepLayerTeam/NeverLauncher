@@ -4,7 +4,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCOPE="${1:---all}"
-case "$SCOPE" in --all) target=all ;; --core) target=core ;; *) echo 'usage: serverbridge-live-matrix-04113.sh [--core|--all]' >&2; exit 2 ;; esac
+case "$SCOPE" in --all) target=all ;; --core) target=core ;; *) echo 'Использование: serverbridge-live-matrix-04113.sh [--core|--all]' >&2; exit 2 ;; esac
 for executable in docker java gradle go cargo jq psql mvn; do
   command -v "$executable" >/dev/null || {
     echo "[0.41.13] отсутствует обязательный исполняемый файл реального Runtime: $executable" >&2; exit 1;

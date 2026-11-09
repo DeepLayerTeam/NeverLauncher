@@ -58,7 +58,7 @@ function displayValue(row: Item, col: Column): string {
 function details(item: Item): [string, unknown][] { return Object.entries(item).filter(([key]) => !['passwordHash', 'token', 'refreshToken'].includes(key)); }
 export function StructuredDetails({ value, depth = 0, fieldName = '' }: { value: unknown; depth?: number; fieldName?: string }) {
   if (depth > 3) return <span className="muted">Дополнительные вложенные сведения доступны через API</span>;
-  if (Array.isArray(value)) return <ul className="structuredList">{value.slice(0, 50).map((item, index) => <li key={index}><StructuredDetails value={item} depth={depth + 1}/></li>)}</ul>;
+  if (Array.isArray(value)) return <ul className="structuredList">{value.slice(0, 50).map((item, index) => <li key={index}><StructuredDetails value={item} depth={depth + 1} fieldName={fieldName}/></li>)}</ul>;
   if (isRecord(value)) return <dl className="structuredFields">{Object.entries(value).slice(0, 70).map(([field, item]) => <div key={field}><dt title={field}>{resourceFieldRu(field)}</dt><dd><StructuredDetails value={item} depth={depth + 1} fieldName={field}/></dd></div>)}</dl>;
   return <span>{displayScalar(value, fieldName)}</span>;
 }
