@@ -1291,7 +1291,7 @@ def main() -> int:
         if args.network_ha and args.action == "restore-fresh" and world_backups:
             raise DrillError("Параметры резервных копий игровых миров допустимы только для backup")
         if not args.network_ha and (world_backups or world_destinations):
-            raise DrillError("world recovery: требуется --network-ha")
+            raise DrillError("Для восстановления мира требуется --network-ha")
         if args.network_ha and args.action == "backup" and not args.s3_source_bucket:
             raise DrillError("network-ha backup: требуется --s3-source-bucket")
         if args.action == "restore-fresh" and not args.ready_url:

@@ -116,7 +116,7 @@ func (s Server) storageIntegrityReport(ctx context.Context) (map[string]any, boo
 		})
 		sort.Strings(orphans)
 		for _, orphan := range orphans {
-			problems = append(problems, problem{Path: orphan, Kind: "orphan", Message: "объект отсутствует в repository metadata"})
+			problems = append(problems, problem{Path: orphan, Kind: "orphan", Message: "объект отсутствует в метаданных репозитория"})
 		}
 	}
 

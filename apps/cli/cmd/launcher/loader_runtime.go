@@ -480,7 +480,7 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 		return loaderMetaEntry{}, "", "", fmt.Errorf("%s метаданные версии загрузчика повреждены: %w", loader, err)
 	}
 	if len(entries) == 0 {
-		return loaderMetaEntry{}, "", "", fmt.Errorf("для Minecraft %s нет совместимых %s loader versions", minecraftVersion, loader)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("Для Minecraft %s нет совместимых версий загрузчика %s", minecraftVersion, loader)
 	}
 	selected, err := selectModernMetaEntry0272(loader, minecraftVersion, requested, entries)
 	if err != nil {
@@ -609,7 +609,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 		if artifactURL == "" {
 			base := strings.TrimSpace(lib.URL)
 			if base == "" {
-				return nil, fmt.Errorf("loader library %s не содержит Maven repository URL", lib.Name)
+				return nil, fmt.Errorf("В библиотеке загрузчика %s отсутствует URL репозитория Maven", lib.Name)
 			}
 			artifactURL = strings.TrimRight(base, "/") + "/" + strings.TrimLeft(rel, "/")
 		}

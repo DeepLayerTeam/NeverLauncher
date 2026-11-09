@@ -336,7 +336,7 @@ func bridgeRollout02812(args []string) error {
 			}
 		}
 		if e := bridgeWaitHostExit02812(root); e != nil {
-			return fmt.Errorf("Ошибка: поэтапное развёртывание: %v; rollback BLOCKED pending supervisor exit: %w", problem, e)
+			return fmt.Errorf("Ошибка поэтапного развёртывания: %v; откат заблокирован до завершения работы Host Supervisor: %w", problem, e)
 		}
 		state, e := readBridgeProvisionState0199(existingPath)
 		if e != nil {

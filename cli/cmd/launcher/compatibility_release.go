@@ -520,10 +520,10 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		return releaseCompatibilityCertification{}, fmt.Errorf("Несовпадение версии продукта в проверке совместимости: релиз=%s, цели=%s, матрица=%s", ver, targets.ProductVersion, matrix.ProductVersion)
 	}
 	if matrix.Status != "passed" || len(matrix.Errors) != 0 {
-		return releaseCompatibilityCertification{}, errors.New("compatibility matrix не имеет fail-closed status=passed")
+		return releaseCompatibilityCertification{}, errors.New("В матрице совместимости отсутствует обязательный статус status=passed (при неопределённости выпуск блокируется)")
 	}
 	if strings.TrimSpace(matrix.Repository) == "" || strings.TrimSpace(matrix.Commit) == "" || strings.TrimSpace(matrix.RunID) == "" {
-		return releaseCompatibilityCertification{}, errors.New("compatibility matrix не содержит repository/commit/runId")
+		return releaseCompatibilityCertification{}, errors.New("В матрице совместимости отсутствуют сведения repository/commit/runId")
 	}
 	if strings.TrimSpace(expectedCommit) != "" && matrix.Commit != strings.TrimSpace(expectedCommit) {
 		return releaseCompatibilityCertification{}, fmt.Errorf("Не совпадает коммит матрицы совместимости: ожидался=%s, получен=%s", strings.TrimSpace(expectedCommit), matrix.Commit)
@@ -584,7 +584,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 		}
 	}
 	if len(requiredIDs) == 0 {
-		return releaseCompatibilityCertification{}, errors.New("compatibility targets не содержат required targets")
+		return releaseCompatibilityCertification{}, errors.New("Список целей совместимости не содержит обязательных целей")
 	}
 	if enhanced {
 		for loader := range allowedLoaders {
@@ -993,7 +993,7 @@ func validateCompatibilityEvidence(matrixRaw, targetsRaw []byte, ver, expectedCo
 			return releaseCompatibilityCertification{}, fmt.Errorf("Матрица содержит неожиданную целевую платформу: %s", id)
 		}
 		if _, exists := resultByID[id]; exists {
-			return releaseCompatibilityCertification{}, fmt.Errorf("matrix содержит duplicate target: %s", id)
+			return releaseCompatibilityCertification{}, fmt.Errorf("Матрица содержит повторяющуюся цель: %s", id)
 		}
 		resultByID[id] = result
 	}

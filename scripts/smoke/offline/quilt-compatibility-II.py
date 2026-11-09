@@ -57,7 +57,7 @@ for row in quilt_rows:
     by_version[minecraft] = row
 if set(by_version) != set(expected):
     raise SystemExit(
-        f"Quilt 0.17.2 release grid: несоответствие — missing={sorted(set(expected) - set(by_version))} extra={sorted(set(by_version) - set(expected))}"
+        f"Quilt 0.17.2 матрица релизов: несоответствие — отсутствуют={sorted(set(expected) - set(by_version))} лишние={sorted(set(by_version) - set(expected))}"
     )
 for minecraft, java_major in expected.items():
     row = by_version[minecraft]

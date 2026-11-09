@@ -479,7 +479,7 @@ def extensions(cli: Path, backend: str, coords: list[str], channel: str):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='action', required=True)
-    standard_cmd = sub.add_parser('standard', help="Обновить образы Standard API/Admin Compose с холодной копией и откатом")
+    standard_cmd = sub.add_parser('standard', help="Обновить образы стандартных API и панели администратора в Docker Compose с холодной копией и возможностью отката")
     for key in ('project', 'confirm', 'source-env', 'target-env', 'backup'):
         standard_cmd.add_argument('--' + key, required=True,
                                   type=Path if key.endswith('env') or key == 'backup' else str)

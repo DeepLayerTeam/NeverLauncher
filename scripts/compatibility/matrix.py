@@ -676,7 +676,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"Fabric Compatibility II 0.17.1 release grid: несоответствие — missing={missing} extra={extra}"
+                f"Fabric Compatibility II 0.17.1 матрица релизов: несоответствие — отсутствуют={missing} лишние={extra}"
             )
         if len(required_fabric_rows) != len(FABRIC_COMPATIBILITY_II_0171):
             die(
@@ -722,7 +722,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"Quilt Compatibility II 0.17.2 release grid: несоответствие — missing={missing} extra={extra}"
+                f"Quilt Compatibility II 0.17.2 матрица релизов: несоответствие — отсутствуют={missing} лишние={extra}"
             )
         if len(required_quilt_rows) != len(QUILT_COMPATIBILITY_II_0172):
             die(
@@ -816,7 +816,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             }
         )
         if unexpected:
-            die(f"Forge Modern 0.17.3: неожиданный результат — required targets: {unexpected}")
+            die(f"Forge Modern 0.17.3: неожиданные обязательные цели: {unexpected}")
 
     if forge_legacy_1122_0174_required():
         legacy_rows = [
@@ -828,7 +828,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         ]
         if len(legacy_rows) != 1:
             die(
-                f"Forge Legacy 1.12.2 0.17.4: требуется ровно one required target, получено {len(legacy_rows)}"
+                f"Forge Legacy 1.12.2 0.17.4: требуется ровно одна обязательная цель, получено {len(legacy_rows)}"
             )
         target = legacy_rows[0]
         if target["javaMajor"] != 8 or target["scope"] != "client":
@@ -850,7 +850,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         ]
         if len(legacy_rows) != 1:
             die(
-                f"Forge Legacy 1.7.10 0.17.5: требуется ровно one required target, получено {len(legacy_rows)}"
+                f"Forge Legacy 1.7.10 0.17.5: требуется ровно одна обязательная цель, получено {len(legacy_rows)}"
             )
         target = legacy_rows[0]
         if target["javaMajor"] != 8 or target["scope"] != "client":
@@ -877,7 +877,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"NeoForge Compatibility II 0.17.6 release grid: несоответствие — missing={missing} extra={extra}"
+                f"NeoForge Compatibility II 0.17.6 матрица релизов: несоответствие — отсутствуют={missing} лишние={extra}"
             )
         if len(required_rows) != len(NEOFORGE_COMPATIBILITY_II_0176):
             die(
@@ -923,7 +923,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 missing = sorted(expected_platforms - actual_platforms)
                 extra = sorted(actual_platforms - expected_platforms)
                 die(
-                    f"Cross-platform Loaders 0.17.9 {loader} {minecraft} grid: несоответствие — missing={missing} extra={extra} rows={len(rows)}"
+                    f"Cross-platform Loaders 0.17.9 {loader} {minecraft}: матрица релизов не совпадает — отсутствуют={missing}, лишние={extra}, строк={len(rows)}"
                 )
             for target in rows:
                 if target["javaMajor"] != java_major or target["scope"] != "client":

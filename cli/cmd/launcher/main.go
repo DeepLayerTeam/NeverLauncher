@@ -420,7 +420,7 @@ func handleManifest(args []string) error {
 		if target := flagValue(args, "--compat", ""); target != "" {
 			var warnings []string
 			if strings.TrimSpace(manifest.SchemaVersion) == "" {
-				warnings = append(warnings, "поле schemaVersion должно быть явно зафиксировано для canonical manifest contract")
+				warnings = append(warnings, "для канонического контракта манифеста необходимо явно указать поле schemaVersion")
 			}
 			printJSON(compatibilityReport("manifest", target, args[1], warnings, nil))
 			return nil

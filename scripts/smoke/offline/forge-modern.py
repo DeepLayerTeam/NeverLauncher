@@ -57,7 +57,7 @@ for row in forge_rows:
     by_version[minecraft] = row
 if set(by_version) != set(expected):
     raise SystemExit(
-        f"Forge Modern 0.17.3 release grid: несоответствие — missing={sorted(set(expected) - set(by_version))} extra={sorted(set(by_version) - set(expected))}"
+        f"Forge Modern 0.17.3 матрица релизов: несоответствие — отсутствуют={sorted(set(expected) - set(by_version))} лишние={sorted(set(by_version) - set(expected))}"
     )
 for minecraft, java_major in expected.items():
     row = by_version[minecraft]

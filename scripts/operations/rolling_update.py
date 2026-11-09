@@ -320,7 +320,7 @@ def remote(target, script, directory, project, operation, *, timeout=540):
 
 
 class PGAdvisoryLock:
-    """Одна PostgreSQL advisory lock на время сеанса для всех операций SSH."""
+    """Одна консультативная блокировка PostgreSQL на время сеанса для всех операций SSH."""
     def __init__(self, dsn_file):
         self.dsn_file = dsn_file
         self.process = None

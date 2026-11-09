@@ -214,7 +214,7 @@ def validate_preflight(env: dict[str, str]) -> str:
     if not root.is_absolute() or not root.is_dir() or root.is_symlink():
         raise GateError("Для тестового тома SQLite требуется существующий абсолютный путь к каталогу")
     if root.stat().st_mode & 0o077:
-        raise GateError("SQLite test root: требуется приватные права 0700")
+        raise GateError("Каталог тестовой базы SQLite должен иметь закрытые права доступа 0700")
     return str(root.resolve())
 
 

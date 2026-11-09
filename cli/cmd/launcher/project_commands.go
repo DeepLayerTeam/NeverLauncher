@@ -58,7 +58,7 @@ func handleProject(args []string) error {
 		}
 	}
 	if _, ok := project["profiles"]; !ok {
-		warnings = append(warnings, "для canonical project contract желательно явно описать profiles")
+		warnings = append(warnings, "для канонического контракта проекта рекомендуется явно указать profiles")
 	}
 	report := compatibilityReport("project", target, path, warnings, errs)
 	printJSON(report)
@@ -76,7 +76,7 @@ type canonicalOpenAPIDocument struct {
 func canonicalOpenAPIErrors(data []byte) []string {
 	var document canonicalOpenAPIDocument
 	if err := json.Unmarshal(data, &document); err != nil {
-		return []string{"canonical OpenAPI должен быть валидным JSON/YAML-совместимым документом: " + err.Error()}
+		return []string{"Канонический документ OpenAPI должен иметь корректный формат JSON или YAML: " + err.Error()}
 	}
 	errs := make([]string, 0)
 	if document.OpenAPI != "3.1.1" {
@@ -84,13 +84,13 @@ func canonicalOpenAPIErrors(data []byte) []string {
 	}
 	for _, path := range []string{"/health", "/ready", "/api/v1/status"} {
 		if _, ok := document.Paths[path]; !ok {
-			errs = append(errs, "в canonical OpenAPI отсутствует путь "+path)
+			errs = append(errs, "В каноническом документе OpenAPI отсутствует путь "+path)
 		}
 	}
 	for path := range document.Paths {
 		for _, legacy := range []string{"/api/v2", "/api/v3", "/api/v4", "/api/v5"} {
 			if path == legacy || strings.HasPrefix(path, legacy+"/") {
-				errs = append(errs, "canonical OpenAPI содержит удалённый historical path "+path)
+				errs = append(errs, "В каноническом документе OpenAPI присутствует удалённый исторический маршрут "+path)
 			}
 		}
 	}
@@ -111,7 +111,7 @@ func handleAPI(args []string) error {
 	report := compatibilityReport("api", target, openapiPath, nil, errs)
 	printJSON(report)
 	if len(errs) > 0 {
-		return errors.New("API-контракт не прошёл canonical compatibility-check")
+		return errors.New("API-контракт не прошёл каноническую проверку совместимости")
 	}
 	return nil
 }
@@ -153,7 +153,7 @@ func handleTenant(args []string) error {
 		printJSON(map[string]any{
 			"schemaVersion": "1.0",
 			"tenantId":      profile.TenantID,
-			"checks":        []string{"изолировать проекты по tenantId", "использовать отдельный storage prefix", "проверить RBAC-права проекта", "проверить audit log по tenantId"},
+			"checks":        []string{"изолировать проекты по tenantId", "использовать отдельный префикс хранилища", "проверить RBAC-права проекта", "проверить журнал аудита по tenantId"},
 			"storage":       profile.Storage,
 			"limits":        profile.Limits,
 		})
@@ -341,12 +341,12 @@ func isHexColor(value string) bool {
 
 func handleSDK(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные sdk-подкоманды: list, init, validate (legacy aliases; prefer nl extension init/test)")
+		return errors.New("Доступные подкоманды sdk: list, init, validate (устаревшие псевдонимы; предпочтительны nl extension init/test)")
 	}
 	sdks := []map[string]string{
 		{"target": "backend", "language": "go", "path": "sdk/backend/go", "purpose": "серверные расширения Backend API"},
-		{"target": "admin", "language": "typescript", "path": "sdk/admin/typescript", "purpose": "страницы и виджеты Admin Panel"},
-		{"target": "desktop", "language": "typescript/rust", "path": "sdk/desktop", "purpose": "панели и действия Desktop Client"},
+		{"target": "admin", "language": "typescript", "path": "sdk/admin/typescript", "purpose": "страницы и виджеты панели администратора"},
+		{"target": "desktop", "language": "typescript/rust", "path": "sdk/desktop", "purpose": "панели и действия настольного клиента"},
 		{"target": "cli", "language": "go", "path": "sdk/cli/go", "purpose": "дополнительные CLI-команды"},
 	}
 	switch args[0] {
@@ -387,7 +387,7 @@ func sdkEntrypoint(target string) string {
 }
 
 func sdkReadme(target string) string {
-	return "# Расширение Launcher\\n\\nЦель: " + target + "\\n\\nФайл `launcher-extension.json` описывает расширение. Исходный файл entrypoint создаётся как стартовый шаблон для SDK Launcher 3.7.\\n"
+	return "# Расширение Launcher\\n\\nЦель: " + target + "\\n\\nФайл `launcher-extension.json` описывает расширение. Исходный файл точки входа создаётся как стартовый шаблон для SDK Launcher 3.7.\\n"
 }
 
 func sdkTemplate(target string) string {
@@ -454,7 +454,7 @@ func handlePlugin(args []string) error {
 		}
 		if len(errs) > 0 {
 			printJSON(map[string]any{"valid": false, "legacy": true, "errors": errs})
-			return errors.New("legacy plugin manifest не прошёл проверку")
+			return errors.New("Манифест устаревшего плагина не прошёл проверку")
 		}
 		printJSON(map[string]any{"valid": true, "legacy": true, "deprecated": true, "id": manifest.ID, "target": manifest.Target, "api": manifest.API, "migration": "nl extension import-legacy <launcher-plugin.json> --publisher <publisher>"})
 		return nil
