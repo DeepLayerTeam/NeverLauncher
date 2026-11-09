@@ -169,7 +169,7 @@ func (s Server) runtimeRequirements(w http.ResponseWriter, r *http.Request) {
 func (s Server) launchTemplate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id":          "recommended",
-		"name":        "Recommended",
+		"name":        "Рекомендуемый",
 		"description": "Шаблон профиля запуска Minecraft для Launcher",
 		"minecraft": map[string]any{
 			"version": "1.21.1",

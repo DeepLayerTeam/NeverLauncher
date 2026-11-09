@@ -251,8 +251,8 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 	// завершения его конструктора.
 	snapshot := model.SnapshotProfile(model.Profile{
 		SchemaVersion: model.ProfileSchemaV2, Revision: 1,
-		ID: "vanilla", ProjectID: "demo-project", Name: "Vanilla",
-		Description: "Минимальный vanilla-профиль", Loader: "vanilla", IsDefault: true,
+		ID: "vanilla", ProjectID: "demo-project", Name: "Без загрузчика",
+		Description: "Минимальный профиль без загрузчика", Loader: "vanilla", IsDefault: true,
 	})
 	manifest := model.Manifest{
 		SchemaVersion:   model.ManifestSchemaV2,
@@ -307,12 +307,12 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 			{ID: "demo-project", Name: "Демонстрационный проект", Description: "Пример проекта Launcher", DefaultChannel: "stable", CreatedAt: now, UpdatedAt: now},
 		},
 		profiles: []model.Profile{
-			{ID: "vanilla", ProjectID: "demo-project", Name: "Vanilla", Description: "Минимальный vanilla-профиль", Loader: "vanilla", IsDefault: true, CreatedAt: now, UpdatedAt: now},
+			{ID: "vanilla", ProjectID: "demo-project", Name: "Без загрузчика", Description: "Минимальный профиль без загрузчика", Loader: "vanilla", IsDefault: true, CreatedAt: now, UpdatedAt: now},
 			{ID: "fabric", ProjectID: "demo-project", Name: "Fabric", Description: "Пример профиля для Fabric-сборки", Loader: "fabric", Preset: "recommended", IsDefault: false, CreatedAt: now, UpdatedAt: now},
-			{ID: "lite", ProjectID: "demo-project", Name: "Lite", Description: "Лёгкий профиль для слабых машин", Loader: "vanilla", Preset: "lite", IsDefault: false, CreatedAt: now, UpdatedAt: now},
-			{ID: "recommended", ProjectID: "demo-project", Name: "Recommended", Description: "Рекомендуемый профиль", Loader: "fabric", Preset: "recommended", IsDefault: false, CreatedAt: now, UpdatedAt: now},
-			{ID: "cinematic", ProjectID: "demo-project", Name: "Cinematic", Description: "Профиль с упором на визуальную часть", Loader: "fabric", Preset: "cinematic", IsDefault: false, CreatedAt: now, UpdatedAt: now},
-			{ID: "custom", ProjectID: "demo-project", Name: "Custom", Description: "Пользовательский профиль", Loader: "fabric", Preset: "custom", IsDefault: false, CreatedAt: now, UpdatedAt: now},
+			{ID: "lite", ProjectID: "demo-project", Name: "Облегчённый", Description: "Лёгкий профиль для слабых машин", Loader: "vanilla", Preset: "lite", IsDefault: false, CreatedAt: now, UpdatedAt: now},
+			{ID: "recommended", ProjectID: "demo-project", Name: "Рекомендуемый", Description: "Рекомендуемый профиль", Loader: "fabric", Preset: "recommended", IsDefault: false, CreatedAt: now, UpdatedAt: now},
+			{ID: "cinematic", ProjectID: "demo-project", Name: "Кинематографичный", Description: "Профиль с упором на визуальную часть", Loader: "fabric", Preset: "cinematic", IsDefault: false, CreatedAt: now, UpdatedAt: now},
+			{ID: "custom", ProjectID: "demo-project", Name: "Пользовательский", Description: "Пользовательский профиль", Loader: "fabric", Preset: "custom", IsDefault: false, CreatedAt: now, UpdatedAt: now},
 		},
 		channels: []model.ReleaseChannel{
 			{ID: "dev", ProjectID: "demo-project", Name: "dev", Description: "Канал разработки", Protected: false},
@@ -331,9 +331,9 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 			{ID: "release-manager", Name: "Менеджер релизов", Description: "Подготовка, публикация и откат релизов", Permissions: []string{"project:read", "release:prepare", "release:publish", "audit:read"}},
 			{ID: "operator", Name: "Оператор", Description: "Работа с профилями, пакетами и файлами без финальной публикации", Permissions: []string{"project:read", "project:write", "release:prepare", "file:write", "diagnostics:read", "serverbridge:control", "gameserver:broadcast", "gameserver:moderate", "gameserver:save", "gameserver:traffic"}},
 			{ID: "support", Name: "Поддержка", Description: "Чтение проекта, диагностика и аудит без права изменения", Permissions: []string{"project:read", "diagnostics:read", "audit:read"}},
-			{ID: "developer", Name: "Разработчик (legacy)", Description: "Совместимая ограниченная роль подготовки версий", Permissions: []string{"project:read", "release:prepare", "file:write"}},
+			{ID: "developer", Name: "Разработчик (устаревшая роль)", Description: "Совместимая ограниченная роль подготовки версий", Permissions: []string{"project:read", "release:prepare", "file:write"}},
 			{ID: "viewer", Name: "Наблюдатель", Description: "Только чтение", Permissions: []string{"project:read"}},
-			{ID: "player", Name: "Игрок", Description: "Вход в desktop и запуск доступных профилей", Permissions: []string{"launcher:login", "profile:download", "profile:launch"}},
+			{ID: "player", Name: "Игрок", Description: "Вход в настольное приложение и запуск доступных профилей", Permissions: []string{"launcher:login", "profile:download", "profile:launch"}},
 		},
 		users: []model.User{
 			{ID: "admin", Email: "admin@launcher.local", DisplayName: "Администратор", RoleID: "owner", Status: "active", ProjectRoles: map[string]string{"demo-project": "owner"}, PasswordHash: "sha256:8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", PasswordUpdatedAt: now, CreatedAt: now, UpdatedAt: now},
