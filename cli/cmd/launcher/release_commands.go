@@ -37,7 +37,7 @@ func handleRelease(args []string) error {
 		if releaseVerificationV2Required0158(ver) {
 			policySource := flagValue(args, "--trust-policy", strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_TRUST_POLICY_FILE")))
 			if policySource == "" {
-				return errors.New("0.15.8+ release build требует --trust-policy или LAUNCHER_RELEASE_TRUST_POLICY_FILE")
+				return errors.New("Для сборки выпуска версии 0.15.8 и новее требуется --trust-policy или LAUNCHER_RELEASE_TRUST_POLICY_FILE")
 			}
 			if err := os.MkdirAll(out, 0o755); err != nil {
 				return err
@@ -63,7 +63,7 @@ func handleRelease(args []string) error {
 		); err != nil {
 			return err
 		}
-		fmt.Printf("Каталог release bundle подготовлен: %s\n", out)
+		fmt.Printf("Каталог пакета выпуска подготовлен: %s\n", out)
 		return nil
 	case "verify", "publish-check":
 		if len(args) < 2 {
@@ -180,7 +180,7 @@ func handleRelease(args []string) error {
 					return fmt.Errorf("Ошибка сертификации промышленной поставки релиза 0.16.0: %w", err)
 				}
 			}
-			fmt.Println("Release publish-check пройден: Release Verification v2 + exact-commit certification + signed/notarized six-target delivery + Managed JRE + transactional updater + public matrix/E2E + Production Delivery Release + Windows Protection GA certification")
+			fmt.Println("Проверка публикации выпуска пройдена: проверка выпуска v2, подтверждение точного коммита, подписанные и нотариально заверенные пакеты для шести платформ, управляемая JRE, транзакционное обновление, публичная матрица совместимости и сквозные тесты, сертификация промышленной поставки и защиты Windows уровня GA")
 			return nil
 		}
 		fmt.Println("Пакет выпуска полностью проверен: обязательные артефакты, SHA-256, подпись выпуска Ed25519 и подтверждение происхождения")
@@ -194,12 +194,12 @@ func handleRelease(args []string) error {
 			return err
 		}
 		if !productionReleaseCandidateRequired01511(manifestVersion) {
-			return fmt.Errorf("production release candidate certification требуется только для 0.15.11+, bundle=%s", manifestVersion)
+			return fmt.Errorf("Сертификация кандидата промышленного выпуска доступна только для версии 0.15.11 и новее; версия пакета: %s", manifestVersion)
 		}
 		if err := verifyProductionReleaseCandidate01511(args[1], manifestVersion, true); err != nil {
 			return err
 		}
-		fmt.Println("Production release candidate certification пройдена: exact source commit + full production cohort")
+		fmt.Println("Сертификация кандидата промышленного выпуска пройдена: подтверждены точный коммит исходного кода и полный набор производственных проверок")
 		return nil
 	case "production-verify":
 		if len(args) < 2 {
@@ -210,12 +210,12 @@ func handleRelease(args []string) error {
 			return err
 		}
 		if !productionDeliveryReleaseRequired0160(manifestVersion) {
-			return fmt.Errorf("Production Delivery Release certification требуется только для 0.16.0+, bundle=%s", manifestVersion)
+			return fmt.Errorf("Сертификация промышленной поставки доступна только для версии 0.16.0 и новее; версия пакета: %s", manifestVersion)
 		}
 		if err := verifyProductionDeliveryRelease0160(args[1], manifestVersion, true); err != nil {
 			return err
 		}
-		fmt.Println("Production Delivery Release certification пройдена: stable six-target GA boundary + immutable versioned public origin")
+		fmt.Println("Сертификация промышленной поставки пройдена: стабильный выпуск для шести целевых платформ и неизменяемый публичный источник с указанием версии")
 		return nil
 	case "windows-protection-verify":
 		if len(args) < 2 {
@@ -226,12 +226,12 @@ func handleRelease(args []string) error {
 			return err
 		}
 		if !windowsProtectionReleaseRequired01812(manifestVersion) {
-			return fmt.Errorf("Windows Protection RC certification требуется только для 0.18.12+, bundle=%s", manifestVersion)
+			return fmt.Errorf("Сертификация кандидата защиты Windows доступна только для версии 0.18.12 и новее; версия пакета: %s", manifestVersion)
 		}
 		if err := verifyWindowsProtectionRelease01812(args[1], manifestVersion); err != nil {
 			return err
 		}
-		fmt.Println("Windows Protection RC certification пройдена: adversarial CI + signed x64/ARM64 production bytes + exact source commit")
+		fmt.Println("Сертификация кандидата защиты Windows пройдена: проверки атак в CI, подписанные производственные сборки x64/ARM64 и точный коммит исходного кода")
 		return nil
 	case "windows-protection-ga-verify":
 		if len(args) < 2 {
@@ -242,12 +242,12 @@ func handleRelease(args []string) error {
 			return err
 		}
 		if !windowsProtectionGARequired0190(manifestVersion) {
-			return fmt.Errorf("Windows Protection GA certification требуется только для 0.19.0+, bundle=%s", manifestVersion)
+			return fmt.Errorf("Сертификация защиты Windows уровня GA доступна только для версии 0.19.0 и новее; версия пакета: %s", manifestVersion)
 		}
 		if err := verifyWindowsProtectionGA0190(args[1], manifestVersion); err != nil {
 			return err
 		}
-		fmt.Println("Windows Protection GA certification пройдена: fail-closed user-mode boundary + RC/adversarial/signed x64/ARM64 binding")
+		fmt.Println("Сертификация защиты Windows уровня GA пройдена: запрет при ошибке проверки границы пользовательского режима и привязка к проверкам кандидата, испытаниям атак и подписанным сборкам x64/ARM64")
 		return nil
 	case "distribution-verify":
 		if len(args) < 2 {
@@ -258,7 +258,7 @@ func handleRelease(args []string) error {
 			return err
 		}
 		if !distributionRequired04511(ver) {
-			return fmt.Errorf("signed distribution verification: требуется «0.45.11+:» %s", ver)
+			return fmt.Errorf("Проверка подписанного дистрибутива доступна только для версии 0.45.11 и новее; версия пакета: %s", ver)
 		}
 		if err := verifyReleaseBOM03214(args[1], ver); err != nil {
 			return err
@@ -577,7 +577,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 			missing = append(missing, "guard CI matrix")
 		}
 		if len(missing) > 0 {
-			return fmt.Errorf("0.15.11+ production release candidate: требуется «полный набор результатов сертификации:» %s", strings.Join(missing, ", "))
+			return fmt.Errorf("Для кандидата промышленного выпуска версии 0.15.11 и новее не хватает результатов сертификации: %s", strings.Join(missing, ", "))
 		}
 	}
 	if strings.TrimSpace(compatibilityMatrixPath) != "" {
@@ -917,7 +917,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		return err
 	}
 	if len(checksums) == 0 {
-		return errors.New("release bundle не содержит файлов для SHA256SUMS")
+		return errors.New("Пакет выпуска не содержит файлов для составления SHA256SUMS")
 	}
 	return os.WriteFile(filepath.Join(out, "SHA256SUMS"), []byte(strings.Join(checksums, "\n")+"\n"), 0o644)
 }
@@ -1003,7 +1003,7 @@ func verifyReleaseBundleWithTrust(dir, publicKeyPath, trustStatePath, trustPolic
 func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, trustPolicyPath string) error {
 	for _, name := range []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "RELEASE_NOTES.txt", "SBOM.spdx.json", "PROVENANCE.json", "PROVENANCE.json.sig"} {
 		if st, err := os.Stat(filepath.Join(dir, name)); err != nil || st.IsDir() {
-			return fmt.Errorf("не найден обязательный release file %s", name)
+			return fmt.Errorf("Не найден обязательный файл выпуска %s", name)
 		}
 	}
 	manifestRaw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
@@ -1198,7 +1198,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		}
 		requiredCount++
 		if artifact.Status != "present" {
-			return fmt.Errorf("required artifact %s имеет status=%s вместо present", artifact.Name, artifact.Status)
+			return fmt.Errorf("Обязательный артефакт %s имеет status=%s вместо present", artifact.Name, artifact.Status)
 		}
 		cleanArtifact, err := safeReleaseRelativePath0158(artifact.Name)
 		if err != nil {
@@ -1207,7 +1207,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		path := filepath.Join(dir, cleanArtifact)
 		actual, size, err := hashFile(path)
 		if err != nil {
-			return fmt.Errorf("required artifact %s отсутствует или unreadable: %w", artifact.Name, err)
+			return fmt.Errorf("Обязательный артефакт %s отсутствует или недоступен для чтения: %w", artifact.Name, err)
 		}
 		if artifact.Size > 0 && artifact.Size != size {
 			return fmt.Errorf("Не совпадает размер обязательного артефакта %s: манифест=%d, фактически=%d", artifact.Name, artifact.Size, size)
@@ -1217,7 +1217,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		}
 	}
 	if requiredCount == 0 {
-		return errors.New("RELEASE_MANIFEST.json не содержит required artifacts")
+		return errors.New("RELEASE_MANIFEST.json не содержит обязательных артефактов")
 	}
 	data, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
 	if err != nil {

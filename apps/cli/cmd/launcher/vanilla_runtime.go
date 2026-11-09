@@ -329,7 +329,7 @@ func installVanillaServer(ctx context.Context, requestedVersion, serverDir, vers
 	}
 	serverDownload, ok := metadata.Downloads["server"]
 	if !ok || strings.TrimSpace(serverDownload.URL) == "" || strings.TrimSpace(serverDownload.SHA1) == "" || serverDownload.Size <= 0 {
-		return vanillaServerInstallResult{}, fmt.Errorf("Minecraft %s version.json не содержит проверяемый downloads.server", selectedID)
+		return vanillaServerInstallResult{}, fmt.Errorf("В version.json для Minecraft %s отсутствуют проверяемые сведения downloads.server", selectedID)
 	}
 
 	metadataPath, err := secureClientDestination(serverDir, "version.json")
@@ -449,7 +449,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		}
 		if prev, exists := tasks[task.Path]; exists {
 			if prev.URL != task.URL || prev.Kind != task.Kind || (!strings.EqualFold(prev.SHA1, task.SHA1) && prev.SHA1 != "" && task.SHA1 != "") || (prev.Size > 0 && task.Size > 0 && prev.Size != task.Size) || !equalStringSets0277(prev.NativeExclude, task.NativeExclude) {
-				return fmt.Errorf("конфликт upstream artifact %s", task.Path)
+				return fmt.Errorf("Конфликт артефакта исходного репозитория %s", task.Path)
 			}
 			prev.TargetOS = unionStrings(prev.TargetOS, task.TargetOS)
 			prev.NativeTargets = unionNativeTargets0277(prev.NativeTargets, task.NativeTargets)
@@ -567,7 +567,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			classifier := strings.ReplaceAll(classifierTemplate, "${arch}", nativeArchForTarget(target.Arch))
 			native, ok := lib.Downloads.Classifiers[classifier]
 			if !ok {
-				return vanillaInstallResult{}, fmt.Errorf("library %s: отсутствует classifier %s", lib.Name, classifier)
+				return vanillaInstallResult{}, fmt.Errorf("Для библиотеки %s отсутствует классификатор %s", lib.Name, classifier)
 			}
 			nativePath := strings.TrimSpace(native.Path)
 			if nativePath == "" {
@@ -605,14 +605,14 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	}
 	var assets vanillaAssetIndex
 	if err := json.Unmarshal(assetBytes, &assets); err != nil {
-		return vanillaInstallResult{}, fmt.Errorf("asset index повреждён: %w", err)
+		return vanillaInstallResult{}, fmt.Errorf("Индекс игровых ресурсов повреждён: %w", err)
 	}
 	for name, object := range assets.Objects {
 		if err := validateAssetLogicalPath(name); err != nil {
 			return vanillaInstallResult{}, err
 		}
 		if err := validateSHA1Hex(object.Hash); err != nil || object.Size < 0 {
-			return vanillaInstallResult{}, fmt.Errorf("asset %q содержит некорректный hash/size", name)
+			return vanillaInstallResult{}, fmt.Errorf("Игровой ресурс %q содержит некорректные хеш или размер", name)
 		}
 		objectURL := strings.TrimRight(opts.AssetBaseURL, "/") + "/" + object.Hash[:2] + "/" + object.Hash
 		objectPath := filepath.ToSlash(filepath.Join("assets", "objects", object.Hash[:2], object.Hash))
@@ -974,7 +974,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		return vanillaDownloadedFile{}, err
 	}
 	if task.Size > maxCompatibilityArtifact {
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: artifact size %d превышает лимит %d", task.Path, task.Size, maxCompatibilityArtifact)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: размер артефакта %d превышает ограничение %d", task.Path, task.Size, maxCompatibilityArtifact)
 	}
 	if task.SHA1 != "" {
 		if err := validateSHA1Hex(task.SHA1); err != nil {
@@ -992,7 +992,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	quarantined := false
 	if _, statErr := os.Lstat(dest); statErr == nil {
 		if task.SHA1 == "" {
-			return vanillaDownloadedFile{}, fmt.Errorf("%s: существующий artifact нельзя безопасно переиспользовать без SHA-1", task.Path)
+			return vanillaDownloadedFile{}, fmt.Errorf("%s: существующий артефакт нельзя безопасно использовать повторно без SHA-1", task.Path)
 		}
 		quarantined, err = quarantineCompatibilityArtifact(root, task.Path, "Артефакт в кеше не прошёл проверку SHA-1 или размера Mojang")
 		if err != nil {
@@ -1028,7 +1028,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		ok, sha256sum, size := existingFileMatchesSHA1(tmp, task.SHA1, task.Size)
 		if !ok {
 			if err := os.Remove(tmp); err != nil && !errors.Is(err, os.ErrNotExist) {
-				return vanillaDownloadedFile{}, fmt.Errorf("%s: удалить повреждённый completed partial: %w", task.Path, err)
+				return vanillaDownloadedFile{}, fmt.Errorf("%s: не удалось удалить повреждённый файл завершённой частичной загрузки: %w", task.Path, err)
 			}
 			resumeOffset = 0
 		} else {
@@ -1057,7 +1057,7 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 		}
 		if resp.ContentLength > 0 && task.Size > 0 && resp.ContentLength != task.Size-resumeOffset {
 			_ = os.Remove(tmp)
-			return vanillaDownloadedFile{}, fmt.Errorf("%s: resumed Content-Length=%d, ожидалось %d", task.Path, resp.ContentLength, task.Size-resumeOffset)
+			return vanillaDownloadedFile{}, fmt.Errorf("%s: после возобновления загрузки Content-Length=%d, ожидалось %d", task.Path, resp.ContentLength, task.Size-resumeOffset)
 		}
 	} else if task.Size > 0 && resp.ContentLength > 0 && resp.ContentLength != task.Size {
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: Content-Length=%d, ожидалось %d", task.Path, resp.ContentLength, task.Size)
@@ -1105,12 +1105,12 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	gotSHA256 := hex.EncodeToString(h256.Sum(nil))
 	if totalWritten > maxCompatibilityArtifact {
 		_ = os.Remove(tmp)
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: artifact превышает лимит %d", task.Path, maxCompatibilityArtifact)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: размер артефакта превышает ограничение %d", task.Path, maxCompatibilityArtifact)
 	}
 	if task.Size > 0 && totalWritten != task.Size {
 		// Корректно завершившаяся досрочно передача EOF также допускает возобновление;
 		// сохраняйте частичные данные с проверенным ограничением размера, не теряя прогресс.
-		return vanillaDownloadedFile{}, fmt.Errorf("%s: неполная загрузка %d/%d bytes сохранена для recovery", task.Path, totalWritten, task.Size)
+		return vanillaDownloadedFile{}, fmt.Errorf("%s: частичная загрузка %d/%d байт сохранена для восстановления", task.Path, totalWritten, task.Size)
 	}
 	if task.SHA1 != "" && !strings.EqualFold(gotSHA1, task.SHA1) {
 		_ = os.Remove(tmp)
@@ -1237,16 +1237,16 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		}
 		mode := entry.Mode()
 		if mode&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("native archive содержит symlink: %s", entry.Name)
+			return nil, fmt.Errorf("Архив нативных библиотек содержит символическую ссылку: %s", entry.Name)
 		}
 		if !mode.IsRegular() {
-			return nil, fmt.Errorf("native archive содержит неподдерживаемый entry type: %s", entry.Name)
+			return nil, fmt.Errorf("Архив нативных библиотек содержит запись неподдерживаемого типа: %s", entry.Name)
 		}
 		if entry.UncompressedSize64 > uint64(maxCompatibilityNativeEntry) {
-			return nil, fmt.Errorf("native archive entry %s имеет небезопасный размер %d", entry.Name, entry.UncompressedSize64)
+			return nil, fmt.Errorf("Запись %s в архиве нативных библиотек имеет небезопасный размер %d", entry.Name, entry.UncompressedSize64)
 		}
 		if totalExtracted > maxCompatibilityNativeExtract-int64(entry.UncompressedSize64) {
-			return nil, fmt.Errorf("native archive распаковывается более чем в %d bytes", maxCompatibilityNativeExtract)
+			return nil, fmt.Errorf("Размер распакованных нативных библиотек превышает %d байт", maxCompatibilityNativeExtract)
 		}
 		dst, err := secureClientDestination(targetDir, clean)
 		if err != nil {
@@ -1316,7 +1316,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 func copyFileVerified(src, dst string, expectedSize int64, expectedSHA1 string) error {
 	ok, _, _ := existingFileMatchesSHA1(src, expectedSHA1, expectedSize)
 	if !ok {
-		return errors.New("source asset не прошёл SHA-1/size verification")
+		return errors.New("Исходный игровой ресурс не прошёл проверку SHA-1 и размера")
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
@@ -1537,13 +1537,13 @@ func normalizeVanillaTarget(target vanillaTarget) (vanillaTarget, error) {
 	case "darwin", "mac", "macos", "osx":
 		osName = "osx"
 	default:
-		return vanillaTarget{}, fmt.Errorf("неподдерживаемая target OS: %s", target.OS)
+		return vanillaTarget{}, fmt.Errorf("Неподдерживаемая целевая ОС: %s", target.OS)
 	}
 	arch := normalizeVanillaArch(target.Arch)
 	switch arch {
 	case "x86", "x86_64", "aarch64", "arm":
 	default:
-		return vanillaTarget{}, fmt.Errorf("неподдерживаемая target arch: %s", target.Arch)
+		return vanillaTarget{}, fmt.Errorf("Неподдерживаемая целевая архитектура: %s", target.Arch)
 	}
 	return vanillaTarget{OS: osName, Arch: arch}, nil
 }
@@ -2109,7 +2109,7 @@ func validateVanillaRelativePath(rel string) error {
 	rel = strings.ReplaceAll(rel, "\\", "/")
 	clean := path.Clean(rel)
 	if rel == "" || clean == "." || clean == ".." || clean != rel || strings.HasPrefix(rel, "/") || strings.HasPrefix(rel, "../") || strings.ContainsRune(rel, '\x00') {
-		return fmt.Errorf("небезопасный Vanilla path: %q", rel)
+		return fmt.Errorf("Небезопасный путь к файлу Vanilla: %q", rel)
 	}
 	return nil
 }

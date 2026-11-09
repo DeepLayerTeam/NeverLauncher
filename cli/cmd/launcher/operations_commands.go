@@ -273,7 +273,7 @@ func resolveLoaderMetadata(loader, minecraftVersion, loaderVersion, metadataPath
 	if loader == "vanilla" {
 		return LoaderMetadata{Loader: "vanilla", MinecraftVersion: minecraftVersion, LoaderVersion: loaderVersion, MainClass: "net.minecraft.client.main.Main"}, "mojang-version-json", nil
 	}
-	return LoaderMetadata{}, "", fmt.Errorf("Для загрузчика %s требуются подготовленные метаданные профиля или --installer-profile; использование встроенных резервных метаданных запрещено", loader)
+	return LoaderMetadata{}, "", fmt.Errorf("Для загрузчика %s необходимы подготовленные метаданные профиля или --installer-profile; использование встроенных резервных метаданных запрещено", loader)
 }
 
 func mergeLoaderLibraries(basePlan map[string]any, metadata LoaderMetadata) ([]map[string]any, []string) {

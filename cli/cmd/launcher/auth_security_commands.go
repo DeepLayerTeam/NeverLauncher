@@ -236,14 +236,14 @@ func supplyChainSecurityModel() map[string]any {
 		"signedArtifacts":  []string{"manifest", "release-bundle", "desktop-package", "extension-package", "client-package"},
 		"requiredControls": []string{"ed25519-signatures", "sha256-every-file", "root-signed-trust-policy", "trusted-keys-registry", "key-rotation", "revocation-list", "trust-epoch-anti-rollback", "release-version-anti-rollback", "sbom", "provenance", "audit-log", "safe-extraction", "download-allowlist"},
 		"checks": []map[string]string{
-			{"id": "signed-manifests", "status": "required", "message": "каждый клиентский manifest подписывается Ed25519 ключом проекта"},
-			{"id": "signed-release-bundles", "status": "required", "message": "release bundle bundle содержит SHA256SUMS, SHA256SUMS.sig и RELEASE_MANIFEST.json"},
-			{"id": "desktop-pinned-key", "status": "required", "message": "desktop-клиент принимает только manifest, подписанный доверенным public key"},
+			{"id": "signed-manifests", "status": "required", "message": "Каждый клиентский манифест подписывается ключом Ed25519 проекта"},
+			{"id": "signed-release-bundles", "status": "required", "message": "Пакет выпуска содержит SHA256SUMS, SHA256SUMS.sig и RELEASE_MANIFEST.json"},
+			{"id": "desktop-pinned-key", "status": "required", "message": "Настольный клиент принимает только манифест, подписанный доверенным открытым ключом"},
 			{"id": "sbom", "status": "required", "message": "релиз содержит SPDX/CycloneDX SBOM metadata"},
 			{"id": "provenance", "status": "required", "message": "релиз содержит SLSA-compatible provenance metadata"},
 			{"id": "revocation", "status": "required", "message": "отозванные ключи и артефакты блокируются до установки"},
 			{"id": "safe-extraction", "status": "required", "message": "архивы распаковываются только после проверки безопасности путей"},
-			{"id": "rollback-protection", "status": "required", "message": "manifest и release bundle защищены от отката на уязвимую версию"},
+			{"id": "rollback-protection", "status": "required", "message": "Манифест и пакет выпуска защищены от отката к уязвимой версии"},
 		},
 	}
 }
@@ -535,7 +535,7 @@ func handleStorage(args []string) error {
 	case "consistency":
 		endpoint = "/api/v1/operations/storage/consistency"
 	default:
-		return fmt.Errorf("неизвестная storage-подкоманда: %s; cleanup удалён, поскольку production cleanup без atomic backend primitive небезопасен", args[0])
+		return fmt.Errorf("Неизвестная подкоманда хранилища: %s; cleanup удалена, поскольку очистка в рабочем окружении без атомарной операции Backend небезопасна", args[0])
 	}
 	payload, err := httpJSONWithAuth("GET", backend+endpoint, nil, token)
 	if err != nil {
