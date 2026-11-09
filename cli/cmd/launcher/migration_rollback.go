@@ -124,7 +124,7 @@ func rollbackReadSnapshot0448(path string) (any, string, error) {
 		return nil, "", err
 	}
 	if !st.Mode().IsRegular() || st.Size() == 0 || st.Size() > 8<<20 {
-		return nil, "", errors.New("rollback snapshot: требуется обычный JSON-файл размером не более 8 МиБ")
+		return nil, "", errors.New("Для снимка отката требуется обычный JSON-файл размером не более 8 МиБ")
 	}
 	raw, err := io.ReadAll(io.LimitReader(f, (8<<20)+1))
 	if err != nil {

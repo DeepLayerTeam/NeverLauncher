@@ -367,7 +367,7 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректная dependency %q", d.ID)
 		}
 		if d.Version == "" || len(d.Version) > 128 {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("dependency %s требует version constraint", d.ID)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("Для зависимости %s требуется ограничение версии", d.ID)
 		}
 		if _, ok := seenDeps[d.ID]; ok {
 			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("dependency %q указана повторно", d.ID)
@@ -384,7 +384,7 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный conflict %q", c.ID)
 		}
 		if c.Version == "" || len(c.Version) > 128 {
-			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("conflict %s требует version constraint", c.ID)
+			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("Для конфликта %s требуется ограничение версии", c.ID)
 		}
 		if _, ok := seenConflicts[c.ID]; ok {
 			return CanonicalExtensionManifest0201{}, "", fmt.Errorf("conflict %q указан повторно", c.ID)

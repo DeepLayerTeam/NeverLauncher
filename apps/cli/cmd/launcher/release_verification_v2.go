@@ -218,7 +218,7 @@ func verifyReleaseTrustPolicy0158(policy releaseTrustPolicy0158, rootPublicKeyPa
 		rootPublicKeyPath = strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if rootPublicKeyPath == "" {
-		return "", errors.New("Release Verification v2 требует внешний root public key")
+		return "", errors.New("Для проверки выпуска по протоколу Release Verification v2 требуется внешний открытый корневой ключ")
 	}
 	root, err := loadEd25519PublicKey(rootPublicKeyPath)
 	if err != nil {
@@ -335,7 +335,7 @@ func precheckTrustState0158(path, rootFP string, policyEpoch uint64, releaseVers
 		cur, ok1 := parseVersionTriple0158(releaseVersion)
 		old, ok2 := parseVersionTriple0158(s.HighestRelease)
 		if !ok1 || !ok2 {
-			return errors.New("anti-rollback state содержит некорректную release version")
+			return errors.New("В состоянии защиты от отката указана некорректная версия выпуска")
 		}
 		cmp := compareVersionTriple0158(cur, old)
 		if cmp < 0 {
@@ -395,7 +395,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		resolvedRoot = strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if resolvedRoot == "" {
-		return releaseVerificationV2Context{}, errors.New("Release Verification v2 требует внешний root public key")
+		return releaseVerificationV2Context{}, errors.New("Для проверки выпуска по протоколу Release Verification v2 требуется внешний открытый корневой ключ")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, resolvedRoot); err != nil {
 		return releaseVerificationV2Context{}, fmt.Errorf("Ошибка корневого доверенного ключа: %w", err)
@@ -599,7 +599,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 		return nil, err
 	}
 	if reg.TrustEpoch == 0 {
-		return nil, errors.New("registry trustEpoch=0; сначала создайте/ротируйте release-signing key")
+		return nil, errors.New("В реестре trustEpoch=0; сначала создайте или смените ключ подписи выпуска")
 	}
 	rootPrivatePath := flagValue(args, "--root-private-key", strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_ROOT_PRIVATE_KEY_FILE")))
 	if rootPrivatePath == "" {
@@ -630,7 +630,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 		policy.Keys = append(policy.Keys, releaseTrustKey0158{ID: rec.ID, Purpose: rec.Purpose, Algorithm: "Ed25519", PublicKey: hex.EncodeToString(pub), Fingerprint: rec.Fingerprint, Status: rec.Status, NotBefore: rec.CreatedAt, RetiredAt: rec.RetiredAt, RevokedAt: rec.RevokedAt, ReplacedBy: rec.ReplacedBy})
 	}
 	if len(policy.Keys) == 0 {
-		return nil, errors.New("registry не содержит release-signing keys")
+		return nil, errors.New("В реестре отсутствуют ключи подписи выпуска")
 	}
 	active := 0
 	for _, k := range policy.Keys {
@@ -639,7 +639,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 		}
 	}
 	if active == 0 {
-		return nil, errors.New("registry не содержит active release-signing key")
+		return nil, errors.New("В реестре отсутствует активный ключ подписи выпуска")
 	}
 	sort.Slice(policy.Keys, func(i, j int) bool { return policy.Keys[i].ID < policy.Keys[j].ID })
 	payload, err := releaseTrustPolicyPayload0158(policy)
@@ -650,7 +650,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 	rootFP := fingerprintEd255190158(rootPub)
 	for _, k := range policy.Keys {
 		if strings.EqualFold(k.Fingerprint, rootFP) {
-			return nil, errors.New("offline root key не может одновременно быть release-signing key")
+			return nil, errors.New("Автономный корневой ключ не может одновременно служить ключом подписи выпуска")
 		}
 	}
 	policy.RootSignature = &releaseTrustRootSignature0158{Algorithm: "Ed25519", RootFingerprint: rootFP, Signature: base64.StdEncoding.EncodeToString(ed25519.Sign(rootPriv, payload)), SignedAt: now.Format(time.RFC3339Nano)}

@@ -61,10 +61,10 @@ func handleMigrationCutover03311(args []string) error {
 	case "cutover-activate":
 		rev, e := strconv.ParseInt(flagValue(args, "--expected-revision", ""), 10, 64)
 		if e != nil {
-			return errors.New("Для активация требуется --expected-revision")
+			return errors.New("Для активации требуется --expected-revision")
 		}
 		if flagValue(args, "--source-fenced", "") != "true" {
-			return errors.New("Для активация требуется явный флаг --source-fenced true после остановки внешнего процесса записи Gravit")
+			return errors.New("Для активации требуется явный флаг --source-fenced true после остановки внешнего процесса записи Gravit")
 		}
 		// Читает подлинную квитанцию проверки на исходной системе. Произвольный
 		// 64-символьный хеш больше не проходит предварительную проверку CLI.

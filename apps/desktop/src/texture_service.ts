@@ -168,7 +168,7 @@ export class TextureServiceClient0258 {
       const result = await res.json().catch(() => null);
       if (!res.ok) throw textureError0258(res.status, result);
       if (!result || !("data" in result))
-        throw new Error("Texture API вернул некорректный ответ.");
+        throw new Error("API текстур вернул некорректный ответ.");
       return result.data as T;
     } finally {
       clearTimeout(timeout);

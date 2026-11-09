@@ -266,7 +266,7 @@ func migrationImportAll0493(args []string) error {
 		var plan migrationLivePlan0493
 		if exists {
 			if !resume {
-				return errors.New("partially imported workspace: требуется --resume=true")
+				return errors.New("Для продолжения частично импортированного рабочего пространства требуется --resume=true")
 			}
 			_, err = migrationJSON0493(client, "GET", base+"/dry-run", token, "", nil, &plan, false)
 		} else {

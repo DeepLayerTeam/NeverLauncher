@@ -188,7 +188,7 @@ func ensurePublicKeyNotRevoked(registryDir, publicKeyPath string) error {
 		publicKeyPath = strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if publicKeyPath == "" {
-		return errors.New("revocation check требует trusted public key")
+		return errors.New("Для проверки отзыва требуется доверенный открытый ключ")
 	}
 	pub, err := loadEd25519PublicKey(publicKeyPath)
 	if err != nil {
@@ -215,7 +215,7 @@ func securityAttest(args []string) (map[string]any, error) {
 	}
 	privateKeyPath := flagValue(args, "--private-key", os.Getenv("LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE"))
 	if privateKeyPath == "" {
-		return nil, errors.New("security attest требует --private-key")
+		return nil, errors.New("Для аттестации безопасности требуется --private-key")
 	}
 	priv, err := loadEd25519PrivateKey(privateKeyPath)
 	if err != nil {

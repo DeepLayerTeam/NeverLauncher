@@ -43,7 +43,7 @@ func handleAuthUpgrade02911(args []string) error {
 		return errors.New("Параметр --snapshot должен указывать на существующий или новый файл контрольной точки")
 	}
 	if action == "apply" && (!*backup || !*maintenance) {
-		return errors.New("apply: требуется --backup-confirmed and --maintenance-confirmed; Launcher cannot create or verify an off-host backup automatically")
+		return errors.New("Для применения нужны --backup-confirmed и --maintenance-confirmed; Launcher не может автоматически создать или проверить резервную копию на внешнем узле")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()

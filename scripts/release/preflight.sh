@@ -186,14 +186,14 @@ fi
 if [[ -d "${RELEASE_DIR}" ]]; then
   run_step release-bundle bash "${ROOT_DIR}/scripts/smoke/release-required/release-bundle.sh" "${RELEASE_DIR}"
 elif is_true "${STRICT}"; then
-  echo "[Launcher] strict preflight: release bundle ${RELEASE_DIR} обязателен" >&2
+  echo "[Launcher] для строгой предварительной проверки необходим пакет выпуска ${RELEASE_DIR}" >&2
   exit 1
 else
-  echo "[Launcher] Release bundle ${RELEASE_DIR} не найден: проверка пропущена; такой прогон не является production-ready"
+  echo "[Launcher] Пакет выпуска ${RELEASE_DIR} не найден: проверка пропущена; этот запуск не подтверждает готовность к эксплуатации"
 fi
 
 if is_true "${STRICT}"; then
-  echo "[Launcher] Strict production preflight ${VERSION} завершён успешно"
+  echo "[Launcher] Строгая предварительная проверка выпуска ${VERSION} завершена успешно"
 else
-  echo "[Launcher] Preflight ${VERSION} завершён успешно для доступного локального контура; production-ready требует LAUNCHER_PREFLIGHT_STRICT=1"
+  echo "[Launcher] Предварительная проверка ${VERSION} локального окружения завершена успешно; для подтверждения готовности к эксплуатации требуется LAUNCHER_PREFLIGHT_STRICT=1"
 fi

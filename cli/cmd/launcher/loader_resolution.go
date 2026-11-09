@@ -99,7 +99,7 @@ func validateLoaderResolutionLock(lock *loaderResolutionLock, loader, minecraft,
 		return fmt.Errorf("Несоответствие идентификатора блокировки загрузчика: получено %s/%s selector=%s resolved=%s, ожидалось %s/%s selector=%s", lock.Loader, lock.MinecraftVersion, lock.Selector, lock.ResolvedVersion, expectedLoader, strings.TrimSpace(minecraft), expectedSelector)
 	}
 	if lock.ResolvedVersion == "" || isMutableLoaderSelector(lock.ResolvedVersion) {
-		return errors.New("файл фиксации выбора загрузчика не содержит immutable resolvedVersion")
+		return errors.New("В файле фиксации выбора загрузчика отсутствует неизменяемое значение resolvedVersion")
 	}
 	if lock.ResolutionSourceURL == "" || !compatibilitySHA256RE.MatchString(strings.ToLower(lock.ResolutionSourceSHA256)) {
 		return errors.New("В файле фиксации разрешения загрузчика отсутствует идентификатор источника разрешения")

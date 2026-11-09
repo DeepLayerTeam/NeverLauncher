@@ -20,7 +20,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	}
 	if commit {
 		if len(planSHA) != 64 {
-			return errors.New("content import: требуется зафиксированная контрольная сумма --plan-sha256 из пробного запуска")
+			return errors.New("Для импорта содержимого требуется контрольная сумма --plan-sha256, зафиксированная при пробном запуске")
 		}
 		if _, err := hex.DecodeString(planSHA); err != nil {
 			return errors.New("Некорректное значение: план миграции SHA-256")
@@ -33,7 +33,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Gravit content transfer: требуется HTTPS или локальный IP-адрес обратной связи")
+			return errors.New("Для передачи содержимого Gravit требуется HTTPS или локальный IP-адрес обратной связи")
 		}
 	}
 	f, e := os.Open(source)
@@ -119,7 +119,7 @@ func migrationApplyOptionalsCLI0337(endpoint, token, id, out string) error {
 	if u.Scheme != "https" {
 		ip := net.ParseIP(u.Hostname())
 		if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("catalog mutation: требуется HTTPS")
+			return errors.New("Для изменения каталога требуется HTTPS")
 		}
 	}
 	r, e := http.NewRequest("POST", endpoint, nil)

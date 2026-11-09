@@ -60,7 +60,7 @@ func clientInstallOrUpdate(packagePath, storageDir, clientDir, mode string) (map
 		return nil, err
 	}
 	if !verify.Valid {
-		return nil, fmt.Errorf("%s завершён, но post-verify failed: missing=%v corrupted=%v", mode, verify.Missing, verify.Corrupted)
+		return nil, fmt.Errorf("Операция %s завершена, но последующая проверка не пройдена: отсутствуют=%v, повреждены=%v", mode, verify.Missing, verify.Corrupted)
 	}
 	return map[string]any{
 		"schemaVersion":    cliSchemaVersion,

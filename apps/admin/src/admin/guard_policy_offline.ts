@@ -53,7 +53,7 @@ export function guardCandidate05011(current: GuardContent05011, previous: GuardC
   if (!Number.isSafeInteger(current.epoch+1)) throw Error('Исчерпана точность представления эпохи');
   if (previous && (previous.epoch >= current.epoch || previous.projectId !== current.projectId || previous.minecraft !== current.minecraft || previous.loader.toLowerCase() !== current.loader.toLowerCase())) throw Error('Историческая политика не относится к данной сборке или не старше текущей');
   const digest = digestList.split(/[\s,]+/).filter(Boolean);
-  if (digest.some(x => !/^[a-f0-9]{64}$/.test(x))) throw Error('Отзыв JAR/native требует SHA-256 lowercase hex');
+  if (digest.some(x => !/^[a-f0-9]{64}$/.test(x))) throw Error('Для отзыва JAR-файла или нативного компонента требуется SHA-256 в нижнем регистре шестнадцатеричной записи');
   const transforms = transformList.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean);
   if (transforms.some(x => x.length>256)) throw Error('Идентификатор трансформации слишком длинный');
   if (!previous && digest.length===0 && transforms.length===0) throw Error('Для новой эпохи требуется отзыв или историческая конфигурация');

@@ -143,7 +143,7 @@ func validateComponentProtocols02310(manifest componentUpdateManifest0157) error
 		if item.Component == "updater" {
 			updaterCount++
 			if !item.Executable {
-				return errors.New("updater helper: требуется исполняемый файл")
+				return errors.New("Для вспомогательного средства обновления требуется исполняемый файл")
 			}
 		}
 	}

@@ -2074,10 +2074,10 @@ function App() {
       );
     }
     setDeviceTrustStatus(
-      `attested · до ${new Date(data.attestationExpiresAt).toLocaleString()}`,
+      `Аттестация подтверждена · действует до ${new Date(data.attestationExpiresAt).toLocaleString()}`,
     );
     log(
-      `Аттестация по схеме «запрос — ответ» подтверждена для ${key.deviceId}; freshness=${data.attestationExpiresAt}. Проверено владение зарегистрированным аппаратным ключом; vendor TPM/Secure Enclave provenance не заявляется.`,
+      `Аттестация по схеме «запрос — ответ» подтверждена для ${key.deviceId}; срок действия аттестации — ${data.attestationExpiresAt}. Проверено владение зарегистрированным аппаратным ключом; происхождение ключа в TPM или Secure Enclave производителем не подтверждено.`,
     );
     return persistTrustedAccess(session, data.accessToken);
   }
@@ -2582,7 +2582,7 @@ function App() {
     if (!authSession?.accessToken) return;
     if (
       !window.confirm(
-        "Отозвать все остальные trusted devices? Текущее устройство останется активным; остальные device keys и связанные сессии будут отозваны без возможности восстановления ключа.",
+        "Отозвать доверие ко всем остальным устройствам? Текущее устройство останется активным. Ключи остальных устройств и связанные с ними сеансы будут отозваны без возможности восстановления ключей.",
       )
     )
       return;
@@ -2637,7 +2637,7 @@ function App() {
     });
     setAuthSession(next);
     log(
-      `Вход выполнен. Серверная сессия ${next.sessionId} сохранена в системном хранилище учётных данных; refresh token не записывается в конфигурацию/localStorage.`,
+      `Вход выполнен. Серверная сессия ${next.sessionId} сохранена в системном хранилище учётных данных; токен обновления не записывается в конфигурацию или локальное хранилище браузера.`,
     );
     try {
       if (recoveryLogin0435) {
@@ -4007,7 +4007,7 @@ function App() {
   ): Promise<MinecraftLaunchCredentials> {
     if (!authSession?.accessToken)
       throw new Error(
-        "Для запуска Minecraft требуется активная Never session.",
+        "Для запуска Minecraft требуется активный сеанс Never.",
       );
     const response = await fetch(endpoint("/api/v1/minecraft/session"), {
       method: "POST",
@@ -4194,7 +4194,7 @@ function App() {
       serverId: settings.serverId,
     });
     log(
-      `Серверный билет official Minecraft подтверждён для ${confirmed.username} (${confirmed.uuid}); вход проверит игровой ServerBridge.`,
+      `Серверный билет официального Minecraft подтверждён для ${confirmed.username} (${confirmed.uuid}); вход проверит игровой ServerBridge.`,
     );
   }
 
@@ -5388,14 +5388,15 @@ function App() {
                 >
                   {measuredBootBusy0315
                     ? "Проверка PCR…"
-                    : "Проверить Measured Boot по TPM Quote"}
+                    : "Проверить измеренную загрузку по свидетельству TPM Quote"}
                 </button>
                 <p role="status">{measuredBootStatus0315}</p>
                 <small>
-                  Linux: необходимы /dev/tpmrm0, tpm2-tools 5.x и AK на TPM
-                  persistent handle. Windows: пустая auth-сессия PCP-ключа.
-                  Несовместимые TPM/AK завершаются отказом без аппаратного
-                  assurance. AK root policy задаётся оператором на сервере.
+                  Для Linux необходимы /dev/tpmrm0, tpm2-tools 5.x и ключ AK с постоянным
+                  дескриптором TPM. Для Windows требуется пустая сессия
+                  аутентификации ключа PCP. Несовместимые TPM/AK отклоняются
+                  без подтверждения аппаратной защиты. Корневую политику AK
+                  задаёт оператор на сервере.
                 </small>
               </section>
             )}
@@ -5615,7 +5616,7 @@ function App() {
                 }}
                 onAdopted={() => {
                   log(
-                    "Проверенные файлы прежней установки добавлены в content cache.",
+                    "Проверенные файлы прежней установки добавлены в кэш содержимого.",
                   );
                   void verifyFiles();
                 }}

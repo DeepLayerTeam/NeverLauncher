@@ -30,7 +30,7 @@ type loaderPayloadCacheRecord struct {
 func loaderPayloadCachePaths(root, sha string) (recordRel, payloadRel, recordPath, payloadPath string, err error) {
 	sha = strings.ToLower(strings.TrimSpace(sha))
 	if !compatibilitySHA256RE.MatchString(sha) {
-		return "", "", "", "", errors.New("loader payload cache требует валидный SHA-256")
+		return "", "", "", "", errors.New("Для кэша данных загрузчика требуется корректная контрольная сумма SHA-256")
 	}
 	baseRel := filepath.ToSlash(filepath.Join(".launcher", "loader-cache", "sha256", sha[:2], sha))
 	recordRel = baseRel + ".json"
@@ -93,7 +93,7 @@ func storeLoaderPayloadCacheFile(root, loader, minecraft, source, filePath, expe
 
 func writeLoaderPayloadCacheRecord(recordPath, loader, minecraft, source, sha string, size int64) error {
 	if size <= 0 || size > maxCompatibilityArtifact {
-		return fmt.Errorf("loader payload cache size %d вне допустимого диапазона", size)
+		return fmt.Errorf("Размер кэша данных загрузчика (%d) вне допустимого диапазона", size)
 	}
 	record := loaderPayloadCacheRecord{
 		SchemaVersion:    loaderPayloadCacheSchema,
@@ -269,7 +269,7 @@ func downloadPinnedSHA256Artifact(ctx context.Context, client *http.Client, root
 		return vanillaDownloadedFile{}, err
 	}
 	if !compatibilitySHA256RE.MatchString(strings.ToLower(strings.TrimSpace(expectedSHA256))) {
-		return vanillaDownloadedFile{}, errors.New("pinned artifact: требуется SHA-256")
+		return vanillaDownloadedFile{}, errors.New("Для закреплённого артефакта требуется контрольная сумма SHA-256")
 	}
 	if max <= 0 || max > maxCompatibilityArtifact {
 		max = maxCompatibilityArtifact

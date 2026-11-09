@@ -155,7 +155,7 @@ export class AuthenticationExperience02610 {
       links: linksResult.status === "fulfilled" ? linksResult.value : null,
       linksIssue:
         linksResult.status === "rejected"
-          ? "Связь с Never identity временно недоступна."
+          ? "Служба идентификации Never временно недоступна."
           : null,
       issue:
         accountsResult.status === "rejected"

@@ -460,7 +460,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		return o, errors.New("Допустимый диапазон для тайм-аут процессора: 1s–1h")
 	}
 	if o.ProcessorSandbox != "" && o.ProcessorSandbox != "process" && o.ProcessorSandbox != "required" {
-		return o, errors.New("processor sandbox: требуется настройка процесса или обязательные параметры")
+		return o, errors.New("Для изоляции обработчика требуется настройка процесса или обязательные параметры")
 	}
 	return o, nil
 }

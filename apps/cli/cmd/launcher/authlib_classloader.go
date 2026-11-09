@@ -274,7 +274,7 @@ func readCompatReceipt0279(root string) (*compatLock0279, error) {
 		return nil, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 1<<20 {
-		return nil, errors.New("compatibility receipt: требуется небольшой обычный файл")
+		return nil, errors.New("Для подтверждения совместимости требуется обычный файл допустимого размера")
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
