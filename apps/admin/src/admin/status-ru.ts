@@ -17,6 +17,18 @@ export function statusRu(value: string | null | undefined): string {
     valid: "Корректно", invalid: "Некорректно", new: "Новое",
     open: "Открыто", closed: "Закрыто", verified: "Проверено",
     unverified: "Не проверено", skipped: "Пропущено", retrying: "Повторная попытка",
+    absent: "Отсутствует", installed: "Установлено", uninstalled: "Удалено",
+    isolated: "Изолировано", unisolated: "Без изоляции",
+    enabled_unverified: "Включено, не проверено",
+    fresh: "Актуально", initializing: "Инициализация", starting: "Запускается",
+    stopping: "Останавливается", restarting: "Перезапускается",
+    accepted: "Принято", dispatched: "Отправлено", delivered: "Доставлено",
+    executed: "Выполнено", indeterminate: "Результат неизвестен",
+    detached: "Отключено", available: "Доступно", unavailable: "Недоступно",
+    unsupported: "Не поддерживается", denied_by_policy: "Запрещено политикой",
+    none: "Нет", ok: "Норма", enforced: "Применено",
+    "not-enforced": "Не применяется", "os-isolated": "Изолировано средствами ОС",
+    "legacy-unisolated": "Без подтверждённой изоляции ОС",
   };
   return labels[value.toLowerCase()] ?? value;
 }

@@ -1522,9 +1522,9 @@ export function ServerBridgeWorkspace({
       <details className="advanced">
         <summary>Диагностика протокола v3, топологии и аудита</summary>
         <p className="muted">
-          {overview?.protocol?.status || "unknown"} · хеш{" "}
-          <code>{overview?.protocol?.featureDigest || "unknown"}</code> ·
-          зафиксирован: {String(overview?.protocol?.frozen ?? "unknown")}
+          {statusRu(overview?.protocol?.status)} · хеш{" "}
+          <code>{overview?.protocol?.featureDigest || "неизвестен"}</code> ·
+          зафиксирован: {overview?.protocol?.frozen === undefined ? "неизвестно" : overview.protocol.frozen ? "да" : "нет"}
         </p>
         <ResourceGrid
           section="server-bridge"

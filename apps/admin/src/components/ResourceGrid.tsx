@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { collection, isRecord } from '../api/client';
 import { valueAt, textValue, filterSortRows, paginateRows, type Column } from './resource-model';
 import type { SectionId } from '../admin/routing';
+import { statusRu } from '../admin/status-ru';
 
 type Item = Record<string, unknown>;
 const definitions: Partial<Record<SectionId, Column[]>> = {
@@ -19,6 +20,7 @@ const definitions: Partial<Record<SectionId, Column[]>> = {
 function displayValue(row: Item, col: Column): string {
   const value = valueAt(row, col.field);
   if (col.datetime && typeof value === 'string' && value && !Number.isNaN(Date.parse(value))) return new Date(value).toLocaleString();
+  if (col.field === 'status' || col.field === 'trustState' || col.field === 'integrityStatus') return statusRu(textValue(value));
   return textValue(value);
 }
 function details(item: Item): [string, unknown][] { return Object.entries(item).filter(([key]) => !['passwordHash', 'token', 'refreshToken'].includes(key)); }

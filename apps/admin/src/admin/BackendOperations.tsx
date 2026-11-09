@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
 import { navigate } from "./routing";
+import { statusRu } from "./status-ru";
 
 type Status = {
   instanceId: string;
@@ -160,7 +161,7 @@ export function BackendOperations0289({
         body: JSON.stringify({ instanceId: status.instanceId, confirmation }),
       });
       setInfo(
-        `Команда ${result.operation.id}: ${result.state ?? "ранее принята"}. Повтор с тем же ключом не выполняет действие ещё раз.`,
+        `Команда ${result.operation.id}: ${result.state ? statusRu(result.state) : "ранее принята"}. Повтор с тем же ключом не выполняет действие ещё раз.`,
       );
     } catch (e) {
       setError(

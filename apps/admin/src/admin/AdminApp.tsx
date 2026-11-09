@@ -21,6 +21,7 @@ import { ConfigWorkspace } from "./ConfigWorkspace";
 import { OfficialProviderWorkspace02611 } from "./OfficialProviderWorkspace02611";
 import { AuthProviderWizard02910 } from "./AuthProviderWizard02910";
 import { requestJSON, ApiError } from "../api/client";
+import { statusRu } from "./status-ru";
 import { AdminApi, type AdminOverview } from "../api/admin";
 import { MetricCard, TextInput } from "../components/primitives";
 import { ServerBridgeWorkspace } from "./ServerBridgeWorkspace";
@@ -1989,7 +1990,7 @@ export function AdminApp() {
             <MetricCard label="Профили" value={metrics.profiles ?? "—"} />
             <MetricCard label="Каналы" value={metrics.channels ?? "—"} />
             <MetricCard label="Аудит" value={metrics.auditEvents ?? "—"} />
-            <MetricCard label="Состояние" value={dashboard?.status ?? status} />
+            <MetricCard label="Состояние" value={statusRu(dashboard?.status ?? status)} />
           </section>
         )}
         {active === "dashboard" && token && identity && (

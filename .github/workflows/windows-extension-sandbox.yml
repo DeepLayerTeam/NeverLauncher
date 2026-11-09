@@ -48,10 +48,10 @@ jobs:
       - name: Потребовать нативную архитектуру Windows без эмуляции
         run: |
           $goArch = (go env GOARCH).Trim()
-          if ($goArch -ne '${{ matrix.arch }}') { throw "Expected native ${{ matrix.arch }} Go, got $goArch" }
+          if ($goArch -ne '${{ matrix.arch }}') { throw "Ожидалась нативная архитектура Go ${{ matrix.arch }}, получена $goArch" }
           $osArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
           $expected = if ('${{ matrix.arch }}' -eq 'arm64') { 'Arm64' } else { 'X64' }
-          if ($osArchitecture -ne $expected) { throw "Expected $expected host, got $osArchitecture" }
+          if ($osArchitecture -ne $expected) { throw "Ожидалась архитектура хоста $expected, получена $osArchitecture" }
       - name: Собрать SDK расширений для Windows
         run: |
           Push-Location sdk/backend/go
@@ -66,7 +66,7 @@ jobs:
           go test -tags launcher_nopgx -count=1 -timeout 10m -v ./internal/windowssandbox
           if ($LASTEXITCODE -ne 0) { throw 'Тесты нативной границы изоляции Windows завершились ошибкой' }
           go test -tags launcher_nopgx -count=1 ./internal/extensionpolicy ./internal/extensionhost
-          if ($LASTEXITCODE -ne 0) { throw 'Windows extension policy/host tests failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'Проверки политики расширений и хоста Windows завершились ошибкой' }
       - name: Собрать настоящий Backend для Windows
         working-directory: services/api
         run: |

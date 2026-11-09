@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
 import { TextInput } from "../components/primitives";
 import { auditHref, recoveryAdvice } from "./lifecycle";
+import { statusRu } from "./status-ru";
 
 type RegistryArtifactView = {
   packageIdentity: string;
@@ -851,10 +852,10 @@ export function RegistryWorkspace({
                   <span
                     className={`badge ${item.currentState === "enabled" ? "ok" : item.currentState === "absent" ? "warn" : ""}`}
                   >
-                    {item.currentState}
+                    {statusRu(item.currentState)}
                   </span>
                   <span className="badge">
-                    {item.scope}
+                    {item.scope === "global" ? "Глобально" : item.scope === "project" ? "Проект" : item.scope}
                     {item.scopeId ? `:${item.scopeId}` : ""}
                   </span>
                 </div>
@@ -872,9 +873,9 @@ export function RegistryWorkspace({
                 return host ? (
                   <>
                     <p className="muted">
-                      Хост: <strong>{host.state}</strong> · доверие{" "}
-                      <strong>{host.executionTrust ?? "неизвестно"}</strong> · изоляция
-                      ОС {host.osSandbox ?? "none"} · работоспособен{" "}
+                      Хост: <strong>{statusRu(host.state)}</strong> · доверие{" "}
+                      <strong>{host.executionTrust === "os-isolated" ? "Изолировано средствами ОС" : host.executionTrust === "legacy-unisolated" ? "Без подтверждённой изоляции ОС" : statusRu(host.executionTrust)}</strong> · изоляция
+                      ОС {statusRu(host.osSandbox ?? "none")} · работоспособен{" "}
                       {host.healthy ? "да" : "нет"} · PID {host.pid ?? "—"} ·
                       перезапусков {host.restarts} · RSS{" "}
                       {host.memoryBytes
@@ -884,13 +885,13 @@ export function RegistryWorkspace({
                     </p>
                     <p className="muted">
                       Изоляция:{" "}
-                      <strong>{host.isolationStatus ?? "неизвестно"}</strong> ·{" "}
+                      <strong>{statusRu(host.isolationStatus)}</strong> ·{" "}
                       {host.isolationReasonCodes?.join(", ") ||
                         "нет доказательств"}{" "}
                       · действующие ограничения:{" "}
                       {host.effectiveRestrictions?.join(", ") || "неизвестно"};
-                      Сеть {host.networkSandbox ?? "none"}, FS{" "}
-                      {host.filesystemSandbox ?? "none"}.
+                      Сеть {statusRu(host.networkSandbox ?? "none")}, файловая система{" "}
+                      {statusRu(host.filesystemSandbox ?? "none")}.
                     </p>
                     {host.lastError && (
                       <p className="error">Хост: {host.lastError}</p>

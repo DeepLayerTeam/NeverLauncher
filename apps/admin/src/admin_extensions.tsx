@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { auditHref, recoveryAdvice } from "./admin/lifecycle";
+import { statusRu } from "./admin/status-ru";
 import {
   ExtensionManagement0425,
   checkScope0425,
@@ -13,6 +14,20 @@ import {
 
 const ADMIN_PROTOCOL = "extensions.admin-rpc.v1";
 const EXTENSION_API_VERSION = "1.0";
+
+// Переводятся только отображаемые подписи; идентификаторы запросов остаются прежними.
+function scopeRu(scope?: string): string {
+  if (!scope || scope === "global") return "глобально";
+  if (scope === "project") return "проект";
+  return scope;
+}
+function extensionActionRu(action: string): string {
+  return ({ start: "запуск", stop: "остановку", restart: "перезапуск",
+    enable: "включение", disable: "отключение", install: "установку",
+    uninstall: "удаление", upgrade: "обновление", downgrade: "возврат версии",
+    "quarantine-release": "снятие карантина", "emergency-disable": "экстренное отключение",
+    "emergency-clear": "снятие экстренной блокировки" } as Record<string, string>)[action] ?? action;
+}
 
 type Envelope<T> = { data?: T; error?: { message?: string } };
 export type AdminPage = { id: string; title: string; description?: string };
@@ -497,7 +512,7 @@ export function AdminExtensions({
     };
     if (
       !window.confirm(
-        `Подтвердить ${action}: ${id}\nОбласть действия: ${scope.scope}/${scope.scopeId || "global"}`,
+        `Подтвердить ${extensionActionRu(action)}: ${id}\nОбласть действия: ${scopeRu(scope.scope)}${scope.scopeId ? `/${scope.scopeId}` : ""}`,
       )
     )
       return;
@@ -608,7 +623,7 @@ export function AdminExtensions({
     }
     if (
       !window.confirm(
-        `Подтвердить ${action}: ${id}${version ? `@${version}` : ""}\nОбласть действия: ${scope.scope}/${scope.scopeId || "global"}\n${action === "uninstall" ? "Удаление пакета может быть необратимым." : "Операция будет проверена через сервер."}`,
+        `Подтвердить ${extensionActionRu(action)}: ${id}${version ? `@${version}` : ""}\nОбласть действия: ${scopeRu(scope.scope)}${scope.scopeId ? `/${scope.scopeId}` : ""}\n${action === "uninstall" ? "Удаление пакета может быть необратимым." : "Операция будет проверена через сервер."}`,
       )
     )
       return;
@@ -900,7 +915,7 @@ export function AdminExtensions({
             <strong>Запрещено: {entry.extensionId}</strong>
             <p className="error">{entry.reason}</p>
             <p className="muted">
-              {entry.scope}/{entry.scopeId || "global"}
+              {scopeRu(entry.scope)}{entry.scopeId ? `/${entry.scopeId}` : ""}
             </p>
             <button
               disabled={operationBusy}
@@ -931,17 +946,17 @@ export function AdminExtensions({
               <div className="registryHeading">
                 <div>
                   <strong>
-                    {install.extensionId ?? "extension"} ·{" "}
+                    {install.extensionId ?? "расширение"} ·{" "}
                     {install.currentVersion ?? install.desiredVersion ?? "—"}
                   </strong>
                   <p className="muted">
-                    {install.scope ?? "global"}{" "}
+                    {scopeRu(install.scope)}{" "}
                     {install.scopeId ? `· ${install.scopeId}` : ""} · поколение{" "}
                     {install.generation ?? 0}
                   </p>
                 </div>
                 <span className={`badge ${runtime.healthy ? "ok" : "warn"}`}>
-                  {runtime.state ?? install.currentState ?? "unknown"}
+                  {statusRu(runtime.state ?? install.currentState)}
                 </span>
               </div>
               <p className="muted">
@@ -958,18 +973,18 @@ export function AdminExtensions({
                     Исполнение:{" "}
                     {runtime.isolationStatus === "isolated" &&
                     runtime.executionTrust === "os-isolated"
-                      ? "OS-isolated"
+                      ? "Изолировано средствами ОС"
                       : runtime.executionTrust === "legacy-unisolated"
                         ? "Без подтверждённой OS-изоляции"
                         : "Не подтверждено"}
                   </strong>{" "}
-                  · {runtime.state ?? "не запущено"}
+                  · {runtime.state ? statusRu(runtime.state) : "не запущено"}
                 </p>
                 <p className="muted">
-                  ОС: {runtime.osSandbox ?? "нет"} · ресурсы:{" "}
+                  ОС: {runtime.osSandbox ? statusRu(runtime.osSandbox) : "не проверено"} · ресурсы:{" "}
                   {runtime.resourceIsolation ?? "не проверено"} · сеть:{" "}
-                  {runtime.networkSandbox ?? "не проверено"} · файлы:{" "}
-                  {runtime.filesystemSandbox ?? "не проверено"}
+                  {runtime.networkSandbox ? statusRu(runtime.networkSandbox) : "не проверено"} · файлы:{" "}
+                  {runtime.filesystemSandbox ? statusRu(runtime.filesystemSandbox) : "не проверено"}
                 </p>
                 {!!runtime.isolationReasonCodes?.length && (
                   <p className="error">
