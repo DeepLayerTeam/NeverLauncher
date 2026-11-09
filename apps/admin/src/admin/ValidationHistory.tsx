@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ReleaseApi, type ValidationAuditReport03412 } from '../api/release';
 
 type Props = {api:ReleaseApi; packageId:string};
-const readableTime = (value?:string) => value ? new Date(value).toLocaleString() : '—';
+const readableTime = (value?:string) => value ? new Date(value).toLocaleString("ru-RU") : '—';
 
 /** Этот экран не отправляет административное решение о сертификации. Право на неё
  * определяется только действующим анализатором подписанных доказательств в Backend. */

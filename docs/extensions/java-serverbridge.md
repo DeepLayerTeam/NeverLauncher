@@ -38,7 +38,7 @@ var node = bridge.server("my-project", "my-server");
 if (node.runtimeActive()) {
     var receipt = bridge.command(
         "my-project", "my-server", "message.broadcast",
-        java.util.Map.of("message", "Server maintenance in 5 minutes"),
+        java.util.Map.of("message", "Техническое обслуживание сервера через 5 минут"),
         "maintenance-notice-20261102", 120);
     var state = bridge.commandStatus(
         "my-project", "my-server", receipt.command().id());

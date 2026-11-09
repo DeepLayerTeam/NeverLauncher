@@ -395,7 +395,7 @@ export function AuthProviderWizard02910({
                       {rev.revision === h.activeRevision ? " (активна)" : ""}
                     </td>
                     <td>{statusRu(rev.kind)}</td>
-                    <td>{new Date(rev.createdAt).toLocaleString()}</td>
+                    <td>{new Date(rev.createdAt).toLocaleString("ru-RU")}</td>
                     <td>
                       <button disabled={busy} onClick={() => choose(h, rev)}>
                         Посмотреть

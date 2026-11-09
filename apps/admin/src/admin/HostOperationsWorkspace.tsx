@@ -32,7 +32,7 @@ function readPending(
 }
 const datetime = (value?: string) =>
   value && Number.isFinite(Date.parse(value))
-    ? new Date(value).toLocaleString()
+    ? new Date(value).toLocaleString("ru-RU")
     : "неизвестно";
 const formatBytes = (bytes?: number) =>
   Number.isFinite(bytes) && bytes !== undefined

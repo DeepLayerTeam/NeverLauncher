@@ -824,7 +824,7 @@ export function ReleaseWorkspace({
                 >
                   {d.version || "Без версии"} · {d.profileId || "Без профиля"} ·{" "}
                   {d.step}{" "}
-                  <small>({new Date(d.updatedAt).toLocaleString()})</small>
+                  <small>({new Date(d.updatedAt).toLocaleString("ru-RU")})</small>
                 </button>
               </li>
             ))}
@@ -1429,7 +1429,7 @@ export function ReleaseWorkspace({
                     <td>
                       {item.publishedAt &&
                       !Number.isNaN(Date.parse(item.publishedAt))
-                        ? new Date(item.publishedAt).toLocaleString()
+                        ? new Date(item.publishedAt).toLocaleString("ru-RU")
                         : "—"}
                     </td>
                     <td>

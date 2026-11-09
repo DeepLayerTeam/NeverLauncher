@@ -11,16 +11,16 @@ services.events().subscribeJob("project.saved", projectSchema,
         // event.metadata().schemaVersion(), event.metadata().orderingKey().
         // Сохраняйте запись идемпотентности вместе с внешним результатом операции.
         // Для ошибок, допускающих повтор, выбрасывайте IOException.
-        if (temporarilyUnavailable()) throw new IOException("retry later");
+        if (temporarilyUnavailable()) throw new IOException("Повторите попытку позже");
         if (permanentlyInvalid(event.event().payload()))
-            throw new RuntimeEvents.PermanentFailure("invalid work item");
+            throw new RuntimeEvents.PermanentFailure("Недопустимое задание");
         applyChange(event.event().idempotencyKey(), event.event().payload());
     });
 services.events().subscribeHook("release.before-publish", releaseSchema,
     payload -> Json.object(payload), event ->
         isPermitted(event.event().payload())
             ? RuntimeEvents.HookDecision.allow()
-            : RuntimeEvents.HookDecision.deny("release policy rejected"));
+            : RuntimeEvents.HookDecision.deny("Публикация запрещена политикой выпуска"));
 ```
 
 `subscribeJob()` — долговременный **асинхронный обработчик задач, запускаемых событием**, а не новый API произвольного планирования заданий. Выполнение обратных вызовов Host ограничено ресурсами, а повторы выполняются только после ошибки обработчика или отсутствия ACK. Семантика отказов:

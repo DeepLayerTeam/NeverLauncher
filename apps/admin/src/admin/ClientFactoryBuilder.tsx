@@ -509,7 +509,7 @@ export function ClientFactoryBuilder02710({
             <option value="">Выберите задание</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {new Date(j.createdAt).toLocaleString()} · {j.request.loader} ·{" "}
+                {new Date(j.createdAt).toLocaleString("ru-RU")} · {j.request.loader} ·{" "}
                 {statusRu(j.state)} · {j.id.slice(0, 8)}
               </option>
             ))}

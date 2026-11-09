@@ -52,7 +52,7 @@ const definitions: Partial<Record<SectionId, Column[]>> = {
 };
 function displayValue(row: Item, col: Column): string {
   const value = valueAt(row, col.field);
-  if (col.datetime && typeof value === 'string' && value && !Number.isNaN(Date.parse(value))) return new Date(value).toLocaleString();
+  if (col.datetime && typeof value === 'string' && value && !Number.isNaN(Date.parse(value))) return new Date(value).toLocaleString("ru-RU");
   return displayScalar(value, col.field);
 }
 function details(item: Item): [string, unknown][] { return Object.entries(item).filter(([key]) => !['passwordHash', 'token', 'refreshToken'].includes(key)); }

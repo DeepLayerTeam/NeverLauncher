@@ -86,7 +86,7 @@ const monitorStorageKey = (
 ) => durableOwnerKey(backendUrl, userId, projectId, "bridge") + ".monitor";
 const timeLabel = (iso?: string) => {
   const time = Date.parse(iso ?? "");
-  return Number.isFinite(time) ? new Date(time).toLocaleString() : "неизвестно";
+  return Number.isFinite(time) ? new Date(time).toLocaleString("ru-RU") : "неизвестно";
 };
 const formatMetric = (value?: number | null) =>
   typeof value === "number" && Number.isFinite(value)
@@ -922,7 +922,7 @@ export function ServerBridgeWorkspace({
               <dt>Снимок</dt>
               <dd>
                 {t?.sampledAtUnixMillis
-                  ? new Date(t.sampledAtUnixMillis).toLocaleString()
+                  ? new Date(t.sampledAtUnixMillis).toLocaleString("ru-RU")
                   : "неизвестно"}
               </dd>
             </dl>

@@ -77,7 +77,7 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
     <a href={auditHref(selected || 'backup:')} >Открыть журнал резервного копирования</a>
     <div className="dataToolbar"><label>Поиск по ID<input type="search" value={search} onChange={e => setSearch(e.target.value)} /></label></div>
     <div className="tableScroll"><table className="table resourceTable"><thead><tr><th>Резервное копирование</th><th>Создан</th><th>Размер</th><th>SHA-256</th><th>Действия</th></tr></thead><tbody>
-      {filtered.map(item => <tr key={item.backupId}><td><code>{item.backupId}</code></td><td>{item.createdAt ? new Date(item.createdAt).toLocaleString() : '—'}</td><td>{(item.size / 1024 / 1024).toFixed(1)} MiB</td><td><code>{item.sha256.slice(0, 18)}…</code></td><td><button disabled={!!busy} onClick={() => { choose(item.backupId); inspect(item.backupId); }}>Открыть</button></td></tr>)}
+      {filtered.map(item => <tr key={item.backupId}><td><code>{item.backupId}</code></td><td>{item.createdAt ? new Date(item.createdAt).toLocaleString("ru-RU") : '—'}</td><td>{(item.size / 1024 / 1024).toFixed(1)} MiB</td><td><code>{item.sha256.slice(0, 18)}…</code></td><td><button disabled={!!busy} onClick={() => { choose(item.backupId); inspect(item.backupId); }}>Открыть</button></td></tr>)}
       {filtered.length === 0 && <tr><td colSpan={5}>Архивов нет либо поиск ничего не нашёл.</td></tr>}
     </tbody></table></div>
     {selected && current && <article className="subcard">
