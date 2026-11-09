@@ -5805,7 +5805,7 @@ function FirstRunSigned0352({
           {progress && (
             <div role="status">
               <p>
-                {progress.phase}: {progress.completed + progress.skipped} из{" "}
+                {locale0357 === "en" ? progress.phase : (progress0354(progress)?.label ?? t.installing)}: {progress.completed + progress.skipped} из{" "}
                 {progress.totalFiles} файлов
               </p>
               <progress

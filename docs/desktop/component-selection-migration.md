@@ -22,4 +22,4 @@
 - `apps/desktop/src/ComponentPortability02410.tsx`: импорт/экспорт файлов, предложенный выбор, разрешённые различия, явное подтверждение.
 - `apps/desktop/src/main.tsx`: сохранение прежних предпочтений при обновлении манифеста и синхронизация DesktopConfig после отката.
 
-Запустите `cargo test --manifest-path runtime/runtime/Cargo.toml component_selection_02410` и `npm --prefix apps/desktop run build` с установленными зависимостями проекта. Полная интеграция Minecraft должна охватывать последовательность `old selection → new signed release → migrate → install → launch → rollback`, включая имитируемый отказ и конфликты с файлами пользователя.
+Запустите `cargo test --manifest-path runtime/runtime/Cargo.toml component_selection_02410` и `npm --prefix apps/desktop run build` с установленными зависимостями проекта. Полная интеграция Minecraft должна охватывать последовательность `прежний выбор → новый подписанный выпуск → перенос → установка → запуск → откат`, включая имитируемый отказ и конфликты с файлами пользователя.
