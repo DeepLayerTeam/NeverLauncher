@@ -511,7 +511,7 @@ export function ServerBridgeWorkspace({
           : `Установить максимум ${limit} мест`;
     if (
       !window.confirm(
-        `${label} для ${node.name || node.id}?\nСуществующие соединения не отключаются. Незавершённые handoff будут отозваны.`,
+        `${label} для ${node.name || node.id}?\nСуществующие соединения не отключаются. Незавершённые передачи игроков будут отозваны.`,
       )
     )
       return;
@@ -858,7 +858,7 @@ export function ServerBridgeWorkspace({
               <dt>Обслуживание / вывод из нагрузки</dt>
               <dd>
                 {networkFresh
-                  ? `Подписанная маршрутизация: ${statusRu(network?.state)}; решение о допуске: ${network?.reason}`
+                  ? `Подписанная маршрутизация: ${statusRu(network?.state)}; решение о допуске: ${statusRu(network?.reason)}`
                   : "Не подтверждено актуальным снимком маршрутизации"}
                 . ACK команд проверяйте отдельно.
               </dd>
@@ -870,8 +870,8 @@ export function ServerBridgeWorkspace({
               className={`badge ${tele?.state === "fresh" && snapshotFresh ? "ok" : "warn"}`}
             >
               {tele?.state === "fresh" && snapshotFresh
-                ? `Fresh · ${tele.ageSeconds} сек`
-                : tele?.reason || "нет данных"}
+                ? `Актуально · ${tele.ageSeconds} сек`
+                : tele?.reason ? statusRu(tele.reason) : "нет данных"}
             </span>
             <dl className="bridgeFacts">
               <dt>В сети / максимум</dt>
@@ -986,7 +986,7 @@ export function ServerBridgeWorkspace({
                 <dl className="bridgeFacts">
                   <dt>Источник / свежесть</dt>
                   <dd>
-                    {network.source} ·{" "}
+                    {statusRu(network.source)} ·{" "}
                     {networkFresh && snapshotFresh
                       ? "актуально"
                       : "устарело / не подтверждено"}{" "}
@@ -1005,14 +1005,14 @@ export function ServerBridgeWorkspace({
                     >
                       {networkFresh && network.routable
                         ? "принимает новых игроков"
-                        : network.reason}
+                        : statusRu(network.reason)}
                     </span>{" "}
                     · узел {statusRu(network.state)} / {statusRu(network.health)}
                   </dd>
                   <dt>Загрузка / резерв</dt>
                   <dd>
                     {network.playersOnline} игроков · {network.reservedSlots}{" "}
-                    handoff reservations · свободно{" "}
+                    зарезервированных мест для передачи игроков · свободно{" "}
                     {network.availableSlots === -1
                       ? "без лимита"
                       : network.availableSlots}

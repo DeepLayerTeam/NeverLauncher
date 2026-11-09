@@ -510,7 +510,7 @@ export function ClientFactoryBuilder02710({
             <option value="">Выберите задание</option>
             {jobs.map((j) => (
               <option key={j.id} value={j.id}>
-                {new Date(j.createdAt).toLocaleString("ru-RU")} · {j.request.loader} ·{" "}
+                {new Date(j.createdAt).toLocaleString("ru-RU")} · {j.request.loader === "vanilla" ? "Без загрузчика" : j.request.loader} ·{" "}
                 {statusRu(j.state)} · {j.id.slice(0, 8)}
               </option>
             ))}
@@ -571,7 +571,7 @@ export function ClientFactoryBuilder02710({
                 <dd>{plan.minecraftVersion}</dd>
                 <dt>Загрузчик</dt>
                 <dd>
-                  {plan.loader} {plan.loaderVersion || ""}
+                  {plan.loader === "vanilla" ? "Без загрузчика" : plan.loader} {plan.loaderVersion || ""}
                 </dd>
                 <dt>Java</dt>
                 <dd>{plan.java.major}</dd>

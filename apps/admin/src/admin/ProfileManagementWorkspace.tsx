@@ -251,7 +251,7 @@ export function ProfileManagementWorkspace({
         <select value={preset} onChange={(e) => setPreset(e.target.value)}>
           {presets.map((p) => (
             <option value={p.id} key={p.id}>
-              {p.name} — {p.loader}
+              {p.name} — {p.loader === "vanilla" ? "Без загрузчика" : p.loader}
             </option>
           ))}
         </select>

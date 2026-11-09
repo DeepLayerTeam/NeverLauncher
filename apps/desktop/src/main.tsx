@@ -5235,6 +5235,7 @@ function App() {
                 launchPlan={launchPlan}
                 readinessContract={readinessContract}
                 diagnosticsPolicy={diagnosticsPolicy}
+                locale0357={ui0357.locale}
               />
             )}
             {screen === "auth" &&
@@ -5788,7 +5789,7 @@ function FirstRunSigned0352({
             </label>
           </div>
           <p>
-            {manifest.minecraft.version} · {manifest.minecraft.loader} ·{" "}
+            {manifest.minecraft.version} · {manifest.minecraft.loader === "vanilla" ? (locale0357 === "en" ? "Vanilla" : "Без загрузчика") : manifest.minecraft.loader} ·{" "}
             {manifest.files.length} файлов. Фактические зависимости и конфликты
             проверит Runtime перед установкой.
           </p>
@@ -5938,6 +5939,7 @@ function Overview({
   launchPlan,
   readinessContract,
   diagnosticsPolicy,
+  locale0357,
 }: any) {
   return (
     <>
@@ -5952,7 +5954,7 @@ function Overview({
           <strong>{manifest ? manifest.version : "не загружен"}</strong>
           <p>
             {manifest
-              ? `${manifest.projectId}/${manifest.profileId} · ${manifest.minecraft.loader} ${manifest.minecraft.version}`
+              ? `${manifest.projectId}/${manifest.profileId} · ${manifest.minecraft.loader === "vanilla" ? (locale0357 === "en" ? "Vanilla" : "Без загрузчика") : manifest.minecraft.loader} ${manifest.minecraft.version}`
               : "Загрузите профиль клиента."}
           </p>
         </article>

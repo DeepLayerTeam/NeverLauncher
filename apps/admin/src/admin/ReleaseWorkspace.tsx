@@ -960,7 +960,7 @@ export function ReleaseWorkspace({
             <p className="muted" role="status">
               Профиль закрепляет Minecraft{" "}
               {profiles.find((p) => p.id === form.profileId)?.minecraftVersion},
-              загрузчик {profiles.find((p) => p.id === form.profileId)?.loader}{" "}
+              загрузчик {profiles.find((p) => p.id === form.profileId)?.loader === "vanilla" ? "без загрузчика" : profiles.find((p) => p.id === form.profileId)?.loader}{" "}
               {profiles.find((p) => p.id === form.profileId)?.loaderVersion ||
                 ""}{" "}
               и Java {profiles.find((p) => p.id === form.profileId)?.javaMajor}.
