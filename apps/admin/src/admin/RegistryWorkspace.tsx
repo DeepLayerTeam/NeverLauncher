@@ -520,9 +520,9 @@ export function RegistryWorkspace({
         <div>
           <h2>Реестр расширений {TOOL_VERSION}</h2>
           <p className="muted">
-            Private/local registry подписанных immutable .nlext. Publish
-            принимает только артефакты с доверенным публичным ключом издателя Ed25519;
-            install повторно проверяет bytes и signature из storage.
+            Локальный закрытый реестр подписанных неизменяемых пакетов .nlext.
+            Публикация допускается только для артефактов с доверенным открытым ключом издателя Ed25519;
+            при установке повторно проверяются содержимое и подпись пакета из хранилища.
           </p>
         </div>
         <span className="badge ok">установка только проверенных пакетов</span>
@@ -530,7 +530,7 @@ export function RegistryWorkspace({
       {lastOperation && (
         <article className="subcard" role="status">
           <strong>{lastOperation.label}</strong>
-          <p>Последний ответ Backend:</p>
+          <p>Последний ответ сервера:</p>
           <details>
             <summary>Технические детали ответа</summary>
             <pre>
@@ -573,7 +573,7 @@ export function RegistryWorkspace({
             )
           }
         >
-          Обновить installs/hosts
+          Обновить установки и хосты
         </button>
       </div>
       <div className="registryToolbar">
@@ -655,7 +655,7 @@ export function RegistryWorkspace({
                 ).catch((err) => setError(err.message))
               }
             >
-              Добавить trusted key
+              Добавить доверенный ключ
             </button>
           </div>
         </article>
@@ -770,7 +770,7 @@ export function RegistryWorkspace({
                     ).catch((err) => setError(err.message))
                   }
                 >
-                  Установить verified artifact (staged)
+                  Подготовить и установить проверенный пакет
                 </button>
                 <button
                   disabled={Boolean(item.yankedAt)}
@@ -804,7 +804,7 @@ export function RegistryWorkspace({
                     ).catch((err) => setError(err.message))
                   }
                 >
-                  Yank
+                  Отозвать версию
                 </button>
               </div>
             </article>
@@ -820,18 +820,18 @@ export function RegistryWorkspace({
           Изоляция ОС:{" "}
           <strong>
             {sandboxDiagnostics0311?.enforced
-              ? "isolated"
+              ? "Изоляция включена"
               : "не поддерживается / не применяется"}
           </strong>{" "}
           · {sandboxDiagnostics0311?.platform || "неизвестная платформа"} ·{" "}
           {sandboxDiagnostics0311?.reasonCodes?.join(", ") ||
             "нет проверенного заключения"}
-          . Подпись пакета не даёт статус trusted. Старые расширения 2.0
-          запускаются без OS sandbox.
+          . Наличие подписи пакета само по себе не означает, что ему можно доверять.
+          Расширения старого формата 2.0 запускаются без изоляции средствами ОС.
         </p>
         {extensionInstalls.length === 0 ? (
           <p className="muted">
-            Для выбранного scope установок нет. Нажмите «Обновить installs».
+            Для выбранной области установок нет. Нажмите «Обновить установки и хосты».
           </p>
         ) : (
           extensionInstalls.map((item) => (

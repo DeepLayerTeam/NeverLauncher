@@ -2558,7 +2558,7 @@ function App() {
     const payload = await response.json();
     const data = payload.data ?? payload;
     log(
-      `Устройство ${device.id} отозвано: sessions=${data.revokedSessions ?? 0}, refreshFamilies=${data.revokedRefreshFamilies ?? 0}, minecraft=${data.revokedMinecraftSessions ?? 0}, challenges=${data.invalidatedChallenges ?? 0}.`,
+      `Устройство ${device.id} отозвано: завершено сеансов — ${data.revokedSessions ?? 0}, отозвано семейств токенов обновления — ${data.revokedRefreshFamilies ?? 0}, завершено сеансов Minecraft — ${data.revokedMinecraftSessions ?? 0}, отменено проверок — ${data.invalidatedChallenges ?? 0}.`,
     );
     if (device.current) {
       if (authSession.userId)
@@ -2868,7 +2868,7 @@ function App() {
             session: normalized,
           });
         log(
-          `Сессия восстановлена из системного хранилища учётных данных: ${Array.isArray(payload?.data?.items) ? payload.data.items.length : "ok"}.`,
+          `Сессия восстановлена из системного хранилища учётных данных. Учётных записей: ${Array.isArray(payload?.data?.items) ? payload.data.items.length : "неизвестно"}.`,
         );
         if (normalized.userId) {
           try {
