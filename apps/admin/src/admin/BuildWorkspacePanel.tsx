@@ -432,7 +432,7 @@ export function BuildWorkspacePanel({
               rows={3}
               value={settingsJSON}
               onChange={(e) => setSettingsJSON(e.target.value)}
-              placeholder="minecraft, runtime, fileRules, toolVersions"
+              placeholder="Например: minecraft, runtime, fileRules, toolVersions"
             />
           </label>
           <button

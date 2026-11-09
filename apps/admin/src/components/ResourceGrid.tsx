@@ -6,19 +6,37 @@ import { statusRu } from '../admin/status-ru';
 import { resourceFieldRu, resourceBooleanRu } from './resource-labels';
 
 type Item = Record<string, unknown>;
-const localizedStatusFields = new Set(['status', 'state', 'trustState', 'integrityStatus', 'protocolMode', 'telemetryState', 'commandType', 'action', 'riskState', 'keyBinding', 'health']);
+const localizedStatusFields = new Set([
+  'status', 'state', 'trustState', 'integrityStatus', 'protocolMode',
+  'telemetryState', 'commandType', 'action', 'riskState', 'keyBinding', 'health',
+  'scope', 'mode', 'kind', 'riskLevel', 'approvalState', 'approvalStatus',
+  'deviceStatus', 'deviceTrustState', 'trustStatus', 'routingState', 'routingHealth',
+  'runtimeState', 'runtimeStatus', 'nodeStatus', 'connectionStatus', 'networkState',
+  'isolationState', 'guardStatus', 'securityState', 'verificationState',
+  'verificationStatus', 'deploymentState', 'releaseStatus', 'extensionStatus',
+  'jobStatus', 'commandStatus', 'operationStatus', 'lifecycleState', 'sessionStatus',
+  'currentState', 'desiredState', 'stage', 'phase', 'operationType',
+]);
+const localizedBooleanFields = new Set([
+  'enabled', 'disabled', 'isDefault', 'protected', 'active', 'online', 'verified',
+  'eligible', 'routingAccepting', 'requireApproval', 'isHealthy', 'isEnabled',
+  'isActive', 'isTrusted', 'allowPlayerSkins', 'allowPlayerCapes',
+]);
+function displayBooleanString(value: unknown, field: string): string | null {
+  if (!localizedBooleanFields.has(field) || typeof value !== 'string') return null;
+  if (value.toLowerCase() === 'true') return 'Да';
+  if (value.toLowerCase() === 'false') return 'Нет';
+  return null;
+}
 function displayScalar(value: unknown, field = ''): string {
-  const boolean = resourceBooleanRu(value);
+  const boolean = resourceBooleanRu(value) ?? displayBooleanString(value, field);
   if (boolean !== null) return boolean;
   const text = textValue(value);
   return localizedStatusFields.has(field) ? statusRu(text) : text;
 }
 function displayFacet(value: string, field: string): string {
   if (localizedStatusFields.has(field)) return statusRu(value);
-  if ((field === 'protected' || field === 'isDefault') && (value === 'true' || value === 'false')) {
-    return value === 'true' ? 'Да' : 'Нет';
-  }
-  return value;
+  return displayBooleanString(value, field) ?? value;
 }
 const definitions: Partial<Record<SectionId, Column[]>> = {
   projects: [{ field: 'name', title: 'Проект' }, { field: 'id', title: 'ID' }, { field: 'defaultChannel', title: 'Канал', facet: true }, { field: 'updatedAt', title: 'Изменён', datetime: true }],

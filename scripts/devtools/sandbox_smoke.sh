@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-CLI="${1:?pass built CLI}"
+CLI="${1:?укажите путь к собранному CLI}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 cat > "$TMP/Fixture.java" <<'JAVA'
