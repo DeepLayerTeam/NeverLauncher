@@ -42,4 +42,4 @@ func run() error {
  fmt.Printf("PASS sdk=go checks=3 binaryBytes=%d binarySha256=%s\n",n,expected)
  return nil
 }
-func main(){if err:=run();err!=nil{fmt.Fprintln(os.Stderr,"BLOCKED SDK Go: "+err.Error());os.Exit(2)}}
+func main(){if err:=run();err!=nil{fmt.Fprintln(os.Stderr,"ПРОВЕРКА SDK Go ЗАБЛОКИРОВАНА: "+err.Error());os.Exit(2)}}

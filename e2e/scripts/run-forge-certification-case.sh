@@ -130,7 +130,7 @@ else:
     if mode != 'processors':
         raise SystemExit(f'Современная целевая версия Forge не использовала режим обработчиков: {mode!r}')
     if client_processors <= 0 or ran + skipped != client_processors:
-        raise SystemExit(f'Forge processor execution evidence is incomplete: client={client_processors} ran={ran} skipped={skipped}')
+        raise SystemExit(f'Неполные подтверждения выполнения обработчиков Forge: всего на клиенте={client_processors}, выполнено={ran}, пропущено={skipped}')
 for key in ('installerSha256', 'profileSha256'):
     if not re.fullmatch(r'[0-9a-f]{64}', str(install.get(key) or '')):
         raise SystemExit(f'Некорректное поле Forge {key}')

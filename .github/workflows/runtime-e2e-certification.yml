@@ -123,7 +123,7 @@ jobs:
           import json
           from pathlib import Path
           proof=json.loads(Path('e2e/runtime/matching-server.json').read_text())
-          assert proof['status']=='passed' and proof['clientJoinedServer'] is True, 'no real client/server join'
+          assert proof['status']=='passed' and proof['clientJoinedServer'] is True, 'реальное подключение клиента к серверу не подтверждено'
           PYJOIN
       - name: Сохранить диагностику реального подходящего сервера
         if: always()

@@ -88,7 +88,7 @@ type authSessionStore struct {
 }
 
 var (
-	errRefreshTokenInvalid       = errors.New("refresh token недействителен")
+	errRefreshTokenInvalid       = errors.New("Токен обновления недействителен")
 	errRefreshTokenReuseDetected = errors.New("обнаружено повторное использование refresh token")
 )
 

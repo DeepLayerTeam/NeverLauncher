@@ -69,7 +69,7 @@ jobs:
           script=pathlib.Path('scripts/acceptance/native_packages_0522.py').resolve()
           spec=importlib.util.spec_from_file_location('native_0522',script)
           m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
-          print('Native runner:',m.host_target())
+          print('Нативный исполнитель:',m.host_target())
           assert m.host_target()==('${{ matrix.platform }}','${{ matrix.arch }}')
           PY
       - name: "Подготовка независимого доверия к нативной подписи"

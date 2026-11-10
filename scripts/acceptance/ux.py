@@ -242,7 +242,7 @@ def execute(journeys, ids, timeout, report):
                 }
                 if result.returncode:
                     print(
-                        "FAILED:",
+                        "ОШИБКА:",
                         path,
                         "(вывод скрыт; для диагностики запустите команду непосредственно)",
                         file=sys.stderr,
@@ -254,7 +254,7 @@ def execute(journeys, ids, timeout, report):
                     "testRefs": [path],
                     "command": cmd,
                 }
-                print("BLOCKED:", path, type(e).__name__, file=sys.stderr)
+                print("ЗАБЛОКИРОВАНО:", path, type(e).__name__, file=sys.stderr)
     outcome = []
     for j in selected:
         runnable = [plan_test(p) for p in j["testRefs"]]
@@ -327,7 +327,7 @@ def main(argv=None):
         )
         return execute(journeys, ids, args.timeout, args.report)
     except (AuditError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
-        print("UX0351 BLOCKED:", exc, file=sys.stderr)
+        print("UX0351 ЗАБЛОКИРОВАНО:", exc, file=sys.stderr)
         return 2
 
 

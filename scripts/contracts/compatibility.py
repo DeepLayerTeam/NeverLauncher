@@ -80,7 +80,7 @@ def main():
     new = json.loads(CURRENT.read_text(encoding='utf-8'))
     failures = check(old,new)
     if failures:
-        for item in failures[:50]: print('BREAKING:', item, file=sys.stderr)
+        for item in failures[:50]: print('НАРУШЕНИЕ СОВМЕСТИМОСТИ:', item, file=sys.stderr)
         raise SystemExit(f'{len(failures)} Несовместимые изменения API относительно 0.45.11')
     print('Обратная совместимость OpenAPI v1 с 0.45.11 подтверждена:',
           sum(k in METHODS for ops in old['paths'].values() for k in ops))

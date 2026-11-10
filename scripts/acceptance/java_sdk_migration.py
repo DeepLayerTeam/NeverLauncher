@@ -163,7 +163,7 @@ def main(argv=None):
         print('0.52.8', result['status'], len(result.get('checks',{})))
         return 0
     except (Blocked, OSError, ValueError, KeyError, TypeError) as exc:
-        print('BLOCKED 0.52.8:',type(exc).__name__,str(exc),file=sys.stderr)
+        print('ЗАБЛОКИРОВАНО 0.52.8:',type(exc).__name__,str(exc),file=sys.stderr)
         return 2
 
 

@@ -15,4 +15,4 @@ try {
  if (size < 8 || hash.digest('hex') !== need('NL_GA_BINARY_SHA256')) throw new Error('Потоковая передача SDK изменила байты двоичных данных');
  await api.request('GET','https://untrusted.invalid').then(() => {throw new Error('Небезопасный маршрут ошибочно принят');},()=>{});
  console.log(`PASS sdk=typescript checks=3 binaryBytes=${size} binarySha256=${process.env.NL_GA_BINARY_SHA256}`);
-} catch (error) { console.error('BLOCKED SDK TypeScript: '+error.constructor.name); process.exitCode=2; }
+} catch (error) { console.error('ПРОВЕРКА SDK TypeScript ЗАБЛОКИРОВАНА: '+error.constructor.name); process.exitCode=2; }

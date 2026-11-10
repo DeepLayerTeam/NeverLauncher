@@ -217,7 +217,7 @@ def main():
             incident(args)
     except OperatorError as err:
         # Детали ошибки намеренно не содержат stdout команды и секретов.
-        print('ERROR:',err,file=sys.stderr)
+        print('ОШИБКА:',err,file=sys.stderr)
         return 2
     return 0
 

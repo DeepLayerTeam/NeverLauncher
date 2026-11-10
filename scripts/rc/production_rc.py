@@ -294,7 +294,7 @@ def main() -> int:
     try:
         run_gate(args.output, dict(os.environ))
     except (GateError, OSError, ValueError) as exc:
-        print(f"RC BLOCKED: {exc}", file=sys.stderr)
+        print(f"ПРОВЕРКА РЕЛИЗ-КАНДИДАТА ЗАБЛОКИРОВАНА: {exc}", file=sys.stderr)
         return 2
     print("Тесты RC пройдены; остальные проверки готовности GA по-прежнему обязательны.")
     return 0

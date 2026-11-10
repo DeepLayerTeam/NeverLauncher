@@ -108,7 +108,7 @@ ran = int(install.get('processorRan') or 0)
 skipped = int(install.get('processorSkipped') or 0)
 mode = str(install.get('installMode') or '')
 if mode != 'processors' or client_processors <= 0 or ran + skipped != client_processors:
-    raise SystemExit(f'NeoForge processor execution evidence is incomplete: mode={mode!r} client={client_processors} ran={ran} skipped={skipped}')
+    raise SystemExit(f'Неполные подтверждения выполнения обработчиков NeoForge: режим={mode!r}, всего на клиенте={client_processors}, выполнено={ran}, пропущено={skipped}')
 for key in ('installerSha256', 'profileSha256'):
     if not re.fullmatch(r'[0-9a-f]{64}', str(install.get(key) or '')):
         raise SystemExit(f'Некорректное поле NeoForge {key}')

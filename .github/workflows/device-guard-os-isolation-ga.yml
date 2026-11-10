@@ -190,7 +190,7 @@ jobs:
           root=pathlib.Path('dist/security-0320-approved')
           paths=sorted(root.glob('*.json'))
           if len(paths)!=7:
-              raise SystemExit('BLOCKED: seven independently signed evidence reports required')
+              raise SystemExit('ЗАБЛОКИРОВАНО: требуются семь независимо подписанных отчётов с подтверждениями')
           cmd=[sys.executable, 'scripts/security/ga_verify_0320.py', '--commit', os.environ['GITHUB_SHA'], '--source-sha256', source_fingerprint(), '--trusted-public-key', os.environ.get('TRUSTED_KEY',''), '--output', 'dist/security-0320-GA-verdict.json', '--evidence', *map(str,paths)]
           raise SystemExit(subprocess.call(cmd))
           PY
