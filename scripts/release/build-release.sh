@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CANONICAL_VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 if [[ -n "${1:-}" && "$1" != "${CANONICAL_VERSION}" ]]; then
-  echo "Ошибка: версия release задаётся только через VERSION=${CANONICAL_VERSION}; передано: $1" >&2
+  echo "Ошибка: версия выпуска задаётся только через VERSION=${CANONICAL_VERSION}; передано: $1" >&2
   exit 2
 fi
 VERSION="${CANONICAL_VERSION}"
@@ -387,7 +387,7 @@ PYVER
 if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require git
   [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]] || {
-    echo "Ошибка: ${VERSION} Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort" >&2
+    echo "Ошибка: ${VERSION} кандидат на промышленный выпуск требует полного комплекта подтверждений совместимости, доверия устройств и сертификации Guard в CI" >&2
     exit 1
   }
   require_file "${COMPATIBILITY_MATRIX}"
@@ -397,7 +397,7 @@ if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require_file "${GUARD_CI_MATRIX}"
   require_file "${GUARD_CI_TARGETS}"
   git -C "${ROOT_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
-    echo "Ошибка: ${VERSION} Production Release Candidate должен собираться из git checkout" >&2
+    echo "Ошибка: ${VERSION} кандидат на промышленный выпуск должен собираться из рабочей копии Git" >&2
     exit 1
   }
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
@@ -407,28 +407,28 @@ if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
     exit 1
   }
   [[ "${SOURCE_COMMIT}" =~ ^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$ ]] || {
-    echo "Ошибка: некорректный exact source commit: ${SOURCE_COMMIT}" >&2
+    echo "Ошибка: некорректный точный хеш исходного коммита: ${SOURCE_COMMIT}" >&2
     exit 1
   }
   git -C "${ROOT_DIR}" diff --quiet HEAD -- || {
-    echo "Ошибка: Production Release Candidate запрещает изменения tracked-файлов относительно HEAD" >&2
+    echo "Ошибка: кандидат на промышленный выпуск запрещает изменения отслеживаемых файлов относительно HEAD" >&2
     exit 1
   }
   git -C "${ROOT_DIR}" diff --cached --quiet || {
-    echo "Ошибка: Production Release Candidate запрещает staged изменения относительно HEAD" >&2
+    echo "Ошибка: кандидат на промышленный выпуск запрещает подготовленные к коммиту изменения относительно HEAD" >&2
     exit 1
   }
 fi
 if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
   [[ -n "${WINDOWS_ADVERSARIAL_CERTIFICATE}" ]] || {
-    echo "Ошибка: ${VERSION} Windows Protection RC требует LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE" >&2
+    echo "Ошибка: ${VERSION} кандидат защиты Windows требует LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE" >&2
     exit 1
   }
   require_file "${WINDOWS_ADVERSARIAL_CERTIFICATE}"
 fi
 if [[ "${PRODUCTION_DELIVERY_RELEASE_REQUIRED}" == "1" ]]; then
   [[ "${VERSION}" != *-* && "${VERSION}" != *+* ]] || {
-    echo "Ошибка: Production Delivery Release требует GA SemVer без prerelease/build suffix: ${VERSION}" >&2
+    echo "Ошибка: промышленный выпуск требует стабильную версию SemVer без суффиксов предварительного выпуска и сборки: ${VERSION}" >&2
     exit 1
   }
   python3 - "${PUBLIC_RELEASE_BASE_URL}" "${VERSION}" <<'PYURL'
@@ -437,36 +437,36 @@ raw, version = sys.argv[1], sys.argv[2]
 u = urllib.parse.urlparse(raw)
 segments = [urllib.parse.unquote(x) for x in u.path.split('/') if x]
 if u.scheme != 'https' or not u.netloc or (version not in segments and ('v'+version) not in segments):
-    raise SystemExit(f"Ошибка: Production Delivery Release требует HTTPS public origin с immutable version segment {version!r} или {'v'+version!r}: {raw}")
+    raise SystemExit(f"Ошибка: промышленный выпуск требует публичный HTTPS-адрес с неизменяемым сегментом версии {version!r} или {'v'+version!r}: {raw}")
 PYURL
 fi
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${LINUX_PRODUCTION_ARTIFACTS_DIR}" && -d "${LINUX_PRODUCTION_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} production release требует LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с native x64+ARM64 outputs" >&2
+    echo "Ошибка: ${VERSION} промышленный выпуск требует LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с нативными пакетами x64 и ARM64" >&2
     exit 1
   }
 fi
 if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${MACOS_PRODUCTION_ARTIFACTS_DIR}" && -d "${MACOS_PRODUCTION_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} release bundle требует LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR с macOS x64+ARM64 delivery outputs" >&2
+    echo "Ошибка: ${VERSION} комплект выпуска требует LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR с пакетами macOS для x64 и ARM64" >&2
     exit 1
   }
 fi
 if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
   [[ -n "${MANAGED_JRE_ARTIFACTS_DIR}" && -d "${MANAGED_JRE_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} release bundle требует LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR с Managed JRE Distribution" >&2
+    echo "Ошибка: ${VERSION} комплект выпуска требует LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR с подготовленным дистрибутивом Java (JRE)" >&2
     exit 1
   }
 fi
 if [[ "${GUARD_CERT_REQUIRED}" == "1" ]]; then
   [[ -n "${GUARD_CI_MATRIX}" && -n "${GUARD_CI_TARGETS}" && -n "${GUARD_PLATFORM_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} production release требует LAUNCHER_GUARD_CI_MATRIX_FILE, LAUNCHER_GUARD_CI_TARGETS_FILE и LAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR" >&2
+    echo "Ошибка: ${VERSION} промышленный выпуск требует LAUNCHER_GUARD_CI_MATRIX_FILE, LAUNCHER_GUARD_CI_TARGETS_FILE и LAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR" >&2
     exit 1
   }
   require_file "${GUARD_CI_MATRIX}"
   require_file "${GUARD_CI_TARGETS}"
-  [[ -d "${GUARD_PLATFORM_ARTIFACTS_DIR}" ]] || { echo "Ошибка: Guard platform artifact directory отсутствует: ${GUARD_PLATFORM_ARTIFACTS_DIR}" >&2; exit 1; }
+  [[ -d "${GUARD_PLATFORM_ARTIFACTS_DIR}" ]] || { echo "Ошибка: отсутствует каталог платформенных артефактов Guard: ${GUARD_PLATFORM_ARTIFACTS_DIR}" >&2; exit 1; }
   python3 "${ROOT_DIR}/scripts/guard_ci/matrix.py" validate --targets "${GUARD_CI_TARGETS}"
 fi
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
@@ -962,22 +962,22 @@ if [[ "${PUBLIC_DELIVERY_REQUIRED}" == "1" ]]; then
 fi
 if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json"
-  log "Проверка Windows Protection RC certificate до release signing"
+  log "Проверка сертификата кандидата защиты Windows перед подписанием выпуска"
   "${RELEASE_CLI}" release windows-protection-verify "${OUT_DIR}"
 fi
 if [[ "${WINDOWS_PROTECTION_GA_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/WINDOWS_PROTECTION_GA_CERTIFICATE.json"
-  log "Проверка Windows Protection GA certificate до release signing"
+  log "Проверка итогового сертификата защиты Windows перед подписанием выпуска"
   "${RELEASE_CLI}" release windows-protection-ga-verify "${OUT_DIR}"
 fi
 if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/PRODUCTION_RELEASE_CANDIDATE.json"
-  log "Проверка production release candidate cohort до подписи"
+  log "Проверка комплекта подтверждений кандидата на промышленный выпуск перед подписанием"
   "${RELEASE_CLI}" release candidate-verify "${OUT_DIR}"
 fi
 if [[ "${PRODUCTION_DELIVERY_RELEASE_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/PRODUCTION_DELIVERY_RELEASE.json"
-  log "Проверка stable Production Delivery Release boundary до подписи"
+  log "Проверка условий стабильного промышленного выпуска перед подписанием"
   "${RELEASE_CLI}" release production-verify "${OUT_DIR}"
 fi
 
@@ -1004,7 +1004,7 @@ fi
 log "Подписание выпуска Ed25519"
 "${RELEASE_CLI}" release sign "${OUT_DIR}" --private-key "${PRIVATE_KEY}"
 
-log "Строгая проверка required artifacts/checksums/Ed25519 trust anchor"
+log "Строгая проверка обязательных артефактов, контрольных сумм и корневого ключа доверия Ed25519"
 "${RELEASE_CLI}" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
 if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
@@ -1036,7 +1036,7 @@ if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD
   log "Проверка публикации: совместимость Minecraft, выпуск доверенных устройств и межплатформенная сертификация Guard CI"
   "${RELEASE_CLI}" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
   if python3 "${ROOT_DIR}/scripts/release/release_policy.py" requires-rehearsal --version "${VERSION}" | grep -qx '1'; then
-    log "Публикационный dry-run: физическое копирование релиза, повторная проверка подписи и publish-check"
+    log "Пробная публикация: копирование выпуска, повторная проверка подписи и проверка допустимости публикации"
     python3 "${ROOT_DIR}/scripts/release/rehearsal_0365.py" dry-run \
       --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
       --trusted-key "${GA_TARGET_TRUSTED_KEY}" --commit "${SOURCE_COMMIT}" \
@@ -1046,12 +1046,12 @@ if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD
       --output "${WORK_DIR}/PUBLICATION_DRY_RUN_0365.json"
   fi
 elif [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" || -n "${GUARD_CI_MATRIX}" ]]; then
-  log "Передан неполный certification set: официальный publish-check ${VERSION} требует Compatibility, Device Trust и Guard CI evidence"
+  log "Передан неполный комплект подтверждений: для публикации ${VERSION} необходимы свидетельства совместимости, доверия устройств и проверки Guard в CI"
 else
-  log "Certification evidence не передан: bundle не является publishable release"
+  log "Свидетельства сертификации не предоставлены: комплект нельзя опубликовать как проверенный выпуск"
 fi
 
 if release_from_0462; then
   python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
 fi
-log "Каталог production-релиза готов: ${OUT_DIR}"
+log "Каталог промышленного выпуска готов: ${OUT_DIR}"

@@ -529,7 +529,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		return forgeMaterializeResult{}, fmt.Errorf("Профиль версии %s: inheritsFrom=%s, ожидалось %s", loader, bundle.Version.InheritsFrom, vanilla.MinecraftVersion)
 	}
 	if bundle.Version.ID == "" || bundle.Version.MainClass == "" {
-		return forgeMaterializeResult{}, fmt.Errorf("%s файл version.json установщика не содержит id/mainClass", loader)
+		return forgeMaterializeResult{}, fmt.Errorf("%s: файл version.json установщика не содержит обязательных полей id и mainClass", loader)
 	}
 	if err := validateLoaderProfileID(bundle.Version.ID); err != nil {
 		return forgeMaterializeResult{}, err
@@ -736,7 +736,7 @@ func installForgeLegacy(
 		profileNormalized = true
 	}
 	if bundle.Version.InheritsFrom != vanilla.MinecraftVersion {
-		return forgeMaterializeResult{}, fmt.Errorf("профиль устаревшего Forge inheritsFrom=%s, ожидался %s", bundle.Version.InheritsFrom, vanilla.MinecraftVersion)
+		return forgeMaterializeResult{}, fmt.Errorf("профиль устаревшего Forge: inheritsFrom=%s, ожидалось %s", bundle.Version.InheritsFrom, vanilla.MinecraftVersion)
 	}
 	if bundle.Version.ID == "" || bundle.Version.MainClass == "" {
 		return forgeMaterializeResult{}, errors.New("Профиль среды выполнения устаревшей версии Forge не содержит поля id/mainClass")
@@ -803,7 +803,7 @@ func installForgeLegacy(
 			return forgeMaterializeResult{}, fmt.Errorf("Установщик Forge 1.12.2 без обработчиков не создал универсальный JAR %s", universalDestRel)
 		}
 	} else {
-		return forgeMaterializeResult{}, fmt.Errorf("неизвестный Forge legacy install mode %q", bundle.LegacyMode)
+		return forgeMaterializeResult{}, fmt.Errorf("неизвестный режим установки устаревшей версии Forge: %q", bundle.LegacyMode)
 	}
 
 	universalSHA1, universalSHA256, universalSize, err := hashFileSHA1SHA256(universalDest)

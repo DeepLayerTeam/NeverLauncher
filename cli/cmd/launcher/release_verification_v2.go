@@ -603,7 +603,7 @@ func exportReleaseTrustPolicy0158(args []string) (map[string]any, error) {
 	}
 	rootPrivatePath := flagValue(args, "--root-private-key", strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_ROOT_PRIVATE_KEY_FILE")))
 	if rootPrivatePath == "" {
-		return nil, errors.New("trust-policy требует --root-private-key")
+		return nil, errors.New("для команды trust-policy требуется --root-private-key")
 	}
 	rootPriv, err := loadEd25519PrivateKey(rootPrivatePath)
 	if err != nil {

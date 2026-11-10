@@ -476,7 +476,7 @@ GRADLE
   [[ "$resolved_commit" == "$FOLIA_SOURCE_COMMIT" ]] || { echo "[e2e] Folia несовпадение коммита исходников: $resolved_commit" >&2; return 1; }
 
   resolved_mc="$(sed -n 's/^mcVersion=//p' "$source_dir/gradle.properties" | head -n1 | tr -d '\r')"
-  [[ "$resolved_mc" == "$FOLIA_MINECRAFT_VERSION" ]] || { echo "[e2e] исходный код Folia рассчитан на Minecraft $resolved_mc, expected $FOLIA_MINECRAFT_VERSION" >&2; return 1; }
+  [[ "$resolved_mc" == "$FOLIA_MINECRAFT_VERSION" ]] || { echo "[e2e] исходный код Folia рассчитан на Minecraft $resolved_mc, ожидается $FOLIA_MINECRAFT_VERSION" >&2; return 1; }
 
   (
     # При применении патчей Paper/Folia paperweight создаёт вложенные Git-репозитории.

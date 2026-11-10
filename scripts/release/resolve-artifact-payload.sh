@@ -12,11 +12,11 @@ fail() {
 }
 
 [[ -n "${ROOT_DIR}" && -n "${VERSION}" && -n "${MARKER}" ]] || \
-  fail "Для resolve-artifact-payload укажите ROOT VERSION MARKER [LABEL]"
+  fail "Для команды resolve-artifact-payload укажите ROOT VERSION MARKER [LABEL]"
 [[ "${VERSION}" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]*$ ]] || \
   fail "${LABEL}: некорректная версия для структуры артефакта: ${VERSION}"
 [[ "${MARKER}" != */* && "${MARKER}" != "." && "${MARKER}" != ".." ]] || \
-  fail "${LABEL}: marker должен быть именем файла без пути: ${MARKER}"
+  fail "${LABEL}: маркер должен быть именем файла без пути: ${MARKER}"
 [[ -d "${ROOT_DIR}" && ! -L "${ROOT_DIR}" ]] || \
   fail "${LABEL}: корневой каталог артефакта отсутствует или является символической ссылкой: ${ROOT_DIR}"
 
@@ -44,15 +44,15 @@ fi
 [[ "${release_dirs[0]}" == "${EXPECTED_DIR}" ]] || \
   fail "${LABEL}: содержимое артефакта относится не к ${VERSION}: ${release_dirs[0]}"
 [[ -d "${EXPECTED_DIR}" && ! -L "${EXPECTED_DIR}" ]] || \
-  fail "${LABEL}: release-${VERSION} payload отсутствует или является symlink"
+  fail "${LABEL}: данные выпуска release-${VERSION} отсутствуют или являются символической ссылкой"
 [[ -f "${NESTED_MARKER}" && ! -L "${NESTED_MARKER}" ]] || \
-  fail "${LABEL}: обязательный marker отсутствует в release-${VERSION}: ${MARKER}"
+  fail "${LABEL}: обязательный файл-маркер отсутствует в release-${VERSION}: ${MARKER}"
 
 if find "${ROOT_DIR}" -mindepth 1 -maxdepth 1 \( -type f -o -type l \) -print -quit | grep -q .; then
   fail "${LABEL}: вложенная структура артефакта содержит неожиданные файлы или символические ссылки на верхнем уровне"
 fi
 if find "${EXPECTED_DIR}" -mindepth 1 -maxdepth 1 -type l -print -quit | grep -q .; then
-  fail "${LABEL}: release-${VERSION} payload содержит symlink"
+  fail "${LABEL}: данные выпуска release-${VERSION} содержат символическую ссылку"
 fi
 
 printf '%s\n' "${EXPECTED_DIR}"

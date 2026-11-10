@@ -736,7 +736,7 @@ for required in [
 ]:
     if required not in compose:
         fail(
-            f"production compose: отсутствует deterministic volume ownership gate: {required}"
+            f"в промышленной конфигурации Compose отсутствует проверка прав владения томом с предсказуемым результатом: {required}"
         )
 
 for required in [
@@ -747,15 +747,15 @@ for required in [
     "KeyFingerprint",
 ]:
     if required not in release_signing:
-        fail(f"release signing не реализует настоящий Ed25519 primitive: {required}")
+        fail(f"подписание выпуска не использует необходимую криптографическую операцию Ed25519: {required}")
 if "ключ из комплекта поставки не считается корневым ключом доверия" not in release_signing:
-    fail("release verification должен требовать внешний trusted public key")
+    fail("проверка выпуска должна требовать внешний доверенный открытый ключ")
 for forbidden in [
     '[]byte(hex.EncodeToString(sum[:])+"  SHA256SUMS\\n")',
     'SHA256SUMS.sig"), []byte(hex.EncodeToString',
 ]:
     if forbidden in release_commands or forbidden in release_signing:
-        fail("release signature снова сведена к checksum вместо Ed25519")
+        fail("подпись выпуска ошибочно заменена контрольной суммой вместо Ed25519")
 for required in [
     "required artifact",
     'artifact.Status != "present"',
@@ -763,7 +763,7 @@ for required in [
     "releaseArtifacts(ver)",
 ]:
     if required not in release_commands:
-        fail(f"release verify не содержит strict required-artifact gate: {required}")
+        fail(f"проверка выпуска не контролирует строгое наличие всех обязательных артефактов: {required}")
 
 for rel in [
     "scripts/release/source-package.py",
@@ -771,7 +771,7 @@ for rel in [
     "scripts/release/zip-dir.py",
 ]:
     if not (ROOT / rel).is_file():
-        fail(f"отсутствует production release utility: {rel}")
+        fail(f"отсутствует утилита подготовки промышленного выпуска: {rel}")
 for required in [
     "source-package.py",
     "secret-scan.py",
@@ -781,32 +781,32 @@ for required in [
     "artifacts/plugins/launcher-${bridge}-bridge-${VERSION}.jar",
 ]:
     if required not in build_release:
-        fail(f"build-release не собирает/проверяет обязательный artifact: {required}")
+        fail(f"сценарий сборки выпуска не собирает или не проверяет обязательный артефакт: {required}")
 if (
     "LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE" not in build_release
     or "LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in build_release
 ):
-    fail("build-release должен требовать внешний Ed25519 private/public key")
+    fail("сценарий сборки выпуска должен требовать внешний закрытый и открытый ключ Ed25519")
 if (
     "release-bundle:" not in production_release_workflow
     or "Build and cryptographically verify complete release bundle"
     not in production_release_workflow
 ):
-    fail("dedicated production workflow не собирает полный production release bundle")
+    fail("отдельный процесс промышленного выпуска не собирает полный комплект артефактов")
 if (
     "release-bundle:" in ci
     or "windows-production-signed:" in ci
     or "macos-production-notarized:" in ci
 ):
-    fail("ordinary main CI не должен зависеть от publish-only signing credentials")
+    fail("обычный основной процесс CI не должен зависеть от учётных данных подписи, предназначенных только для публикации")
 if (
     "production-e2e:" not in ci
     or "release-bundle"
     in ci.split("production-e2e:", 1)[1].split("needs:", 1)[1].split("\n", 1)[0]
 ):
-    fail("main functional E2E должен выполняться независимо от production signing")
+    fail("основной функциональный сквозной тест должен выполняться независимо от подписания промышленного выпуска")
 if "LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in release_bundle_gate:
-    fail("release-bundle smoke gate не требует trusted Ed25519 public key")
+    fail("базовая проверка комплекта выпуска не требует доверенный открытый ключ Ed25519")
 
 for legacy_helper in [
     "packagePipelinePayload",
@@ -814,7 +814,7 @@ for legacy_helper in [
     "packagePipelinePublishPayload",
 ]:
     if legacy_helper in package_commands:
-        fail(f"CLI pipeline содержит статический legacy helper: {legacy_helper}")
+        fail(f"цепочка CLI содержит устаревшую статическую вспомогательную функцию: {legacy_helper}")
 for required in [
     "/validate",
     "/sign",
@@ -824,7 +824,7 @@ for required in [
     "httpJSONWithAuth",
 ]:
     if required not in package_commands:
-        fail(f"CLI pipeline не вызывает реальный Backend API: {required}")
+        fail(f"цепочка CLI не обращается к действующему серверному API: {required}")
 for required in [
     "/api/v1/operations/storage/audit",
     "/api/v1/operations/storage/consistency",
@@ -833,12 +833,12 @@ for required in [
 ]:
     if required not in security_commands:
         fail(
-            f"CLI storage/migrate operation не связан с production Backend primitive: {required}"
+            f"операция CLI с хранилищем или миграцией не связана с промышленной серверной реализацией: {required}"
         )
 for required in ["verifyReleaseBundle", "verifyDetachedEd25519"]:
     if required not in security_commands:
         fail(
-            f"security verify-signature не выполняет cryptographic verification: {required}"
+            f"команда проверки подписи не выполняет криптографическую проверку: {required}"
         )
 for required in [
     "/health",
@@ -847,7 +847,7 @@ for required in [
     "/api/v1/operations/storage/consistency",
 ]:
     if required not in install_commands:
-        fail(f"install verify/storage-check не содержит реальную проверку: {required}")
+        fail(f"проверка установки или хранилища не выполняет настоящую проверку: {required}")
 for required in [
     "readCanonicalProductionTemplate",
     "standaloneProductionCompose",
@@ -857,7 +857,7 @@ for required in [
 ]:
     if required not in install_commands:
         fail(
-            f"install first-run не является standalone/pinned production deployment: {required}"
+            f"первоначальная установка не обеспечивает отдельное промышленное развёртывание с закреплёнными версиями: {required}"
         )
 for name in ["docker-compose.yml", "nginx.conf", "env.production.example"]:
     canonical = ROOT / "deploy/production" / name

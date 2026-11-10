@@ -82,7 +82,7 @@ wait_ready() {
     fi
     sleep 1
   done
-  echo "[device-trust-e2e] Backend не вернул HTTP 200 для готовности (last HTTP ${code:-curl-error})" >&2
+  echo "[device-trust-e2e] Серверный API не подтвердил готовность кодом HTTP 200 (последний ответ: ${code:-curl-error})" >&2
   [[ -s "$out" ]] && cat "$out" >&2 || true
   compose logs api-a >&2 || true
   return 1

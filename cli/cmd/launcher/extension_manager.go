@@ -16,7 +16,7 @@ func handleExtensionManager0425(args []string) error {
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("extension manager требует --token или LAUNCHER_TOKEN")
+		return errors.New("для управления расширениями требуется --token или LAUNCHER_TOKEN")
 	}
 	out := strings.TrimSpace(flagValue(args, "--output", ""))
 	payload, err := httpJSONWithAuth(http.MethodGet, backend+"/api/v1/admin/extensions/manager", nil, token)

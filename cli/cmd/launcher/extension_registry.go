@@ -28,7 +28,7 @@ func handleExtensionRegistry0203(args []string) error {
 	}
 	token := backendToken(args)
 	if token == "" {
-		return errors.New("extension registry требует --token или LAUNCHER_TOKEN")
+		return errors.New("для работы с реестром расширений требуется --token или LAUNCHER_TOKEN")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -102,7 +102,7 @@ func handleExtensionRegistry0203(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "show":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("show требует extension id или id@version")
+			return errors.New("команде show требуется идентификатор расширения или id@version")
 		}
 		id, versionValue, hasVersion := parseRegistryCoordinate0203(args[1])
 		endpoint := backend + "/api/v1/admin/extension-registry/extensions/" + url.PathEscape(id)
@@ -142,7 +142,7 @@ func handleExtensionRegistry0203(args []string) error {
 			id = args[1]
 		}
 		if id == "" || channel == "" || versionValue == "" {
-			return errors.New("channel-set требует extension id, --channel и --version")
+			return errors.New("команде channel-set требуются идентификатор расширения, --channel и --version")
 		}
 		payload, err := httpJSONWithAuth(http.MethodPut, backend+"/api/v1/admin/extension-registry/extensions/"+url.PathEscape(id)+"/channels/"+url.PathEscape(channel), map[string]any{"version": versionValue}, token)
 		if err != nil {
