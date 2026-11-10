@@ -3,7 +3,7 @@ version = rootProject.file("VERSION").readText().trim()
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 dependencies {
     implementation(project(":plugins:bungee-family-common"))
-    compileOnly("net.md-5:bungeecord-api:1.21-R0.5-SNAPSHOT")
+    compileOnly("net.md-5:bungeecord-api:26.1-R0.1-SNAPSHOT")
 }
 tasks.jar {
     dependsOn(configurations.runtimeClasspath.get().buildDependencies)
