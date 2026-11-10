@@ -117,7 +117,7 @@ jobs:
         run: |
           test "${#PINNED_ROOT_KEY}" -eq 64
           printf '%s' "$PINNED_ROOT_KEY" > root-public-key.hex
-      - name: Подготовить Windows code-signing сертификат
+      - name: Подготовить сертификат подписи кода Windows
         if: runner.os == 'Windows'
         shell: pwsh
         env:
@@ -131,7 +131,7 @@ jobs:
           if (!$cert.Thumbprint) { throw 'Сертификат подписи не импортирован' }
           Add-Content $env:GITHUB_ENV "LAUNCHER_WINDOWS_CERT_THUMBPRINT=$($cert.Thumbprint)"
           Remove-Item signing.pfx
-      - name: Импортировать macOS Apple сертификаты
+      - name: Импортировать сертификаты Apple для macOS
         if: runner.os == 'macOS'
         uses: apple-actions/import-codesign-certs@v3
         with:
@@ -179,7 +179,7 @@ jobs:
             --project '${{ vars.LAUNCHER_BRANDED_PROJECT_ID }}' --version "$VERSION" \
             --config branded-input/bootstrap.signed.json --prestarter "$PRESTARTER" \
             --root-key-file root-public-key.hex --output dist/native "${EXTRA[@]}"
-      - name: Удалить temporary Apple notary ключ файл
+      - name: Удалить временный файл ключа для нотариального заверения Apple
         if: always() && runner.os == 'macOS'
         shell: bash
         run: rm -f "$RUNNER_TEMP/native-notary-0522.p8"

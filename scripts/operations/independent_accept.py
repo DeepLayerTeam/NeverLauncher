@@ -419,7 +419,7 @@ def parser_make():
     install.add_argument('--project', default='launcher')
     install.add_argument('--version', default=VERSION)
     install.add_argument('--email', required=True)
-    install.add_argument('--display-name', default='Independent Operator')
+    install.add_argument('--display-name', default='Независимый оператор')
     install.add_argument('--password-file', type=Path, required=True)
     upgrade = common('upgrade-standard')
     upgrade.add_argument('--project', required=True)

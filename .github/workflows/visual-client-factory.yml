@@ -72,5 +72,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Собрать запускаемый API и CLI Client фабрика в образе
+      - name: Собрать в образе исполняемые API и CLI фабрики клиентов
         run: docker build -f services/api/Dockerfile -t launcher-factory-ci .

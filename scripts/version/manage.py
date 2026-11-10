@@ -22,7 +22,7 @@ class VersionError(RuntimeError):
 def read_version() -> str:
     version = VERSION_FILE.read_text(encoding="utf-8").strip()
     if not SEMVER_RE.fullmatch(version):
-        raise VersionError(f"VERSION содержит некорректную SemVer-версию: {version!r}")
+        raise VersionError(f"В файле VERSION указана некорректная версия SemVer: {version!r}")
     return version
 
 
@@ -49,7 +49,7 @@ def replace_package_version(text: str, version: str, path: Path) -> str:
         r'(?m)^(version\s*=\s*)"[^"]+"\s*$', rf'\1"{version}"', text, count=1
     )
     if count != 1:
-        raise VersionError(f"{path.relative_to(ROOT)}: не найден package version")
+        raise VersionError(f"{path.relative_to(ROOT)}: не найдено поле version в описании пакета")
     return updated
 
 

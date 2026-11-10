@@ -66,9 +66,9 @@ jobs:
       - name: Запустить детектор гонок Go для поддерживаемых агентов
         if: runner.os == 'Linux'
         run: go test -race -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
-      - name: Vet фактические POC implementation
+      - name: Проверить фактическую реализацию POC с помощью go vet
         run: go vet ./internal/officialminecraft ./cmd/official-provider-poc
-      - name: Скомпилировать interactive реальные провайдер E2E исполняемый файл
+      - name: Собрать исполняемый файл для интерактивных E2E-проверок реального провайдера
         run: go build -o "$RUNNER_TEMP/official-provider-poc${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/official-provider-poc
         shell: bash
       - name: Проверить парсер свидетельств журналов оператора без подмены реальными свидетельствами

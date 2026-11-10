@@ -307,7 +307,7 @@ FORGE_MODERN_0173: dict[str, int] = {
 FORGE_LEGACY_1122_0174: dict[str, int] = {"1.12.2": 8}
 FORGE_LEGACY_1710_0175: dict[str, int] = {"1.7.10": 8}
 
-# NeoForge Compatibility II 0.17.6 сертифицирует все стабильные выпуски NeoForge
+# Проверка совместимости NeoForge II 0.17.6 сертифицирует все стабильные выпуски NeoForge
 # от исходных 1.20.x до текущей стабильной линейки 26.2. Версия 26.3 намеренно
 # исключена до появления стабильной сборки net.neoforged:neoforge.
 NEOFORGE_COMPATIBILITY_II_0176: dict[str, int] = {
@@ -327,7 +327,7 @@ NEOFORGE_COMPATIBILITY_II_0176: dict[str, int] = {
     "26.2": 25,
 }
 
-# Cross-platform Loaders 0.17.9 сертифицирует настоящий современный
+# Проверка кроссплатформенных загрузчиков 0.17.9 сертифицирует настоящий современный
 # клиент каждого семейства загрузчиков для каждой поддерживаемой пары
 # ОС и архитектуры. Linux x86_64 уже является широким контрольным
 # вариантом; остальные пять — дополнительные обязательные сертификации.
@@ -520,21 +520,21 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         for minecraft in LEGACY_VANILLA_JAVA8_0163:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Для Legacy Vanilla 0.16.3 отсутствует обязательная версия Minecraft {minecraft}")
+                die(f"Для ранних версий Vanilla 0.16.3 отсутствует обязательная версия Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
-                die(f"Legacy Vanilla {minecraft}: для 0.16.3 требуется Java 8 с scope=client")
+                die(f"Ранние версии Vanilla {minecraft}: для 0.16.3 требуется Java 8 с scope=client")
     if legacy_vanilla_pre17_required():
         for minecraft in LEGACY_VANILLA_PRE17_0164:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Legacy Vanilla 0.16.4: отсутствует required Minecraft {minecraft}")
+                die(f"Ранние версии Vanilla 0.16.4: отсутствует обязательная версия Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
-                die(f"Legacy Vanilla {minecraft}: для 0.16.4 требуется Java 8 с scope=client")
+                die(f"Ранние версии Vanilla {minecraft}: для 0.16.4 требуется Java 8 с scope=client")
     if java16_17_vanilla_required():
         for minecraft, java_major in JAVA16_17_VANILLA_0166.items():
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Java 16/17 Vanilla 0.16.6: отсутствует required Minecraft {minecraft}")
+                die(f"Java 16/17 Vanilla 0.16.6: отсутствует обязательная версия Minecraft {minecraft}")
             if target["javaMajor"] != java_major or target["scope"] != "client":
                 die(
                     f"Java 16/17 Vanilla {minecraft}: для 0.16.6 требуется Java {java_major} scope=client"
@@ -543,7 +543,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         for minecraft in JAVA21_VANILLA_0167:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Java 21 Vanilla 0.16.7: отсутствует required Minecraft {minecraft}")
+                die(f"Java 21 Vanilla 0.16.7: отсутствует обязательная версия Minecraft {minecraft}")
             expected_scope = "integration" if minecraft == "1.21.1" else "client"
             if target["javaMajor"] != 21 or target["scope"] != expected_scope:
                 die(
@@ -553,7 +553,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         for minecraft in JAVA25_VANILLA_0168:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Java 25 Vanilla 0.16.8: отсутствует required Minecraft {minecraft}")
+                die(f"Java 25 Vanilla 0.16.8: отсутствует обязательная версия Minecraft {minecraft}")
             if target["javaMajor"] != 25 or target["scope"] != "client":
                 die(
                     f"Java 25 Vanilla {minecraft}: для 0.16.8 требуется Java 25 с scope=client"
@@ -570,11 +570,11 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             target = platform_targets.get((os_name, arch))
             if target is None:
                 die(
-                    f"Cross-platform Vanilla 0.16.9: отсутствует required 26.3 target {os_name}/{arch}"
+                    f"Кроссплатформенная Vanilla 0.16.9: отсутствует обязательная целевая платформа Minecraft 26.3 {os_name}/{arch}"
                 )
             if target["javaMajor"] != 25 or target["scope"] != "client":
                 die(
-                    f"Cross-platform Vanilla 26.3 {os_name}/{arch}: для 0.16.9 требуется Java 25 с scope=client"
+                    f"Кроссплатформенная Vanilla 26.3 {os_name}/{arch}: для 0.16.9 требуется Java 25 с scope=client"
                 )
     if actual_client_e2e_ii_required():
         for minecraft, java_major in ACTUAL_CLIENT_E2E_II_01610.items():
@@ -595,23 +595,23 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             target = matching[0]
             if target["javaMajor"] != java_major or target["scope"] != "client":
                 die(
-                    f"Actual Client E2E II {minecraft}: требуется Java {java_major} с scope=client на linux/x86_64"
+                    f"Реальная E2E-проверка клиента II, Minecraft {minecraft}: требуется Java {java_major} с scope=client на linux/x86_64"
                 )
     if legacy_vanilla_0170v1_required():
         for minecraft in LEGACY_VANILLA_0170V1:
             target = required_vanilla.get(minecraft)
             if target is None:
-                die(f"Legacy Vanilla 0.17.0v1: отсутствует required Minecraft {minecraft}")
+                die(f"Ранние версии Vanilla 0.17.0v1: отсутствует обязательная версия Minecraft {minecraft}")
             if target["javaMajor"] != 8 or target["scope"] != "client":
                 die(
-                    f"Legacy Vanilla {minecraft}: для 0.17.0v1 требуется Java 8 с scope=client"
+                    f"Ранние версии Vanilla {minecraft}: для 0.17.0v1 требуется Java 8 с scope=client"
                 )
     if java16_17_vanilla_0170v2_required():
         for minecraft, java_major in JAVA16_17_VANILLA_0170V2.items():
             target = required_vanilla.get(minecraft)
             if target is None:
                 die(
-                    f"Java 16/17 Vanilla 0.17.0v2: отсутствует required Minecraft {minecraft}"
+                    f"Java 16/17 Vanilla 0.17.0v2: отсутствует обязательная версия Minecraft {minecraft}"
                 )
             if (
                 target["javaMajor"] != java_major
@@ -627,7 +627,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             target = required_vanilla.get(minecraft)
             if target is None:
                 die(
-                    f"Java 21/25 Vanilla 0.17.0v3: отсутствует required Minecraft {minecraft}"
+                    f"Java 21/25 Vanilla 0.17.0v3: отсутствует обязательная версия Minecraft {minecraft}"
                 )
             if (
                 target["javaMajor"] != java_major
@@ -722,11 +722,11 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"Quilt Compatibility II 0.17.2 матрица релизов: несоответствие — отсутствуют={missing} лишние={extra}"
+                f"Совместимость Quilt II 0.17.2 матрица релизов: несоответствие — отсутствуют={missing} лишние={extra}"
             )
         if len(required_quilt_rows) != len(QUILT_COMPATIBILITY_II_0172):
             die(
-                "Для Quilt Compatibility II 0.17.2 нужна ровно одна обязательная цель для каждого стабильного выпуска Minecraft"
+                "Для проверки совместимости Quilt II 0.17.2 нужна ровно одна обязательная цель для каждого стабильного выпуска Minecraft"
             )
         for target in required_quilt_rows:
             minecraft = target["minecraft"]
@@ -750,7 +750,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
         quilt_java = {target["javaMajor"] for target in required_quilt_rows}
         if not COMPATIBILITY_II_GA_JAVA_MAJORS.issubset(quilt_java):
             die(
-                f"Для Quilt Compatibility II 0.17.2 необходимо покрытие JRE {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
+                f"Для проверки совместимости Quilt II 0.17.2 необходимо покрытие JRE {sorted(COMPATIBILITY_II_GA_JAVA_MAJORS)}"
             )
 
     if forge_modern_0173_required():
@@ -877,11 +877,11 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
             missing = sorted(expected_versions - actual_versions)
             extra = sorted(actual_versions - expected_versions)
             die(
-                f"NeoForge Compatibility II 0.17.6 матрица релизов: несоответствие — отсутствуют={missing} лишние={extra}"
+                f"Совместимость NeoForge II 0.17.6 матрица релизов: несоответствие — отсутствуют={missing} лишние={extra}"
             )
         if len(required_rows) != len(NEOFORGE_COMPATIBILITY_II_0176):
             die(
-                "Для NeoForge Compatibility II 0.17.6 нужна ровно одна обязательная цель для каждого стабильного выпуска Minecraft с NeoForge"
+                "Для проверки совместимости NeoForge II 0.17.6 нужна ровно одна обязательная цель для каждого стабильного выпуска Minecraft с NeoForge"
             )
         for target in required_rows:
             minecraft = target["minecraft"]
@@ -903,7 +903,7 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                     f"NeoForge {minecraft}: для 0.17.6 требуется loaderVersion=latest-stable с доказательством неизменяемого разрешения версии"
                 )
         if 25 not in {target["javaMajor"] for target in required_rows}:
-            die("Для NeoForge Compatibility II 0.17.6 требуется покрытие Java 25 для Minecraft 26.x")
+            die("Для проверки совместимости NeoForge II 0.17.6 требуется покрытие Java 25 для Minecraft 26.x")
 
     if cross_platform_loaders_0179_required():
         expected_platforms = set(CROSS_PLATFORM_LOADER_PLATFORMS_0179)
@@ -923,16 +923,16 @@ def validate_baseline_ii(targets: list[dict[str, Any]]) -> None:
                 missing = sorted(expected_platforms - actual_platforms)
                 extra = sorted(actual_platforms - expected_platforms)
                 die(
-                    f"Cross-platform Loaders 0.17.9 {loader} {minecraft}: матрица релизов не совпадает — отсутствуют={missing}, лишние={extra}, строк={len(rows)}"
+                    f"Кроссплатформенные загрузчики 0.17.9 {loader} {minecraft}: матрица релизов не совпадает — отсутствуют={missing}, лишние={extra}, строк={len(rows)}"
                 )
             for target in rows:
                 if target["javaMajor"] != java_major or target["scope"] != "client":
                     die(
-                        f"Cross-platform Loaders 0.17.9 {loader} {minecraft} требуется Java {java_major} с scope=client на каждой платформе"
+                        f"Для кроссплатформенных загрузчиков 0.17.9 {loader} {minecraft} требуется Java {java_major} с scope=client на каждой платформе"
                     )
                 if target["loaderVersion"] != "latest-stable":
                     die(
-                        f"Cross-platform Loaders 0.17.9 {loader} {minecraft} требуется loaderVersion=latest-stable с неизменяемым разрешением версии"
+                        f"Для кроссплатформенных загрузчиков 0.17.9 {loader} {minecraft} требуется loaderVersion=latest-stable с неизменяемым разрешением версии"
                     )
 
 
@@ -1097,9 +1097,9 @@ def load_targets(path: Path) -> dict[str, Any]:
             and target["arch"] == "x86_64"
         ]
         feature = (
-            "Quilt Compatibility II 0.17.2"
+            "Совместимость Quilt II 0.17.2"
             if loader == "quilt"
-            else "NeoForge Compatibility II 0.17.6"
+            else "Совместимость NeoForge II 0.17.6"
         )
         if len(blocked_rows) != 1:
             die(

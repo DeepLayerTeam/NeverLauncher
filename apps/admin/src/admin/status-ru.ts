@@ -2,6 +2,17 @@
 export function statusRu(value: string | null | undefined): string {
   if (!value) return "Неизвестно";
   const labels: Record<string, string> = {
+    // Этапы и результаты миграции, подписания и публикации, отображаемые в Admin.
+    inventory: "Инвентаризация", identities: "Учётные записи",
+    credentials: "Учётные данные", content: "Содержимое",
+    cutover: "Переключение на новую систему", rehearsal: "Пробный прогон",
+    security: "Безопасность", modules: "Модули", mapping: "Сопоставление",
+    migration: "Миграция", review: "Рассмотрение", verification: "Проверка",
+    export: "Экспорт", preparation: "Подготовка", finalized: "Завершено",
+    preview: "Предпросмотр", profile: "Профиль", source: "Источник",
+    version: "Версия", signed: "Подписано", unsigned: "Без подписи",
+    "ready-to-publish": "Готово к публикации",
+    "source-ready": "Источник готов", "target-ready": "Целевая система готова",
     pending: "Ожидает", queued: "В очереди", running: "Выполняется",
     global: "Глобально", project: "Проект",
     active: "Активно", inactive: "Неактивно", succeeded: "Успешно",

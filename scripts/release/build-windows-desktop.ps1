@@ -279,7 +279,7 @@ try {
                     --file "runtime.exe=$RuntimePackagePath" `
                     --file "guard-sensor.dll=$SensorPackagePath" `
                     --file "launcher-cli.exe=$CliRootPath"
-            } "unsigned Windows $Arch capture"
+            } "Сохранение неподписанных артефактов Windows $Arch"
         }
 
         if ($UnsignedOnly) { continue }
@@ -359,9 +359,9 @@ try {
         Write-JsonNoBom $ComponentUpdatePath $ComponentUpdateManifest
         $ComponentSigner = Join-Path $Root "scripts\release\component_set_sign.py"
         if ($SignedProduction) {
-            Invoke-Checked { python $ComponentSigner --manifest $ComponentUpdatePath } "sign Windows component set"
+            Invoke-Checked { python $ComponentSigner --manifest $ComponentUpdatePath } "Подписание набора компонентов Windows"
         } else {
-            Invoke-Checked { python $ComponentSigner --manifest $ComponentUpdatePath --development } "prepare development component set"
+            Invoke-Checked { python $ComponentSigner --manifest $ComponentUpdatePath --development } "Подготовка набора компонентов для разработки"
         }
 
         $ZipName = "launcher-desktop-$Version-windows-$Arch.zip"
