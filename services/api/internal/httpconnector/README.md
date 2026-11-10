@@ -25,7 +25,7 @@ GET  /health
   "subject": "stable-external-user-id",
   "username": "player",
   "email": "player@example.com",
-  "displayName": "Player",
+  "displayName": "Игрок",
   "groups": ["vip"],
   "roles": ["member"],
   "claims": {"region": "eu"},

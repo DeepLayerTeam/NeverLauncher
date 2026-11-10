@@ -253,7 +253,7 @@ def main(argv=None):
         print(report['status'])
         return 0
     except (Blocked, OSError, ValueError, KeyError, TypeError, IndexError, subprocess.TimeoutExpired) as exc:
-        print('BLOCKED 0.52.9: '+str(exc),file=sys.stderr)
+        print('Проверка Guard/Bridge 0.52.9 заблокирована: '+str(exc),file=sys.stderr)
         return 2
 
 if __name__=='__main__':

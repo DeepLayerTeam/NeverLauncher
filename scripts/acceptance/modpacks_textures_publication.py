@@ -466,7 +466,7 @@ def main(argv=None):
             subprocess.SubprocessError, RuntimeError) as err:
         report['failureType'] = type(err).__name__
         report['failure'] = 'Реальная приёмка не завершена; изучите закрытую диагностику раннера'
-        print('BLOCKED 0.52.6: ' + type(err).__name__, file=sys.stderr)
+        print('Приёмка модпаков, текстур и публикации 0.52.6 заблокирована: ' + type(err).__name__, file=sys.stderr)
         return 1
     finally:
         report['finishedAt'] = datetime.now(timezone.utc).isoformat()

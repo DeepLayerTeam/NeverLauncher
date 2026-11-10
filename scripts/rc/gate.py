@@ -184,7 +184,7 @@ def main():
         a.output.parent.mkdir(parents=True, exist_ok=True)
         a.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
     except (GateBlocked, ValueError, OSError, KeyError, TypeError) as exc:
-        print("0.35.14 RC blocked: " + str(exc), file=sys.stderr)
+        print("Кандидат в релиз 0.35.14 заблокирован: " + str(exc), file=sys.stderr)
         return 3
     print(
         "Кандидат 0.35.14 прошёл проверку исходников. Реальный Minecraft, защищённая промышленная среда и аварийное восстановление НЕ сертифицированы."
