@@ -85,7 +85,7 @@ func (s Server) requireDesktopExtensionAuth0209(next http.HandlerFunc) http.Hand
 		}
 		session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub)
 		if !ok || strings.TrimSpace(session.TrustedDeviceID) == "" || session.DeviceTrustState != "verified" {
-			writeError(w, http.StatusPreconditionRequired, "Desktop Extensions требуют verified device binding")
+			writeError(w, http.StatusPreconditionRequired, "Для расширений Desktop требуется подтверждённая привязка устройства")
 			return
 		}
 		next(w, r)

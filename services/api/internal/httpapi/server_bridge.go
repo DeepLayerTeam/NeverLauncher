@@ -382,7 +382,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		profile, profileErr := s.minecraftRepo119()
 		if profileErr == nil {
 			if minecraftProfile, getErr := profile.GetMinecraftProfileByUUID(minecraftSession.ProfileUUID); getErr == nil && req.Username != "" && !strings.EqualFold(req.Username, minecraftProfile.Name) {
-				writeError(w, http.StatusPreconditionFailed, "username не совпадает с integrity-verified Minecraft profile")
+				writeError(w, http.StatusPreconditionFailed, "Имя пользователя не соответствует профилю Minecraft, прошедшему проверку целостности")
 				return
 			}
 		}

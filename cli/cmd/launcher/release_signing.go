@@ -80,7 +80,7 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 			return err
 		}
 		if string(gaKey) == string(privateKey.Public().(ed25519.PublicKey)) {
-			return errors.New("release and independent GA keys: требуется «различаться»")
+			return errors.New("Ключ подписи выпуска и независимый ключ GA должны различаться")
 		}
 	}
 	// Обязательная независимая проверка GA точных байтов должна выполняться внутри `launcher release sign`, а
@@ -173,19 +173,19 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 	}
 	var envelope releaseSignatureEnvelope
 	if err := json.Unmarshal(sigRaw, &envelope); err != nil {
-		return fmt.Errorf("SHA256SUMS.sig не является Launcher Ed25519 signature envelope: %w", err)
+		return fmt.Errorf("Файл SHA256SUMS.sig не содержит корректную структуру подписи Ed25519 Launcher: %w", err)
 	}
 	if envelope.Algorithm != "Ed25519" || envelope.SignedFile != "SHA256SUMS" {
 		return fmt.Errorf("Неподдерживаемая подпись выпуска: алгоритм=%q, подписанный файл=%q", envelope.Algorithm, envelope.SignedFile)
 	}
 	digest := sha256.Sum256(data)
 	if !strings.EqualFold(envelope.SHA256, hex.EncodeToString(digest[:])) {
-		return errors.New("SHA256SUMS digest не совпадает с SHA256SUMS.sig")
+		return errors.New("Контрольная сумма SHA256SUMS не совпадает со значением в SHA256SUMS.sig")
 	}
 	pubDigest := sha256.Sum256(publicKey)
 	fingerprint := "sha256:" + hex.EncodeToString(pubDigest[:])
 	if !strings.EqualFold(envelope.KeyFingerprint, fingerprint) {
-		return fmt.Errorf("Подпись релиза создана другим ключом: got=%s trusted=%s", envelope.KeyFingerprint, fingerprint)
+		return fmt.Errorf("Подпись выпуска создана другим ключом: получен отпечаток %s, доверенный отпечаток %s", envelope.KeyFingerprint, fingerprint)
 	}
 	signature, err := base64.StdEncoding.DecodeString(envelope.Signature)
 	if err != nil || len(signature) != ed25519.SignatureSize {

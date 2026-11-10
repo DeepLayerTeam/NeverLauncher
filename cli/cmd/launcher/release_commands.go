@@ -1456,57 +1456,57 @@ func releaseDescription(ver string) string {
 		extra += "\n- 0.43.0+: выпуск включает два подписанных исполняемых пакета примеров расширений Java и ZIP с приёмочными испытаниями переноса исходников JVM/Gravit для шести целевых платформ; перенос исходников не означает двоичную совместимость с произвольными JAR Gravit."
 	}
 	if compatibilityCertificationRequired(ver) {
-		extra = "\n- официальный publish-check требует COMPATIBILITY_TARGETS/MATRIX/CERTIFICATION, привязанные к той же версии и source commit;"
+		extra = "\n- официальная проверка publish-check требует COMPATIBILITY_TARGETS/MATRIX/CERTIFICATION, относящиеся к той же версии и исходному коммиту;"
 	}
 	if deviceTrustCertificationRequired(ver) {
-		extra += "\n- начиная с 0.13.0 официальный publish-check также требует DEVICE_TRUST_TARGETS/MATRIX/CERTIFICATION для того же product version и source commit;"
+		extra += "\n- начиная с 0.13.0 официальная проверка publish-check также требует DEVICE_TRUST_TARGETS/MATRIX/CERTIFICATION для той же версии продукта и исходного коммита;"
 	}
 	if guardCICertificationRequired(ver) {
-		extra += "\n- начиная с 0.13.9 publish-check требует cross-platform GUARD_CI_TARGETS/MATRIX/CERTIFICATION и повторно сверяет exact Windows/Linux/macOS Guard artifacts по SHA-256;"
+		extra += "\n- начиная с 0.13.9 проверка publish-check требует межплатформенные GUARD_CI_TARGETS/MATRIX/CERTIFICATION и повторно сверяет точные артефакты Guard для Windows/Linux/macOS по SHA-256;"
 	}
 	if serverBridge3CertificationRequired0191(ver) {
-		extra += "\n- начиная с 0.19.1 publish-check требует SERVERBRIDGE3_CERTIFICATION.json (Protocol v3) и повторно сверяет все 11 platform JAR с exact-version BRIDGE_RELEASE_ALLOWLIST.json;"
+		extra += "\n- начиная с 0.19.1 проверка publish-check требует SERVERBRIDGE3_CERTIFICATION.json (протокол v3) и повторно сверяет все 11 платформенных JAR с перечнем BRIDGE_RELEASE_ALLOWLIST.json для точной версии;"
 	} else if serverBridge2CertificationRequired0150(ver) {
-		extra += "\n- для 0.15.0–0.19.0 publish-check требует исторический SERVERBRIDGE2_CERTIFICATION.json и повторно сверяет все 11 platform JAR с exact-version BRIDGE_RELEASE_ALLOWLIST.json;"
+		extra += "\n- для 0.15.0–0.19.0 проверка publish-check требует исторический SERVERBRIDGE2_CERTIFICATION.json и повторно сверяет все 11 платформенных JAR с перечнем BRIDGE_RELEASE_ALLOWLIST.json для точной версии;"
 	}
 	if deliveryManifestRequired0151(ver) {
-		extra += "\n- начиная с 0.15.1 подписанный DELIVERY_MANIFEST.json фиксирует SHA-256/size каждого delivery artifact и каноническую platform/architecture пару (windows/linux/macos + x64/arm64/universal); release verify повторно проверяет inventory fail-closed;"
+		extra += "\n- начиная с 0.15.1 подписанный DELIVERY_MANIFEST.json фиксирует SHA-256 и размер каждого артефакта поставки, а также каноническую пару платформы и архитектуры (windows/linux/macos + x64/arm64/universal); release verify повторно проверяет состав поставки с отказом при любой ошибке;"
 	}
 	if windowsSigningRequired0152(ver) {
-		extra += "\n- начиная с 0.15.2 publish-check требует реальные Windows x64+ARM64 PE для CLI/Desktop/Guard, Authenticode SHA-256 + RFC3161 timestamp и WINDOWS_SIGNING_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json и package ZIP;"
+		extra += "\n- начиная с 0.15.2 проверка publish-check требует реальные PE-файлы для Windows x64+ARM64 (CLI/Desktop/Guard), подпись Authenticode SHA-256 с отметкой времени RFC3161 и WINDOWS_SIGNING_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json и ZIP-пакетом;"
 	}
 	if linuxProductionRequired0153(ver) {
-		extra += "\n- начиная с 0.15.3 publish-check требует нативно собранные Linux x64+ARM64 CLI/API/Desktop/Guard/Runtime, проверяет ELF e_machine, deterministic tar.gz, embedded package manifests и их привязку к DELIVERY_MANIFEST.json;"
+		extra += "\n- начиная с 0.15.3 проверка publish-check требует нативные сборки CLI/API/Desktop/Guard/Runtime для Linux x64+ARM64, проверяет ELF e_machine, воспроизводимый tar.gz, встроенные манифесты пакетов и их привязку к DELIVERY_MANIFEST.json;"
 	}
 	if macOSProductionRequired0154(ver) {
-		extra += "\n- начиная с 0.15.4 publish-check требует отдельные macOS x64+ARM64 Mach-O, Developer ID Application + Hardened Runtime, Accepted Apple notarization, stapled ticket, Gatekeeper acceptance и MACOS_NOTARIZATION_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json;"
+		extra += "\n- начиная с 0.15.4 проверка publish-check требует отдельные Mach-O для macOS x64+ARM64, подпись Developer ID Application с Hardened Runtime, успешно пройденную нотариальную проверку Apple, прикреплённый билет, допуск Gatekeeper и MACOS_NOTARIZATION_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json;"
 	}
 	if managedJREDistributionRequired0155(ver) {
-		extra += "\n- начиная с 0.15.5 publish-check требует Managed JRE Distribution: exact Temurin 21 vendor archives для Windows/Linux/macOS x64+ARM64, MANAGED_JRE_MANIFEST/EVIDENCE, проверку SHA-256/size/архитектуры bin/java и binding к DELIVERY_MANIFEST.json;"
+		extra += "\n- начиная с 0.15.5 проверка publish-check требует поставку управляемой JRE: архивы Temurin 21 точно заданной версии от производителя для Windows/Linux/macOS x64+ARM64, MANAGED_JRE_MANIFEST/EVIDENCE, проверку SHA-256, размера и архитектуры bin/java и привязку к DELIVERY_MANIFEST.json;"
 	}
 	if updaterVersionAtLeast0156(ver) {
-		extra += "\n- начиная с 0.15.6 client install/update/package-apply используют Unified Transactional Updater Core: verified same-filesystem staging, durable journal, crash recovery, automatic rollback и fail-closed post-verify; publish-check выполняет реальный updater self-test;"
+		extra += "\n- начиная с 0.15.6 команды client install/update/package-apply используют единый модуль транзакционного обновления: проверенную подготовку файлов в пределах одной файловой системы, устойчивый журнал операций, восстановление после сбоя, автоматический откат и обязательную итоговую проверку; publish-check выполняет реальную самопроверку обновления;"
 	}
 	if publicProductionDeliveryRequired0159(ver) {
-		extra += "\n- начиная с 0.15.9 PUBLIC_PRODUCTION_DELIVERY_MATRIX.json публикует точный six-target Windows/Linux/macOS x64+ARM64 inventory с HTTPS URL, SHA-256/size и Managed JRE binding; post-publish nl delivery public-e2e скачивает публичные bytes, сверяет matrix/delivery manifest и повторно выполняет Release Verification v2 end-to-end;"
+		extra += "\n- начиная с 0.15.9 PUBLIC_PRODUCTION_DELIVERY_MATRIX.json публикует точный перечень шести платформенных сборок Windows/Linux/macOS x64+ARM64 с HTTPS-адресами, SHA-256, размерами и привязкой управляемой JRE; после публикации команда nl delivery public-e2e загружает общедоступные файлы, сверяет матрицу с манифестом поставки и повторно выполняет сквозную проверку Release Verification v2;"
 	}
 	if migrationStabilizationRequired01510(ver) {
-		extra += "\n- начиная с 0.15.10 migration stabilization сериализует Release Verification через persistent trust-state lock, мигрирует state 2.0→2.1 с same-version RELEASE_MANIFEST binding, переносит legacy macOS component state в canonical location и удаляет terminal updater staging/backup payload после durable rollback;"
+		extra += "\n- начиная с 0.15.10 стабилизация миграции выполняет Release Verification последовательно под постоянной блокировкой состояния доверия, переносит состояние 2.0→2.1 с привязкой RELEASE_MANIFEST к той же версии, перемещает состояние компонентов старых версий macOS в стандартное расположение и удаляет остаточные подготовленные и резервные файлы после надёжного отката;"
 	}
 	if productionReleaseCandidateRequired01511(ver) {
-		extra += "\n- начиная с 0.15.11 Production Release Candidate требует полный exact-commit certification cohort, реальные vendor-signed/notarized Windows/macOS artifacts и PRODUCTION_RELEASE_CANDIDATE.json; candidate certification хэширует весь pre-sign release cohort и входит в Ed25519 signed SHA256SUMS boundary;"
+		extra += "\n- начиная с 0.15.11 кандидат производственного выпуска требует полный набор результатов сертификации для точного коммита, настоящие подписанные производителем и нотариально проверенные артефакты Windows/macOS и PRODUCTION_RELEASE_CANDIDATE.json; сертификация кандидата вычисляет хеш набора артефактов до подписи и входит в область защиты SHA256SUMS, подписанного Ed25519;"
 	}
 	if productionDeliveryReleaseRequired0160(ver) {
-		extra += "\n- начиная с 0.16.0 Production Delivery Release промотит прошедший exact-commit RC в stable GA boundary: PRODUCTION_DELIVERY_RELEASE.json связывает six-target delivery, vendor signing/notarization, Managed JRE, trust policy и immutable versioned public origin; документ сам входит в Release Verification v2 signature boundary;"
+		extra += "\n- начиная с 0.16.0 производственный выпуск поставки переводит проверенный кандидат точного коммита в стабильный выпуск GA: PRODUCTION_DELIVERY_RELEASE.json связывает поставку для шести целевых платформ, подписи и нотариальную проверку производителя, управляемую JRE, политику доверия и неизменяемый публичный источник с версионированием; сам документ включён в область действия подписи Release Verification v2;"
 	}
 	return fmt.Sprintf("# Launcher %s — Конвейер выпуска\n\n"+
-		"Launcher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+
+		"Launcher %s задаёт воспроизводимый процесс подготовки и публикации артефактов выпуска.\n\n"+
 		"Основное:\n"+
-		"- единый build-release сценарий для CLI, Backend API, Admin Web, Desktop Web/native, Runtime и ServerBridge;\n"+
-		"- фактический SHA256SUMS вместо декларативных placeholder-комментариев;\n"+
-		"- SBOM.spdx.json, PROVENANCE.json и RELEASE_MANIFEST.json в каждом release bundle;\n"+
-		"- проверка release bundle через nl release verify;\n"+
-		"- Ed25519-подпись SHA256SUMS и отдельная signed SLSA provenance attestation с внешним trust anchor;\n"+
+		"- единый сценарий сборки выпуска для CLI, Backend API, Admin Web, Desktop Web/native, Runtime и ServerBridge;\n"+
+		"- фактический SHA256SUMS вместо формальных комментариев-заглушек;\n"+
+		"- SBOM.spdx.json, PROVENANCE.json и RELEASE_MANIFEST.json в каждом пакете выпуска;\n"+
+		"- проверка пакета выпуска командой nl release verify;\n"+
+		"- Ed25519-подпись SHA256SUMS и отдельное подписанное подтверждение происхождения SLSA с внешним корневым элементом доверия;\n"+
 		"- Исходный пакет формируется только из отслеживаемых Git и разрешённых файлов, после чего проверяется на наличие секретов.%s", ver, ver, extra)
 }
 

@@ -144,7 +144,7 @@ func (s Server) authPasskeyRegisterComplete117(w http.ResponseWriter, r *http.Re
 	}
 	credential := passkeyCredential117{ID: id, UserID: claims.Sub, CredentialID: result.CredentialID, UserHandle: s.webauthnUserHandle117(claims.Sub), PublicKeyCOSE: result.PublicKeyCOSE, Algorithm: result.Algorithm, SignCount: result.SignCount, AAGUID: result.AAGUID, Transports: normalizeTransports117(req.Credential.Response.Transports), FriendlyName: name, BackupEligible: result.BackupEligible, BackedUp: result.BackedUp, Status: "active"}
 	if err := s.State.Passkeys.saveCredential(credential); err != nil {
-		writeError(w, http.StatusConflict, "passkey уже зарегистрирован")
+		writeError(w, http.StatusConflict, "Ключ доступа уже зарегистрирован")
 		return
 	}
 	// Сама регистрация — свежая процедура UV, поэтому текущий сеанс получает повышенный уровень проверки.
@@ -195,7 +195,7 @@ func (s Server) authPasskeyLoginComplete117(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if err := s.State.Passkeys.updateUse(credential.ID, user.ID, result.SignCount, result.BackedUp); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось обновить passkey state")
+		writeError(w, http.StatusInternalServerError, "Не удалось обновить состояние ключа доступа")
 		return
 	}
 	s.issuePasskeyLogin117(w, r, user, firstNonEmpty(req.DeviceID, "passkey-client"), "passkey", "", nil)
@@ -223,7 +223,7 @@ func (s Server) authPasskeyMFALoginComplete117(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if err := s.State.Passkeys.updateUse(credential.ID, user.ID, result.SignCount, result.BackedUp); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось обновить passkey state")
+		writeError(w, http.StatusInternalServerError, "Не удалось обновить состояние ключа доступа")
 		return
 	}
 	methods := metadataStrings117(tx.Metadata, "authMethods")
@@ -240,7 +240,7 @@ func (s Server) authPasskeyStepUpBegin117(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if s.State.Passkeys.countByUser(claims.Sub) == 0 {
-		writeError(w, http.StatusBadRequest, "у пользователя нет активных passkeys")
+		writeError(w, http.StatusBadRequest, "У пользователя нет активных ключей доступа")
 		return
 	}
 	challenge, err := newChallengeBytes117()
@@ -278,7 +278,7 @@ func (s Server) authPasskeyStepUpComplete117(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if err := s.State.Passkeys.updateUse(credential.ID, claims.Sub, result.SignCount, result.BackedUp); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось обновить passkey state")
+		writeError(w, http.StatusInternalServerError, "Не удалось обновить состояние ключа доступа")
 		return
 	}
 	session, err := s.State.AuthSessions.stepUp(claims.SessionID, claims.Sub, []string{"passkey", "user-verification"}, "phishing-resistant", time.Now().UTC())
@@ -344,7 +344,7 @@ func (s Server) authPasskeyRename117(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.State.Passkeys.rename(r.PathValue("credentialId"), claims.Sub, name); err != nil {
-		writeError(w, http.StatusNotFound, "passkey не найден")
+		writeError(w, http.StatusNotFound, "Ключ доступа не найден")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "renamed"}})
@@ -365,7 +365,7 @@ func (s Server) authPasskeyDelete117(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.State.Passkeys.revoke(r.PathValue("credentialId"), claims.Sub); err != nil {
-		writeError(w, http.StatusNotFound, "passkey не найден")
+		writeError(w, http.StatusNotFound, "Ключ доступа не найден")
 		return
 	}
 	s.audit(r, claims.Email, "auth:passkey:revoked", r.PathValue("credentialId"))
@@ -412,11 +412,11 @@ func (s Server) authMFAPolicy117(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if target == mfaRequired117 && !s.State.Security.totpEnabled(claims.Sub) && s.State.Passkeys.countByUser(claims.Sub) == 0 {
-		writeError(w, http.StatusConflict, "для REQUIRED сначала включите TOTP или зарегистрируйте passkey")
+		writeError(w, http.StatusConflict, "Для обязательной многофакторной аутентификации сначала включите TOTP или зарегистрируйте ключ доступа")
 		return
 	}
 	if target == mfaPhishingResistant117 && s.State.Passkeys.countByUser(claims.Sub) == 0 {
-		writeError(w, http.StatusConflict, "для PHISHING_RESISTANT сначала зарегистрируйте passkey")
+		writeError(w, http.StatusConflict, "Для защиты от фишинга сначала зарегистрируйте ключ доступа")
 		return
 	}
 	if err := s.State.Passkeys.setPolicy(claims.Sub, target); err != nil {
@@ -457,7 +457,7 @@ func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, use
 
 func (s Server) startPasskeyMFAContinuation117(user model.User, provider, identityID, deviceID string, methods []string, providerToken ...string) (map[string]any, error) {
 	if s.State.Passkeys.countByUser(user.ID) == 0 {
-		return nil, errors.New("Политика MFA требует ключ доступа passkey, но ни один ключ не зарегистрирован")
+		return nil, errors.New("Политика многофакторной аутентификации требует ключ доступа, но ни один ключ не зарегистрирован")
 	}
 	challenge, err := newChallengeBytes117()
 	if err != nil {
@@ -655,7 +655,7 @@ func freshAuth117(c authClaims, strength string, maxAge time.Duration) bool {
 	return authStrengthLevel117(c.AuthStrength) >= authStrengthLevel117(strength) && c.AuthTime > 0 && time.Since(time.Unix(c.AuthTime, 0)) <= maxAge
 }
 func writeStepUpRequired117(w http.ResponseWriter, strength string) {
-	errorBody := map[string]any{"code": http.StatusPreconditionRequired, "message": "требуется свежая step-up authentication", "requiredAuthStrength": strength, "passkeyBegin": "POST /api/v1/auth/passkeys/step-up/begin"}
+	errorBody := map[string]any{"code": http.StatusPreconditionRequired, "message": "Требуется недавнее дополнительное подтверждение личности", "requiredAuthStrength": strength, "passkeyBegin": "POST /api/v1/auth/passkeys/step-up/begin"}
 	if authStrengthLevel117(strength) <= authStrengthLevel117("mfa") {
 		errorBody["totpStepUp"] = "POST /api/v1/auth/mfa/step-up/totp"
 	}

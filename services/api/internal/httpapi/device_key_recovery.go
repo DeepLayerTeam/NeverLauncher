@@ -115,7 +115,7 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 	if mode == "rotate" {
 		oldDeviceID = strings.TrimSpace(session.TrustedDeviceID)
 		if oldDeviceID == "" || session.DeviceTrustState != "verified" {
-			writeError(w, http.StatusConflict, "rotation требует текущую verified device binding")
+			writeError(w, http.StatusConflict, "Для ротации ключа требуется подтверждённая привязка устройства к текущей сессии")
 			return
 		}
 	} else if oldDeviceID == "" {
@@ -140,7 +140,7 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 		return
 	}
 	if mode == "rotate" && oldDevice.ID != session.TrustedDeviceID {
-		writeError(w, http.StatusConflict, "rotation разрешён только для device текущей сессии")
+		writeError(w, http.StatusConflict, "Ротация ключа разрешена только для устройства текущей сессии")
 		return
 	}
 	if oldDevice.KeyFingerprint == newPub.fingerprint {

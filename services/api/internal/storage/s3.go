@@ -197,7 +197,7 @@ func (s *S3Storage) Health(ctx context.Context) error {
 
 func (s *S3Storage) newSignedRequest(ctx context.Context, method, key string, body io.Reader, size int64) (*http.Request, error) {
 	if body != nil {
-		return nil, errors.New("S3 request with body: требуется «явный хеш потокового содержимого»")
+		return nil, errors.New("Для запроса S3 с телом требуется явный хеш передаваемых данных")
 	}
 	return s.newSignedRequestWithHash(ctx, method, key, nil, size, sha256Hex(nil))
 }

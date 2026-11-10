@@ -41,7 +41,7 @@ func migrationSigner0336(cfg config.Config) (string, string, error) {
 		}
 	}
 	if strings.EqualFold(active, strings.TrimSpace(cfg.ManifestSigningPrivateKey)) {
-		return "", "", errors.New("JWT and Ed25519 signing secrets: требуется «быть независимыми»")
+		return "", "", errors.New("Секрет JWT и ключ подписи Ed25519 должны быть независимыми")
 	}
 	seed, err := hex.DecodeString(strings.TrimSpace(cfg.ManifestSigningPrivateKey))
 	if err != nil || len(seed) != ed25519.SeedSize {

@@ -190,7 +190,7 @@ func (s Server) authDeviceRevokeOthers0125(w http.ResponseWriter, r *http.Reques
 	}
 	currentDeviceID := currentTrustedDeviceID0125(s, claims)
 	if currentDeviceID == "" {
-		writeError(w, http.StatusConflict, "текущая сессия должна быть привязана к verified trusted device")
+		writeError(w, http.StatusConflict, "Текущая сессия должна быть привязана к проверенному доверенному устройству")
 		return
 	}
 	current, err := s.Repo.GetTrustedDevice(claims.Sub, currentDeviceID)
