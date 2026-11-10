@@ -1,6 +1,6 @@
 plugins {
     `java-library`
-    id("net.neoforged.moddev") version "2.0.147"
+    id("net.neoforged.moddev") version "2.0.148"
 }
 version = rootProject.file("VERSION").readText().trim()
 group = "ru.launcher"
