@@ -71,7 +71,7 @@ def main():
     try:
         result = verify(args.evidence, args.revision, args.public_key, args.signature)
     except (ValueError, OSError, subprocess.CalledProcessError, TypeError) as e:
-        parser.exit(1, f"Launcher GA BLOCKED: {e}\n")
+        parser.exit(1, f"ПРОВЕРКА GA LAUNCHER ЗАБЛОКИРОВАНА: {e}\n")
     print(json.dumps(result, indent=2))
 
 

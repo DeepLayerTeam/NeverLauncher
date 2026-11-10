@@ -158,7 +158,7 @@ def main():
     except (ValueError,OSError,subprocess.TimeoutExpired,KeyError,zipfile.BadZipFile) as exc:
         print('ПРОВЕРКА НАТИВНОЙ ПОДПИСИ ЗАБЛОКИРОВАНА: '+str(exc),file=sys.stderr)
         return 2
-    print(f'PASS: нативная подпись ОС проверена для фактического пакета {args.target}; независимый аудит преобразований по-прежнему требуется')
+    print(f'ПРОЙДЕНО: нативная подпись ОС проверена для фактического пакета {args.target}; независимый аудит преобразований по-прежнему требуется')
     return 0
 
 if __name__=='__main__':raise SystemExit(main())

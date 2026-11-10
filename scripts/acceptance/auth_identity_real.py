@@ -376,7 +376,7 @@ def main(argv=None):
             message = str(error)
         else:
             message = type(error).__name__
-        print('BLOCKED: '+message, file=sys.stderr)
+        print('ЗАБЛОКИРОВАНО: '+message, file=sys.stderr)
         return 2
 
 if __name__ == '__main__':

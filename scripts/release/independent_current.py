@@ -147,7 +147,7 @@ def main():
                           a.commit, a.run_id, a.attempt)
         require(not a.out.exists(), 'Перезапись сравнения или квитанции запрещена')
         atomic_json(a.out, doc)
-        print('PASS: точные байты неподписанного содержимого независимо проверены; итоговая нативная GA НЕ подтверждена')
+        print('ПРОЙДЕНО: точные байты неподписанного содержимого независимо проверены; итоговая нативная GA НЕ подтверждена')
         return 0
     except (Blocked, OSError, ValueError, TypeError, KeyError, subprocess.CalledProcessError) as exc:
         print('Независимая сборка заблокирована: ' + str(exc), file=sys.stderr)

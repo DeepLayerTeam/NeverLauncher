@@ -325,7 +325,7 @@ def main(argv=None) -> int:
               "миграционных E2E-проверок и", result["moduleCheckCount"], "проверок модулей")
         return 0
     except (Blocked, OSError, KeyError, TypeError, ValueError, RuntimeError) as exc:
-        print("BLOCKED: " + str(exc), file=sys.stderr)
+        print("ЗАБЛОКИРОВАНО: " + str(exc), file=sys.stderr)
         return 1
 
 

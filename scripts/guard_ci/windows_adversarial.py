@@ -404,7 +404,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         )
         return 1
     print(
-        f"Результат атакующих проверок Windows PASS: Java {args.java_major}, сценариев {len(SCENARIOS)} -> {args.output}"
+        f"Атакующие проверки Windows пройдены: Java {args.java_major}, сценариев {len(SCENARIOS)} -> {args.output}"
     )
     return 0
 

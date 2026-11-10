@@ -118,7 +118,7 @@ jobs:
             --windows-thumbprint "$PINNED_WINDOWS_SHA1" \
             --apple-team-id "$PINNED_APPLE_TEAM_ID" \
             --disposable-runner --output "$RUNNER_TEMP/native-package-0522"
-      - name: Загрузить обезличенные диагностические журналы и проверенную квитанцию либо маркер BLOCKED
+      - name: Загрузить обезличенные диагностические журналы и проверенную квитанцию либо маркер блокировки
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -144,7 +144,7 @@ jobs:
         env:
           RESULT: ${{ needs.native-package.result }}
         run: |
-          test "$RESULT" = success || { echo 'BLOCKED: один или несколько нативных установщиков завершились ошибкой либо были пропущены'; exit 2; }
+          test "$RESULT" = success || { echo 'ЗАБЛОКИРОВАНО: один или несколько нативных установщиков завершились ошибкой либо были пропущены'; exit 2; }
       - uses: actions/checkout@v4
         with:
           persist-credentials: false

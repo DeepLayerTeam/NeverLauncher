@@ -158,7 +158,7 @@ def main():
         print(f'Приёмка расширений завершилась отказом по принципу fail-closed: {error}', file=sys.stderr, flush=True)
         returncode = 1
     else:
-        print(f"PASS: реальные сквозные проверки расширений, подписанных пакетов и негативных сценариев для {args.target}")
+        print(f"ПРОЙДЕНО: реальные сквозные проверки расширений, подписанных пакетов и негативных сценариев для {args.target}")
         returncode = 0
     args.evidence.parent.mkdir(parents=True, exist_ok=True)
     args.evidence.write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')

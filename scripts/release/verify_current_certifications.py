@@ -117,7 +117,7 @@ def main() -> int:
         check_admin(read(a.admin), a.version, a.commit)
         check_profiles(read(a.profiles), a.version, a.commit)
     except (OSError, ValueError, TypeError, KeyError) as e:
-        print('ACTIVE GA BLOCKED: '+str(e), file=sys.stderr)
+        print('ПРОВЕРКА ДЕЙСТВУЮЩЕЙ GA ЗАБЛОКИРОВАНА: '+str(e), file=sys.stderr)
         return 2
     print('Действующая GA для Admin и профилей пройдена: подтверждены точная версия, коммит, запуск, попытка и реальные тесты')
     return 0

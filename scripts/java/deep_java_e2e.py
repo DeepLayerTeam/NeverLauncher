@@ -119,7 +119,7 @@ def main() -> None:
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2) + '\n')
-    print('PASS: три независимых расширения опубликованного SDK запущены в реальных подпроцессах JVM (хост имитируется)')
+    print('ПРОЙДЕНО: три независимых расширения опубликованного SDK запущены в реальных подпроцессах JVM (хост имитируется)')
 
 
 if __name__ == '__main__':

@@ -264,7 +264,7 @@ def main() -> None:
             )
         )
     except (ValueError, KeyError, OSError, TypeError, json.JSONDecodeError) as exc:
-        print("[0364] BLOCKED: " + str(exc), file=sys.stderr)
+        print("[0364] ЗАБЛОКИРОВАНО: " + str(exc), file=sys.stderr)
         sys.exit(2)
 
 

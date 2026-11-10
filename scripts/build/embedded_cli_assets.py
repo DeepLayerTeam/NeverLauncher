@@ -59,7 +59,7 @@ def verify_or_write(write: bool) -> None:
                 target.write_bytes(data)
         elif not target.is_file() or target.read_bytes() != data:
             raise ValueError(f"Встроенные ресурсы CLI устарели: {target_rel}; выполните --write и проверьте изменения")
-        print(f"PASS: {target_rel}: {count} эталонных файлов")
+        print(f"ПРОЙДЕНО: {target_rel}: {count} эталонных файлов")
 
 
 def main() -> int:

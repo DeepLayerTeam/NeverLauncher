@@ -196,7 +196,7 @@ func safeAdminEntrypoint0208(root, entry string) (string, error) {
 		return "", err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return "", errors.New("Для точка входа Admin требуется: обычный файл без символических ссылок")
+		return "", errors.New("Для точки входа Admin требуется: обычный файл без символических ссылок")
 	}
 	if info.Size() > maxAdminEntrypointBytes0208 {
 		return "", errors.New("Размер точки входа Admin превышает 2 МиБ")

@@ -350,7 +350,7 @@ def main(argv=None):
         return 0
     except (co.Blocked, OSError, ValueError, KeyError, TypeError, json.JSONDecodeError,
             subprocess.SubprocessError) as exc:
-        print("BLOCKED: " + str(exc), file=sys.stderr)
+        print("ЗАБЛОКИРОВАНО: " + str(exc), file=sys.stderr)
         return 2
 
 

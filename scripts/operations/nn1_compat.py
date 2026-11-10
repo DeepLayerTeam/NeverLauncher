@@ -234,7 +234,7 @@ def main(argv=None):
         print("Совместимость N/N−1 на работающей системе проверена; каталог миграций не изменён, DDL не выполнялись", file=sys.stderr)
         return 0
     except (CompatibilityError, multi.DeploymentError, inventory.InventoryError, OSError, ValueError) as exc:
-        print("N/N-1 BLOCKED: " + str(exc), file=sys.stderr)
+        print("ПРОВЕРКА СОВМЕСТИМОСТИ N/N-1 ЗАБЛОКИРОВАНА: " + str(exc), file=sys.stderr)
         return 3
 
 if __name__ == "__main__":

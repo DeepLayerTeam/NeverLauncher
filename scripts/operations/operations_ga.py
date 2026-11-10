@@ -229,7 +229,7 @@ def main():
             raise
         print('Эксплуатационная приёмка подписана; ещё необходимы итоговый выпуск и проверка нативных платформ')
     except (ValueError, OSError, operational.Rejected) as exc:
-        print('GA BLOCKED: ' + str(exc), file=sys.stderr)
+        print('ПРОВЕРКА GA ЗАБЛОКИРОВАНА: ' + str(exc), file=sys.stderr)
         return 2
     return 0
 

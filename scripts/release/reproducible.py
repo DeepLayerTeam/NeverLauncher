@@ -392,7 +392,7 @@ def main() -> int:
     except (ValueError, OSError, KeyError, TypeError, json.JSONDecodeError,zipfile.BadZipFile,tarfile.TarError,InvalidSignature) as exc:
         print('Проверка воспроизводимости заблокирована: '+str(exc),file=sys.stderr)
         return 2
-    print(f'PASS: проверка воспроизводимости {args.cmd} завершена; свидетельства ещё должны пройти следующий выпускной контроль')
+    print(f'ПРОЙДЕНО: проверка воспроизводимости {args.cmd} завершена; свидетельства ещё должны пройти следующий выпускной контроль')
     return 0
 
 if __name__=='__main__':

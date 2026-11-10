@@ -308,7 +308,7 @@ def main(argv=None):
                 os.close(fd)
         return 0
     except (co.Blocked, OSError, ValueError, KeyError, TypeError) as exc:
-        print("BLOCKED: " + str(exc),file=sys.stderr)
+        print("ЗАБЛОКИРОВАНО: " + str(exc),file=sys.stderr)
         return 2
 
 

@@ -144,7 +144,7 @@ def main() -> int:
         return 0
     except (GateFailure, ValueError, OSError, subprocess.CalledProcessError) as exc:
         path.write_text(json.dumps({"status": "blocked", "error": str(exc)}, indent=2) + "\n", encoding="utf-8")
-        print(f"{args.gate}: BLOCKED: проверка заблокирована: {exc}", file=sys.stderr)
+        print(f"{args.gate}: проверка заблокирована: {exc}", file=sys.stderr)
         return 2
 
 

@@ -72,7 +72,7 @@ for forbidden in [
         )
 
 if errors:
-    print("Проверка ключа устройства и защищённого хранилища ОС: FAILED:", file=sys.stderr)
+    print("Проверка ключа устройства и защищённого хранилища ОС: НЕ ПРОЙДЕНА:", file=sys.stderr)
     for item in errors:
         print(" - " + item, file=sys.stderr)
     raise SystemExit(1)

@@ -169,4 +169,4 @@ payload={
 open(out_p,'w',encoding='utf-8').write(json.dumps(payload,indent=2,ensure_ascii=False)+'\n')
 PY
 
-printf '[loader-native] PASS: клиент %s ↔ сервер %s / Minecraft %s / загрузчик %s\n' "$LOADER" "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"
+printf '[loader-native] ПРОЙДЕНО: клиент %s ↔ сервер %s / Minecraft %s / загрузчик %s\n' "$LOADER" "$LOADER" "$MINECRAFT_VERSION" "$LOADER_VERSION"

@@ -118,7 +118,7 @@ def main():
         return 1
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
-    print("PASS: шесть результатов проверок реальных JVM и негативные проверки подписанных пакетов")
+    print("ПРОЙДЕНО: шесть результатов проверок реальных JVM и негативные проверки подписанных пакетов")
     return 0
 
 

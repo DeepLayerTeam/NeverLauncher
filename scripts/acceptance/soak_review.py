@@ -49,7 +49,7 @@ def main():
     a=p.parse_args()
     try:
         sign(a)
-        print('PASS: фактические результаты длительного тестирования независимо проверены и подписаны (НЕ GA)')
+        print('ПРОЙДЕНО: фактические результаты длительного тестирования независимо проверены и подписаны (НЕ GA)')
         return 0
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print('Проверка результатов длительного тестирования заблокирована: ' + str(exc),file=sys.stderr)

@@ -222,7 +222,7 @@ def main():
                    'minecraft':verify_minecraft(a.compat_results,a.commit,a.compat_run_id,a.compat_attempt)}
         require(a.output.is_absolute() and not a.output.exists(), 'Требуется новое абсолютное имя файла отчёта')
         inventory.write_exclusive(a.output,(json.dumps(doc,sort_keys=True,indent=2)+'\n').encode())
-        print('PASS: реальные наблюдения воспроизведены; независимая итоговая GA остаётся заблокированной')
+        print('ПРОЙДЕНО: реальные наблюдения воспроизведены; независимая итоговая GA остаётся заблокированной')
         return 0
     except (Blocked, inventory.Blocked, native.Blocked, reproducible.Blocked, OSError,
             ValueError, TypeError, KeyError, InvalidSignature) as exc:

@@ -135,7 +135,7 @@ def main():
             print(f'frozen {len(snapshot["files"])} Реальные входные исходники')
         else:
             verify(json.loads(BASELINE.read_text(encoding='utf8')),snapshot)
-            print(f'PASS: {len(snapshot["files"])} закреплённых исходных файлов не изменились')
+            print(f'ПРОЙДЕНО: {len(snapshot["files"])} закреплённых исходных файлов не изменились')
         return 0
     except (ValueError, OSError, KeyError) as exc:
         print('Проверка исходной базы заблокирована: '+str(exc),file=sys.stderr)

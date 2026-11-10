@@ -1202,7 +1202,7 @@ jobs:
           [[ "$GUARD_EVIDENCE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАН: отсутствует независимый запуск сбора доказательств'; exit 2; }
           [[ "$GUARD_NATIVE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАН: отсутствует нативный запуск игры'; exit 2; }
           [[ "$GUARD_REVIEWER_PUBLIC_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАН: отсутствует закреплённый ключ независимого проверяющего'; exit 2; }
-          [[ "$GUARD_SHADOW_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 BLOCKED: ключ HMAC для теневого режима недоступен'; exit 2; }
+          [[ "$GUARD_SHADOW_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo '0.51.0 ЗАБЛОКИРОВАНО: ключ HMAC для теневого режима недоступен'; exit 2; }
           test -n "$GUARD_RELEASE_OPERATOR"
           umask 077
           printf '%s' "$GUARD_REVIEWER_PUBLIC_KEY" | xxd -r -p > "$RUNNER_TEMP/guard-reviewer.key"

@@ -612,7 +612,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
             print(f"Матрица Guard CI: {item}")
         return 1
     print(
-        f"Матрица Guard CI PASS: {len(targets)} целей, коммит={args.commit}, запуск={args.run_id}"
+        f"Матрица Guard CI пройдена: {len(targets)} целей, коммит={args.commit}, запуск={args.run_id}"
     )
     return 0
 

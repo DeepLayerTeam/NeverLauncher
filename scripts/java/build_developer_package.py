@@ -49,6 +49,6 @@ if __name__ == '__main__':
     args = ap.parse_args()
     try:
         build(args.sdk_repo, args.output.resolve())
-        print(f'PASS: реальный неподписанный пакет расширения Java готов к подписанию: {args.output}')
+        print(f'ПРОЙДЕНО: реальный неподписанный пакет расширения Java готов к подписанию: {args.output}')
     except (OSError, RuntimeError, ValueError) as e:
-        sys.exit(f'FAIL: {e}')
+        sys.exit(f'ОШИБКА: {e}')

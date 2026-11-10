@@ -98,7 +98,7 @@ def main():
         result=probe(a)
         import inventory_0521 as inventory
         inventory.write_exclusive(a.output,(json.dumps(result,sort_keys=True)+'\n').encode())
-        print('PASS: реальные операции HTTP SDK Go, TS и Java прошли на одном HTTPS Backend')
+        print('ПРОЙДЕНО: реальные операции HTTP SDK Go, TS и Java прошли на одном HTTPS Backend')
         return 0
     except (Blocked,OSError,ValueError,TypeError,subprocess.TimeoutExpired) as exc:
         print('Реальный сквозной тест SDK заблокирован: '+type(exc).__name__,file=sys.stderr)

@@ -107,7 +107,7 @@ exit 91
             assert runtime["status"] == "stopped", runtime
             assert runtime["stopMethod"] == "console-stop", runtime
             print(
-                "PASS: READY, WATCHDOG, SIGTERM, остановка Minecraft через stdin, сохранение данных игроков и плагинов"
+                "ПРОЙДЕНО: READY, WATCHDOG, SIGTERM, остановка Minecraft через stdin, сохранение данных игроков и плагинов"
             )
         finally:
             if proc.poll() is None:

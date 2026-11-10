@@ -341,7 +341,7 @@ def main():
                 signed=read(a.rehearsal)
                 verify_signature(signed,a.rehearsal_sig,a.review_key,a.review_pin,REHEARSAL_DOMAIN)
                 require(doc==signed,'Исходные свидетельства или регрессии отличаются от независимо подписанной репетиции')
-        print('PASS: точные байты и исходные свидетельства реальной среды независимо перепроверены; GA НЕ предоставлена')
+        print('ПРОЙДЕНО: точные байты и исходные свидетельства реальной среды независимо перепроверены; GA НЕ предоставлена')
         return 0
     except (Blocked,inventory.Blocked,native.Blocked,sweep.Blocked, OSError,ValueError,
             KeyError,TypeError,subprocess.CalledProcessError,subprocess.TimeoutExpired) as exc:

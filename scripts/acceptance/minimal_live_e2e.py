@@ -816,7 +816,7 @@ def main(argv=None):
         # Не включайте ответы, переменные окружения, токены и тела запросов в отчёты.
         report["failureType"] = type(exc).__name__
         report["failure"] = str(exc)[:300]
-        print("BLOCKED: " + str(exc)[:300], file=sys.stderr)
+        print("ЗАБЛОКИРОВАНО: " + str(exc)[:300], file=sys.stderr)
     finally:
         report["finishedAt"] = datetime.now(timezone.utc).isoformat()
         encode_report(args.report.absolute(), report)
