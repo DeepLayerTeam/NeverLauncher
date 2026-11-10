@@ -78,26 +78,26 @@ jobs:
           $Dir = "dist/release-$Version"
           foreach ($Arch in @('x64','arm64')) {
             $Zip = Join-Path $Dir "launcher-desktop-$Version-windows-$Arch.zip"
-            if (-not (Test-Path -PathType Leaf $Zip)) { throw "missing final $Arch package" }
+            if (-not (Test-Path -PathType Leaf $Zip)) { throw "Не найден окончательный пакет для архитектуры $Arch" }
             $Extract = Join-Path $env:RUNNER_TEMP "nl-verified-$Arch"
             if (Test-Path $Extract) { Remove-Item $Extract -Recurse -Force }
             Expand-Archive -LiteralPath $Zip -DestinationPath $Extract -Force
             $Executable = @(Get-ChildItem -LiteralPath $Extract -Recurse -File | Where-Object { $_.Extension -in @('.exe', '.dll') })
-            if (@($Executable | Where-Object Name -eq 'launcher-desktop.exe').Count -ne 1) { throw "missing final signed Desktop PE inside $Zip" }
-            if ($Executable.Count -lt 4) { throw "missing signed installer components inside $Zip" }
+            if (@($Executable | Where-Object Name -eq 'launcher-desktop.exe').Count -ne 1) { throw "В архиве $Zip отсутствует окончательный подписанный PE-файл Desktop" }
+            if ($Executable.Count -lt 4) { throw "В архиве $Zip отсутствуют необходимые подписанные компоненты установщика" }
             foreach ($Exe in $Executable) {
               $Signature = Get-AuthenticodeSignature -LiteralPath $Exe.FullName
               if ($Signature.Status -ne 'Valid' -or -not $Signature.SignerCertificate) {
-                throw "invalid Authenticode chain for $($Exe.FullName): $($Signature.Status)"
+                throw "Недопустимая цепочка сертификатов Authenticode для $($Exe.FullName): $($Signature.Status)"
               }
               Write-Host "Проверен исполняемый файл окончательного подписанного пакета: $($Exe.Name) $Arch"
             }
           }
-      - name: Удалить подписание учётные данные файл
+      - name: Удалить файл с учётными данными для подписи
         if: always()
         shell: pwsh
         run: Remove-Item "$env:RUNNER_TEMP\launcher-codesign.pfx" -Force -ErrorAction SilentlyContinue
-      - name: Загрузить подписанные Windows доставка артефакты
+      - name: Загрузить подписанные артефакты поставки Windows
         uses: actions/upload-artifact@v4
         with:
           name: launcher-windows-production-${{ github.sha }}

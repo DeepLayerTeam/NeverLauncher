@@ -2247,7 +2247,7 @@ function App() {
         throw new Error("Несовпадение TPM Quote: запрос, сеанс, эпоха или политика");
       }
       setMeasuredBootStatus0315(
-        `TPM Quote: ${challenge.pcrSelection} · policy ${challenge.policyId}`,
+        `Подтверждение TPM: ${challenge.pcrSelection} · политика ${challenge.policyId}`,
       );
       const evidence = await callTauri<{
         tpm2bAttest: string;

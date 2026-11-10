@@ -128,7 +128,7 @@ def main():
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-    print("native OS signature:", report["status"])
+    print("Нативная подпись ОС:", {"passed": "проверена", "failed": "проверка не пройдена"}.get(report["status"], report["status"]))
     return 0 if report["status"] == "passed" else 1
 
 

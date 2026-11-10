@@ -81,6 +81,6 @@ jobs:
           const fs=require('node:fs');
           const assets=JSON.parse(fs.readFileSync('apps/desktop/dist/asset-index-03011.json'));
           const js=assets.assets.filter(x=>x.path.endsWith('.js'));
-          if(js.length<3)throw Error(`expected real Vite JS code splitting, got ${js.length} chunks`);
-          console.log(`Vite emitted ${js.length} content-hashed JS chunks`);
+          if(js.length<3)throw Error(`Ожидалось настоящее разделение JS-кода на части через Vite; получено частей: ${js.length}`);
+          console.log(`Vite создал части JS с хешами содержимого; количество: ${js.length}`);
           NODE

@@ -8,7 +8,7 @@
 sh sdk/java/core/build.sh test
 # Результат: sdk/java/core/build/launcher-java-sdk-core-$(cat VERSION).jar
 sh examples/extensions/java-lifecycle/build.sh
-python3 examples/extensions/java-lifecycle/test-runner.py  # Linux/macOS, requires Java on PATH
+python3 examples/extensions/java-lifecycle/test-runner.py  # Linux/macOS: требуется Java в переменной PATH
 ```
 
 JAR ядра можно включить в пакет расширения как `backend/lib/launcher-java-sdk-core.jar`; все Java-классы компилируются с `--release 17`. CI проверяет сборку и тесты SDK на Java 17/21 для разных платформ, а Linux CI запускает пример как настоящий дочерний процесс.

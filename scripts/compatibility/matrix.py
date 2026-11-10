@@ -1550,9 +1550,9 @@ def render_markdown(
         record = records.get(target["id"], {})
         checks = record.get("checks") if isinstance(record.get("checks"), dict) else {}
         status = (
-            ("⚪ NOT CERTIFIED — " + str(target["unavailableReason"]))
+            ("⚪ НЕ СЕРТИФИЦИРОВАНО — " + str(target["unavailableReason"]))
             if not target["required"] and record.get("status") == "unsupported"
-            else ("✅ PASS" if record.get("status") == "passed" else "❌ FAIL")
+            else ("✅ ПРОЙДЕНО" if record.get("status") == "passed" else "❌ НЕ ПРОЙДЕНО")
         )
         paper = (
             "—"
@@ -1572,9 +1572,9 @@ def render_markdown(
         )
         jre_build = "—"
         if isinstance(runtime, dict) and runtime.get("certified") is True:
-            vendor = str(runtime.get("vendor", "")).strip() or "unknown"
+            vendor = str(runtime.get("vendor", "")).strip() or "неизвестен"
             runtime_version = (
-                str(runtime.get("runtimeVersion", "")).strip() or "unknown"
+                str(runtime.get("runtimeVersion", "")).strip() or "неизвестна"
             )
             jre_build = f"`{vendor} {runtime_version}`"
         lines.append(

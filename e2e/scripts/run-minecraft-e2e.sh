@@ -361,7 +361,7 @@ materialize_pinned_spark_paper_dependency() {
   cat > "$init_script" <<'GRADLE'
 def pinnedRepo = System.getenv("LAUNCHER_SPARK_BUILD_MAVEN_REPO")
 if (pinnedRepo == null || pinnedRepo.trim().isEmpty()) {
-    throw new GradleException("LAUNCHER_SPARK_BUILD_MAVEN_REPO is required")
+    throw new GradleException("Требуется переменная LAUNCHER_SPARK_BUILD_MAVEN_REPO")
 }
 gradle.beforeProject { project ->
     project.repositories {
@@ -447,7 +447,7 @@ materialize_pinned_folia_runtime() {
   cat > "$init_script" <<'GRADLE'
 def pinnedRepo = System.getenv("LAUNCHER_FOLIA_BUILD_MAVEN_REPO")
 if (pinnedRepo == null || pinnedRepo.trim().isEmpty()) {
-    throw new GradleException("LAUNCHER_FOLIA_BUILD_MAVEN_REPO is required")
+    throw new GradleException("Требуется переменная LAUNCHER_FOLIA_BUILD_MAVEN_REPO")
 }
 gradle.beforeProject { project ->
     project.repositories {
