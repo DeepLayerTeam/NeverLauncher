@@ -155,7 +155,7 @@ if __name__ == "__main__":
         ):
             time.sleep(0.05)
         assert p.poll() is None and Handler.subscribed and Handler.callback, (
-            f"backend did not subscribe: {p.poll()}"
+            f"Backend не оформил подписку на события: {p.poll()}"
         )
         msg = {
             "protocolVersion": "1.0",
@@ -209,7 +209,7 @@ if __name__ == "__main__":
             text=True,
             timeout=12,
         )
-        assert cli.returncode == 0, f"CLI error {cli.stderr} stdout {cli.stdout}"
+        assert cli.returncode == 0, f"Ошибка CLI: {cli.stderr}; стандартный вывод: {cli.stdout}"
         data = json.loads(cli.stdout.strip())
         assert data["settings"] == {"enabled": True} and data["lastRelease"] == {
             "version": "42.1.0"

@@ -478,7 +478,7 @@ services:
       ENABLE_AUTOSTOP: "false"
       UID: ${LAUNCHER_E2E_HOST_UID:-1000}
       GID: ${LAUNCHER_E2E_HOST_GID:-1000}
-      MOTD: "Launcher loader-native E2E"
+      MOTD: "Launcher: сквозная проверка нативного загрузчика"
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 5s

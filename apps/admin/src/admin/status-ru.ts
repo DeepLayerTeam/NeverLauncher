@@ -92,6 +92,8 @@ export function statusRu(value: string | null | undefined): string {
     restored: "Восстановлено", database: "База данных", storage: "Файловое хранилище",
     owner: "Владелец", admin: "Администратор", operator: "Оператор",
     moderator: "Модератор", viewer: "Наблюдатель", member: "Участник",
+    player: "Игрок", support: "Служба поддержки", developer: "Разработчик",
+    "release-manager": "Ответственный за выпуски",
     "manifest-files": "Проверка файлов манифеста",
     materialization: "Подготовка и проверка файлов",
     startup: "Запуск клиента", "loader-readiness": "Готовность загрузчика",

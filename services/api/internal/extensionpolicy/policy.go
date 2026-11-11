@@ -98,7 +98,7 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 		return nil, errors.New("Ограничение частоты/вывода IPC изолированной среды превышает допустимый предел хоста")
 	}
 	if p.Mode == "isolated" && (p.MaxProcesses == 0 || p.MaxMemoryBytes == 0 || p.TimeoutSeconds == 0 || p.MaxCPUPercent == 0) {
-		return nil, errors.New("isolated sandbox: требуется «ограничения по числу процессов, памяти, ЦП и времени»")
+		return nil, errors.New("Для изолированной среды требуются ограничения числа процессов, памяти, времени ЦП и времени выполнения")
 	}
 	return &p, nil
 }

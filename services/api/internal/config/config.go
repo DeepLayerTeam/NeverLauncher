@@ -389,24 +389,24 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "LAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY должен быть 64 hex символами Ed25519 seed")
 		}
 		if strings.EqualFold(previousKey, strings.TrimSpace(cfg.ServerBridgeControlSigningPrivateKey)) {
-			problems = append(problems, "активный и previous ServerBridge control signing keys должны различаться")
+			problems = append(problems, "Активный и предыдущий ключи подписи команд ServerBridge должны различаться")
 		}
 	}
 	if raw := strings.TrimSpace(cfg.AuthTokenKeysJSON); raw != "" {
 		keys := map[string]string{}
 		if err := json.Unmarshal([]byte(raw), &keys); err != nil {
-			problems = append(problems, "LAUNCHER_AUTH_TOKEN_KEYS_JSON должен быть JSON object kid->secret")
+			problems = append(problems, "LAUNCHER_AUTH_TOKEN_KEYS_JSON должен содержать объект JSON, сопоставляющий идентификаторы ключей (kid) с секретами")
 		} else {
 			active := strings.TrimSpace(cfg.AuthTokenActiveKID)
 			if active == "" {
 				active = "primary"
 			}
 			if strings.TrimSpace(keys[active]) == "" {
-				problems = append(problems, "active auth token kid отсутствует в LAUNCHER_AUTH_TOKEN_KEYS_JSON")
+				problems = append(problems, "Идентификатор активного ключа токенов авторизации отсутствует в LAUNCHER_AUTH_TOKEN_KEYS_JSON")
 			}
 			for kid, key := range keys {
 				if strings.TrimSpace(kid) == "" || len(strings.TrimSpace(key)) < 32 {
-					problems = append(problems, fmt.Sprintf("auth token key %q должен содержать не менее 32 символов", kid))
+					problems = append(problems, fmt.Sprintf("Ключ токена авторизации %q должен содержать не менее 32 символов", kid))
 				}
 			}
 		}
@@ -444,7 +444,7 @@ func ValidateProduction(cfg Config) error {
 					platform = strings.ToLower(strings.TrimSpace(platform))
 					expectedSigning := map[string]string{"windows": "authenticode", "linux": "integrity-only", "macos": "developer-id-notarized"}[platform]
 					if expectedSigning == "" || platformPolicy.SigningMode != expectedSigning || len(platformPolicy.Artifacts) == 0 {
-						problems = append(problems, fmt.Sprintf("Guard release policy %q platform %q имеет недопустимый production signingMode/artifact set", version, platform))
+						problems = append(problems, fmt.Sprintf("Политика выпуска Guard %q: для платформы %q указан недопустимый режим подписи или набор производственных артефактов", version, platform))
 						continue
 					}
 					for _, pair := range platformPolicy.Artifacts {
@@ -460,7 +460,7 @@ func ValidateProduction(cfg Config) error {
 							}
 						}
 						if platform == "windows" && !pair.RequireAuthenticode {
-							problems = append(problems, fmt.Sprintf("Guard release policy %q Windows production artifact pair должна требовать Authenticode", version))
+							problems = append(problems, fmt.Sprintf("Политика выпуска Guard %q: для пары производственных артефактов Windows необходимо требовать подпись Authenticode", version))
 						}
 					}
 				}
@@ -499,10 +499,10 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "production требует LAUNCHER_RATE_LIMIT_FAIL_CLOSED=true")
 		}
 		if !singleNode && strings.TrimSpace(cfg.RedisURL) == "" {
-			problems = append(problems, "LAUNCHER_REDIS_URL обязателен для distributed production rate limiting")
+			problems = append(problems, "Для распределённого ограничения частоты запросов в рабочей среде необходимо указать LAUNCHER_REDIS_URL")
 		}
 		if cfg.RateLimitGlobalPerMinute <= 0 || cfg.RateLimitAuthPerMinute <= 0 || cfg.RateLimitServerBridgePerMinute <= 0 {
-			problems = append(problems, "production rate-limit budgets global/auth/serverbridge должны быть > 0")
+			problems = append(problems, "Ограничения частоты запросов global/auth/serverbridge в рабочей среде должны быть больше нуля")
 		}
 	}
 
@@ -665,35 +665,35 @@ func ValidateProduction(cfg Config) error {
 	if strings.TrimSpace(cfg.ExtensionRoot) == "" || extensionRoot == "." {
 		problems = append(problems, "LAUNCHER_EXTENSION_ROOT обязателен")
 	} else if pathsOverlap(extensionRoot, backupRoot) {
-		problems = append(problems, "extension root должен быть отделён от backup root")
+		problems = append(problems, "Каталог расширений должен находиться отдельно от каталога резервных копий")
 	}
 	if cfg.ExtensionBackupRetention < 1 || cfg.ExtensionBackupRetention > 100 {
 		problems = append(problems, "LAUNCHER_EXTENSION_BACKUP_RETENTION должен быть 1..100")
 	}
 	if cfg.ExtensionEventsEnabled {
 		if !cfg.ExtensionHostEnabled {
-			problems = append(problems, "Extensions Events требует LAUNCHER_EXTENSION_HOST_ENABLED=true")
+			problems = append(problems, "Для обработки событий расширений необходимо установить LAUNCHER_EXTENSION_HOST_ENABLED=true")
 		}
 		if cfg.ExtensionEventsWorkerIntervalMilliseconds < 50 || cfg.ExtensionEventsWorkerIntervalMilliseconds > 60000 {
-			problems = append(problems, "extension events worker interval должен быть 50..60000 ms")
+			problems = append(problems, "Интервал обработчика событий расширений должен составлять от 50 до 60000 мс")
 		}
 		if cfg.ExtensionEventsLeaseSeconds < 2 || cfg.ExtensionEventsLeaseSeconds > 600 {
-			problems = append(problems, "extension events lease должен быть 2..600 секунд")
+			problems = append(problems, "Срок аренды для событий расширений должен составлять от 2 до 600 секунд")
 		}
 		if cfg.ExtensionEventsHookTimeoutMilliseconds < 50 || cfg.ExtensionEventsHookTimeoutMilliseconds > 60000 {
 			problems = append(problems, "Тайм-аут обработчика событий расширений должен составлять от 50 до 60000 мс")
 		}
 		if cfg.ExtensionEventsMaxAttempts < 1 || cfg.ExtensionEventsMaxAttempts > 100 {
-			problems = append(problems, "extension events max attempts должен быть 1..100")
+			problems = append(problems, "Максимальное число попыток обработки событий расширений должно быть от 1 до 100")
 		}
 		if cfg.ExtensionEventsBaseRetryMilliseconds < 100 || cfg.ExtensionEventsBaseRetryMilliseconds > 60000 {
-			problems = append(problems, "extension events base retry должен быть 100..60000 ms")
+			problems = append(problems, "Базовый интервал повторной попытки для событий расширений должен быть от 100 до 60000 мс")
 		}
 		if cfg.ExtensionEventsMaxRetrySeconds < 1 || cfg.ExtensionEventsMaxRetrySeconds > 86400 {
-			problems = append(problems, "extension events max retry должен быть 1..86400 секунд")
+			problems = append(problems, "Максимальный интервал повторной попытки для событий расширений должен составлять от 1 до 86400 секунд")
 		}
 		if cfg.ExtensionEventsBatchSize < 1 || cfg.ExtensionEventsBatchSize > 100 {
-			problems = append(problems, "extension events batch size должен быть 1..100")
+			problems = append(problems, "Размер пакета событий расширений должен быть от 1 до 100")
 		}
 	}
 	if cfg.ExtensionHostEnabled {
@@ -716,37 +716,37 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "Тайм-аут проверки возможностей хоста расширений должен составлять от 1 до 60 секунд")
 		}
 		if cfg.ExtensionHostMaxMemoryMB < 32 || cfg.ExtensionHostMaxMemoryMB > 1048576 {
-			problems = append(problems, "extension host max memory должен быть 32..1048576 MiB")
+			problems = append(problems, "Ограничение памяти хоста расширений должно составлять от 32 до 1048576 МиБ")
 		}
 		if cfg.ExtensionHostMaxProcesses < 1 || cfg.ExtensionHostMaxProcesses > 1024 {
-			problems = append(problems, "extension host max processes должен быть 1..1024")
+			problems = append(problems, "Ограничение числа процессов хоста расширений должно составлять от 1 до 1024")
 		}
 		if cfg.ExtensionHostMaxLogBytes < 65536 || cfg.ExtensionHostMaxLogBytes > 1<<30 {
-			problems = append(problems, "extension host max log bytes вне безопасного диапазона")
+			problems = append(problems, "Ограничение размера журнала хоста расширений выходит за безопасные пределы")
 		}
 		if cfg.ExtensionHostMaxLogEntries < 10 || cfg.ExtensionHostMaxLogEntries > 100000 {
-			problems = append(problems, "extension host max log entries вне безопасного диапазона")
+			problems = append(problems, "Ограничение числа записей журнала хоста расширений выходит за безопасные пределы")
 		}
 		if cfg.ExtensionHostMaxProtocolBodyBytes < 4096 || cfg.ExtensionHostMaxProtocolBodyBytes > 16<<20 {
-			problems = append(problems, "extension host max protocol body вне безопасного диапазона")
+			problems = append(problems, "Ограничение размера тела протокольного сообщения хоста расширений выходит за безопасные пределы")
 		}
 		if cfg.ExtensionHostMaxStorageReadBytes < 4096 || cfg.ExtensionHostMaxStorageReadBytes > 64<<20 {
-			problems = append(problems, "extension host storage read limit вне безопасного диапазона")
+			problems = append(problems, "Ограничение чтения хранилища хоста расширений выходит за безопасные пределы")
 		}
 		if cfg.ExtensionHostCrashLimit < 1 || cfg.ExtensionHostCrashLimit > 100 {
-			problems = append(problems, "extension host crash limit должен быть 1..100")
+			problems = append(problems, "Допустимое число аварийных завершений хоста расширений должно составлять от 1 до 100")
 		}
 		if cfg.ExtensionHostCrashWindowSeconds < 10 || cfg.ExtensionHostCrashWindowSeconds > 86400 {
-			problems = append(problems, "extension host crash window должен быть 10..86400 секунд")
+			problems = append(problems, "Окно учёта аварийных завершений хоста расширений должно составлять от 10 до 86400 секунд")
 		}
 		if cfg.ExtensionHostRestartBackoffMilliseconds < 100 || cfg.ExtensionHostRestartBackoffMilliseconds > 60000 {
-			problems = append(problems, "extension host restart backoff должен быть 100..60000 ms")
+			problems = append(problems, "Задержка перед перезапуском хоста расширений должна составлять от 100 до 60000 мс")
 		}
 		if cfg.ExtensionHTTPMaxRequestBytes < 1024 || cfg.ExtensionHTTPMaxRequestBytes > 8<<20 {
-			problems = append(problems, "extension HTTP request limit должен быть 1024..8388608 bytes")
+			problems = append(problems, "Ограничение размера HTTP-запроса расширения должно составлять от 1024 до 8388608 байт")
 		}
 		if cfg.ExtensionHTTPMaxResponseBytes < 4096 || cfg.ExtensionHTTPMaxResponseBytes > 32<<20 {
-			problems = append(problems, "extension HTTP response limit должен быть 4096..33554432 bytes")
+			problems = append(problems, "Ограничение размера HTTP-ответа расширения должно составлять от 4096 до 33554432 байт")
 		}
 		if cfg.ExtensionHTTPTimeoutSeconds < 1 || cfg.ExtensionHTTPTimeoutSeconds > 60 {
 			problems = append(problems, "Тайм-аут HTTP-запросов расширений должен составлять от 1 до 60 секунд")
@@ -757,11 +757,11 @@ func ValidateProduction(cfg Config) error {
 	case "local", "":
 		storageRoot := filepath.Clean(strings.TrimSpace(cfg.StorageLocalPath))
 		if strings.TrimSpace(cfg.StorageLocalPath) == "" || storageRoot == "." {
-			problems = append(problems, "LAUNCHER_STORAGE_LOCAL_PATH обязателен для local storage")
+			problems = append(problems, "Для локального хранилища необходимо указать LAUNCHER_STORAGE_LOCAL_PATH")
 		} else if pathsOverlap(storageRoot, backupRoot) {
-			problems = append(problems, "backup root должен быть отделён от local storage root")
+			problems = append(problems, "Каталог резервных копий должен находиться отдельно от каталога локального хранилища")
 		} else if strings.TrimSpace(cfg.ExtensionRoot) != "" && extensionRoot != "." && pathsOverlap(storageRoot, extensionRoot) {
-			problems = append(problems, "extension root должен быть отделён от local storage root")
+			problems = append(problems, "Каталог расширений должен находиться отдельно от каталога локального хранилища")
 		}
 	case "s3", "s3-compatible":
 		if strings.TrimSpace(cfg.StorageS3Endpoint) == "" || strings.TrimSpace(cfg.StorageS3Bucket) == "" || strings.TrimSpace(cfg.StorageS3AccessKey) == "" || strings.TrimSpace(cfg.StorageS3SecretKey) == "" {

@@ -95,7 +95,7 @@ func BuildBatch0492(ctx context.Context, source io.ReaderAt, size int64, run, pr
 		}
 	}
 	if len(available) == 0 || len(available) != len(destinations) {
-		return out, fmt.Errorf("every Gravit profile: требуется «однозначное сопоставление: в источнике %d, в запросе» %d", len(available), len(destinations))
+		return out, fmt.Errorf("Для каждого профиля Gravit необходимо однозначное сопоставление: в источнике %d, в запросе %d", len(available), len(destinations))
 	}
 	mapped, ids := make(map[string]bool), make(map[string]bool)
 	for _, d := range destinations {

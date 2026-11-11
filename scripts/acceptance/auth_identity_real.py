@@ -149,7 +149,7 @@ def credentials(value, name):
     require(isinstance(value, dict) and isinstance(value.get('identifier'), str) and
             isinstance(value.get('password'), str) and value['identifier'] and
             value['password'] and len(value['password']) <= 4096,
-            'missing private ' + name + ' test credentials')
+            'Отсутствуют конфиденциальные тестовые учётные данные для ' + name)
     return value
 
 
