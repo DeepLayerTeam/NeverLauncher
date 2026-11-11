@@ -866,15 +866,15 @@ func standaloneProductionCompose(template []byte, apiImage, adminImage string) (
 
 func projectTemplates() []ProjectTemplate {
 	return []ProjectTemplate{
-		{ID: "vanilla", Title: "Проект сервера Vanilla", Description: "Базовый проект без mod loader", Loaders: []string{"vanilla"}, UseCase: "public-server"},
-		{ID: "fabric", Title: "Проект сервера Fabric", Description: "Проект с Fabric loader и modpack-профилем", Loaders: []string{"fabric"}, UseCase: "modded"},
-		{ID: "forge", Title: "Проект сервера Forge", Description: "Проект с Forge loader", Loaders: []string{"forge"}, UseCase: "modded"},
-		{ID: "neoforge", Title: "Проект сервера NeoForge", Description: "Проект с NeoForge loader", Loaders: []string{"neoforge"}, UseCase: "modern-modded"},
-		{ID: "quilt", Title: "Проект сервера Quilt", Description: "Проект с Quilt loader", Loaders: []string{"quilt"}, UseCase: "experimental-modded"},
+		{ID: "vanilla", Title: "Проект сервера Vanilla", Description: "Базовый проект без загрузчика модов", Loaders: []string{"vanilla"}, UseCase: "public-server"},
+		{ID: "fabric", Title: "Проект сервера Fabric", Description: "Проект с загрузчиком Fabric и профилем набора модов", Loaders: []string{"fabric"}, UseCase: "modded"},
+		{ID: "forge", Title: "Проект сервера Forge", Description: "Проект с загрузчиком Forge", Loaders: []string{"forge"}, UseCase: "modded"},
+		{ID: "neoforge", Title: "Проект сервера NeoForge", Description: "Проект с загрузчиком NeoForge", Loaders: []string{"neoforge"}, UseCase: "modern-modded"},
+		{ID: "quilt", Title: "Проект сервера Quilt", Description: "Проект с загрузчиком Quilt", Loaders: []string{"quilt"}, UseCase: "experimental-modded"},
 		{ID: "modpack", Title: "Проект с модпаком", Description: "Готовая структура для модпака", Loaders: []string{"fabric", "forge", "neoforge", "quilt"}, UseCase: "modpack"},
 		{ID: "mmorpg", Title: "Проект MMORPG", Description: "Шаблон для RPG/MMORPG-сервера", Loaders: []string{"paper", "purpur"}, UseCase: "rpg"},
 		{ID: "survival-plus", Title: "Проект Survival+", Description: "Шаблон для Survival+ проекта", Loaders: []string{"paper", "purpur"}, UseCase: "survival"},
-		{ID: "private-community", Title: "Проект закрытого сообщества", Description: "Закрытый community-проект", Loaders: []string{"vanilla", "fabric"}, UseCase: "private"},
+		{ID: "private-community", Title: "Проект закрытого сообщества", Description: "Закрытый проект сообщества", Loaders: []string{"vanilla", "fabric"}, UseCase: "private"},
 	}
 }
 
@@ -884,7 +884,7 @@ func installProfiles() []InstallProfile {
 		{ID: "single-server-s3", Title: "Один сервер с S3", Description: "Один экземпляр Backend и Admin с хранилищем, совместимым с S3", Components: []string{"api", "admin", "cli", "s3-storage"}, Storage: "s3"},
 		{ID: "multi-project", Title: "Backend для нескольких проектов", Description: "Один экземпляр Backend для нескольких проектов", Components: []string{"api", "admin", "rbac", "audit"}, Storage: "local-or-s3"},
 		{ID: "multi-tenant", Title: "Многопользовательский Backend", Description: "Изоляция арендаторов для нескольких проектов и команд", Components: []string{"api", "admin", "tenants", "rbac", "audit", "s3-storage"}, Storage: "s3"},
-		{ID: "development", Title: "Режим разработки", Description: "Локальная разработка без production-хранилища", Components: []string{"api", "admin", "desktop", "cli"}, Storage: "local"},
-		{ID: "offline", Title: "Автономный режим", Description: "Ограниченный режим без внешних registry sync", Components: []string{"desktop", "local-manifest", "diagnostics"}, Storage: "local"},
+		{ID: "development", Title: "Режим разработки", Description: "Локальная разработка без промышленного хранилища", Components: []string{"api", "admin", "desktop", "cli"}, Storage: "local"},
+		{ID: "offline", Title: "Автономный режим", Description: "Ограниченный режим без внешней синхронизации реестров", Components: []string{"desktop", "local-manifest", "diagnostics"}, Storage: "local"},
 	}
 }

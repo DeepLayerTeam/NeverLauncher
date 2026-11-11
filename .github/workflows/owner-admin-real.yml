@@ -76,12 +76,12 @@ jobs:
           NL_0523_OWNER_EMAIL: ${{ vars.NL_0523_OWNER_EMAIL }}
         run: |
           set -euo pipefail
-          : "${NL_0523_ENV:?Dedicated immutable Standard .env required}"
+          : "${NL_0523_ENV:?требуется отдельный неизменяемый файл .env для стандартного режима}"
           : "${NL_0523_PASSWORD_FILE:?Dedicated owner password file required}"
-          : "${NL_0523_REGISTRATION_FILE:?Real Bridge node public identity required}"
-          : "${NL_0523_WORLD_MARKER:?Real game persistent player data marker required}"
-          : "${NL_0523_SERVER_ID:?Dedicated Minecraft server required}"
-          : "${NL_0523_OWNER_EMAIL:?Dedicated owner email required}"
+          : "${NL_0523_REGISTRATION_FILE:?требуется настоящий публичный идентификатор узла Bridge}"
+          : "${NL_0523_WORLD_MARKER:?требуется маркер сохранённых данных игрока на реальном игровом сервере}"
+          : "${NL_0523_SERVER_ID:?требуется отдельный сервер Minecraft}"
+          : "${NL_0523_OWNER_EMAIL:?требуется отдельный адрес электронной почты владельца}"
           umask 077
           python3 scripts/acceptance/owner_admin_real_0523.py \
             --env "$NL_0523_ENV" --email "$NL_0523_OWNER_EMAIL" \

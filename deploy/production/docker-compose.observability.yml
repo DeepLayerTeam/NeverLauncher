@@ -48,7 +48,7 @@ services:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
     volumes:
-      - ${LAUNCHER_ALERTMANAGER_CONFIG:?Generate the private Alertmanager config before starting}:/etc/alertmanager/alertmanager.yml:ro
+      - ${LAUNCHER_ALERTMANAGER_CONFIG:?перед запуском создайте закрытый файл конфигурации Alertmanager}:/etc/alertmanager/alertmanager.yml:ro
       - launcher_alertmanager:/alertmanager
     security_opt: ['no-new-privileges:true']
     networks: [launcher]

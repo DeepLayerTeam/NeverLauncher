@@ -92,7 +92,7 @@ services:
       PUID: ${LAUNCHER_E2E_HOST_UID:-1000}
       PGID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: velocity-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project
@@ -125,7 +125,7 @@ services:
       PUID: ${LAUNCHER_E2E_HOST_UID:-1000}
       PGID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: bungeecord-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project
@@ -158,7 +158,7 @@ services:
       PUID: ${LAUNCHER_E2E_HOST_UID:-1000}
       PGID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: waterfall-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project
@@ -196,7 +196,7 @@ services:
       UID: ${LAUNCHER_E2E_HOST_UID:-1000}
       GID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: spigot-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project
@@ -233,12 +233,12 @@ services:
       # Только внутренняя консоль E2E; порт RCON не публикуется на хосте. Проверка GA
       # игрового мира должна отправить `save-all flush` и `stop`, не полагаясь лишь на
       # SIGTERM.
-      RCON_PASSWORD: ${LAUNCHER_E2E_RCON_PASSWORD:?E2E private RCON password required}
+      RCON_PASSWORD: ${LAUNCHER_E2E_RCON_PASSWORD:?для сквозной E2E-проверки требуется закрытый пароль RCON}
       SPAWN_PROTECTION: "0"
       UID: ${LAUNCHER_E2E_HOST_UID:-1000}
       GID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: paper-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project
@@ -276,7 +276,7 @@ services:
       UID: ${LAUNCHER_E2E_HOST_UID:-1000}
       GID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: purpur-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project
@@ -315,7 +315,7 @@ services:
       UID: ${LAUNCHER_E2E_HOST_UID:-1000}
       GID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: folia-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project
@@ -357,7 +357,7 @@ services:
       UID: ${LAUNCHER_E2E_HOST_UID:-1000}
       GID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: fabric-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project
@@ -396,7 +396,7 @@ services:
       UID: ${LAUNCHER_E2E_HOST_UID:-1000}
       GID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: forge-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project
@@ -435,7 +435,7 @@ services:
       UID: ${LAUNCHER_E2E_HOST_UID:-1000}
       GID: ${LAUNCHER_E2E_HOST_GID:-1000}
       LAUNCHER_BACKEND_URL: http://launcher-api:8080
-      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?для сквозной E2E-проверки требуется ключ подписи команд управления}
       LAUNCHER_SERVER_ID: neoforge-e2e-p3
       LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       LAUNCHER_PROJECT_ID: e2e-project

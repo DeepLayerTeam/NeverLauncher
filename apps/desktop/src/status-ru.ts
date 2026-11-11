@@ -1,6 +1,18 @@
 /** Локализация пользовательских статусов обращений; коды API сохраняются. */
 export function statusRuDesktop(value: string | null | undefined): string {
   const labels: Record<string, string> = {
+    "connecting": "Подключение",
+    "reconnecting": "Повторное подключение",
+    "launching": "Запуск",
+    "installing": "Установка",
+    "repairing": "Восстановление",
+    "uploading": "Загрузка на сервер",
+    "available": "Доступно",
+    "waiting_for_approval": "Ожидает подтверждения",
+    "partial_failure": "Частичная ошибка",
+    "failed_validation": "Проверка не пройдена",
+    "permission_denied": "Отказано в доступе",
+    "network_error": "Сетевая ошибка",
     pending: "Ожидает", open: "Открыто", reviewed: "Рассмотрено",
     changed: "Изменено", unchanged: "Без изменений", confirmed: "Подтверждено",
     trusted: "Доверенное", untrusted: "Недоверенное",

@@ -595,7 +595,7 @@ def service_unit(env_path):
         fail("Небезопасный путь к окружению нативной службы")
     return f"""{UNIT_MARKER}
 [Unit]
-Description=Launcher API (DEP09 managed)
+Description=Launcher API (под управлением DEP09)
 Wants=network-online.target
 After=network-online.target postgresql.service
 

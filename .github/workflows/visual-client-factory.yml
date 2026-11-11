@@ -28,7 +28,7 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Проверить форматирование Go
         run: test -z "$(gofmt -l services/api/internal/httpapi/client_factory_builder_02710*.go)"
-      - name: Проверить API на настоящих пакетах
+      - name: Проверить API на реальных пакетах
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestFactoryBuilder.*02710|TestBuildWorkspaceDirectoryStageAndMaterialize0226' -count=1 -timeout=8m
       - name: Запустить детектор гонок
@@ -62,10 +62,10 @@ jobs:
       - name: Установить закреплённые зависимости
         working-directory: apps/admin
         run: npm ci
-      - name: Type-check и сборка
+      - name: Проверить типы и собрать проект
         working-directory: apps/admin
         run: npm run build
-      - name: Admin тесты
+      - name: Запустить тесты панели Admin
         working-directory: apps/admin
         run: npm test
   image:

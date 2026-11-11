@@ -92,16 +92,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          : "${NL_INSTALLER:?Pinned final neverinstaller path required}"
-          : "${NL_INSTALLER_SHA256:?Independent installer digest required}"
-          : "${NL_BUNDLE_OLD:?Exact old signed bundle path required}"
+          : "${NL_INSTALLER:?требуется закреплённый путь к итоговому установщику neverinstaller}"
+          : "${NL_INSTALLER_SHA256:?требуется независимо проверенная контрольная сумма установщика}"
+          : "${NL_BUNDLE_OLD:?требуется точный путь к прежнему подписанному пакету}"
           : "${NL_BUNDLE_OLD_SHA256:?Old config SHA required}"
-          : "${NL_BUNDLE_NEW:?Exact new signed bundle path required}"
+          : "${NL_BUNDLE_NEW:?требуется точный путь к новому подписанному пакету}"
           : "${NL_BUNDLE_NEW_SHA256:?New config SHA required}"
           : "${NL_MANAGED_FILE:?Real managed game/runtime file required}"
           : "${NL_MANAGED_SHA256:?Managed file digest required}"
-          : "${NL_SCRATCH:?Dedicated scratch required}"
-          : "${NL_TMPFS_MIB:?Explicit isolated tmpfs capacity required}"
+          : "${NL_SCRATCH:?требуется отдельный временный каталог}"
+          : "${NL_TMPFS_MIB:?требуется явно заданная ёмкость изолированного tmpfs}"
           umask 077
           python3 scripts/acceptance/install_upgrade_repair_0527.py \
             --installer "$NL_INSTALLER" --installer-sha256 "$NL_INSTALLER_SHA256" \

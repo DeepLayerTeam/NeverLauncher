@@ -1,4 +1,4 @@
-name: Нативные брендированные установщики (нотариально заверенная версия 0.52.2)
+name: Нативные брендированные установщики (нотариализованный выпуск 0.52.2)
 on:
   pull_request:
     paths:
@@ -19,12 +19,12 @@ on:
   workflow_dispatch:
     inputs:
       production_release:
-        description: 'Собрать и подписать артефакты релиза из утверждённого подписанного запуска начальной загрузки'
+        description: 'Собрать и подписать артефакты выпуска на основе утверждённого подписанного загрузчика'
         type: boolean
         required: true
         default: false
       source_run_id:
-        description: 'Запускать с подписанными артефактами launcher-bootstrap-{platform}-{arch}'
+        description: 'Использовать подписанные артефакты launcher-bootstrap-{platform}-{arch}'
         required: false
         type: string
 permissions:
@@ -47,7 +47,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install 'cryptography>=43,<47'
-      - name: Проверить нативные жизненный цикл и проверки подписей
+      - name: Проверить жизненный цикл нативных компонентов и проверку подписей
         working-directory: prestarter
         run: go test -count=1 ./...
       - name: Выполнить кросс-компиляцию нативного установщика и Prestarter для шести платформ
@@ -103,14 +103,14 @@ jobs:
           test "$(go env GOOS)" = '${{ matrix.platform }}' || { echo 'Несоответствие операционной системы производственной сборки'; exit 1; }
           test "$(go env GOARCH)" = '${{ matrix.arch }}' || { echo 'Несоответствие архитектуры производственной сборки'; exit 1; }
           (cd prestarter && go test -count=1 ./...)
-      - name: Получить утверждённые подписанные первый запуск входные данные
+      - name: Получить утверждённые подписанные файлы начальной загрузки
         uses: actions/download-artifact@v4
         with:
           name: launcher-bootstrap-${{ matrix.platform }}-${{ matrix.arch }}
           run-id: ${{ inputs.source_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: branded-input
-      - name: Закрепить root ключ из защищённые релиз окружение
+      - name: Закрепить корневой ключ из защищённого окружения выпуска
         shell: bash
         env:
           PINNED_ROOT_KEY: ${{ vars.LAUNCHER_RELEASE_ROOT_PUBLIC_KEY }}
@@ -153,7 +153,7 @@ jobs:
             --key "$RUNNER_TEMP/native-notary-0522.p8" \
             --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER"
           printf 'LAUNCHER_MACOS_NOTARY_PROFILE=native-package-0522\n' >> "$GITHUB_ENV"
-      - name: Импортировать Linux подписание ключ
+      - name: Импортировать ключ подписи для Linux
         if: runner.os == 'Linux'
         shell: bash
         env:

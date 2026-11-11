@@ -92,8 +92,8 @@ jobs:
         run: |
           set -euo pipefail
           : "${AUTH_0525_SECRETS_FILE:?private 0600 credential file required}"
-          : "${AUTH_0525_OIDC_PROOF_FILE:?private 0600 real browser proof required}"
-          : "${AUTH_0525_API_SHA256:?independently pinned Backend package SHA-256 required}"
+          : "${AUTH_0525_OIDC_PROOF_FILE:?требуется файл подтверждения реального браузера с правами доступа 0600}"
+          : "${AUTH_0525_API_SHA256:?требуется независимо закреплённая контрольная сумма SHA-256 пакета Backend}"
           umask 077
           python3 scripts/acceptance/auth_identity_real_0525.py run \
              --secrets "$AUTH_0525_SECRETS_FILE" \
