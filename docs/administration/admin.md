@@ -14,7 +14,7 @@ npm run build
 
 ## Навигация
 
-Разделы доступны по hash-маршрутам: `#/dashboard`, `#/projects`, `#/profiles`, `#/channels`, `#/packages`, `#/releases`, `#/users`, `#/roles`, `#/devices`, `#/audit`, `#/server-bridge`, `#/extension-registry`. Маршруты работают после перезагрузки браузера и при использовании кнопок «Назад»/«Вперёд». Подключение новых Nginx rewrite rules не требуется.
+Разделы доступны по маршрутам с хешем: `#/dashboard`, `#/projects`, `#/profiles`, `#/channels`, `#/packages`, `#/releases`, `#/users`, `#/roles`, `#/devices`, `#/audit`, `#/server-bridge`, `#/extension-registry`. Маршруты работают после перезагрузки браузера и при использовании кнопок «Назад»/«Вперёд». Подключение новых Nginx rewrite rules не требуется.
 
 После входа Admin вызывает `GET /api/v1/admin/me` (полномочия глобальной роли и `projectPermissions`) и защищённый `GET /api/v1/admin/overview` (только доступные проекты). Выбранный проект хранится в sessionStorage. Проектный контекст применяется для профилей, каналов и релизов и сбрасывает ранее выбранные профили/версии при смене проекта. Просмотр чужого проекта не появляется в навигации и таблице.
 

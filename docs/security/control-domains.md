@@ -35,4 +35,4 @@
 
 - `cd services/api && GOPROXY=off go test ./internal/authorization ./internal/dbmigrate`
 - `cd apps/admin && npm test`
-- При установленных зависимостях запустите полный набор тестов HTTP API, `npm run build`, миграции в одноразовом PostgreSQL и реальный жизненный цикл команд ServerBridge v3 до признания выпуска проверенным для production.
+- При установленных зависимостях запустите полный набор тестов HTTP API, `npm run build`, миграции в одноразовом PostgreSQL и реальный жизненный цикл команд ServerBridge v3 до признания выпуска проверенным для промышленной эксплуатации.

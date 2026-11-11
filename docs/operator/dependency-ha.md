@@ -136,7 +136,7 @@ sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py verify \
 `verify` запрашивает живую HAProxy UNIX stats socket, **запрещает два
 одновременно доступных writer**, требует 2 ingress+2 S3 gateways, реальный
 доступ к /ready, строгие SSH host keys и пробы приложения через его уже
-существующий `launcher-api diagnose growth`: PostgreSQL fencing, Redis lease
+существующий `launcher-api diagnose growth`: изоляция PostgreSQL, Redis lease
 и S3 read/write/delete. Отдельно выполняет AWS SigV4 PUT→GET между
 различными прямыми S3 шлюзами, с TLS hostname verification. Отчёт не
 содержит DSN/секреты; отсутствие права или сервера — ошибка, не PASS.
@@ -185,7 +185,7 @@ sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py edge-drill \
 **Фактические результаты**: измерить RTO/RPO для PostgreSQL, Redis,
 S3 и ingress отдельно; подтвердить состояние миров, UUID, identities,
 реплик и durable jobs; сверить количество подтверждённых writes до/после.
-Механизм outage probe не утверждает сохранность всех данных по одному canary,
+Механизм outage probe не утверждает сохранность всех данных по одному контрольному объекту,
 и не заменяет проверку power-off, разделения сети, Redis lease-split или
 выполнения JVM/gameplay. Split-brain и fencing относятся к 0.51.4,
 Поэтапные обновления N/N−1 — к 0.51.6/0.51.7, восстановление — к 0.51.8/0.51.9.

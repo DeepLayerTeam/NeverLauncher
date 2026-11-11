@@ -25,4 +25,4 @@
 
 Перед развёртыванием выполнить стандартный migration apply для Backend; `0053_release_workspace_0218.sql` применяется с контрольной суммой, как и все предыдущие миграции. Рекомендуемые проверки: `cd services/api && go test ./internal/httpapi ./internal/repository -run 'TestRelease' -count=1`, `cd apps/admin && npm ci && npm run test && npm run build`, `python3 scripts/version/manage.py check`.
 
-Архив исходников 0.21.8 был подготовлен без доступного npm registry и Go module cache, поэтому полная production-сборка и E2E должны быть выполнены в CI перед выкладкой.
+Архив исходников 0.21.8 был подготовлен без доступного npm registry и Go module cache, поэтому полная промышленная сборка и E2E должны быть выполнены в CI перед выкладкой.

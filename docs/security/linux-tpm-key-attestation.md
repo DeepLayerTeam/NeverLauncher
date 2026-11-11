@@ -8,7 +8,7 @@
 
 После `TPM2_ReadPublic` полная TPM2B_PUBLIC побайтово сверяется с сохранённой, а P-256 SEC1 — с серверной идентификатору устройства. `TPM2_Certify` вызывается с отдельным TPM AK по persistent handle `0x81xxxxxx`, с `qualifyingData` — ровно 32-байтовым серверным nonce-derived SHA256. Клиент отправляет binary TPM2B_PUBLIC, TPM2B_ATTEST, TPMT_SIGNATURE и issuer-certified AK X.509 material в существующий `POST /api/v1/auth/devices/{id}/tpm-certify/complete` (после `begin`). Никакая локальная опция не выставляет `verified`: его присваивает только сервер.
 
-0.31.4 исправляет реальную несовместимость с 0.31.2: `hardware-enclave` Linux создаёт signing key `TPMT_ECC_SCHEME=ECDSA(SHA256)`, тогда как Windows ранее проверял `NULL`. Общий бинарный парсер и Go verifier теперь принимают **только** `NULL` или `ECDSA(SHA256)`; SHA-1, остальные схемы и кривые остаются запрещёнными. TPM Name пересчитывается из полной фактической public area, включая scheme/hash, поэтому чужой объект не может пройти проверку по голому public key.
+0.31.4 исправляет реальную несовместимость с 0.31.2: `hardware-enclave` Linux создаёт signing key `TPMT_ECC_SCHEME=ECDSA(SHA256)`, тогда как Windows ранее проверял `NULL`. Общий бинарный парсер и проверяющий компонент Go теперь принимают **только** `NULL` или `ECDSA(SHA256)`; SHA-1, остальные схемы и кривые остаются запрещёнными. TPM Name пересчитывается из полной фактической public area, включая scheme/hash, поэтому чужой объект не может пройти проверку по голому public key.
 
 ## Требования оператора
 

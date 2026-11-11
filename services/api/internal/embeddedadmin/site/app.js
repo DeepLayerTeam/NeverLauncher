@@ -1,6 +1,26 @@
 "use strict";
 const byId = (id) => document.getElementById(id);
 let token = ""; // Только в оперативной памяти: никогда не сохраняется в sessionStorage, localStorage или URL.
+// Человекочитаемые подписи для статусов API; машинные значения остаются неизменными.
+const statusLabelsRu = Object.freeze({
+  ready: "Готово",
+  healthy: "Исправно",
+  degraded: "Частично работоспособно",
+  unavailable: "Недоступно",
+  blocked: "Заблокировано",
+  pending: "Ожидает",
+  running: "Выполняется",
+  completed: "Завершено",
+  failed: "Ошибка",
+  success: "Успешно",
+  ok: "Норма",
+  setup_required: "Требуется первоначальная настройка",
+  not_ready: "Не готово",
+  uninitialized: "Не инициализировано",
+  rollback_required: "Требуется откат",
+  rolled_back: "Откат выполнен",
+});
+const statusRu = (value) => statusLabelsRu[String(value).toLowerCase()] ?? String(value ?? "Неизвестно");
 const show = (id, state) => {
   byId(id).hidden = !state;
 };
@@ -35,7 +55,7 @@ async function readiness() {
   try {
     const data = await api("/api/v1/install/readiness");
     message(
-      `Готовность: ${data.status}; установка завершена: ${data.installationCompleted ? "да" : "нет"}`,
+      `Готовность: ${statusRu(data.status)}; установка завершена: ${data.installationCompleted ? "да" : "нет"}`,
     );
     show(
       "bootstrap",
@@ -898,7 +918,7 @@ for (const operation of ["plan", "commit", "status"]) {
           byId("migration-rollback-plan-sha").value = result.planSha256;
         message(
           result?.ready
-            ? `Откат: ${result.state}; исходный процесс записи НЕ перезапущен`
+            ? `Откат: ${statusRu(result.state)}; исходный процесс записи НЕ перезапущен`
             : `Откат заблокирован: ${(result?.blockers || []).join("; ")}`,
         );
       } catch (err) {
@@ -965,7 +985,7 @@ for (const action of ["report", "status", "review"]) {
       message(
         data.status === "blocked"
           ? "Сертификация заблокирована. Изучите фактические подтверждения."
-          : `RC ${data.status}; сертификат GA НЕ выпущен`,
+          : `RC ${statusRu(data.status)}; сертификат GA НЕ выпущен`,
       );
     } catch (err) {
       message(err.message, true);
