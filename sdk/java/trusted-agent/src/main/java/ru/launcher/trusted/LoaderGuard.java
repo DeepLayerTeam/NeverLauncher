@@ -130,7 +130,7 @@ final class LoaderGuard0504 implements ClassFileTransformer {
     }
     private static String digestBytes(byte[] bytes) {
         try {return hex(MessageDigest.getInstance("SHA-256").digest(bytes));}
-        catch(Exception ex) { reject("SHA-256 unavailable: "+ex); return ""; }
+        catch(Exception ex) { reject("Алгоритм SHA-256 недоступен: "+ex); return ""; }
     }
     private static String hex(byte[] bytes) {
         StringBuilder out=new StringBuilder(64);

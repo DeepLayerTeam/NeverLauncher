@@ -34,7 +34,7 @@ public final class RuntimeUI implements AutoCloseable {
     private void active(){if(closed)throw new IllegalStateException("Среда выполнения интерфейса закрыта");}
     public synchronized void registerAction(String target,String actionId,JsonSchema schema,Action handler){
         active();String key=surface(target)+":"+token(actionId);
-        if(!declared.getOrDefault(target,Set.of()).contains(actionId))throw new SecurityException("Действие отсутствует в подписанных элементах "+target+" contributions");
+        if(!declared.getOrDefault(target,Set.of()).contains(actionId))throw new SecurityException("Действие отсутствует среди подписанных элементов интерфейса "+target);
         if(actions.putIfAbsent(key,new Binding(schema,Objects.requireNonNull(handler)))!=null)throw new IllegalArgumentException("Повторяющееся действие интерфейса");
     }
     /** Каждый параметр должен быть явно зарегистрирован в Java и сохранён в существующей конфигурации расширения. */

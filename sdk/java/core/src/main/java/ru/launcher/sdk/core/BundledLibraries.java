@@ -74,7 +74,7 @@ public final class BundledLibraries implements AutoCloseable {
                     String name=parts[0],coordinate=parts[1],version=parts[2],hash=parts[3],range=parts[4];
                     if(!name.matches("META-INF/launcher/libs/[A-Za-z0-9._-]+\\.jar")||!coordinate.matches("[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+")||!hash.matches("[0-9a-f]{64}")||!names.add(name)||!artifacts.add(coordinate))throw new SecurityException("Некорректный или повторяющийся идентификатор библиотеки");
                     SemVer.parse(version);
-                    if(!SemVer.parse(api).matches(range))throw new SecurityException("library "+coordinate+" требует несовместимый API SDK: "+range);
+                    if(!SemVer.parse(api).matches(range))throw new SecurityException("Библиотека "+coordinate+" требует несовместимый API SDK: "+range);
                     JarEntry bundled=entries.get(name);
                     if(bundled==null||bundled.isDirectory()||bundled.getSize()<1||bundled.getSize()>MAX_LIB_BYTES)throw new SecurityException("Библиотека отсутствует или превышает допустимый размер: "+name);
                     libraries.add(new Library(name,hash,bundled));

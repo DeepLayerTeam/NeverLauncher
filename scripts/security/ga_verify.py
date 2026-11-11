@@ -265,7 +265,7 @@ def main() -> int:
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, sort_keys=True, indent=2) + "\n")
-    print(f"Launcher 0.32.0 security GA: {result['status']}")
+    print(f"Launcher 0.32.0 — проверка безопасности GA: {result['status']}")
     return 0 if result["status"] == "PASS" else 1
 
 

@@ -288,7 +288,7 @@ def execute(journeys, ids, timeout, report):
     atomic_report(report, document)
     failed = sum(x["status"] != "local-regression-passed" for x in outcome)
     print(
-        f"Local G/M regression: {len(outcome) - failed}/{len(outcome)} пройдено; проверка целевой платформы: НЕ ВЫПОЛНЯЛАСЬ"
+        f"Локальная регрессионная проверка G/M: {len(outcome) - failed}/{len(outcome)} пройдено; проверка целевой платформы: НЕ ВЫПОЛНЯЛАСЬ"
     )
     return 1 if failed else 0
 

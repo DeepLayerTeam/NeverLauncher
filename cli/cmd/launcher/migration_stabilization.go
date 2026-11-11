@@ -437,7 +437,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := updater.apply(updaterRequest0156{Root: live, Namespace: "01510-rollback", Files: []updaterFileSpec0156{spec}, Verify: func() error { return errors.New("intentional rollback") }}); err == nil {
+	if _, err := updater.apply(updaterRequest0156{Root: live, Namespace: "01510-rollback", Files: []updaterFileSpec0156{spec}, Verify: func() error { return errors.New("Преднамеренная ошибка для проверки отката") }}); err == nil {
 		return nil, errors.New("Проверка отката при стабилизации неожиданно зафиксировала транзакцию")
 	}
 	txRoot := filepath.Join(updater.controlDir, "transactions")
