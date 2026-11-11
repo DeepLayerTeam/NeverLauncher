@@ -138,7 +138,7 @@ for kind, class_name, expected in (
             'implementation(project(":plugins:bungee-family-common"))',
             "net.md-5:bungeecord-api:1.21-R0.5-SNAPSHOT",
         ],
-        f"{kind} Gradle build",
+        f"{kind} сборка Gradle",
     )
 
 backend = read("services/api/internal/httpapi/server_bridge.go")
@@ -175,7 +175,7 @@ for kind in ("velocity", "bungeecord", "waterfall"):
             f":plugins:{kind}-bridge:clean",
             f"launcher-{kind}-bridge-${{VERSION}}.jar",
         ],
-        f"{kind} production build",
+        f"{kind} промышленная сборка",
     )
 require(
     build,

@@ -215,7 +215,7 @@ def verified_minecraft(root: Path, delivered: dict, commit: str) -> dict:
                     and run['commit'] == commit,
                     f'{target}/{loader}: реальный игровой запуск не связан с финальным пакетом')
             result = verify_game(work, work / 'paper.log', run['username'])
-            require(result['loader'] == loader, f'{target}/{loader}: different Minecraft loader ran')
+            require(result['loader'] == loader, f'{target}/{loader}: запустился другой загрузчик Minecraft')
             completed += 1
     return {'realNativeMinecraftJoins': completed}
 

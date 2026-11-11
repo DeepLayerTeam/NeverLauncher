@@ -64,12 +64,15 @@ import {
 /** Перевод типовых ошибок браузера без изменения диагностических кодов API. */
 function browserErrorRu(error: unknown): string {
   const message = String(error ?? '');
-  if (/^(?:TypeError: )?(?:Failed to fetch|Network request failed|Load failed)$/i.test(message))
+  if (/^(?:(?:TypeError|NetworkError):\s*)?(?:Failed to fetch|Network request failed|Load failed|fetch failed)$/i.test(message.trim()))
     return 'Не удалось выполнить сетевой запрос';
   if (/^(?:TypeError: )?NetworkError when attempting to fetch resource\.?$/i.test(message))
     return 'Сетевая ошибка при обращении к серверу';
-  if (/^(?:AbortError: )?The operation was aborted\.?$/i.test(message))
+  if (/^(?:AbortError:\s*)?(?:The operation was aborted|The user aborted a request|This operation was aborted)\.?$/i.test(message.trim()))
     return 'Операция прервана';
+  if (/^(?:AbortError|TimeoutError):?$/i.test(message.trim())) return 'Время ожидания операции истекло';
+  if (/^getaddrinfo ENOTFOUND\b|^connect (?:ETIMEDOUT|ECONNREFUSED)\b/i.test(message.trim()))
+    return 'Не удалось подключиться к серверу (ошибка сети)';
   return message;
 }
 
@@ -5116,7 +5119,7 @@ function App() {
             !bootstrapError0352 && (
               <section className="settings compact">
                 <label>
-                  URL Backend
+                  Адрес серверного API
                   <input
                     value={settings.backendUrl}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
@@ -5879,7 +5882,7 @@ function FirstRunPanel({
       </p>
       <div className="settings">
         <label>
-          URL Backend
+          Адрес серверного API
           <input
             value={settings.backendUrl}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) =>

@@ -82,7 +82,7 @@ for loader in ("fabric", "quilt", "forge", "neoforge"):
             "resolutionLockSha256",
             f"{loader}-resolution-lock.json",
         ],
-        f"{loader} replay certification",
+        f"{loader} сертификация защиты от повторного использования",
     )
 
 integration = read("e2e/scripts/run-minecraft-e2e.sh")

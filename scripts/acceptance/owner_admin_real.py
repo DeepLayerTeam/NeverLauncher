@@ -102,7 +102,7 @@ class HTTPS:
 
     def request(self, method, route, *, data=None, token=None, bootstrap=None,
                 idempotency=None, expected=(200,), timeout=30):
-        require(route.startswith('/api/v1/') or route in ('/health', '/ready'), 'non-API route')
+        require(route.startswith('/api/v1/') or route in ('/health', '/ready'), 'маршрут вне API')
         require(not route.startswith('//') and '\\' not in route and '#' not in route,
                 'Небезопасный маршрут API')
         body = json.dumps(data, separators=(',', ':')).encode('utf-8') if data is not None else None
@@ -156,7 +156,7 @@ def verify_project(api, project, profile, channel, description, email, password)
             'Утрачены идентификатор или описание проекта')
     profiles = api.request('GET', '/api/v1/projects/' + project + '/profiles')
     channels = api.request('GET', '/api/v1/projects/' + project + '/channels')
-    require(any(row.get('id') == profile for row in profiles.get('items', [])), 'profile lost')
+    require(any(row.get('id') == profile for row in profiles.get('items', [])), 'профиль потерян')
     require(any(row.get('id') == channel for row in channels.get('items', [])), 'Соединение с каналом потеряно')
     api.request('GET', '/api/v1/admin/audit', token=token)
     api.request('GET', '/api/v1/admin/audit', expected=(401, 403))

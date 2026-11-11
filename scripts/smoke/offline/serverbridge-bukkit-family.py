@@ -121,7 +121,7 @@ for kind, (java_rel, expected) in wrappers.items():
     require(
         descriptor,
         ["main:", "version: ${version}", "api-version: '1.21'", "nlbridge:"],
-        f"{kind} plugin descriptor",
+        f"{kind} описание плагина",
     )
     require(
         build,
@@ -130,7 +130,7 @@ for kind, (java_rel, expected) in wrappers.items():
             "org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT",
             'attributes["paperweight-mappings-namespace"] = "mojang"',
         ],
-        f"{kind} Gradle build",
+        f"{kind} сборка Gradle",
     )
 if "folia-supported: true" not in read(
     "plugins/folia-bridge/src/main/resources/plugin.yml"
@@ -185,7 +185,7 @@ for kind in ("bukkit", "spigot", "paper", "purpur", "folia"):
             f":plugins:{kind}-bridge:clean",
             f"launcher-{kind}-bridge-${{VERSION}}.jar",
         ],
-        f"{kind} production build",
+        f"{kind} промышленная сборка",
     )
 require(
     build,

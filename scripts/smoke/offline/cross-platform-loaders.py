@@ -88,7 +88,7 @@ for loader in anchors:
             "verify-loader-platform.py",
             "loader-platform.json",
         ],
-        f"{loader} platform certification",
+        f"{loader} сертификация платформы",
     )
     if 'TARGET_OS" != "linux"' in script or 'TARGET_ARCH" != "x86_64"' in script:
         raise SystemExit(

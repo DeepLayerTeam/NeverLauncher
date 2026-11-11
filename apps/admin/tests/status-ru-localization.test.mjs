@@ -25,3 +25,17 @@ test('Отображение кода не меняет идентификато
   assert.equal(statusRu('external:custom:event'), 'external:custom:event');
   assert.equal(statusRu(undefined), 'Неизвестно');
 });
+
+test('Состояния сборки, безопасности и ServerBridge отображаются по-русски', () => {
+  const samples = {
+    'integrity-check-failed': 'Проверка целостности не пройдена',
+    'not-certified': 'Не сертифицировано',
+    'repaired-and-verified': 'Восстановлено и проверено',
+    'handoff-denied': 'Передача подключения отклонена',
+    'manual-intervention-required': 'Требуется вмешательство оператора',
+    'events-acknowledged': 'Получение событий подтверждено',
+  };
+  for (const [value, expected] of Object.entries(samples)) {
+    assert.equal(statusRu(value), expected, value);
+  }
+});

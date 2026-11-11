@@ -23,12 +23,15 @@ export function httpStatusRu(response: Pick<Response, 'status'>): string {
 export function networkErrorRu(value: unknown): string {
   const message = value instanceof Error ? value.message : String(value ?? '');
   if (!message.trim()) return 'Причина не указана';
-  if (/^(Failed to fetch|Network request failed|Load failed)$/i.test(message.trim()))
+  if (/^(?:(?:TypeError|NetworkError):\s*)?(?:Failed to fetch|Network request failed|Load failed|fetch failed)$/i.test(message.trim()))
     return 'Не удалось выполнить сетевой запрос';
   if (/^NetworkError when attempting to fetch resource\.?$/i.test(message.trim()))
     return 'Сетевая ошибка при обращении к серверу';
-  if (/^The operation was aborted\.?$/i.test(message.trim()))
+  if (/^(?:AbortError:\s*)?(?:The operation was aborted|The user aborted a request|This operation was aborted)\.?$/i.test(message.trim()))
     return 'Операция прервана';
+  if (/^(?:AbortError|TimeoutError):?$/i.test(message.trim())) return 'Время ожидания операции истекло';
+  if (/^getaddrinfo ENOTFOUND\b|^connect (?:ETIMEDOUT|ECONNREFUSED)\b/i.test(message.trim()))
+    return 'Не удалось подключиться к серверу (ошибка сети)';
   return message;
 }
 

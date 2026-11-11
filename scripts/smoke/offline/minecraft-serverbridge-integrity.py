@@ -190,7 +190,7 @@ for platform, cls, expected in [
     require(
         source,
         ["extends BukkitFamilyBridgePlugin", f"BukkitFamilyPlatform.{expected}"],
-        f"{platform} Bukkit-family adapter",
+        f"{platform} адаптер семейства Bukkit",
     )
 
 frontend = read("apps/desktop/src/main.tsx")
