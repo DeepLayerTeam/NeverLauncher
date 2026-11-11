@@ -1437,7 +1437,7 @@ func validateRemoteURL(raw string) error {
 	}
 	if parsed.Scheme == "https" {
 		if ip := net.ParseIP(host); ip != nil && isPrivateCompatibilityIP(ip) && !allowPrivateCompatibilityUpstream() {
-			return fmt.Errorf("private/link-local HTTPS upstream требует LAUNCHER_ALLOW_PRIVATE_UPSTREAM=1: %s", raw)
+			return fmt.Errorf("Для приватного или локального HTTPS-источника требуется LAUNCHER_ALLOW_PRIVATE_UPSTREAM=1: %s", raw)
 		}
 		return nil
 	}
@@ -1490,7 +1490,7 @@ func isLegacyVirtualAssetIndex(id string) bool {
 func validateLegacyAssetIndexID(id string) error {
 	id = strings.TrimSpace(id)
 	if id == "" || strings.ContainsAny(id, `/\`) || id == "." || id == ".." || strings.ContainsRune(id, '\x00') {
-		return fmt.Errorf("небезопасный legacy asset index id: %q", id)
+		return fmt.Errorf("Небезопасный идентификатор устаревшего индекса ресурсов: %q", id)
 	}
 	return nil
 }

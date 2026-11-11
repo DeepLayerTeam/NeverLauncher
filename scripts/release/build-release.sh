@@ -488,7 +488,7 @@ if [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" || -n "${GUARD
 fi
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
-  log "Сборка legacy CLI linux/amd64"
+  log "Сборка CLI прежнего формата для Linux/amd64"
   (
     cd "${ROOT_DIR}/cli"
     GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/launcher-cli-linux-amd64" ./cmd/launcher
@@ -497,7 +497,7 @@ if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
 fi
 
 if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" != "1" ]]; then
-  log "Сборка legacy CLI windows/amd64"
+  log "Сборка CLI прежнего формата для Windows/amd64"
   (
     cd "${ROOT_DIR}/cli"
     GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/launcher-cli-windows-amd64.exe" ./cmd/launcher
@@ -505,7 +505,7 @@ if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" != "1" ]]; then
 fi
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
-  log "Сборка legacy Backend API linux/amd64 (production pgx, fail-closed)"
+  log "Сборка API Backend прежнего формата для Linux/amd64 (производственный pgx, отказ при ошибке)"
   (
     cd "${ROOT_DIR}/services/api"
     GOOS=linux GOARCH=amd64 CGO_ENABLED="${LAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${SOURCE_COMMIT:-unknown}" -o "${OUT_DIR}/launcher-api-linux-amd64" ./cmd/launcher-api
@@ -514,7 +514,7 @@ if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
 fi
 printf 'apiBuildMode=pgx-production\n' > "${OUT_DIR}/BUILD_NOTES.txt"
 
-log "Сборка Admin Web"
+log "Сборка веб-интерфейса Admin"
 (
   cd "${ROOT_DIR}/apps/admin"
   npm ci
@@ -522,7 +522,7 @@ log "Сборка Admin Web"
 )
 python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${ROOT_DIR}/apps/admin/dist" "${OUT_DIR}/launcher-admin-web-${VERSION}.zip" --prefix admin
 
-log "Сборка Desktop Web и native binary"
+log "Сборка веб-интерфейса Desktop и нативного исполняемого файла"
 (
   cd "${ROOT_DIR}/apps/desktop"
   npm ci
@@ -530,7 +530,7 @@ log "Сборка Desktop Web и native binary"
 )
 python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${ROOT_DIR}/apps/desktop/dist" "${OUT_DIR}/launcher-desktop-web-${VERSION}.zip" --prefix desktop
 if [[ -n "${GUARD_CI_MATRIX}" ]]; then
-  log "Импорт exact cross-platform Guard artifacts из certification run"
+  log "Импорт точных межплатформенных артефактов Guard из сертификационного прогона"
   python3 "${ROOT_DIR}/scripts/guard_ci/stage_release.py" \
     --matrix "${GUARD_CI_MATRIX}" \
     --artifacts-root "${GUARD_PLATFORM_ARTIFACTS_DIR}" \
@@ -540,7 +540,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
     windows_delivery_source="${WINDOWS_SIGNED_ARTIFACTS_DIR:-${GUARD_PLATFORM_ARTIFACTS_DIR}/windows}"
     windows_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
       "${windows_delivery_source}" "${VERSION}" "launcher-cli-windows-x64.exe" "Поставка для Windows x64/ARM64")"
-    log "Импорт Windows x64/ARM64 delivery artifacts из ${windows_delivery_source}"
+    log "Импорт артефактов поставки Windows x64/ARM64 из ${windows_delivery_source}"
     for artifact in \
       "launcher-cli-windows-x64.exe" \
       "launcher-cli-windows-arm64.exe" \
@@ -563,13 +563,13 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
     done
   fi
   if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
-    log "Импорт Windows adversarial certificate exact commit"
+    log "Импорт сертификата состязательных проверок Windows для точного коммита"
     cp "${WINDOWS_ADVERSARIAL_CERTIFICATE}" "${OUT_DIR}/WINDOWS_ADVERSARIAL_CERTIFICATE.json"
   fi
   if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     linux_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
       "${LINUX_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "launcher-cli-linux-x64" "Поставка для Linux x64/ARM64")"
-    log "Импорт native Linux x64/ARM64 production artifacts из ${linux_delivery_source}"
+    log "Импорт производственных нативных артефактов Linux x64/ARM64 из ${linux_delivery_source}"
     for arch in x64 arm64; do
       for artifact in \
         "launcher-cli-linux-${arch}" \
@@ -593,7 +593,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
   if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     macos_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
       "${MACOS_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "launcher-cli-macos-x64" "Поставка для macOS x64/ARM64")"
-    log "Импорт macOS x64/ARM64 delivery artifacts из ${macos_delivery_source}"
+    log "Импорт артефактов поставки macOS x64/ARM64 из ${macos_delivery_source}"
     for arch in x64 arm64; do
       for artifact in \
         "launcher-cli-macos-${arch}" \
@@ -617,7 +617,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
     done
   fi
 else
-  log "Сборка Linux Desktop + Guard production package"
+  log "Сборка производственного пакета Desktop + Guard для Linux"
   bash "${ROOT_DIR}/scripts/release/build-linux-desktop.sh" "${OUT_DIR}"
 fi
 for required_guard_artifact in \
@@ -697,7 +697,7 @@ if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
 fi
 
 if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
-  log "Импорт Managed JRE Distribution из ${MANAGED_JRE_ARTIFACTS_DIR}"
+  log "Импорт дистрибутива Managed JRE из ${MANAGED_JRE_ARTIFACTS_DIR}"
   for artifact in MANAGED_JRE_MANIFEST.json MANAGED_JRE_EVIDENCE.json; do
     require_file "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}"
     cp "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
@@ -725,25 +725,25 @@ fi
 require_file "${RELEASE_CLI}"
 
 if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
-  log "Проверка Managed JRE manifest/evidence и шести native Java targets"
+  log "Проверка манифеста и свидетельств Managed JRE для шести целевых нативных сред Java"
   # DELIVERY_MANIFEST.json будет сформирован release build ниже; до этого проверяем source artifacts через production Go tests/static gate.
   python3 "${ROOT_DIR}/scripts/smoke/offline/managed-jre-distribution-0155.py"
 fi
 
-log "Формирование и проверка реального Desktop package"
+log "Формирование и проверка действительного пакета Desktop"
 "${RELEASE_CLI}" desktop package --version "${VERSION}" --artifact-dir "${OUT_DIR}" --out "${WORK_DIR}/desktop-package" --platform linux
 "${RELEASE_CLI}" desktop verify "${WORK_DIR}/desktop-package"
 python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${WORK_DIR}/desktop-package" "${OUT_DIR}/launcher-desktop-package-${VERSION}.zip" --prefix desktop-package
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
-  log "Сборка legacy Runtime linux/amd64"
+  log "Сборка Runtime прежнего формата для Linux/amd64"
   cargo build --release --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml"
   require_file "${ROOT_DIR}/runtime/runtime/target/release/runtime"
   cp "${ROOT_DIR}/runtime/runtime/target/release/runtime" "${OUT_DIR}/runtime-linux-amd64"
   chmod +x "${OUT_DIR}/runtime-linux-amd64"
 fi
 
-log "Сборка ServerBridge JAR"
+log "Сборка JAR-пакета ServerBridge"
 bash "${ROOT_DIR}/scripts/build/bridge-plugins.sh"
 for bridge in velocity bungeecord waterfall bukkit spigot paper purpur folia fabric quilt forge neoforge sponge vanilla; do
   src="${ROOT_DIR}/artifacts/plugins/launcher-${bridge}-bridge-${VERSION}.jar"
@@ -773,7 +773,7 @@ fi
 # байты по шести отчётам приёмки JVM того же запуска. Нельзя подписывать выпуск только на основании
 # заявленного соответствия модулей.
 if [[ "$(printf '%s\n' '0.43.0' "${VERSION}" | sort -V | head -n1)" == '0.43.0' ]]; then
-  log "${VERSION}: собрать, подписать и проверить исполняемые .nlext Java Host и порта исходников Gravit"
+  log "${VERSION}: собрать, подписать и проверить исполняемые файлы .nlext Java Host и перенесённого исходного кода Gravit"
   EXT_EVIDENCE="${LAUNCHER_EXTENSION_ACCEPTANCE_EVIDENCE_DIR:-}"
   EXT_KEY="${LAUNCHER_EXTENSION_PUBLISHER_PRIVATE_KEY_FILE:-}"
   EXT_PUBLIC="${LAUNCHER_EXTENSION_PUBLISHER_PUBLIC_KEY_FILE:-}"
@@ -809,7 +809,7 @@ if [[ "$(printf '%s\n' '0.43.0' "${VERSION}" | sort -V | head -n1)" == '0.43.0' 
     "${OUT_DIR}/EXTENSION_ACCEPTANCE_EVIDENCE_0430.zip"
 fi
 
-log "Source archive только из git-tracked/allowlisted файлов"
+log "Архив исходников только из отслеживаемых Git и разрешённых файлов"
 python3 "${ROOT_DIR}/scripts/release/source-package.py" "${ROOT_DIR}" "${OUT_DIR}/launcher-source-${VERSION}.zip" --list-file "${WORK_DIR}/source-files.txt"
 python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-source-${VERSION}.zip"
 python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-admin-web-${VERSION}.zip"
@@ -905,15 +905,15 @@ fi
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
 release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}" --trust-policy "${TRUST_POLICY}" --public-base-url "${PUBLIC_RELEASE_BASE_URL}")
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
-  log "Встраивание machine-verifiable Minecraft Compatibility certification для commit ${SOURCE_COMMIT}"
+  log "Встраивание машинно-проверяемого сертификата совместимости Minecraft для коммита ${SOURCE_COMMIT}"
   release_build_args+=(--compatibility-matrix "${COMPATIBILITY_MATRIX}" --compatibility-targets "${COMPATIBILITY_TARGETS}")
 fi
 if [[ -n "${DEVICE_TRUST_MATRIX}" ]]; then
-  log "Встраивание machine-verifiable Device Trust certification для commit ${SOURCE_COMMIT}"
+  log "Встраивание машинно-проверяемого сертификата доверия к устройствам для коммита ${SOURCE_COMMIT}"
   release_build_args+=(--device-trust-matrix "${DEVICE_TRUST_MATRIX}" --device-trust-targets "${DEVICE_TRUST_TARGETS}")
 fi
 if [[ -n "${GUARD_CI_MATRIX}" ]]; then
-  log "Встраивание cross-platform Guard CI certification для commit ${SOURCE_COMMIT}"
+  log "Встраивание сертификата межплатформенных проверок Guard в CI для коммита ${SOURCE_COMMIT}"
   release_build_args+=(--guard-ci-matrix "${GUARD_CI_MATRIX}" --guard-ci-targets "${GUARD_CI_TARGETS}")
 fi
 if [[ -n "${SOURCE_COMMIT}" ]]; then

@@ -409,7 +409,7 @@ func verifyLoaderCompatibilityReleaseCertificate01711(dir, ver string) error {
 		return err
 	}
 	if string(storedRaw) != string(expectedRaw) {
-		return errors.New("LOADER_COMPATIBILITY_RELEASE_CERTIFICATE не соответствует embedded compatibility cohort")
+		return errors.New("LOADER_COMPATIBILITY_RELEASE_CERTIFICATE не соответствует встроенному набору совместимости")
 	}
 	return nil
 }

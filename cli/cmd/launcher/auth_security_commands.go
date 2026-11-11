@@ -132,7 +132,7 @@ func handleSecurity(args []string) error {
 		report := supplyChainSecurityModel()
 		report["legacyAuthChecks"] = []map[string]string{
 			{"id": "password-hashing", "status": "required", "message": "использовать Argon2id с индивидуальной солью и серверным pepper"},
-			{"id": "access-refresh-tokens", "status": "required", "message": "разделить короткоживущий access token и refresh token family"},
+			{"id": "access-refresh-tokens", "status": "required", "message": "разделить краткосрочный токен доступа и семейство токенов обновления"},
 			{"id": "totp", "status": "required", "message": "включить TOTP для администраторов и владельцев проектов"},
 		}
 		return writeOrPrintJSON(out, report)
@@ -239,8 +239,8 @@ func supplyChainSecurityModel() map[string]any {
 			{"id": "signed-manifests", "status": "required", "message": "Каждый клиентский манифест подписывается ключом Ed25519 проекта"},
 			{"id": "signed-release-bundles", "status": "required", "message": "Пакет выпуска содержит SHA256SUMS, SHA256SUMS.sig и RELEASE_MANIFEST.json"},
 			{"id": "desktop-pinned-key", "status": "required", "message": "Настольный клиент принимает только манифест, подписанный доверенным открытым ключом"},
-			{"id": "sbom", "status": "required", "message": "релиз содержит SPDX/CycloneDX SBOM metadata"},
-			{"id": "provenance", "status": "required", "message": "релиз содержит SLSA-compatible provenance metadata"},
+			{"id": "sbom", "status": "required", "message": "выпуск содержит метаданные о составе ПО в форматах SPDX/CycloneDX (SBOM)"},
+			{"id": "provenance", "status": "required", "message": "выпуск содержит совместимые с SLSA метаданные происхождения сборки"},
 			{"id": "revocation", "status": "required", "message": "отозванные ключи и артефакты блокируются до установки"},
 			{"id": "safe-extraction", "status": "required", "message": "архивы распаковываются только после проверки безопасности путей"},
 			{"id": "rollback-protection", "status": "required", "message": "Манифест и пакет выпуска защищены от отката к уязвимой версии"},

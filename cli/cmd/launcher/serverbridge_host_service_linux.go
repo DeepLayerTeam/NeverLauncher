@@ -246,7 +246,7 @@ func hostServiceHandle02811(args []string) error {
 	unit := filepath.Base(path)
 	if action != "install" {
 		if action == "uninstall" && scope == "system" && os.Geteuid() != 0 {
-			return errors.New("system service removal: требуется корневой каталог")
+			return errors.New("Для удаления системной службы требуется корневой каталог")
 		}
 		if action == "uninstall" {
 			data, readErr := os.ReadFile(path)

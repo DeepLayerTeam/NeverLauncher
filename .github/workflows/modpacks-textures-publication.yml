@@ -92,14 +92,14 @@ jobs:
           NL_0526_SERVER_ENTRY: ${{ vars.NL_0526_SERVER_ENTRY }}
         run: |
           set -euo pipefail
-          : "${NL_0526_SECRETS:?missing private player identity file}"
-          : "${NL_0526_OPERATOR_TOKEN:?missing private owner token file}"
-          : "${NL_0526_RUNTIME:?missing production native Runtime}"
-          : "${NL_0526_CLI:?missing production CLI}"
-          : "${NL_0526_JAVA:?missing real Java}"
-          : "${NL_0526_SKIN:?missing valid Minecraft skin}"
-          : "${NL_0526_CAPE:?missing valid Minecraft cape}"
-          : "${NL_0526_PACKAGE_ID:?missing isolated draft package}"
+          : "${NL_0526_SECRETS:?отсутствует закрытый файл идентификации игрока}"
+          : "${NL_0526_OPERATOR_TOKEN:?отсутствует закрытый файл токена владельца}"
+          : "${NL_0526_RUNTIME:?отсутствует нативный Runtime для производственной среды}"
+          : "${NL_0526_CLI:?отсутствует CLI для производственной среды}"
+          : "${NL_0526_JAVA:?отсутствует настоящая Java}"
+          : "${NL_0526_SKIN:?отсутствует корректный скин Minecraft}"
+          : "${NL_0526_CAPE:?отсутствует корректный плащ Minecraft}"
+          : "${NL_0526_PACKAGE_ID:?отсутствует изолированный черновой пакет}"
           umask 077
           extra=()
           if [[ -n "${NL_0526_SERVER_BUNDLE:-}" ]]; then

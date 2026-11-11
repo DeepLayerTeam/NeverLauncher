@@ -826,7 +826,7 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	allowPath := filepath.Join(dir, "BRIDGE_RELEASE_ALLOWLIST.json")
 	raw, err := os.ReadFile(allowPath)
 	if err != nil {
-		return "", errors.New("production provisioning: требуется sibling SERVERBRIDGE3_CERTIFICATION.json or BRIDGE_RELEASE_ALLOWLIST.json; use --allow-unverified-artifact only for development")
+		return "", errors.New("Для подготовки производственной среды необходим расположенный рядом файл SERVERBRIDGE3_CERTIFICATION.json или BRIDGE_RELEASE_ALLOWLIST.json; параметр --allow-unverified-artifact допускается только при разработке")
 	}
 	var document serverBridgeReleaseAllowlist01912
 	if err := json.Unmarshal(raw, &document); err != nil {

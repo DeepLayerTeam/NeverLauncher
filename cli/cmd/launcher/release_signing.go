@@ -235,7 +235,7 @@ func loadEd25519PrivateKey(path string) (ed25519.PrivateKey, error) {
 		}
 		return canonical, nil
 	default:
-		return nil, fmt.Errorf("Ed25519 private key должен иметь 32-byte seed или 64-byte private key, получено %d bytes", len(decoded))
+		return nil, fmt.Errorf("Закрытый ключ Ed25519 должен содержать 32-байтное начальное значение или 64-байтный закрытый ключ; получено %d байт", len(decoded))
 	}
 }
 

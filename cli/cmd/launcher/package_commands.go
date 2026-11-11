@@ -596,7 +596,7 @@ func verifyClientPackage(path string) (map[string]any, error) {
 		errs = append(errs, "files должен быть массивом")
 	}
 	if _, ok := manifest["rollback"]; !ok {
-		warnings = append(warnings, "rollback snapshot policy не задан")
+		warnings = append(warnings, "Политика снимков для отката не задана")
 	}
 	return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "package": path, "valid": len(errs) == 0, "errors": errs, "warnings": warnings, "checks": []string{"schema", "safe-paths", "unique-paths", "sha256", "rollback-policy"}}, nil
 }
@@ -850,7 +850,7 @@ func clientConsumePlan(packagePath, clientDir string) (map[string]any, error) {
 func clientPackageConsume(packagePath, storageDir, clientDir string) (map[string]any, error) {
 	snapshotID, err := createClientSnapshot(clientDir)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось создать transactional rollback snapshot: %w", err)
+		return nil, fmt.Errorf("Не удалось создать транзакционный снимок для отката: %w", err)
 	}
 	return clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, snapshotID)
 }

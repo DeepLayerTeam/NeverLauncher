@@ -258,7 +258,7 @@ def accept(root: Path, release: Path, runtime: Path, commit: str) -> dict:
         matrix.get("status") == "passed" and matrix.get("passedCount") == len(TARGETS),
         "Неполная матрица реальных JVM/Minecraft/Proxy: "
         + ", ".join(
-            f"{name}={matrix.get('cases', {}).get(name, {}).get('reason', 'no live proof')}"
+            f"{name}={matrix.get('cases', {}).get(name, {}).get('reason', 'нет подтверждения реального запуска')}"
             for name in TARGETS
             if matrix.get("cases", {}).get(name, {}).get("status") != "passed"
         ),

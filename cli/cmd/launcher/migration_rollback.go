@@ -54,7 +54,7 @@ func handleMigrationRollback03312(args []string) error {
 	case "rollback-plan", "rollback-commit":
 		file := flagValue(args, "--snapshot", "")
 		if file == "" {
-			return errors.New("Откат: требуется «--snapshot JSON from independently fenced live deployment»")
+			return errors.New("Откат: требуется --snapshot с JSON-снимком из независимо изолированного рабочего развёртывания")
 		}
 		snapshot, snapshotHash, e := rollbackReadSnapshot0448(file)
 		if e != nil {

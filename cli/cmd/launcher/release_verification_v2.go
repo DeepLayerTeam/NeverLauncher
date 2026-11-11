@@ -435,7 +435,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, fmt.Errorf("Текущая политика доверия: %w", err)
 	}
 	if !strings.EqualFold(rootFP, currentRootFP) {
-		return releaseVerificationV2Context{}, errors.New("embedded/current trust policies используют разные root anchors")
+		return releaseVerificationV2Context{}, errors.New("Встроенная и текущая политики доверия используют разные корневые ключи")
 	}
 	if currentPolicy.Epoch < embeddedPolicy.Epoch {
 		return releaseVerificationV2Context{}, fmt.Errorf("Откат текущей политики доверия: текущая эпоха=%d, эпоха релиза=%d", currentPolicy.Epoch, embeddedPolicy.Epoch)

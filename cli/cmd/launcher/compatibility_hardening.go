@@ -61,7 +61,7 @@ func resolveVanillaMetadataWithRecovery(ctx context.Context, client *http.Client
 		// Успешно полученный авторитетный манифест, из которого исчезла
 		// версия, не считается сбоем связи. Не восстанавливайте отозванную
 		// или неизвестную версию из устаревшего локального состояния.
-		return vanillaResolvedMetadata{}, fmt.Errorf("Minecraft %s отсутствует в Mojang version manifest", selectedID)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Версия Minecraft %s отсутствует в манифесте версий Mojang", selectedID)
 	}
 	if selected.URL == "" || selected.SHA1 == "" {
 		return vanillaResolvedMetadata{}, fmt.Errorf("Запись манифеста Mojang %s не содержит URL/SHA1", selectedID)

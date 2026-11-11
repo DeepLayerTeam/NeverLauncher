@@ -855,7 +855,7 @@ func standaloneProductionCompose(template []byte, apiImage, adminImage string) (
 		out = append(out, line)
 	}
 	if !apiSeen || !adminSeen {
-		return nil, errors.New("canonical compose не содержит api/admin image fields")
+		return nil, errors.New("Каноническая конфигурация Docker Compose не содержит полей образов api/admin")
 	}
 	result := strings.Join(out, "\n")
 	if strings.Contains(result, "context: ../..") || strings.Contains(result, "dockerfile: services/api") || strings.Contains(result, "dockerfile: apps/admin") {

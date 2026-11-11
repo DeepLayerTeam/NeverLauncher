@@ -96,7 +96,7 @@ func withReleaseTrustStateLock01510(path string, fn func() error) error {
 			return errors.New("release trust-state lock повреждён; удалите lock только после проверки отсутствия активного verifier")
 		}
 		if updaterProcessAlive0156(existing.PID) {
-			return fmt.Errorf("release trust state занят verifier process pid=%d", existing.PID)
+			return fmt.Errorf("Состояние доверия выпуска занято процессом проверки, PID=%d", existing.PID)
 		}
 		if err := os.Remove(lockPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("Удаление устаревшей блокировки состояния доверия релиза: %w", err)

@@ -237,12 +237,12 @@ func compatibilityRetryDelay(resp *http.Response, attempt int) time.Duration {
 
 func replaceDirectoryAtomicPortable(staging, dst string) error {
 	if staging == "" || dst == "" {
-		return errors.New("atomic directory replace требует staging/destination")
+		return errors.New("Для атомарной замены каталога необходимы staging и destination")
 	}
 	if info, err := os.Lstat(staging); err != nil {
 		return fmt.Errorf("Атомарная подготовка каталога: %w", err)
 	} else if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-		return errors.New("atomic directory staging должен быть реальным каталогом")
+		return errors.New("Каталог подготовки атомарной замены должен существовать")
 	}
 	if _, err := os.Lstat(dst); errors.Is(err, os.ErrNotExist) {
 		return os.Rename(staging, dst)

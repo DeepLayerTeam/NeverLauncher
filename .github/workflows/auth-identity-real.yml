@@ -91,7 +91,7 @@ jobs:
           AUTH_0525_API_SHA256: ${{ vars.AUTH_0525_API_SHA256 }}
         run: |
           set -euo pipefail
-          : "${AUTH_0525_SECRETS_FILE:?private 0600 credential file required}"
+          : "${AUTH_0525_SECRETS_FILE:?Требуется закрытый файл учётных данных с правами 0600}"
           : "${AUTH_0525_OIDC_PROOF_FILE:?требуется файл подтверждения реального браузера с правами доступа 0600}"
           : "${AUTH_0525_API_SHA256:?требуется независимо закреплённая контрольная сумма SHA-256 пакета Backend}"
           umask 077
