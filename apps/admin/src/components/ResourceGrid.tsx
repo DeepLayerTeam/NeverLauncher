@@ -17,11 +17,15 @@ const localizedStatusFields = new Set([
   'jobStatus', 'commandStatus', 'operationStatus', 'lifecycleState', 'sessionStatus',
   'currentState', 'desiredState', 'stage', 'phase', 'operationType', 'roleId',
   'auditAction', 'eventType', 'reasonCode', 'failureReason', 'operationKind',
+  'attestationState', 'attestationStatus', 'privacyMode', 'providerStatus',
+  'recoveryStatus', 'reportStatus', 'signatureStatus', 'validationStatus',
+  'migrationStatus', 'migrationStep', 'runStatus',
 ]);
 const localizedBooleanFields = new Set([
   'enabled', 'disabled', 'isDefault', 'protected', 'active', 'online', 'verified',
   'eligible', 'routingAccepting', 'requireApproval', 'isHealthy', 'isEnabled',
   'isActive', 'isTrusted', 'allowPlayerSkins', 'allowPlayerCapes',
+  'approvalRequired', 'requiresApproval',
 ]);
 function displayBooleanString(value: unknown, field: string): string | null {
   if (!localizedBooleanFields.has(field) || typeof value !== 'string') return null;
