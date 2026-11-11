@@ -11,12 +11,12 @@ import java.util.concurrent.atomic.*;
 public final class CoreTests {
     private static int assertions;
     private static void ok(boolean b,String message){assertions++;if(!b)throw new AssertionError(message);}
-    private static void throwsType(Class<? extends Throwable> type,Checked action){assertions++;try{action.run();throw new AssertionError("ожидалось исключение "+type.getSimpleName());}catch(Throwable e){if(!type.isInstance(e))throw new AssertionError("ожидалось исключение "+type.getSimpleName()+", got "+e,e);}}
+    private static void throwsType(Class<? extends Throwable> type,Checked action){assertions++;try{action.run();throw new AssertionError("ожидалось исключение "+type.getSimpleName());}catch(Throwable e){if(!type.isInstance(e))throw new AssertionError("ожидалось исключение "+type.getSimpleName()+", получено "+e,e);}}
     @FunctionalInterface interface Checked{void run() throws Exception;}
     private static String sample(String id,String version,String deps,String conflicts){return "{\"schemaVersion\":\"2.0\",\"id\":\""+id+"\",\"name\":\"Test\",\"version\":\""+version+"\",\"publisher\":\"team\",\"api\":\"1.0\",\"targets\":[{\"kind\":\"backend\",\"entrypoint\":\"backend/bin/app\"}],\"dependencies\":"+deps+",\"conflicts\":"+conflicts+"}";}
     static ExtensionManifest dep(String id,String version,String deps){return ExtensionManifest.parse(sample(id,version,deps,"[]"));}
     static void jsonAndManifest(){
-        var m=dep("org.test","1.2.3","[]");ok(m.id().equals("org.test"),"manifest");
+        var m=dep("org.test","1.2.3","[]");ok(m.id().equals("org.test"),"Манифест расширения");
         throwsType(IllegalArgumentException.class,()->Json.parse("{\"x\":1,\"x\":2}"));
         throwsType(IllegalArgumentException.class,()->Json.parse("{\"x\":null,\"x\":2}"));
         throwsType(IllegalArgumentException.class,()->Json.parse("{\"x\": [0,]}"));
@@ -24,17 +24,17 @@ public final class CoreTests {
         throwsType(IllegalArgumentException.class,()->ExtensionManifest.parse(sample("org.test","1.0.0","[]","[]").replace("backend/bin/app","../../etc/shadow")));
         throwsType(IllegalArgumentException.class,()->ExtensionManifest.parse(sample("org.test","1.0.0","[{\"id\":\"org.test\",\"version\":\"*\"}]","[]")));
         throwsType(IllegalArgumentException.class,()->ExtensionManifest.parse(sample("org.test","1.0.0","[{\"id\":\"org.other\",\"version\":\"invalid\"}]","[]")));
-        ok(Json.object(Json.parse(Json.encode(Map.of("x",List.of("hello\\world",true,13))))).containsKey("x"),"JSON roundtrip");
+        ok(Json.object(Json.parse(Json.encode(Map.of("x",List.of("hello\\world",true,13))))).containsKey("x"),"Сохранение данных после кодирования и декодирования JSON");
     }
     static void semver(){
         ok(SemVer.parse("2.0.0-beta.2").compareTo(SemVer.parse("2.0.0-beta.11"))<0,"Числовой порядок предварительных выпусков");
-        ok(SemVer.parse("1.5.0").matches(">=1.2.0 <2.0.0"),"compound range");
-        ok(!SemVer.parse("2.0.0").matches("^1.2.0"),"caret bound");
-        ok(SemVer.parse("0.2.7").matches("^0.2.0"),"zero major caret");
-        ok(!SemVer.parse("0.3.0").matches("^0.2.0"),"zero major upper");
-        ok(SemVer.parse("1.8.0").matches("1.x"),"wildcard");
-        ok(SemVer.parse("1.2.5").matches("~1.2.1"),"tilde");
-        ok(SemVer.parse("1.8.0").matches("1.7.0 || 1.8.0"),"OR");
+        ok(SemVer.parse("1.5.0").matches(">=1.2.0 <2.0.0"),"Составной диапазон версий");
+        ok(!SemVer.parse("2.0.0").matches("^1.2.0"),"Ограничение диапазона по знаку ^");
+        ok(SemVer.parse("0.2.7").matches("^0.2.0"),"Диапазон с нулевой основной версией");
+        ok(!SemVer.parse("0.3.0").matches("^0.2.0"),"Верхняя граница диапазона с нулевой основной версией");
+        ok(SemVer.parse("1.8.0").matches("1.x"),"Диапазон с подстановочным символом");
+        ok(SemVer.parse("1.2.5").matches("~1.2.1"),"Диапазон с ограничением тильдой");
+        ok(SemVer.parse("1.8.0").matches("1.7.0 || 1.8.0"),"Диапазон с объединением альтернатив");
         throwsType(IllegalArgumentException.class,()->SemVer.parse("1.2.-3"));
         throwsType(IllegalArgumentException.class,()->SemVer.parse("01.2.3"));
         throwsType(IllegalArgumentException.class,()->SemVer.parse("1.2.3-01"));
@@ -56,18 +56,18 @@ public final class CoreTests {
     }
     static void cancellationAndDeadline() throws Exception {
         var token=new Cancellation();AtomicInteger count=new AtomicInteger();token.onCancel(count::incrementAndGet);var child=token.child();
-        ok(token.cancel()&&!token.cancel(),"cancel idempotent");ok(child.isCancelled()&&count.get()==1,"propagation");
-        token.onCancel(count::incrementAndGet);ok(count.get()==2,"late listeners");
-        var deadline=Deadline.after(Duration.ofMillis(10));Thread.sleep(25);ok(deadline.expired(),"monotonic expiry");throwsType(TimeoutException.class,deadline::check);
+        ok(token.cancel()&&!token.cancel(),"Повторная отмена не меняет результат");ok(child.isCancelled()&&count.get()==1,"Передача сигнала отмены дочерним операциям");
+        token.onCancel(count::incrementAndGet);ok(count.get()==2,"Обработчики, добавленные после отмены");
+        var deadline=Deadline.after(Duration.ofMillis(10));Thread.sleep(25);ok(deadline.expired(),"Истечение срока по монотонному времени");throwsType(TimeoutException.class,deadline::check);
     }
     static void lifecycle() throws Exception {
         var m=dep("org.test","1.0.0","[]");AtomicInteger start=new AtomicInteger(),stop=new AtomicInteger();
         Extension ext=new Extension(){public void start(ExtensionContext c){start.incrementAndGet();}public void stop(ExtensionContext c){stop.incrementAndGet();}};
         try(var managed=new ExtensionLifecycle(ext,m)){
-            managed.start(Duration.ofSeconds(1));ok(managed.state()==ExtensionLifecycle.State.RUNNING,"started");
+            managed.start(Duration.ofSeconds(1));ok(managed.state()==ExtensionLifecycle.State.RUNNING,"Запущено");
             throwsType(IllegalStateException.class,()->managed.start(Duration.ofSeconds(1)));
-            managed.stop(Duration.ofSeconds(1));ok(managed.state()==ExtensionLifecycle.State.STOPPED,"stopped");
-        }ok(start.get()==1&&stop.get()==1,"callbacks once");
+            managed.stop(Duration.ofSeconds(1));ok(managed.state()==ExtensionLifecycle.State.STOPPED,"Остановлено");
+        }ok(start.get()==1&&stop.get()==1,"Каждый обработчик вызывается один раз");
         Extension hangs=new Extension(){public void start(ExtensionContext c)throws Exception{Thread.sleep(60_000);}public void stop(ExtensionContext c){}};
         try(var managed=new ExtensionLifecycle(hangs,m)){
             throwsType(TimeoutException.class,()->managed.start(Duration.ofMillis(50)));ok(managed.state()==ExtensionLifecycle.State.FAILED,"По истечении срока операция безопасно блокируется");
@@ -78,9 +78,9 @@ public final class CoreTests {
         HttpServer server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
         String token="test-token";
         server.createContext("/v1/hello",exchange->{
-            ok(exchange.getRequestHeaders().getFirst("Authorization").equals("Bearer "+token),"authorized hello");
+            ok(exchange.getRequestHeaders().getFirst("Authorization").equals("Bearer "+token),"Аутентифицированное приветствие");
             var req=Json.object(Json.parse(new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8)));
-            ok(req.get("protocolVersion").equals("1.0"),"protocol hello");hello.incrementAndGet();
+            ok(req.get("protocolVersion").equals("1.0"),"Приветствие по протоколу");hello.incrementAndGet();
             byte[] body=Json.encode(Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","instance-42","heartbeatTimeoutSeconds",3)).getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(200,body.length);exchange.getResponseBody().write(body);exchange.close();
         });
@@ -88,7 +88,7 @@ public final class CoreTests {
         server.start();
         try{
             Map<String,String> env=new HashMap<>();env.put("LAUNCHER_EXTENSION_HOST_URL","http://127.0.0.1:"+server.getAddress().getPort());env.put("LAUNCHER_EXTENSION_HOST_TOKEN",token);env.put("LAUNCHER_EXTENSION_ID","org.test");env.put("LAUNCHER_EXTENSION_VERSION","1.0.0");env.put("LAUNCHER_EXTENSION_HOST_PROTOCOL","1.0");env.put("LAUNCHER_EXTENSION_API_VERSION","1.0");env.put("LAUNCHER_EXTENSION_INSTANCE_ID","instance-42");
-            try(HostSession session=HostSession.fromEnvironment(env,dep("org.test","1.0.0","[]"))){session.connect();Thread.sleep(1300);ok(session.healthy(),"heartbeat healthy");}
+            try(HostSession session=HostSession.fromEnvironment(env,dep("org.test","1.0.0","[]"))){session.connect();Thread.sleep(1300);ok(session.healthy(),"Сигналы активности работают");}
             ok(hello.get()==1&&heartbeats.get()>=1,"Настоящий обмен HTTP");
             env.put("LAUNCHER_EXTENSION_ID","wrong");throwsType(IllegalArgumentException.class,()->HostSession.fromEnvironment(env,dep("org.test","1.0.0","[]")));
         }finally{server.stop(0);}

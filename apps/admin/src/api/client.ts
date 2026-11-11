@@ -32,6 +32,23 @@ export function networkErrorRu(value: unknown): string {
   if (/^(?:AbortError|TimeoutError):?$/i.test(message.trim())) return 'Время ожидания операции истекло';
   if (/^getaddrinfo ENOTFOUND\b|^connect (?:ETIMEDOUT|ECONNREFUSED)\b/i.test(message.trim()))
     return 'Не удалось подключиться к серверу (ошибка сети)';
+  // Распространённые ошибки сети в WebView/браузерах Windows, Linux и macOS.
+  if (/\b(?:ERR_CONNECTION_REFUSED|ECONNREFUSED)\b/i.test(message))
+    return 'Соединение с сервером отклонено (ERR_CONNECTION_REFUSED)';
+  if (/\b(?:ERR_NAME_NOT_RESOLVED|ENOTFOUND|EAI_AGAIN)\b/i.test(message))
+    return 'Не удалось определить адрес сервера (ошибка DNS)';
+  if (/\b(?:ERR_CONNECTION_TIMED_OUT|ETIMEDOUT)\b/i.test(message))
+    return 'Превышено время ожидания соединения с сервером';
+  if (/\b(?:ERR_CONNECTION_RESET|ECONNRESET)\b/i.test(message))
+    return 'Сервер разорвал соединение';
+  if (/\b(?:ERR_INTERNET_DISCONNECTED|ENETUNREACH|ERR_NETWORK_CHANGED)\b/i.test(message))
+    return 'Сеть недоступна или соединение изменилось';
+  if (/\bERR_CERT_[A-Z_]+\b/i.test(message))
+    return 'Не удалось проверить сертификат защищённого соединения';
+  if (/^(?:The network connection was lost|Network is unreachable)\.?$/i.test(message.trim()))
+    return 'Сетевое соединение потеряно или недоступно';
+  if (/^An SSL error has occurred/i.test(message.trim()))
+    return 'Не удалось установить защищённое соединение';
   return message;
 }
 

@@ -44,7 +44,7 @@ public final class ProviderRegistry0483Tests {
             fails(IllegalArgumentException.class,()->registry.register(desc("first","*","*",()->null)));
             fails(IllegalArgumentException.class,()->registry.register(new ProviderDescriptor<>(new ProviderService<>("example.greeting",Greeting.class,SemVer.parse("2.0.0")),"other",SemVer.parse("1.0.0"),"*","*",()->null)));
             fails(IllegalStateException.class,()->registry.call(GREETING,p->p.greet("Ada")));
-            ok(registry.select(GREETING.id(),"first",Duration.ofSeconds(2)).providerId().equals("first"),"first provider selected");
+            ok(registry.select(GREETING.id(),"first",Duration.ofSeconds(2)).providerId().equals("first"),"Первым выбран нужный провайдер");
             ok(registry.call(GREETING,p->p.greet("Ada")).equals("one-Ada"),"Проверен реальный типизированный вызов провайдера");
             registry.select(GREETING.id(),"second",Duration.ofSeconds(2));
             ok(registry.call(GREETING,p->p.greet("Ada")).equals("two-Ada"),"После выбора используется новый провайдер");

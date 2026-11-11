@@ -88,7 +88,7 @@ public final class ServerBridge0488Tests {
                     fails(SecurityException.class,()->bridge.server("p1","server1"));
                     fails(SecurityException.class,()->bridge.servers("p1",0,10));
                     wrongProject.set(false);
-                    ok(bridge.subscribeEvents(value->ok(value.event().type().equals("serverbridge.event.received"),"decoded event"))==45,"Подписка на события работает через брокер");
+                    ok(bridge.subscribeEvents(value->ok(value.event().type().equals("serverbridge.event.received"),"Событие успешно декодировано"))==45,"Подписка на события работает через брокер");
                     revoked.set(true);
                     fails(HostSession.HostError.class,()->bridge.commandStatus("p1","server1","ext-c1"));
                     fails(HostSession.HostError.class,()->bridge.command("p1","server1","message.broadcast",Map.of("message","Hello"),"dedupe-124",120));

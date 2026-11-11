@@ -39,3 +39,17 @@ test('Состояния сборки, безопасности и ServerBridge 
     assert.equal(statusRu(value), expected, value);
   }
 });
+
+test('Дополнительные коды разных модулей локализованы без изменения самих данных', () => {
+  assert.equal(statusRu('observed-not-independently-certified'), 'Наблюдалось без независимой сертификации');
+  assert.equal(statusRu('source_tree_unavailable'), 'Дерево исходников недоступно');
+  assert.equal(statusRu('registered-new-trust'), 'Зарегистрирована новая политика доверия');
+  assert.equal(statusRu('recovery-ready'), 'Готово к восстановлению');
+  assert.equal(statusRu('installation-completed-draft-created'), 'Установка завершена, черновик создан');
+  assert.equal(statusRu('provider-credential-deleted'), 'Учётные данные провайдера удалены');
+  assert.equal(statusRu('ci_observed_review_required'), 'Наблюдалось в CI, требуется проверка');
+  assert.equal(statusRu('sandbox-not-prepared'), 'Изоляция не подготовлена');
+  assert.equal(statusRu('sandbox-pid-namespace-not-enforced'), 'Изоляция пространства имён процессов не обеспечена');
+  assert.equal(statusRu('macos-sandbox-invalid-network-grant'), 'Недопустимый доступ к сети в macOS');
+  assert.equal(statusRu('serverbridge-nonexistent'), 'serverbridge-nonexistent');
+});

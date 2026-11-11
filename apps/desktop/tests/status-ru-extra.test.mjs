@@ -15,3 +15,17 @@ test('Диагностические состояния Desktop локализо
   }
   assert.equal(statusRuDesktop('external-extension-status'), 'external-extension-status');
 });
+
+test('Дополнительные коды разных модулей локализованы без изменения самих данных', () => {
+  assert.equal(statusRuDesktop('observed-not-independently-certified'), 'Наблюдалось без независимой сертификации');
+  assert.equal(statusRuDesktop('source_tree_unavailable'), 'Дерево исходников недоступно');
+  assert.equal(statusRuDesktop('registered-new-trust'), 'Зарегистрирована новая политика доверия');
+  assert.equal(statusRuDesktop('recovery-ready'), 'Готово к восстановлению');
+  assert.equal(statusRuDesktop('installation-completed-draft-created'), 'Установка завершена, черновик создан');
+  assert.equal(statusRuDesktop('provider-credential-deleted'), 'Учётные данные провайдера удалены');
+  assert.equal(statusRuDesktop('ci_observed_review_required'), 'Наблюдалось в CI, требуется проверка');
+  assert.equal(statusRuDesktop('sandbox-not-prepared'), 'Изоляция не подготовлена');
+  assert.equal(statusRuDesktop('sandbox-pid-namespace-not-enforced'), 'Изоляция пространства имён процессов не обеспечена');
+  assert.equal(statusRuDesktop('macos-sandbox-invalid-network-grant'), 'Недопустимый доступ к сети в macOS');
+  assert.equal(statusRuDesktop('serverbridge-nonexistent'), 'serverbridge-nonexistent');
+});
