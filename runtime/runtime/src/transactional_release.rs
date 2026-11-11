@@ -1573,7 +1573,7 @@ mod tests {
         sign_manifest(&mut two,&"1a".repeat(32),"2026-10-19T00:00:00Z").unwrap();
         let second=Release{manifest:two.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",101),preset:None,plan_sha256:None };
         commit(&root,second,&key,&staged(&root,&two,&[("mods/main.jar",b"NEW")])).unwrap();
-        assert!(rollback(&root,&key).await.is_err(),"«unsigned local rollback»: запрещено «downgrade a protected release»");
+        assert!(rollback(&root,&key).await.is_err(),"Локальный откат без подписи не должен позволять переход на более старый защищённый релиз");
         assert_eq!(fs::read(root.join("mods/main.jar")).unwrap(),b"NEW");
         let previous=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",102),preset:None,plan_sha256:None };
         assert!(commit(&root,previous,&key,&staged(&root,&one,&[("mods/main.jar",b"OLD")])).is_err());

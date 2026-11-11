@@ -267,7 +267,7 @@ func pragmaInt(ctx context.Context, conn *sql.Conn, name string, want int) error
 		return err
 	}
 	if value != want {
-		return fmt.Errorf("Небезопасное значение: «sqlite PRAGMA %s=%d; expected» %d", name, value, want)
+		return fmt.Errorf("Небезопасное значение PRAGMA SQLite %s: получено %d, ожидалось %d", name, value, want)
 	}
 	return nil
 }

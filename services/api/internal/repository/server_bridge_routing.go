@@ -160,7 +160,7 @@ func (r *SQLRepository) EnsureServerBridgeNodeRoutable(ctx context.Context, serv
 	serverID = strings.TrimSpace(serverID)
 	runtimeID = strings.ToLower(strings.TrimSpace(runtimeID))
 	if serverID == "" || runtimeEpoch < 1 || len(runtimeID) != 64 {
-		return fmt.Errorf("Отсутствует: «%w: runtime routing binding»", ErrConflict)
+		return fmt.Errorf("%w: не указана привязка маршрута к работающему процессу", ErrConflict)
 	}
 	freshAfter := now.UTC().Add(-serverBridgeRoutingFreshness0196)
 	var ok bool

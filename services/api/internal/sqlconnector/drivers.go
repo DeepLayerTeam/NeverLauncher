@@ -37,7 +37,7 @@ func openDatabase(cfg RuntimeConfig) (*sql.DB, error) {
 		mysqlCfg.ParseTime = true
 		return sql.Open("mysql", mysqlCfg.FormatDSN())
 	default:
-		return nil, fmt.Errorf("Не поддерживается: «SQL driver» %q", cfg.Driver)
+		return nil, fmt.Errorf("Неподдерживаемый драйвер SQL: %q", cfg.Driver)
 	}
 }
 

@@ -29,3 +29,19 @@ test('Дополнительные коды разных модулей лока
   assert.equal(statusRuDesktop('macos-sandbox-invalid-network-grant'), 'Недопустимый доступ к сети в macOS');
   assert.equal(statusRuDesktop('serverbridge-nonexistent'), 'serverbridge-nonexistent');
 });
+
+// Проверяем локализацию дополнительных кодов, поступающих из Backend и нативных подсистем.
+test('Ошибки ServerBridge, Guard, хоста и изоляции представлены на русском', () => {
+  const examples = {
+    'serverbridge_event_signature_invalid': 'Недействительная подпись события ServerBridge',
+    'serverbridge_control_idempotency_key_required': 'Необходим ключ идемпотентности команды ServerBridge',
+    'guard_release_revoked': 'Релиз Guard отозван',
+    'host_operation_preflight_failed': 'Предварительная проверка операции хоста не пройдена',
+    'sandbox-macos-helper-ready-timeout': 'Превышено время ожидания готовности помощника macOS',
+    'network_capacity_revision_conflict': 'Конфликт ревизии лимита подключений',
+  };
+  for (const [code, expected] of Object.entries(examples)) {
+    assert.equal(statusRuDesktop(code), expected, code);
+  }
+  assert.equal(statusRuDesktop('unknown_future_status'), 'unknown_future_status');
+});

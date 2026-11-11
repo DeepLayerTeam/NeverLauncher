@@ -567,7 +567,7 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
-		s.writePublishRefusal0385(w, r, lookup, "publish требует криптографически проверенный Ed25519 manifest: "+err.Error())
+		s.writePublishRefusal0385(w, r, lookup, "Для публикации требуется манифест с криптографически проверенной подписью Ed25519: "+err.Error())
 		return
 	}
 	if err := validateCompatibilityManifest(lookup.Release.Manifest); err != nil {

@@ -247,7 +247,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cfg.UserInfoMode = "disabled"
 	}
 	if cfg.UserInfoMode != "disabled" && cfg.UserInfoMode != "optional" && cfg.UserInfoMode != "required" {
-		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: userInfoMode должен быть disabled, optional или required", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: параметр userInfoMode должен иметь значение disabled, optional или required", cfg.ID)
 	}
 	mapping := &cfg.Claims
 	if mapping.Subject == "" {

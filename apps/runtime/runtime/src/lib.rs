@@ -1950,7 +1950,7 @@ mod tests {
         assert!(validate_runtime_constraints_0223(&m).is_err(), "Внедрение через переменные окружения Java");
         m.runtime.launch.environment_allowlist.clear();
         m.runtime.java.maximum_major_version = 16;
-        assert!(validate_runtime_constraints_0223(&m).is_err(), "Несовпадение: «Java constraint»");
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Ограничение версии Java не выполнено");
     }
 
     #[tokio::test]

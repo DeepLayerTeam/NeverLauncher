@@ -116,7 +116,7 @@ func handleExtensionRegistry0203(args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "publish":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("publish требует путь к подписанному .nlext")
+			return errors.New("Для публикации укажите путь к подписанному файлу .nlext")
 		}
 		return extensionRegistryPublishCLI0203(backend, token, args[1], args[2:], out)
 	case "yank":

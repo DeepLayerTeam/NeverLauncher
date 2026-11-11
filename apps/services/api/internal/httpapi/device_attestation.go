@@ -179,7 +179,7 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 		return
 	}
 	if strings.TrimSpace(req.PublicKey) != "" {
-		writeError(w, http.StatusBadRequest, "attestation complete не принимает publicKey: используется уже зарегистрированный device key")
+		writeError(w, http.StatusBadRequest, "Завершение аттестации не принимает параметр publicKey: используется уже зарегистрированный ключ устройства")
 		return
 	}
 	device, err := s.Repo.GetTrustedDevice(claims.Sub, deviceID)

@@ -10,7 +10,7 @@ import (
 
 const MaxFileBytes = 256 << 10
 
-var ErrDenied = errors.New("Доступ запрещён: «scoped broker: access»")
+var ErrDenied = errors.New("Доступ запрещён: недостаточно прав ограниченного посредника")
 
 // AllowedDestination должен совпадать с ТОЧНЫМ origin в подписанном манифесте.
 // Поддерживается только HTTPS, включая явный :443; запрещены userinfo в URL,

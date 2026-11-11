@@ -922,14 +922,14 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 	}
 	payload := guardDeviceSigningPayload0134(req.Challenge, claims, device, req.LauncherVersion, req.Attestation, req.ChallengeExpiresAt)
 	if err := verifyDeviceSignature0123(pub, payload, req.Signature); err != nil {
-		writeError(w, http.StatusUnauthorized, "Guard Attestation device signature недействительна")
+		writeError(w, http.StatusUnauthorized, "Подпись устройства для Guard Attestation недействительна")
 		return
 	}
 
 	now := canonicalGuardAttestationTime0134(time.Now())
 	challenge, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, deviceID, guardAttestationPurpose0134, deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "Guard Attestation challenge недействителен, истёк или уже использован")
+		writeError(w, http.StatusUnauthorized, "Проверочный запрос Guard Attestation недействителен, просрочен или уже использован")
 		return
 	}
 	releaseBindingMatches := true
@@ -943,7 +943,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 		metadataString0121(challenge.Metadata, "launcherVersion") != req.LauncherVersion ||
 		metadataString0121(challenge.Metadata, "keyFingerprint") != device.KeyFingerprint || !releaseBindingMatches ||
 		req.ChallengeExpiresAt != challenge.ExpiresAt.UTC().Format(time.RFC3339Nano) {
-		writeError(w, http.StatusUnauthorized, "Guard Attestation challenge больше не соответствует session/device/release binding")
+		writeError(w, http.StatusUnauthorized, "Проверочный запрос Guard Attestation не соответствует привязке к сеансу, устройству и релизу")
 		return
 	}
 	if err := validateGuardAttestation0134(req.Attestation, req.ChallengeID, req.Challenge, policy, device.Platform, now, challenge.CreatedAt.UTC()); err != nil {

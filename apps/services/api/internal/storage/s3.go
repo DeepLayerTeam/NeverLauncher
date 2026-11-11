@@ -192,7 +192,7 @@ func (s *S3Storage) Health(ctx context.Context) error {
 	if res.StatusCode >= 200 && res.StatusCode < 400 {
 		return nil
 	}
-	return fmt.Errorf("S3 health check вернул статус %d", res.StatusCode)
+	return fmt.Errorf("Проверка доступности S3 завершилась со статусом %d", res.StatusCode)
 }
 
 func (s *S3Storage) newSignedRequest(ctx context.Context, method, key string, body io.Reader, size int64) (*http.Request, error) {

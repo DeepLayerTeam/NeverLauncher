@@ -79,7 +79,7 @@ func (s Server) authOIDCComplete115(w http.ResponseWriter, r *http.Request) {
 	}
 	tx, err := s.openOIDCTransaction115(req.Transaction)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "OIDC transaction недействителен или истёк")
+		writeError(w, http.StatusUnauthorized, "Транзакция OIDC недействительна или срок её действия истёк")
 		return
 	}
 	if tx.LinkUserID != "" || (req.DeviceID != "" && req.DeviceID != tx.DeviceID) {
@@ -93,17 +93,17 @@ func (s Server) authOIDCCallback115(w http.ResponseWriter, r *http.Request) {
 	provider := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	cookie, err := r.Cookie(oidcCookieName115(provider))
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "OIDC transaction cookie отсутствует")
+		writeError(w, http.StatusUnauthorized, "Отсутствует файл cookie транзакции OIDC")
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: oidcCookieName115(provider), Value: "", Path: "/api/v1/auth/oidc/" + provider + "/", HttpOnly: true, Secure: oidcCookieSecure115(s.Config.PublicURL), SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	if upstreamErr := strings.TrimSpace(r.URL.Query().Get("error")); upstreamErr != "" {
-		writeError(w, http.StatusUnauthorized, "OIDC provider отклонил авторизацию")
+		writeError(w, http.StatusUnauthorized, "Поставщик OIDC отклонил авторизацию")
 		return
 	}
 	tx, err := s.openOIDCTransaction115(cookie.Value)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "OIDC transaction недействителен или истёк")
+		writeError(w, http.StatusUnauthorized, "Транзакция OIDC недействительна или срок её действия истёк")
 		return
 	}
 	s.completeOIDC115(w, r, tx, r.URL.Query().Get("code"), r.URL.Query().Get("state"), "", "")
@@ -155,7 +155,7 @@ func (s Server) beginOIDC115(r *http.Request, providerID, redirectURI, deviceID 
 func (s Server) completeOIDC115(w http.ResponseWriter, r *http.Request, tx oidcTransaction115, code, state, totp, recovery string) {
 	provider := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	if provider == "" || provider != tx.ProviderID || tx.LinkUserID != "" || state == "" || state != tx.State || strings.TrimSpace(code) == "" {
-		writeError(w, http.StatusUnauthorized, "OIDC authorization response недействителен")
+		writeError(w, http.StatusUnauthorized, "Ответ авторизации OIDC недействителен")
 		return
 	}
 	if !s.claimBrowserTransaction0525(w, r, tx) {

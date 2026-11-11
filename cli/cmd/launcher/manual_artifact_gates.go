@@ -63,7 +63,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 		return p, err
 	}
 	if !st.Mode().IsRegular() || st.Size() > 4<<20 {
-		return p, errors.New("permissions file: требуется обычный файл JSON размером не более 4 МиБ")
+		return p, errors.New("Файл разрешений должен быть обычным файлом JSON размером не более 4 МиБ")
 	}
 	b, err := os.ReadFile(file)
 	if err != nil {
@@ -89,7 +89,7 @@ func readArtifactPermissions0276(file string) (artifactPermissions0276, error) {
 			return p, err
 		}
 		if !validSHA2560276(g.SHA256) || g.Right != "redistribute" {
-			return p, fmt.Errorf("Некорректное значение: «right or SHA256 for» %q", g.Path)
+			return p, fmt.Errorf("Недопустимые права распространения или SHA-256 для файла %q", g.Path)
 		}
 		if g.AuthorizedBy == "" || len(g.AuthorizedBy) > 256 || strings.TrimSpace(g.AuthorizedBy) != g.AuthorizedBy {
 			return p, fmt.Errorf("Отсутствует: правообладатель для %q", g.Path)

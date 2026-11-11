@@ -414,7 +414,7 @@ func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup p
 	}
 	integrity, err := s.Repo.LatestIntegrityCheck(ctx, lookup.Release.ID)
 	if err != nil {
-		return errors.New("publish требует integrity-check текущего package")
+		return errors.New("Для публикации требуется проверка целостности текущего пакета")
 	}
 	if integrity.Result != "passed" || integrity.ManifestDigest != manifestDigest || integrity.ArtifactDigest != artifactDigest {
 		return errors.New("Для публикации требуется успешная проверка целостности текущего манифеста и файлов")
@@ -486,26 +486,26 @@ func manifestFilesMatch0212(manifest model.Manifest, files []model.FileObject) b
 // выпуска вызывающий код обязан выполнить каноническую проверку пакета.
 func (s Server) prepareAdminPublish0212(r *http.Request, release model.ReleaseVersion) (packageLookup, error) {
 	if release.Status == "published" {
-		return packageLookup{}, errors.New("release уже опубликован; published manifest immutable")
+		return packageLookup{}, errors.New("Релиз уже опубликован; опубликованный манифест неизменяем")
 	}
 	if release.Status != "integrity-passed" {
-		return packageLookup{}, errors.New("publish требует предварительный signed/staged integrity PASS; используйте package validate/sign/stage/integrity-check")
+		return packageLookup{}, errors.New("Для публикации необходимы подпись, подготовка и успешная проверка целостности пакета; выполните команды package validate, sign, stage и integrity-check")
 	}
 	files, err := s.Repo.ListFiles(release.ProjectID, release.ID)
 	if err != nil {
 		return packageLookup{}, err
 	}
 	if len(files) == 0 {
-		return packageLookup{}, errors.New("publish требует package files и integrity evidence")
+		return packageLookup{}, errors.New("Для публикации необходимы файлы пакета и подтверждение их целостности")
 	}
 	if err := s.verifyManifestSignature(release.Manifest); err != nil {
-		return packageLookup{}, fmt.Errorf("publish требует доверенный Ed25519 manifest: %w", err)
+		return packageLookup{}, fmt.Errorf("Для публикации требуется манифест с доверенной подписью Ed25519: %w", err)
 	}
 	if err := s.checkGameReleasePublishGeneration02311(release); err != nil {
 		return packageLookup{}, err
 	}
 	if !manifestFilesMatch0212(release.Manifest, files) {
-		return packageLookup{}, errors.New("publish требует manifest, соответствующий текущим package files")
+		return packageLookup{}, errors.New("Для публикации требуется манифест, соответствующий текущим файлам пакета")
 	}
 	lookup := packageLookup{Release: release, Files: files}
 	if err := s.validatePublishEvidence0212(r, lookup); err != nil {

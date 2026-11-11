@@ -308,7 +308,7 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 	}
 	keyAlgorithm, keyBinding, hardwareProvider, err := normalizeDeviceKeyProperties0123(metadataString0121(ch.Metadata, "keyAlgorithm"), metadataString0121(ch.Metadata, "keyBinding"), metadataString0121(ch.Metadata, "hardwareProvider"))
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "device challenge key properties повреждены")
+		writeError(w, http.StatusUnauthorized, "Повреждены параметры ключа проверочного запроса устройства")
 		return
 	}
 	pub, err := decodeDevicePublicKey0123(req.PublicKey, keyAlgorithm)

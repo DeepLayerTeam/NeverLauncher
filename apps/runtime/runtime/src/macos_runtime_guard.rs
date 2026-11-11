@@ -200,7 +200,7 @@ mod tests {
         assert!(MacOSRuntimeGuard0509::attach(pid,Path::new("/usr/bin/false")).is_err());
         child.kill().unwrap();
         child.wait().unwrap();
-        assert!(attached.verify().is_err(),"«dead JVM»: запрещено сохранять действительные свидетельства Guard");
+        assert!(attached.verify().is_err(),"После завершения JVM свидетельства Guard не должны оставаться действительными");
         let _ = fs::remove_dir_all(fixture);
     }
     #[test]

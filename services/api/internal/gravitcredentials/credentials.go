@@ -139,7 +139,7 @@ func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.
 // действительными для входа.
 func parseFileAuthCredentials(data []byte, path, format string, expected map[string]gi.Account) ([]Credential, error) {
 	if format != "" && !fileauth.SupportedFormat(format) {
-		return nil, errors.New("Не поддерживается: «формат пароля FileAuth»")
+		return nil, errors.New("Не поддерживается формат пароля FileAuth")
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	start, err := dec.Token()
@@ -159,7 +159,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 		}
 		uuid, err := gi.UUID(rawUUID)
 		if err != nil || seen[uuid] {
-			return nil, errors.New("Некорректное значение: «или повторяющийся UUID FileAuth»")
+			return nil, errors.New("Недействительный или повторяющийся UUID FileAuth")
 		}
 		seen[uuid] = true
 		account, ok := expected["fileauth\x00"+path+"\x00"+uuid]
@@ -182,7 +182,7 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 			} else {
 				c.PasswordHash, err = fileauth.EncodeCredential(format, user.Password)
 				if err != nil {
-					return nil, fmt.Errorf("Некорректное значение: «%s verifier for source UUID» %s: %w", format, uuid, err)
+					return nil, fmt.Errorf("Недопустимый проверочный хеш пароля формата %s для исходного UUID %s: %w", format, uuid, err)
 				}
 				c.Algorithm = format
 				c.State, c.Reason = "importable", ""
@@ -194,11 +194,11 @@ func parseFileAuthCredentials(data []byte, path, format string, expected map[str
 		}
 	}
 	if end, err := dec.Token(); err != nil || end != json.Delim('}') {
-		return nil, errors.New("Некорректное значение: «завершающий маркер JSON FileAuth»")
+		return nil, errors.New("Файл FileAuth должен заканчиваться корректным закрывающим маркером JSON")
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
-		return nil, errors.New("Обнаружены лишние данные после: FileAuth данные JSON")
+		return nil, errors.New("После данных FileAuth обнаружены лишние сведения JSON")
 	}
 	return out, nil
 }
@@ -220,7 +220,7 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 	}
 	for _, field := range []string{"id", "username", "uuid"} {
 		if _, ok := cols[field]; !ok {
-			return nil, fmt.Errorf("Отсутствует: SQL %s", field)
+			return nil, fmt.Errorf("В данных SQL отсутствует обязательный столбец %s", field)
 		}
 	}
 	out := []Credential{}
@@ -233,7 +233,7 @@ func parseSQL(data []byte, path string) ([]Credential, error) {
 			return nil, fmt.Errorf("Строка SQL %d: %w", line, e)
 		}
 		if len(rec) != len(header) {
-			return nil, fmt.Errorf("Несовпадение: «SQL row %d column»", line)
+			return nil, fmt.Errorf("Строка SQL %d: число столбцов не соответствует заголовку", line)
 		}
 		uuid, e := gi.UUID(rec[cols["uuid"]])
 		if e != nil {
