@@ -144,7 +144,7 @@ class NativePackageTests(unittest.TestCase):
             payload_bad = json.dumps(invalid, separators=(",", ":")).encode()
             cfgpath.write_text(json.dumps({"schemaVersion": "1.0", "payload": base64.b64encode(payload_bad).decode(), "signature": key.sign(payload_bad).hex()}))
             p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertNotEqual(p.returncode, 0, "signed invalid PNG was packaged")
+            self.assertNotEqual(p.returncode, 0, "В пакет попал подписанный, но некорректный PNG")
             # Возобновите с корректной фикстурой для проверки подмены подписи.
             cfgpath.write_text(json.dumps(envelope))
             config["branding"]["displayName"] = "Tampered"
@@ -152,7 +152,7 @@ class NativePackageTests(unittest.TestCase):
             envelope["payload"] = base64.b64encode(payload).decode()
             cfgpath.write_text(json.dumps(envelope))
             p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertNotEqual(p.returncode, 0, "tampered branded bundle was packaged")
+            self.assertNotEqual(p.returncode, 0, "В пакет попала изменённая фирменная сборка")
 
 
 if __name__ == "__main__":

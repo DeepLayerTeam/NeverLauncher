@@ -3,6 +3,35 @@ export interface ApiFailure { code?: number | string; message?: string; reasonCo
 export type ApiEnvelope<T> = T | { data: T; error?: ApiFailure };
 export type Collection<T> = { items: T[]; count?: number; total?: number; nextCursor?: string };
 
+/** Локализованный HTTP-статус для журналов и сообщений интерфейса. */
+export function httpStatusRu(response: Pick<Response, 'status'>): string {
+  const explanations: Record<number, string> = {
+    400: 'Некорректный запрос', 401: 'Требуется авторизация',
+    403: 'Доступ запрещён', 404: 'Не найдено',
+    408: 'Время ожидания запроса истекло', 409: 'Конфликт данных',
+    410: 'Ресурс больше недоступен', 413: 'Слишком большой запрос',
+    415: 'Неподдерживаемый формат данных', 422: 'Не удалось обработать запрос',
+    423: 'Ресурс заблокирован', 429: 'Слишком много запросов',
+    500: 'Внутренняя ошибка сервера', 501: 'Операция не поддерживается сервером',
+    502: 'Ошибка шлюза', 503: 'Сервис временно недоступен',
+    504: 'Время ответа сервера истекло',
+  };
+  return `HTTP ${response.status}: ${explanations[response.status] ?? 'Ошибка запроса к серверу'}`;
+}
+
+/** Русский текст сетевых ошибок браузера; исходные ошибки API и их коды не меняются. */
+export function networkErrorRu(value: unknown): string {
+  const message = value instanceof Error ? value.message : String(value ?? '');
+  if (!message.trim()) return 'Причина не указана';
+  if (/^(Failed to fetch|Network request failed|Load failed)$/i.test(message.trim()))
+    return 'Не удалось выполнить сетевой запрос';
+  if (/^NetworkError when attempting to fetch resource\.?$/i.test(message.trim()))
+    return 'Сетевая ошибка при обращении к серверу';
+  if (/^The operation was aborted\.?$/i.test(message.trim()))
+    return 'Операция прервана';
+  return message;
+}
+
 export class ApiError extends Error {
   readonly status: number; readonly reasonCode?: string; readonly blockers: NonNullable<ApiFailure['blockers']>;
   constructor(status: number, message: string, reasonCode?: string, blockers: NonNullable<ApiFailure['blockers']> = []) { super(message); this.name = 'ApiError'; this.status = status; this.reasonCode = reasonCode; this.blockers = blockers; }
@@ -27,7 +56,7 @@ export async function requestJSON<T>(backendUrl: string, path: string, token?: s
     response = await fetch(`${backendUrl.replace(/\/$/, '')}${path}`, { ...init, headers, cache: 'no-store' });
   } catch (cause) {
     if (init.signal?.aborted) throw cause;
-    const message = cause instanceof Error ? cause.message : 'Сеть недоступна';
+    const message = networkErrorRu(cause);
     if (mutation) throw new IndeterminateApiError(method,
       `Нет ответа сервера (${message}). Результат операции неизвестен: проверьте задание и журнал аудита. Повторять запрос можно только с прежним ключом идемпотентности.`);
     throw new ApiError(0, `Сервер недоступен (${message}). Проверьте соединение и обновите страницу.`, 'backend-unavailable');
@@ -41,7 +70,7 @@ export async function requestJSON<T>(backendUrl: string, path: string, token?: s
   }
   if (!response.ok) {
     const failure = (payload && typeof payload === 'object' && 'error' in payload ? (payload as { error: ApiFailure }).error : undefined);
-    throw new ApiError(response.status, failure?.message || `${response.status} ${response.statusText}`, failure?.reasonCode, Array.isArray(failure?.blockers) ? failure.blockers : []);
+    throw new ApiError(response.status, failure?.message || httpStatusRu(response), failure?.reasonCode, Array.isArray(failure?.blockers) ? failure.blockers : []);
   }
   if (payload && typeof payload === 'object' && 'data' in payload) return (payload as { data: T }).data;
   return payload as T;

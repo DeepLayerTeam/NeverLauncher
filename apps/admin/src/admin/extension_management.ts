@@ -1,3 +1,5 @@
+import { httpStatusRu } from "../api/client";
+
 /** Действия оператора используют существующее авторизованное API расширений версии
  * 0.20.x. Результат считается успешным только после отражения перехода в достоверном
  * списке установок. Актуальность MFA и защита от фишинга проверяются на сервере.
@@ -65,7 +67,7 @@ export class ExtensionManagement0425 {
     if (!response.ok) {
       const err = body?.error;
       const message = typeof err === "string" ? err : err?.message;
-      throw new Error(message || `HTTP ${response.status} ${response.statusText}`);
+      throw new Error(message || `HTTP ${httpStatusRu(response)}`);
     }
     if (body == null || !Object.prototype.hasOwnProperty.call(body, "data"))
       throw new Error("Сервер вернул ответ без data; состояние не подтверждено");

@@ -221,7 +221,7 @@ if __name__ == "__main__":
         p.send_signal(signal.SIGTERM)
         p.communicate(timeout=5)
         assert Handler.removed == 0, (
-            "JVM shutdown deleted a durable EventBus subscription"
+            "Остановка JVM удалила постоянную подписку EventBus"
         )
         Handler.subscribed = False
         Handler.callback = None
@@ -281,7 +281,7 @@ if __name__ == "__main__":
         }
         assert Handler.hello == 4, "каждая новая JVM должна проходить аутентификацию на хосте"
         assert Handler.removed == 0, (
-            "normal lifecycle removed a persistent subscription"
+            "Обычное завершение жизненного цикла удалило постоянную подписку"
         )
         print(
             "PASS: реальный обработчик событий Java, постоянные документы брокера, RPC через CLI, перезапуск Backend и повторная подписка"

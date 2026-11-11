@@ -1,4 +1,4 @@
-# Ядро Launcher Java SDK / Runtime 0.31.0
+# Ядро Java SDK и среды выполнения Launcher 0.31.0
 
 **Рабочий SDK для Java 17+**, использующий существующие Extensions API `1.0`, Manifest `2.0` и локальный протокол Go Extension Host `1.0`. SDK не создаёт другой манифест, серверный API или реестр. Для сборки его JAR не нужны загрузки зависимостей Maven.
 

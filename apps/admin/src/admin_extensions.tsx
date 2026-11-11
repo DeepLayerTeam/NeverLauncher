@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { httpStatusRu } from "./api/client";
 import { auditHref, recoveryAdvice } from "./admin/lifecycle";
 import { statusRu } from "./admin/status-ru";
 import {
@@ -136,7 +137,7 @@ async function api<T>(
       (typeof (payload as Envelope<T>).error === "string"
         ? (payload as any).error
         : (payload as Envelope<T>).error?.message) ??
-        `${response.status} ${response.statusText}`,
+        `${httpStatusRu(response)}`,
     );
   return ((payload as Envelope<T>).data ?? payload) as T;
 }

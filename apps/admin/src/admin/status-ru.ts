@@ -2,6 +2,29 @@
 export function statusRu(value: string | null | undefined): string {
   if (!value) return "Неизвестно";
   const labels: Record<string, string> = {
+    // Человекочитаемые обозначения из перечислений действующей схемы OpenAPI.
+    "classic": "Классическая модель скина",
+    "fileauth": "Файловая авторизация",
+    "managed-upload": "Загрузка в управляемое хранилище",
+    "negotiated": "Согласовано",
+    "official": "Официальный",
+    "overloaded": "Перегружено",
+    "player.join": "Подключение игрока",
+    "player.login": "Вход игрока",
+    "player.quit": "Выход игрока",
+    "proxy.connect": "Подключение к прокси",
+    "proxy.switch": "Переключение прокси",
+    "reconciled": "Сверено",
+    "remote-reference": "Внешняя ссылка",
+    "server.crash": "Аварийное завершение сервера",
+    "server.error": "Ошибка сервера",
+    "server.ready": "Сервер готов",
+    "server.startup": "Запуск сервера",
+    "slim": "Тонкая модель скина",
+    "sql": "SQL",
+    "unlisted": "Не опубликовано в списках",
+    "world.load": "Загрузка мира",
+    "world.unload": "Выгрузка мира",
     // Этапы и результаты миграции, подписания и публикации, отображаемые в Admin.
     inventory: "Инвентаризация", identities: "Учётные записи",
     credentials: "Учётные данные", content: "Содержимое",

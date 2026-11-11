@@ -1,4 +1,4 @@
-# Модули Gravit → Never ServerBridge (0.44.6)
+# Перенос модулей Gravit в Never ServerBridge (0.44.6)
 
 ## Проверка исходников
 

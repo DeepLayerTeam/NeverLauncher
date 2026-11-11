@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { requestJSON } from "../api/client";
+import { requestJSON, httpStatusRu } from "../api/client";
 import { TextInput } from "../components/primitives";
 import { auditHref, recoveryAdvice } from "./lifecycle";
 import { statusRu } from "./status-ru";
@@ -352,7 +352,7 @@ export function RegistryWorkspace({
     if (!response.ok)
       throw new Error(
         responsePayload?.error?.message ??
-          `${response.status} ${response.statusText}`,
+          `${httpStatusRu(response)}`,
       );
     return responsePayload.data ?? responsePayload;
   }
@@ -494,7 +494,7 @@ export function RegistryWorkspace({
       const responsePayload = await response.json().catch(() => ({}));
       throw new Error(
         responsePayload?.error?.message ??
-          `${response.status} ${response.statusText}`,
+          `${httpStatusRu(response)}`,
       );
     }
     const blob = await response.blob();

@@ -61,6 +61,34 @@ import {
   type Recovery0354,
 } from "./download_experience_0354";
 
+/** Перевод типовых ошибок браузера без изменения диагностических кодов API. */
+function browserErrorRu(error: unknown): string {
+  const message = String(error ?? '');
+  if (/^(?:TypeError: )?(?:Failed to fetch|Network request failed|Load failed)$/i.test(message))
+    return 'Не удалось выполнить сетевой запрос';
+  if (/^(?:TypeError: )?NetworkError when attempting to fetch resource\.?$/i.test(message))
+    return 'Сетевая ошибка при обращении к серверу';
+  if (/^(?:AbortError: )?The operation was aborted\.?$/i.test(message))
+    return 'Операция прервана';
+  return message;
+}
+
+/** Локализованный HTTP-статус для журналов и сообщений интерфейса. */
+export function httpStatusRu(response: Pick<Response, 'status'>): string {
+  const explanations: Record<number, string> = {
+    400: 'Некорректный запрос', 401: 'Требуется авторизация',
+    403: 'Доступ запрещён', 404: 'Не найдено',
+    408: 'Время ожидания запроса истекло', 409: 'Конфликт данных',
+    410: 'Ресурс больше недоступен', 413: 'Слишком большой запрос',
+    415: 'Неподдерживаемый формат данных', 422: 'Не удалось обработать запрос',
+    423: 'Ресурс заблокирован', 429: 'Слишком много запросов',
+    500: 'Внутренняя ошибка сервера', 501: 'Операция не поддерживается сервером',
+    502: 'Ошибка шлюза', 503: 'Сервис временно недоступен',
+    504: 'Время ответа сервера истекло',
+  };
+  return `HTTP ${response.status}: ${explanations[response.status] ?? 'Ошибка запроса к серверу'}`;
+}
+
 // Лениво загружаемые чанки не входят в стартовый бандл: Vite создаёт
 // ресурсы с хешами содержимого, которые WebView кэширует между открытиями экранов.
 const DesktopExtensions0209 = React.lazy(() =>
@@ -1107,14 +1135,14 @@ function App() {
             );
           })
           .catch((error) => {
-            if (!disposed) log(`Автовосстановление загрузки: ${String(error)}`);
+            if (!disposed) log(`Автовосстановление загрузки: ${browserErrorRu(error)}`);
           })
           .finally(() => {
             if (!disposed) setTransferBusy(false);
           });
       })
       .catch((error) => {
-        if (!disposed) log(`Проверка сохранённой загрузки: ${String(error)}`);
+        if (!disposed) log(`Проверка сохранённой загрузки: ${browserErrorRu(error)}`);
       });
     return () => {
       disposed = true;
@@ -1228,7 +1256,7 @@ function App() {
       .catch((error) => {
         if (active)
           setAuthProviderError0293(
-            `Невозможно получить список провайдеров авторизации: ${String(error)}`,
+            `Невозможно получить список провайдеров авторизации: ${browserErrorRu(error)}`,
           );
       });
     return () => {
@@ -1357,7 +1385,7 @@ function App() {
         // Ошибка доверия промышленной сборки Tauri НЕ ДОЛЖНА приводить к переходу на изменяемый localStorage.
         if ((window as any).__TAURI_INTERNALS__) {
           setBootstrapError0352(
-            `Безопасная загрузка Desktop отклонена: ${String(error)}`,
+            `Безопасная загрузка Desktop отклонена: ${browserErrorRu(error)}`,
           );
           setNativeConfigLoaded0357(true);
           setScreen("firstRun");
@@ -1471,7 +1499,7 @@ function App() {
           }
         })
         .catch((error) =>
-          log(`Не удалось получить состояние процесса среды выполнения: ${String(error)}`),
+          log(`Не удалось получить состояние процесса среды выполнения: ${browserErrorRu(error)}`),
         );
     }, 1000);
     return () => window.clearInterval(timer);
@@ -1602,7 +1630,7 @@ function App() {
       log(result.message + ` (${result.configPath})`);
     } catch (error) {
       if ((window as any).__TAURI_INTERNALS__) {
-        log(`Конфигурация настольного приложения не сохранена: ${String(error)}`);
+        log(`Конфигурация настольного приложения не сохранена: ${browserErrorRu(error)}`);
         return;
       }
       localStorage.setItem("launcher.desktop.settings", JSON.stringify(next));
@@ -1683,7 +1711,7 @@ function App() {
       token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
     );
     if (!response.ok)
-      throw new Error(`${response.status} ${response.statusText}`);
+      throw new Error(`${httpStatusRu(response)}`);
     return response.json();
   }
 
@@ -1756,7 +1784,7 @@ function App() {
     );
     if (!beginResponse.ok)
       throw new Error(
-        `Не удалось начать дополнительную проверку по ключу доступа: ${beginResponse.status} ${beginResponse.statusText}`,
+        `Не удалось начать дополнительную проверку по ключу доступа: ${httpStatusRu(beginResponse)}`,
       );
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
@@ -1789,7 +1817,7 @@ function App() {
     );
     if (!completeResponse.ok)
       throw new Error(
-        `Не удалось завершить дополнительную проверку по ключу доступа: ${completeResponse.status} ${completeResponse.statusText}`,
+        `Не удалось завершить дополнительную проверку по ключу доступа: ${httpStatusRu(completeResponse)}`,
       );
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
@@ -1862,7 +1890,7 @@ function App() {
         const body = await beginResponse.json().catch(() => null);
         throw new Error(
           body?.error?.message ||
-            `Начало операции «${mode}»: ${beginResponse.status} ${beginResponse.statusText}`,
+            `Начало операции «${mode}»: ${httpStatusRu(beginResponse)}`,
         );
       }
       const beginPayload = await beginResponse.json();
@@ -1919,7 +1947,7 @@ function App() {
       if (!completeResponse.ok)
         throw new Error(
           completePayload?.error?.message ||
-            `Завершение операции «${mode}»: ${completeResponse.status} ${completeResponse.statusText}`,
+            `Завершение операции «${mode}»: ${httpStatusRu(completeResponse)}`,
         );
       const data = completePayload.data ?? completePayload;
       if (!data.accessToken || !data.device?.id)
@@ -2006,7 +2034,7 @@ function App() {
     );
     if (!beginResponse.ok)
       throw new Error(
-        `Не удалось начать аттестацию устройства: ${beginResponse.status} ${beginResponse.statusText}`,
+        `Не удалось начать аттестацию устройства: ${httpStatusRu(beginResponse)}`,
       );
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
@@ -2053,7 +2081,7 @@ function App() {
     );
     if (!completeResponse.ok)
       throw new Error(
-        `Не удалось завершить аттестацию устройства: ${completeResponse.status} ${completeResponse.statusText}`,
+        `Не удалось завершить аттестацию устройства: ${httpStatusRu(completeResponse)}`,
       );
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
@@ -2185,7 +2213,7 @@ function App() {
       );
       await loadManagedDevices();
     } catch (error) {
-      setTpmStatus0313(`Проверка не пройдена: ${String(error)}`);
+      setTpmStatus0313(`Проверка не пройдена: ${browserErrorRu(error)}`);
       throw error;
     } finally {
       setTpmBusy0313(false);
@@ -2295,7 +2323,7 @@ function App() {
         `Сервер подтвердил аппаратную цитату PCR измеряемой загрузки: устройство=${deviceKey.deviceId}, политика=${result.policyId}, хеш=${result.pcrDigest}. Защита и среда выполнения не проверены.`,
       );
     } catch (error) {
-      setMeasuredBootStatus0315(`Проверка не пройдена: ${String(error)}`);
+      setMeasuredBootStatus0315(`Проверка не пройдена: ${browserErrorRu(error)}`);
       throw error;
     } finally {
       setMeasuredBootBusy0315(false);
@@ -2324,7 +2352,7 @@ function App() {
     );
     if (!beginResponse.ok)
       throw new Error(
-        `Не удалось начать регистрацию устройства: ${beginResponse.status} ${beginResponse.statusText}`,
+        `Не удалось начать регистрацию устройства: ${httpStatusRu(beginResponse)}`,
       );
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
@@ -2368,7 +2396,7 @@ function App() {
     }
     if (!completeResponse.ok)
       throw new Error(
-        `Не удалось завершить регистрацию устройства: ${completeResponse.status} ${completeResponse.statusText}`,
+        `Не удалось завершить регистрацию устройства: ${httpStatusRu(completeResponse)}`,
       );
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
@@ -2407,7 +2435,7 @@ function App() {
     }
     if (!beginResponse.ok)
       throw new Error(
-        `Не удалось начать проверку устройства: ${beginResponse.status} ${beginResponse.statusText}`,
+        `Не удалось начать проверку устройства: ${httpStatusRu(beginResponse)}`,
       );
     const beginPayload = await beginResponse.json();
     const begin = beginPayload.data ?? beginPayload;
@@ -2437,7 +2465,7 @@ function App() {
     );
     if (!completeResponse.ok)
       throw new Error(
-        `Не удалось завершить проверку устройства: ${completeResponse.status} ${completeResponse.statusText}`,
+        `Не удалось завершить проверку устройства: ${httpStatusRu(completeResponse)}`,
       );
     const completePayload = await completeResponse.json();
     const data = completePayload.data ?? completePayload;
@@ -2506,7 +2534,7 @@ function App() {
       headers: { Authorization: `Bearer ${session.accessToken}` },
     });
     if (!response.ok)
-      throw new Error(`Ошибка получения списка устройств: ${response.status} ${response.statusText}`);
+      throw new Error(`Ошибка получения списка устройств: ${httpStatusRu(response)}`);
     const payload = await response.json();
     const data = payload.data ?? payload;
     setManagedDevices(Array.isArray(data.items) ? data.items : []);
@@ -2529,7 +2557,7 @@ function App() {
     );
     if (!response.ok)
       throw new Error(
-        `Ошибка переименования устройства: ${response.status} ${response.statusText}`,
+        `Ошибка переименования устройства: ${httpStatusRu(response)}`,
       );
     await loadManagedDevices(authSession);
     log(`Доверенное устройство ${device.id} переименовано.`);
@@ -2552,7 +2580,7 @@ function App() {
     );
     if (!response.ok)
       throw new Error(
-        `Ошибка отзыва устройства: ${response.status} ${response.statusText}`,
+        `Ошибка отзыва устройства: ${httpStatusRu(response)}`,
       );
     const payload = await response.json();
     const data = payload.data ?? payload;
@@ -2592,7 +2620,7 @@ function App() {
     );
     if (!response.ok)
       throw new Error(
-        `Ошибка отзыва остальных устройств: ${response.status} ${response.statusText}`,
+        `Ошибка отзыва остальных устройств: ${httpStatusRu(response)}`,
       );
     const payload = await response.json();
     const data = payload.data ?? payload;
@@ -2617,7 +2645,7 @@ function App() {
       }),
     });
     if (!response.ok)
-      throw new Error(`${response.status} ${response.statusText}`);
+      throw new Error(`${httpStatusRu(response)}`);
     const payload = await response.json();
     const next: AuthSession = {
       accessToken: payload.data.tokens.accessToken,
@@ -2651,7 +2679,7 @@ function App() {
       }
     } catch (error) {
       setDeviceTrustStatus("ошибка");
-      log(`Доверие к устройству не активировано: ${String(error)}`);
+      log(`Доверие к устройству не активировано: ${browserErrorRu(error)}`);
     }
   }
 
@@ -2746,7 +2774,7 @@ function App() {
       const errorPayload = await response.json().catch(() => null);
       const message =
         errorPayload?.error?.message ||
-        `${response.status} ${response.statusText}`;
+        `${httpStatusRu(response)}`;
       throw new Error(message);
     }
     const payload = await response.json();
@@ -2834,7 +2862,7 @@ function App() {
     } catch (error) {
       setBackendStatus("failed");
       setStage("failed");
-      log(`Серверный API недоступен: ${String(error)}`);
+      log(`Серверный API недоступен: ${browserErrorRu(error)}`);
     }
   }
 
@@ -2876,7 +2904,7 @@ function App() {
           } catch (error) {
             setDeviceTrustStatus("ошибка");
             log(
-              `Доверие к устройству не подтверждено при восстановлении: ${String(error)}`,
+              `Доверие к устройству не подтверждено при восстановлении: ${browserErrorRu(error)}`,
             );
           }
         }
@@ -2894,13 +2922,13 @@ function App() {
             await loadManagedDevices(trusted);
           } catch (error) {
             setDeviceTrustStatus("ошибка");
-            log(`Доверие к устройству не подтверждено после обновления: ${String(error)}`);
+            log(`Доверие к устройству не подтверждено после обновления: ${browserErrorRu(error)}`);
           }
         }
       }
     } catch (error) {
       setAuthSession(null);
-      log(`Сессию восстановить не удалось: ${String(error)}`);
+      log(`Сессию восстановить не удалось: ${browserErrorRu(error)}`);
     }
   }
 
@@ -2917,7 +2945,7 @@ function App() {
       return nextProject;
     } catch (error) {
       setStage("failed");
-      log(`Не удалось загрузить проекты: ${String(error)}`);
+      log(`Не удалось загрузить проекты: ${browserErrorRu(error)}`);
       return "";
     }
   }
@@ -2940,7 +2968,7 @@ function App() {
       return nextProfile;
     } catch (error) {
       setStage("failed");
-      log(`Не удалось загрузить профили: ${String(error)}`);
+      log(`Не удалось загрузить профили: ${browserErrorRu(error)}`);
       return "";
     }
   }
@@ -3013,8 +3041,8 @@ function App() {
       setSettings((current) =>
         normalizedSettings({ ...current, offlineEnabled: false }),
       );
-      setOfflineStatus0358(`Автономный режим недоступен: ${String(error)}. ${action}`);
-      log(`Автономный режим отклонён: ${String(error)}. ${action}`);
+      setOfflineStatus0358(`Автономный режим недоступен: ${browserErrorRu(error)}. ${action}`);
+      log(`Автономный режим отклонён: ${browserErrorRu(error)}. ${action}`);
     }
   }
 
@@ -3080,7 +3108,7 @@ function App() {
       setLaunchResult(null);
       if (!settings.offlineEnabled) {
         await loadProfileServers(result.projectId, result.profileId).catch(
-          (error) => log(`Браузер серверов недоступен: ${String(error)}`),
+          (error) => log(`Браузер серверов недоступен: ${browserErrorRu(error)}`),
         );
       }
       const effectiveRoot = settings.gameDirectory.includes(result.projectId)
@@ -3115,8 +3143,8 @@ function App() {
       );
     } catch (error) {
       setStage("failed");
-      setRequirementsError0359(String(error));
-      log(`Манифест не загружен: ${String(error)}.`);
+      setRequirementsError0359(browserErrorRu(error));
+      log(`Манифест не загружен: ${browserErrorRu(error)}.`);
     }
   }
 
@@ -3133,7 +3161,7 @@ function App() {
       setSettingsCheck(result);
       log(result.messages.join(" "));
     } catch (error) {
-      log(`Настройки не проверены: ${String(error)}`);
+      log(`Настройки не проверены: ${browserErrorRu(error)}`);
     }
   }
 
@@ -3180,7 +3208,7 @@ function App() {
     } catch (error) {
       setJavaInfo(null);
       setStage("failed");
-      log(`Java не проверена: ${String(error)}`);
+      log(`Java не проверена: ${browserErrorRu(error)}`);
     }
   }
 
@@ -3205,7 +3233,7 @@ function App() {
       );
     } catch (error) {
       setStage("failed");
-      log(`Проверка файлов не выполнена: ${String(error)}`);
+      log(`Проверка файлов не выполнена: ${browserErrorRu(error)}`);
     }
   }
 
@@ -3260,7 +3288,7 @@ function App() {
         );
       }
     } catch (error) {
-      log(`Управление загрузкой: ${String(error)}`);
+      log(`Управление загрузкой: ${browserErrorRu(error)}`);
     }
   }
 
@@ -3318,7 +3346,7 @@ function App() {
           );
           if (manifest.runtime.launch?.offlineMode) {
             await cacheSignedManifest(manifest).catch((error) =>
-              log(`Автономный кеш после возобновления не обновлён: ${String(error)}`),
+              log(`Автономный кеш после возобновления не обновлён: ${browserErrorRu(error)}`),
             );
           }
         }
@@ -3335,7 +3363,7 @@ function App() {
     } catch (error) {
       setStage("failed");
       setTransferFailure0354(recovery0354(error));
-      log(`Не удалось возобновить: ${String(error)}`);
+      log(`Не удалось возобновить: ${browserErrorRu(error)}`);
     } finally {
       setTransferBusy(false);
     }
@@ -3382,7 +3410,7 @@ function App() {
       setRequirementsApproved0359("");
       setRequirementsError0359("");
     } catch (error) {
-      setRequirementsError0359(String(error));
+      setRequirementsError0359(browserErrorRu(error));
     }
   }
   function confirmRequirements0359() {
@@ -3415,7 +3443,7 @@ function App() {
     } catch (error) {
       setStage("failed");
       setTransferFailure0354(recovery0354(error));
-      log(String(error));
+      log(browserErrorRu(error));
       return;
     }
     cancelledTransfer0354.current = false;
@@ -3466,7 +3494,7 @@ function App() {
       });
       if (manifest.runtime.launch?.offlineMode) {
         await cacheSignedManifest(manifest).catch((error) =>
-          log(`Автономный кеш после установки не обновлён: ${String(error)}`),
+          log(`Автономный кеш после установки не обновлён: ${browserErrorRu(error)}`),
         );
       }
       log(
@@ -3475,7 +3503,7 @@ function App() {
     } catch (error) {
       setStage("failed");
       setTransferFailure0354(recovery0354(error));
-      log(`Загрузка не выполнена: ${String(error)}`);
+      log(`Загрузка не выполнена: ${browserErrorRu(error)}`);
     } finally {
       setTransferBusy(false);
       void callTauri<PendingDownload | null>("pending_download_job", {
@@ -3565,7 +3593,7 @@ function App() {
       if (manifest.runtime.launch?.offlineMode) {
         await cacheSignedManifest(manifest).catch((error) =>
           log(
-            `Автономный кеш выбранных компонентов не обновлён: ${String(error)}`,
+            `Автономный кеш выбранных компонентов не обновлён: ${browserErrorRu(error)}`,
           ),
         );
       }
@@ -3577,7 +3605,7 @@ function App() {
       );
     } catch (error) {
       setStage("failed");
-      log(`Не удалось применить компоненты: ${String(error)}`);
+      log(`Не удалось применить компоненты: ${browserErrorRu(error)}`);
       throw error;
     } finally {
       setTransferBusy(false);
@@ -3631,7 +3659,7 @@ function App() {
       }
       if (manifest.runtime.launch?.offlineMode) {
         await cacheSignedManifest(manifest).catch((error) =>
-          log(`Автономный кеш после восстановления не обновлён: ${String(error)}`),
+          log(`Автономный кеш после восстановления не обновлён: ${browserErrorRu(error)}`),
         );
       }
       log(
@@ -3640,7 +3668,7 @@ function App() {
     } catch (error) {
       setStage("failed");
       setTransferFailure0354(recovery0354(error));
-      log(`Восстановление завершилось ошибкой: ${String(error)}`);
+      log(`Восстановление завершилось ошибкой: ${browserErrorRu(error)}`);
     } finally {
       setTransferBusy(false);
       void callTauri<PendingDownload | null>("pending_download_job", {
@@ -3708,7 +3736,7 @@ function App() {
       }
       setDownload(null);
     } catch (error) {
-      log(`Откат игрового релиза не выполнен: ${String(error)}`);
+      log(`Откат игрового релиза не выполнен: ${browserErrorRu(error)}`);
     } finally {
       setTransferBusy(false);
     }
@@ -3732,7 +3760,7 @@ function App() {
       );
     } catch (error) {
       setStage("failed");
-      log(`Очистка завершилась ошибкой: ${String(error)}`);
+      log(`Очистка завершилась ошибкой: ${browserErrorRu(error)}`);
     }
   }
 
@@ -3745,7 +3773,7 @@ function App() {
       setLaunchHistory(result);
       log(`История запусков загружена: ${result.length}.`);
     } catch (error) {
-      log(`История запусков не загружена: ${String(error)}`);
+      log(`История запусков не загружена: ${browserErrorRu(error)}`);
     }
   }
 
@@ -3768,7 +3796,7 @@ function App() {
       log("План запуска собран.");
     } catch (error) {
       setStage("failed");
-      log(`План запуска не собран: ${String(error)}`);
+      log(`План запуска не собран: ${browserErrorRu(error)}`);
     }
   }
 
@@ -3811,7 +3839,7 @@ function App() {
     if (!beginResponse.ok)
       throw new Error(
         beginPayload?.error?.message ||
-          `Начало аттестации Guard: ${beginResponse.status} ${beginResponse.statusText}`,
+          `Начало аттестации Guard: ${httpStatusRu(beginResponse)}`,
       );
     const begin = beginPayload?.data ?? beginPayload;
     if (
@@ -3869,7 +3897,7 @@ function App() {
     if (!completeResponse.ok)
       throw new Error(
         completePayload?.error?.message ||
-          `Аттестация Guard завершена: ${completeResponse.status} ${completeResponse.statusText}`,
+          `Аттестация Guard завершена: ${httpStatusRu(completeResponse)}`,
       );
     const data = completePayload?.data ?? completePayload;
     if (!data?.verified || !data?.launchTicket || !data?.oneTime)
@@ -3920,7 +3948,7 @@ function App() {
     if (!beginResponse.ok)
       throw new Error(
         beginPayload?.error?.message ||
-          `Начало аттестации Guard v2: ${beginResponse.status} ${beginResponse.statusText}`,
+          `Начало аттестации Guard v2: ${httpStatusRu(beginResponse)}`,
       );
     const begin = beginPayload?.data ?? beginPayload;
     if (
@@ -3977,7 +4005,7 @@ function App() {
     if (!completeResponse.ok)
       throw new Error(
         completePayload?.error?.message ||
-          `Аттестация Guard v2 завершена: ${completeResponse.status} ${completeResponse.statusText}`,
+          `Аттестация Guard v2 завершена: ${httpStatusRu(completeResponse)}`,
       );
     const data = completePayload?.data ?? completePayload;
     if (
@@ -4023,7 +4051,7 @@ function App() {
     if (!response.ok)
       throw new Error(
         payload?.error?.message ||
-          `Не удалось получить сеанс Minecraft: ${response.status} ${response.statusText}`,
+          `Не удалось получить сеанс Minecraft: ${httpStatusRu(response)}`,
       );
     const data = payload?.data ?? payload;
     if (!data.accessToken || !data.profile?.id || !data.profile?.name)
@@ -4137,7 +4165,7 @@ function App() {
     });
     if (!response.ok)
       throw new Error(
-        `Не удалось создать сессию входа ServerBridge: ${response.status} ${response.statusText}`,
+        `Не удалось создать сессию входа ServerBridge: ${httpStatusRu(response)}`,
       );
     const payload = await response.json();
     log(
@@ -4361,11 +4389,11 @@ function App() {
       if (minecraftIdentity === "offline") {
         const recovery = offlineRecovery0358(error);
         setOfflineStatus0358(
-          `Автономный запуск отклонён: ${String(error)}. ${recovery}`,
+          `Автономный запуск отклонён: ${browserErrorRu(error)}. ${recovery}`,
         );
-        log(`Автономный запуск отклонён: ${String(error)}. ${recovery}`);
+        log(`Автономный запуск отклонён: ${browserErrorRu(error)}. ${recovery}`);
       } else {
-        log(`Запуск не выполнен: ${String(error)}`);
+        log(`Запуск не выполнен: ${browserErrorRu(error)}`);
       }
     }
   }
@@ -4383,7 +4411,7 @@ function App() {
       setLaunchResult(result);
       log(result.message);
     } catch (error) {
-      log(`Не удалось остановить процесс среды выполнения: ${String(error)}`);
+      log(`Не удалось остановить процесс среды выполнения: ${browserErrorRu(error)}`);
     }
   }
 
@@ -4477,7 +4505,7 @@ function App() {
       });
       log("Каталог клиента открыт.");
     } catch (error) {
-      log(`Каталог клиента не открыт: ${String(error)}`);
+      log(`Каталог клиента не открыт: ${browserErrorRu(error)}`);
     }
   }
 
@@ -4594,8 +4622,8 @@ function App() {
       );
     } catch (error) {
       setStage("failed");
-      setFirstRunError0352(`Подготовка отклонена: ${String(error)}`);
-      log(`Первый запуск: ${String(error)}`);
+      setFirstRunError0352(`Подготовка отклонена: ${browserErrorRu(error)}`);
+      log(`Первый запуск: ${browserErrorRu(error)}`);
     } finally {
       setFirstRunBusy0352(false);
     }
@@ -4678,7 +4706,7 @@ function App() {
         try {
           await cacheSignedManifest(manifest, saved.gameDirectory);
         } catch (error) {
-          const message = `Подписанный offline-кеш не сохранён после установки: ${String(error)}`;
+          const message = `Подписанный offline-кеш не сохранён после установки: ${browserErrorRu(error)}`;
           setOfflineStatus0358(`${message}. ${offlineRecovery0358(error)}`);
           log(message);
         }
@@ -4689,9 +4717,9 @@ function App() {
     } catch (error) {
       setStage("failed");
       setFirstRunError0352(
-        `Установка не завершена: ${String(error)}. Используйте повторную попытку.`,
+        `Установка не завершена: ${browserErrorRu(error)}. Используйте повторную попытку.`,
       );
-      log(`Установщик: ${String(error)}`);
+      log(`Установщик: ${browserErrorRu(error)}`);
     } finally {
       setFirstRunBusy0352(false);
       setTransferBusy(false);
@@ -4887,7 +4915,7 @@ function App() {
                   type="button"
                   disabled={!normalActionsEnabled0357 || transferBusy}
                   onClick={() =>
-                    void runFullCheck().catch((error) => log(String(error)))
+                    void runFullCheck().catch((error) => log(browserErrorRu(error)))
                   }
                 >
                   {ui0357.locale === "ru"
@@ -4915,7 +4943,7 @@ function App() {
                         void callTauri("open_external_https_0356", {
                           url: item.url,
                         }).catch((error) =>
-                          log(`Внешняя ссылка: ${String(error)}`),
+                          log(`Внешняя ссылка: ${browserErrorRu(error)}`),
                         );
                       }}
                     >
@@ -4933,7 +4961,7 @@ function App() {
                   e.preventDefault();
                   void callTauri("open_external_https_0356", {
                     url: signedProvisioning0352.branding!.websiteUrl,
-                  }).catch((error) => log(`Внешняя ссылка: ${String(error)}`));
+                  }).catch((error) => log(`Внешняя ссылка: ${browserErrorRu(error)}`));
                 }}
               >
                 {translate0357.website}
@@ -5015,7 +5043,7 @@ function App() {
                 onClick={() =>
                   void callTauri("desktop_window_action_0357", {
                     action: "minimize",
-                  }).catch((error) => log(String(error)))
+                  }).catch((error) => log(browserErrorRu(error)))
                 }
               >
                 {translate0357.minimize}
@@ -5025,7 +5053,7 @@ function App() {
                 onClick={() =>
                   void callTauri("desktop_window_action_0357", {
                     action: "toggleMaximized",
-                  }).catch((error) => log(String(error)))
+                  }).catch((error) => log(browserErrorRu(error)))
                 }
               >
                 {translate0357.maximize}
@@ -6120,7 +6148,7 @@ function AuthPanel({
         <button
           onClick={() =>
             loginDesktop().catch((error: Error) => {
-              setAuthProviderError0293(String(error));
+              setAuthProviderError0293(browserErrorRu(error));
               console.error(error);
             })
           }
@@ -6252,7 +6280,7 @@ function AuthPanel({
             onClick={() =>
               linkPasswordProvider0293().catch((error: Error) => {
                 setLinkedPassword0293("");
-                setLinkFeedback0293(String(error));
+                setLinkFeedback0293(browserErrorRu(error));
               })
             }
           >

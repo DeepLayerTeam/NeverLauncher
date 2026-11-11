@@ -1,4 +1,4 @@
-# NeverLauncher 0.48.8 — интеграция Java с ServerBridge
+# NeverLauncher 0.48.8 — интеграция Java-приложений с ServerBridge
 
 Java-расширения используют `context.runtime().serverBridge()` для доступа к действующему репозиторию ServerBridge v3 в PostgreSQL через **существующий аутентифицированный брокер Go Extension Host**. Это эксплуатационная интеграция, а не альтернативный сервер ServerBridge, API прямого SQL, точка аутентификации Minecraft или изменение classpath внутри процесса. SDK совместим с Java 17, включая хосты Java 21.
 

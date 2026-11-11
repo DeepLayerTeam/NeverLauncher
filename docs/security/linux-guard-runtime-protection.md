@@ -1,4 +1,4 @@
-# NeverLauncher 0.50.8 — защита Guard Runtime на Linux
+# NeverLauncher 0.50.8 — защита среды выполнения Guard на Linux
 
 ## Исполняемый маршрут
 
@@ -13,7 +13,7 @@ Java native-библиотеки внутри управляемого JRE фи�
 ## Проверка
 
 ```bash
-# Требуются Linux, Rust/Cargo, JDK 21, Python 3 и C compiler.
+# Требуются Linux, Rust/Cargo, JDK 21, Python 3 и компилятор C.
 cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
 cargo test --manifest-path runtime/runtime/Cargo.toml --lib linux_runtime_guard_0508 -- --nocapture
 cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_linux -- --nocapture

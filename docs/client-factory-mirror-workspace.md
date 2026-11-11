@@ -1,4 +1,4 @@
-# Client Factory / MirrorHelper: рабочий workspace (0.40.5)
+# Client Factory / MirrorHelper: рабочая область (0.40.5)
 
 `nl runtime client-factory apply-workspace` выполняет загрузку Minecraft, разрешение и установку клиентских файлов, дополнительный импорт `.mrpack`/CurseForge, установку указанных модов и Maven JAR, регистрацию библиотек в version profile, проверенную трансформацию authlib и настройку совместимости JVM. Результат появляется в `--client-dir` **только после** всех проверок целостности. Существующий каталог не перезаписывается.
 

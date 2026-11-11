@@ -1248,7 +1248,7 @@ class MatrixToolTests(unittest.TestCase):
             workflow,
         )
         self.assertEqual(
-            len(restore_blocks), 2, "both matrix shards must use the same Java rule"
+            len(restore_blocks), 2, "Обе части матрицы должны использовать одно правило выбора Java"
         )
         for block in restore_blocks:
             self.assertIn(

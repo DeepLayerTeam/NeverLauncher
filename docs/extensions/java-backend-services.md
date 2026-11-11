@@ -1,4 +1,4 @@
-# NeverLauncher 0.48.4 — Java-сервисы Backend
+# NeverLauncher 0.48.4 — Серверные Java-сервисы
 
 Java-расширения обращаются к существующему авторизованному Go Extension Host Broker через `ExtensionContext.runtime().backend()`. Ни Java SDK, ни расширения не подключаются к базе данных и не получают административных токенов. Новые публичные REST-маршруты и изменения недоверенного classpath не требуются.
 

@@ -20,7 +20,7 @@ import { AuditWorkspace } from "./AuditWorkspace";
 import { ConfigWorkspace } from "./ConfigWorkspace";
 import { OfficialProviderWorkspace02611 } from "./OfficialProviderWorkspace02611";
 import { AuthProviderWizard02910 } from "./AuthProviderWizard02910";
-import { requestJSON, ApiError } from "../api/client";
+import { requestJSON, ApiError, httpStatusRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import { AdminApi, type AdminOverview } from "../api/admin";
 import { MetricCard, TextInput } from "../components/primitives";
@@ -1126,7 +1126,7 @@ export function AdminApp() {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok)
       throw new Error(
-        payload?.error?.message ?? `${response.status} ${response.statusText}`,
+        payload?.error?.message ?? `${httpStatusRu(response)}`,
       );
     return payload.data ?? payload;
   }

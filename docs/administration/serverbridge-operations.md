@@ -1,4 +1,4 @@
-# Launcher 0.21.9 — ServerBridge операции
+# Launcher 0.21.9 — Операции ServerBridge
 
 ## Развёртывание
 
