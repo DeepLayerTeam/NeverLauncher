@@ -252,8 +252,8 @@ def native_verify(asset, package, work, a):
 $ErrorActionPreference = 'Stop'
 $signature = Get-AuthenticodeSignature -LiteralPath $File
 if ($signature.Status -ne 'Valid' -or !$signature.SignerCertificate) { throw 'Недопустимая цепочка сертификатов Authenticode' }
-if ($signature.SignerCertificate.Thumbprint.ToUpperInvariant() -ne $Expected) { throw 'wrong signer certificate' }
-Write-Output 'verified Authenticode chain and independently pinned signer'
+if ($signature.SignerCertificate.Thumbprint.ToUpperInvariant() -ne $Expected) { throw 'Сертификат подписанта не совпадает с ожидаемым' }
+Write-Output 'Цепочка сертификатов Authenticode и независимо закреплённый подписант проверены'
 ''', encoding='utf-8')
         try:
             cmd('native-signature', ['pwsh', '-NoProfile', '-NonInteractive', '-File',

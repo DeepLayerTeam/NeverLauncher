@@ -1257,7 +1257,7 @@ def verify_result(
             errors.append('runAttempt: требуется положительный номер попытки запуска CI')
     for key, value in expected.items():
         if str(result.get(key, "")) != str(value):
-            errors.append(f"{key}: expected {value!r}, got {result.get(key)!r}")
+            errors.append(f"{key}: ожидалось {value!r}, получено {result.get(key)!r}")
     selector = str(result.get("loaderSelector", ""))
     if selector != target["loaderVersion"]:
         errors.append(f"Несовпадение loaderSelector: {selector!r}")

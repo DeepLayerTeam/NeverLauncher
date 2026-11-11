@@ -22,7 +22,7 @@ var joinDDL = []string{
  committed_at INTEGER NOT NULL, expires_at INTEGER NOT NULL CHECK(expires_at>committed_at),
  PRIMARY KEY(node_id,identity_epoch,nonce_hash)) WITHOUT ROWID`,
 	`CREATE INDEX bridge_nonces_expiry ON bridge_nonces(expires_at)`,
-	`CREATE TRIGGER bridge_nonces_no_update BEFORE UPDATE ON bridge_nonces BEGIN SELECT RAISE(ABORT,'immutable replay nonce'); END`,
+	`CREATE TRIGGER bridge_nonces_no_update BEFORE UPDATE ON bridge_nonces BEGIN SELECT RAISE(ABORT,'Одноразовое значение защиты от повторов нельзя изменить'); END`,
 	`CREATE TABLE bridge_join_tickets (
  token_hash TEXT PRIMARY KEY CHECK(length(token_hash)=64),
  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
@@ -50,7 +50,7 @@ var joinDDL = []string{
 	`CREATE INDEX bridge_join_session ON bridge_join_tickets(session_id,status)`,
 	`CREATE INDEX bridge_join_expiry ON bridge_join_tickets(expires_at,status)`,
 	`CREATE TRIGGER bridge_consumed_immutable BEFORE UPDATE ON bridge_join_tickets WHEN OLD.status='consumed'
- BEGIN SELECT RAISE(ABORT,'consumed ticket immutable'); END`,
+ BEGIN SELECT RAISE(ABORT,'Использованный билет нельзя изменить'); END`,
 	`CREATE TRIGGER bridge_ticket_no_delete BEFORE DELETE ON bridge_join_tickets WHEN OLD.status='consumed'
- BEGIN SELECT RAISE(ABORT,'consumed ticket cannot be deleted'); END`,
+ BEGIN SELECT RAISE(ABORT,'Использованный билет нельзя удалить'); END`,
 }

@@ -102,7 +102,7 @@ def request(port, method, path, payload=None, headers=None, *, timeout=5):
 
 def expect(port, method, path, code, payload=None, headers=None):
     status, doc = request(port, method, path, payload, headers)
-    require(status == code, f"{method} {path}: HTTP {status}, expected {code}")
+    require(status == code, f"{method} {path}: HTTP {status}, ожидался код {code}")
     return doc
 
 

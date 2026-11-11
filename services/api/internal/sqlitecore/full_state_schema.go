@@ -12,7 +12,7 @@ var fullStateDDL = []string{
 	`CREATE TABLE bridge_runtime_nonces (
  node_id TEXT NOT NULL REFERENCES bridge_nodes(id) ON DELETE RESTRICT, epoch INTEGER NOT NULL, nonce_hash TEXT NOT NULL CHECK(length(nonce_hash)=64), committed_at INTEGER NOT NULL,
  PRIMARY KEY(node_id,epoch,nonce_hash)) WITHOUT ROWID`,
-	`CREATE TRIGGER bridge_runtime_nonces_no_delete BEFORE DELETE ON bridge_runtime_nonces BEGIN SELECT RAISE(ABORT,'runtime replay tombstone'); END`,
+	`CREATE TRIGGER bridge_runtime_nonces_no_delete BEFORE DELETE ON bridge_runtime_nonces BEGIN SELECT RAISE(ABORT,'Запись защиты Runtime от повторного использования нельзя удалить'); END`,
 	`CREATE TABLE bridge_commands (
  id TEXT PRIMARY KEY, node_id TEXT NOT NULL REFERENCES bridge_nodes(id) ON DELETE RESTRICT,
  runtime_id TEXT NOT NULL, runtime_epoch INTEGER NOT NULL CHECK(runtime_epoch>0),
@@ -33,28 +33,28 @@ var fullStateDDL = []string{
  OR NEW.command_type<>OLD.command_type OR NEW.payload<>OLD.payload OR NEW.payload_digest<>OLD.payload_digest
  OR NEW.request_digest<>OLD.request_digest OR NEW.actor<>OLD.actor OR NEW.idempotency_key<>OLD.idempotency_key
  OR NEW.created_at<>OLD.created_at OR NEW.expires_at<>OLD.expires_at OR NEW.attempt<OLD.attempt
- BEGIN SELECT RAISE(ABORT,'immutable bridge command identity'); END`,
+ BEGIN SELECT RAISE(ABORT,'Идентификатор команды ServerBridge нельзя изменить'); END`,
 	`CREATE TRIGGER bridge_commands_terminal BEFORE UPDATE ON bridge_commands WHEN OLD.status IN('succeeded','failed','unsupported','indeterminate','expired')
- BEGIN SELECT RAISE(ABORT,'terminal bridge command cannot be replayed'); END`,
-	`CREATE TRIGGER bridge_commands_no_delete BEFORE DELETE ON bridge_commands BEGIN SELECT RAISE(ABORT,'bridge idempotency tombstone'); END`,
+ BEGIN SELECT RAISE(ABORT,'Завершённую команду ServerBridge нельзя выполнить повторно'); END`,
+	`CREATE TRIGGER bridge_commands_no_delete BEFORE DELETE ON bridge_commands BEGIN SELECT RAISE(ABORT,'Запись идемпотентности ServerBridge нельзя удалить'); END`,
 	`CREATE TABLE package_blobs (
  digest TEXT PRIMARY KEY CHECK(length(digest)=64), data BLOB NOT NULL,
  size_bytes INTEGER NOT NULL CHECK(size_bytes BETWEEN 1 AND 16777216), created_at INTEGER NOT NULL,
  CHECK(length(data)=size_bytes))`,
-	`CREATE TRIGGER package_blobs_no_change BEFORE UPDATE ON package_blobs BEGIN SELECT RAISE(ABORT,'immutable package bytes'); END`,
-	`CREATE TRIGGER package_blobs_no_delete BEFORE DELETE ON package_blobs BEGIN SELECT RAISE(ABORT,'immutable package bytes'); END`,
+	`CREATE TRIGGER package_blobs_no_change BEFORE UPDATE ON package_blobs BEGIN SELECT RAISE(ABORT,'Содержимое пакета нельзя изменить'); END`,
+	`CREATE TRIGGER package_blobs_no_delete BEFORE DELETE ON package_blobs BEGIN SELECT RAISE(ABORT,'Содержимое пакета нельзя изменить'); END`,
 	`CREATE TABLE extension_publishers (
  id TEXT PRIMARY KEY, public_key BLOB NOT NULL CHECK(length(public_key)=32),
  fingerprint TEXT NOT NULL UNIQUE CHECK(length(fingerprint)=64), active INTEGER NOT NULL CHECK(active IN(0,1)),
  created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`,
 	`CREATE TRIGGER extension_publishers_identity BEFORE UPDATE ON extension_publishers WHEN NEW.id<>OLD.id OR NEW.public_key<>OLD.public_key OR NEW.fingerprint<>OLD.fingerprint
- BEGIN SELECT RAISE(ABORT,'immutable extension publisher identity'); END`,
+ BEGIN SELECT RAISE(ABORT,'Идентификатор издателя расширения нельзя изменить'); END`,
 	`CREATE TABLE extension_packages (
  extension_id TEXT NOT NULL, version TEXT NOT NULL, digest TEXT NOT NULL REFERENCES package_blobs(digest) ON DELETE RESTRICT,
  publisher TEXT NOT NULL REFERENCES extension_publishers(id) ON DELETE RESTRICT, signature BLOB NOT NULL CHECK(length(signature)=64),
  created_at INTEGER NOT NULL, PRIMARY KEY(extension_id,version), UNIQUE(extension_id,version,digest)) WITHOUT ROWID`,
-	`CREATE TRIGGER extension_packages_no_update BEFORE UPDATE ON extension_packages BEGIN SELECT RAISE(ABORT,'immutable signed extension version'); END`,
-	`CREATE TRIGGER extension_packages_no_delete BEFORE DELETE ON extension_packages BEGIN SELECT RAISE(ABORT,'immutable signed extension version'); END`,
+	`CREATE TRIGGER extension_packages_no_update BEFORE UPDATE ON extension_packages BEGIN SELECT RAISE(ABORT,'Подписанную версию расширения нельзя изменить'); END`,
+	`CREATE TRIGGER extension_packages_no_delete BEFORE DELETE ON extension_packages BEGIN SELECT RAISE(ABORT,'Подписанную версию расширения нельзя изменить'); END`,
 	`CREATE TABLE extension_installs (
  extension_id TEXT NOT NULL, scope TEXT NOT NULL, scope_id TEXT NOT NULL,
  version TEXT NOT NULL DEFAULT '', package_digest TEXT NOT NULL DEFAULT '', state TEXT NOT NULL CHECK(state IN('enabled','disabled','absent','error')),
@@ -66,9 +66,9 @@ var fullStateDDL = []string{
  state TEXT NOT NULL, actor TEXT NOT NULL, created_at INTEGER NOT NULL,
  PRIMARY KEY(extension_id,scope,scope_id,generation), FOREIGN KEY(extension_id,scope,scope_id)
  REFERENCES extension_installs(extension_id,scope,scope_id) ON DELETE RESTRICT) WITHOUT ROWID`,
-	`CREATE TRIGGER extension_install_history_no_update BEFORE UPDATE ON extension_install_history BEGIN SELECT RAISE(ABORT,'immutable extension history'); END`,
-	`CREATE TRIGGER extension_install_history_no_delete BEFORE DELETE ON extension_install_history BEGIN SELECT RAISE(ABORT,'immutable extension history'); END`,
-	`CREATE TRIGGER extension_install_generation BEFORE UPDATE ON extension_installs WHEN NEW.generation<>OLD.generation+1 BEGIN SELECT RAISE(ABORT,'extension generation must increase'); END`,
+	`CREATE TRIGGER extension_install_history_no_update BEFORE UPDATE ON extension_install_history BEGIN SELECT RAISE(ABORT,'Историю расширения нельзя изменить'); END`,
+	`CREATE TRIGGER extension_install_history_no_delete BEFORE DELETE ON extension_install_history BEGIN SELECT RAISE(ABORT,'Историю расширения нельзя изменить'); END`,
+	`CREATE TRIGGER extension_install_generation BEFORE UPDATE ON extension_installs WHEN NEW.generation<>OLD.generation+1 BEGIN SELECT RAISE(ABORT,'Номер поколения расширения должен увеличиваться'); END`,
 	`CREATE TABLE extension_kv (
  extension_id TEXT NOT NULL, scope TEXT NOT NULL, scope_id TEXT NOT NULL, item_key TEXT NOT NULL,
  value_json TEXT NOT NULL CHECK(json_valid(value_json)), value_digest TEXT NOT NULL CHECK(length(value_digest)=64),
@@ -79,7 +79,7 @@ var fullStateDDL = []string{
  generation INTEGER NOT NULL CHECK(generation>0), value_digest TEXT NOT NULL CHECK(length(value_digest)=64),
  actor TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(extension_id,scope,scope_id,item_key,generation),
  FOREIGN KEY(extension_id,scope,scope_id,item_key) REFERENCES extension_kv(extension_id,scope,scope_id,item_key) ON DELETE RESTRICT) WITHOUT ROWID`,
-	`CREATE TRIGGER extension_kv_history_no_update BEFORE UPDATE ON extension_kv_history BEGIN SELECT RAISE(ABORT,'immutable extension kv history'); END`,
-	`CREATE TRIGGER extension_kv_history_no_delete BEFORE DELETE ON extension_kv_history BEGIN SELECT RAISE(ABORT,'immutable extension kv history'); END`,
-	`CREATE TRIGGER extension_kv_generation BEFORE UPDATE ON extension_kv WHEN NEW.generation<>OLD.generation+1 BEGIN SELECT RAISE(ABORT,'extension kv CAS regression'); END`,
+	`CREATE TRIGGER extension_kv_history_no_update BEFORE UPDATE ON extension_kv_history BEGIN SELECT RAISE(ABORT,'Историю значений расширения нельзя изменить'); END`,
+	`CREATE TRIGGER extension_kv_history_no_delete BEFORE DELETE ON extension_kv_history BEGIN SELECT RAISE(ABORT,'Историю значений расширения нельзя изменить'); END`,
+	`CREATE TRIGGER extension_kv_generation BEFORE UPDATE ON extension_kv WHEN NEW.generation<>OLD.generation+1 BEGIN SELECT RAISE(ABORT,'Нарушен порядок обновления значений расширения (CAS)'); END`,
 }

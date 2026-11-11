@@ -28,14 +28,14 @@ var durableDDL = []string{
  OR NEW.action<>OLD.action OR NEW.project_id<>OLD.project_id OR NEW.resource_type<>OLD.resource_type
  OR NEW.resource_id<>OLD.resource_id OR NEW.idempotency_key<>OLD.idempotency_key
  OR NEW.payload<>OLD.payload OR NEW.payload_digest<>OLD.payload_digest OR NEW.created_at<>OLD.created_at
- BEGIN SELECT RAISE(ABORT,'immutable durable job identity'); END`,
+ BEGIN SELECT RAISE(ABORT,'Идентификатор постоянного задания нельзя изменить'); END`,
 	`CREATE TRIGGER durable_job_terminal_immutable BEFORE UPDATE ON durable_jobs
- WHEN OLD.status IN('succeeded','failed','dead','revoked') BEGIN SELECT RAISE(ABORT,'terminal durable job immutable'); END`,
+ WHEN OLD.status IN('succeeded','failed','dead','revoked') BEGIN SELECT RAISE(ABORT,'Завершённое постоянное задание нельзя изменить'); END`,
 	`CREATE TRIGGER durable_job_fence_monotonic BEFORE UPDATE ON durable_jobs
  WHEN NEW.lease_fence<OLD.lease_fence OR NEW.attempt_count<OLD.attempt_count
  OR (NEW.lease_token<>OLD.lease_token AND NEW.lease_token<>'' AND NEW.lease_fence<=OLD.lease_fence)
- BEGIN SELECT RAISE(ABORT,'durable job fencing regression'); END`,
-	`CREATE TRIGGER durable_jobs_no_delete BEFORE DELETE ON durable_jobs BEGIN SELECT RAISE(ABORT,'durable job idempotency tombstone'); END`,
+ BEGIN SELECT RAISE(ABORT,'Нарушен порядок блокировок постоянного задания'); END`,
+	`CREATE TRIGGER durable_jobs_no_delete BEFORE DELETE ON durable_jobs BEGIN SELECT RAISE(ABORT,'Запись идемпотентности постоянного задания нельзя удалить'); END`,
 	`CREATE TABLE durable_job_attempts (
  id INTEGER PRIMARY KEY AUTOINCREMENT, job_id TEXT NOT NULL REFERENCES durable_jobs(id) ON DELETE RESTRICT,
  attempt INTEGER NOT NULL CHECK(attempt>0), worker_id TEXT NOT NULL, lease_fence INTEGER NOT NULL CHECK(lease_fence>0),
@@ -46,15 +46,15 @@ var durableDDL = []string{
  WHEN NEW.job_id<>OLD.job_id OR NEW.attempt<>OLD.attempt OR NEW.worker_id<>OLD.worker_id
  OR NEW.lease_fence<>OLD.lease_fence OR NEW.started_at<>OLD.started_at
  OR OLD.status<>'running' OR NEW.status='running' OR NEW.finished_at<=0
- BEGIN SELECT RAISE(ABORT,'immutable job attempt'); END`,
-	`CREATE TRIGGER durable_attempt_no_delete BEFORE DELETE ON durable_job_attempts BEGIN SELECT RAISE(ABORT,'immutable job attempt'); END`,
+ BEGIN SELECT RAISE(ABORT,'Попытку выполнения задания нельзя изменить'); END`,
+	`CREATE TRIGGER durable_attempt_no_delete BEFORE DELETE ON durable_job_attempts BEGIN SELECT RAISE(ABORT,'Попытку выполнения задания нельзя изменить'); END`,
 	`CREATE TABLE durable_scope_leases (
  scope_key TEXT PRIMARY KEY, owner TEXT NOT NULL, lease_token TEXT NOT NULL,
  fencing_token INTEGER NOT NULL CHECK(fencing_token>0), expires_at INTEGER NOT NULL,
  updated_at INTEGER NOT NULL)`,
-	`CREATE TRIGGER durable_scope_no_delete BEFORE DELETE ON durable_scope_leases BEGIN SELECT RAISE(ABORT,'retain fencing high-water mark'); END`,
+	`CREATE TRIGGER durable_scope_no_delete BEFORE DELETE ON durable_scope_leases BEGIN SELECT RAISE(ABORT,'Нельзя сбросить максимальный номер блокировки'); END`,
 	`CREATE TRIGGER durable_scope_fence_monotonic BEFORE UPDATE ON durable_scope_leases
- WHEN NEW.fencing_token<OLD.fencing_token OR (NEW.lease_token<>OLD.lease_token AND NEW.lease_token<>'' AND NEW.fencing_token<=OLD.fencing_token) BEGIN SELECT RAISE(ABORT,'scope fence regression'); END`,
+ WHEN NEW.fencing_token<OLD.fencing_token OR (NEW.lease_token<>OLD.lease_token AND NEW.lease_token<>'' AND NEW.fencing_token<=OLD.fencing_token) BEGIN SELECT RAISE(ABORT,'Нарушен порядок блокировок области действия'); END`,
 	`CREATE TABLE durable_outbox (
  id TEXT PRIMARY KEY, event_type TEXT NOT NULL, project_id TEXT NOT NULL DEFAULT '',
  aggregate_type TEXT NOT NULL, aggregate_id TEXT NOT NULL, actor_id TEXT NOT NULL DEFAULT '',
@@ -76,12 +76,12 @@ var durableDDL = []string{
  OR NEW.aggregate_type<>OLD.aggregate_type OR NEW.aggregate_id<>OLD.aggregate_id OR NEW.actor_id<>OLD.actor_id
  OR NEW.idempotency_key<>OLD.idempotency_key OR NEW.payload<>OLD.payload
  OR NEW.payload_digest<>OLD.payload_digest OR NEW.created_at<>OLD.created_at
- BEGIN SELECT RAISE(ABORT,'immutable outbox identity'); END`,
+ BEGIN SELECT RAISE(ABORT,'Идентификатор исходящего события нельзя изменить'); END`,
 	`CREATE TRIGGER durable_outbox_terminal_immutable BEFORE UPDATE ON durable_outbox
- WHEN OLD.status IN('delivered','dead') BEGIN SELECT RAISE(ABORT,'terminal outbox event immutable'); END`,
+ WHEN OLD.status IN('delivered','dead') BEGIN SELECT RAISE(ABORT,'Завершённое исходящее событие нельзя изменить'); END`,
 	`CREATE TRIGGER durable_outbox_fence_monotonic BEFORE UPDATE ON durable_outbox
  WHEN NEW.lease_fence<OLD.lease_fence OR NEW.attempt_count<OLD.attempt_count
  OR (NEW.lease_token<>OLD.lease_token AND NEW.lease_token<>'' AND NEW.lease_fence<=OLD.lease_fence)
- BEGIN SELECT RAISE(ABORT,'outbox fencing regression'); END`,
-	`CREATE TRIGGER durable_outbox_no_delete BEFORE DELETE ON durable_outbox BEGIN SELECT RAISE(ABORT,'durable outbox idempotency tombstone'); END`,
+ BEGIN SELECT RAISE(ABORT,'Нарушен порядок блокировок исходящих событий'); END`,
+	`CREATE TRIGGER durable_outbox_no_delete BEFORE DELETE ON durable_outbox BEGIN SELECT RAISE(ABORT,'Запись идемпотентности исходящего события нельзя удалить'); END`,
 }

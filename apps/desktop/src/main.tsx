@@ -904,10 +904,9 @@ function App() {
   const [ui0357, setUi0357] = useState<UISettings0357>(() => {
     try {
       const saved = localStorage.getItem(UI_PREFERENCES_KEY0357);
-      return validateUISettings0357(
-        saved ? JSON.parse(saved) : null,
-        navigator.language?.startsWith("en") ? "en" : "ru",
-      );
+      // При первом запуске интерфейс русскоязычный независимо от языка ОС.
+      // Явно сохранённый выбор английского остаётся доступным.
+      return validateUISettings0357(saved ? JSON.parse(saved) : null, "ru");
     } catch {
       return validateUISettings0357(null);
     }

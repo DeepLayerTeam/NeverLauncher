@@ -45,7 +45,7 @@ var authDDL = []string{
  identity_version TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
  CHECK(length(name) BETWEEN 3 AND 16), CHECK(length(uuid)=36))`,
 	`CREATE TRIGGER minecraft_uuid_immutable BEFORE UPDATE OF uuid,user_id ON minecraft_profiles
- WHEN NEW.uuid<>OLD.uuid OR NEW.user_id<>OLD.user_id BEGIN SELECT RAISE(ABORT,'minecraft identity immutable'); END`,
+ WHEN NEW.uuid<>OLD.uuid OR NEW.user_id<>OLD.user_id BEGIN SELECT RAISE(ABORT,'Идентификатор Minecraft нельзя изменить'); END`,
 	`CREATE TABLE minecraft_sessions (
  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
  session_id TEXT NOT NULL REFERENCES auth_sessions(id) ON DELETE RESTRICT,
@@ -58,6 +58,6 @@ var authDDL = []string{
 	`CREATE TABLE auth_revocation_events (
  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
  session_id TEXT NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL)`,
-	`CREATE TRIGGER revocation_events_no_update BEFORE UPDATE ON auth_revocation_events BEGIN SELECT RAISE(ABORT,'immutable security event'); END`,
-	`CREATE TRIGGER revocation_events_no_delete BEFORE DELETE ON auth_revocation_events BEGIN SELECT RAISE(ABORT,'immutable security event'); END`,
+	`CREATE TRIGGER revocation_events_no_update BEFORE UPDATE ON auth_revocation_events BEGIN SELECT RAISE(ABORT,'Событие безопасности нельзя изменить'); END`,
+	`CREATE TRIGGER revocation_events_no_delete BEFORE DELETE ON auth_revocation_events BEGIN SELECT RAISE(ABORT,'Событие безопасности нельзя изменить'); END`,
 }
