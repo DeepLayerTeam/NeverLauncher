@@ -48,7 +48,7 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 		return model.ServerBridgeRoutingSnapshot{}, err
 	}
 	if status != "active" || currentRuntimeEpoch != runtimeEpoch || !strings.EqualFold(currentRuntimeID, routing.RuntimeID) {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: Runtime маршрутизации неактивен", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: Среда выполнения маршрутизации неактивна", ErrConflict)
 	}
 	if oldObserved.Valid && observedAt.Before(oldObserved.Time) {
 		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: снимок маршрутизации устарел", ErrConflict)
@@ -72,7 +72,7 @@ func (r *SQLRepository) SaveServerBridgeRoutingState(ctx context.Context, server
 		return model.ServerBridgeRoutingSnapshot{}, err
 	}
 	if n, _ := res.RowsAffected(); n != 1 {
-		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: во время обновления маршрутизации изменился активный Runtime", ErrConflict)
+		return model.ServerBridgeRoutingSnapshot{}, fmt.Errorf("%w: во время обновления маршрутизации изменилась активная среда выполнения", ErrConflict)
 	}
 	// После прекращения приёма маршрутов серверной частью немедленно аннулируйте ещё не использованные
 	// передачи, не дожидаясь их погашения. Сохранённое доказательство цели остаётся для аудита, но

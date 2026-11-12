@@ -44,4 +44,4 @@ go run ./cmd/official-provider-poc --client-id YOUR_REGISTERED_UUID --flow brows
 - При отмене после выдачи кода Microsoft Backend может уже обменять его, но нативный менеджер не сохранит зашифрованный билет. Повторно использовать код нельзя.
 - Backend и Desktop для нового потока обновляются вместе; существующий режим кода устройства совместим с 0.26.2.
 
-Ссылки: Microsoft Learn — [ограничения redirect URI](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url), [authorization code PKCE](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow), [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252).
+Ссылки: Microsoft Learn — [ограничения URI перенаправления](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url), [код авторизации с PKCE](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow), [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252).

@@ -39,7 +39,7 @@ rows = targets.get("targets")
 if not isinstance(rows, list) or len(rows) < 4:
     raise SystemExit("В публичной матрице доверия устройств отсутствуют обязательные базовые цели")
 if any(row.get("required") is not True for row in rows):
-    raise SystemExit("every Device Trust target: требуется «required»")
+    raise SystemExit("Для каждой цели проверки доверия к устройствам требуется «required»")
 if any("status" in row or "passed" in row for row in rows):
     raise SystemExit("«целевые платформы доверия к устройствам»: запрещено «содержать редактируемый статус прохождения проверки»")
 expected = {

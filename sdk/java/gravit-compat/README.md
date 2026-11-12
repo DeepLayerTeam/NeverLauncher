@@ -1,13 +1,13 @@
 # Адаптер совместимости Gravit 0.31.0 (ограниченный API)
 
-Это **рабочий, намеренно ограниченный адаптер для переноса исходного кода** Java-модулей в стиле GravitLauncher, а не универсальный загрузчик JAR-файлов Gravit. Он работает в существующем Java Extension Host лаунчера (`java -jar`) под контролем супервизора Go с ограничениями времени и проверкой подписи Ed25519 пакетов `.nlext`. Внутренние API Gravit LaunchServer, LauncherRuntime и JavaFX отсутствуют и не имитируются. Реализация независимая и не копирует исходный код Gravit.
+Это **рабочий, намеренно ограниченный адаптер для переноса исходного кода** Java-модулей в стиле GravitLauncher, а не универсальный загрузчик JAR-файлов Gravit. Он работает в существующем хосте Java-расширений лаунчера (`java -jar`) под контролем супервизора Go с ограничениями времени и проверкой подписи Ed25519 пакетов `.nlext`. Внутренние API Gravit LaunchServer, LauncherRuntime и JavaFX отсутствуют и не имитируются. Реализация независимая и не копирует исходный код Gravit.
 
 ## Поддерживаемый API (фиксированный перечень)
 
 | Тип / API | Фактическое поведение расширения |
 |---|---|
 | `pro.gravit.utils.Version` | Целочисленная версия из четырёх компонентов, сравнение, `Type`, `getVersionString` |
-| `pro.gravit.launcher.base.modules.LauncherModule`, `LauncherInitContext` | `preInitAction` и `init` в рамках жизненного цикла Java Extension Host. Контекст `GravitInitContext` предоставляет настоящий `ExtensionContext` |
+| `pro.gravit.launcher.base.modules.LauncherModule`, `LauncherInitContext` | `preInitAction` и `init` в рамках жизненного цикла хоста Java-расширений. Контекст `GravitInitContext` предоставляет настоящий `ExtensionContext` |
 | `LauncherModuleInfo`, `LauncherModuleInfoBuilder` | Локальные метаданные модуля; неподдерживаемые внутренние зависимости Gravit отклоняются, а не помечаются как удовлетворённые |
 | `LauncherModule.EventHandler`, `registerEvent()` | Типизированный адаптер поверх **настоящего** EventBus Go. Принимаются только разрешённые типы `@HostEvent`, имеющие соответствующие типы EventBus |
 | `ReleasePublishedEvent`, `ProjectSavedEvent` | Соответствуют `release.published` и `project.saved`; сохраняются идентификатор события, проект, ключ идемпотентности и исходный JSON |

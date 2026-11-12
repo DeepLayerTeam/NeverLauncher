@@ -62,7 +62,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if status == http.StatusForbidden {
-			writeError(w, status, "пользователь отключён или identity не связана")
+			writeError(w, status, "пользователь отключён или учётная запись не привязана")
 			return
 		}
 		if status == http.StatusBadRequest {

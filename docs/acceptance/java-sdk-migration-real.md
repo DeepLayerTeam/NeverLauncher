@@ -18,7 +18,7 @@ python3 scripts/acceptance/java_sdk_migration_0528.py local \
 
 ## Установленный Java Host и настоящие подтверждения Minecraft
 
-Используйте выделенный изолированный проект с настоящим HTTPS Backend 0.52.8, развёрнутыми Java Extension Host и Go Broker, краткоживущим токеном администратора проекта, тестовым игроком и ранее загруженными миграционными идентичностями/библиотеками. Подготовьте закрытую конфигурацию `0600` (`launcher.java-host-live-0528/v1`) с ключами:
+Используйте выделенный изолированный проект с настоящим HTTPS Backend 0.52.8, развёрнутыми хостом Java-расширений и брокером Go, краткоживущим токеном администратора проекта, тестовым игроком и ранее загруженными миграционными идентичностями/библиотеками. Подготовьте закрытую конфигурацию `0600` (`launcher.java-host-live-0528/v1`) с ключами:
 
 - `format`, `isolatedProject: true`, `sourceCommit` (40 строчных шестнадцатеричных символов), `backendUrl`, `hostUrl`, `projectId`, `profileId`, `loaderVersion`, `testIdentifier`, `testUuid`.
 - `libraryFile`, `librarySha256`, `libraryPath` (реальный файл в `libraries/`, `mods/` или `optional/`, сохранённый и доступный Broker, в пределах лимита актива Java Host SPI 512 КиБ), `extensionJar`, `extensionJarSha256`.

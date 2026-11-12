@@ -524,7 +524,7 @@ func validateContinuousGuardTicketForMinecraftSession01810(ticket model.DeviceCh
 		return errors.New("Данные подтверждения непрерывной защиты Guard предшествуют сеансу Minecraft")
 	}
 	if guardRuntimePolicyRequired0317(session.LauncherVersion) && (metadataString0121(ticket.Metadata, "minecraftSessionId") == "" || metadataString0121(ticket.Metadata, "minecraftSessionId") != session.ID) {
-		return errors.New("Runtime непрерывной защиты Guard не привязан к этому сеансу Minecraft")
+		return errors.New("Среда выполнения непрерывной защиты Guard не привязана к этому сеансу Minecraft")
 	}
 	if metadataString0121(ticket.Metadata, "launcherVersion") != strings.TrimSpace(session.LauncherVersion) {
 		return errors.New("«версия лаунчера в разрешении непрерывной защиты Guard» не совпадает с «сеанс проверки целостности Minecraft»")

@@ -335,7 +335,7 @@ func (s Server) extensionRollback0204(w http.ResponseWriter, r *http.Request) {
 		if install.CurrentState == model.ExtensionInstallStateEnabled {
 			_, _ = s.lifecycleManager0204().Disable(context.Background(), install.ExtensionID, lifecycleScopeFromRequest0204(install.Scope, install.ScopeID))
 		}
-		writeError(w, http.StatusConflict, "Содержимое для отката восстановлено, но хост Backend не запустился; установка отключена: "+err.Error())
+		writeError(w, http.StatusConflict, "Содержимое для отката восстановлено, но хост серверной части не запустился; установка отключена: "+err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:lifecycle:rollback", install.ExtensionID+"@"+install.CurrentVersion+":"+install.Scope+":"+install.ScopeID)

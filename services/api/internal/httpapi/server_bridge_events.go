@@ -276,7 +276,7 @@ func (b *serverBridgeStore) appendEvents0194(server bridgeServerRecord, events [
 	defer b.mu.Unlock()
 	current, ok := b.servers[server.ID]
 	if !ok || current.Status != "active" || current.RuntimeEpoch != server.RuntimeEpoch || !strings.EqualFold(current.RuntimeID, server.RuntimeID) {
-		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: Runtime обработки событий не активен", repository.ErrConflict)
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: Среда выполнения обработки событий неактивна", repository.ErrConflict)
 	}
 	if b.eventAck == nil {
 		b.eventAck = map[string]int64{}

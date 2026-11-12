@@ -54,7 +54,7 @@ func (s Server) evaluatePublishReadiness0385(ctx context.Context, lookup package
 		if c, ok := check["reasonCode"].(string); ok && c != "" {
 			code = c
 		}
-		add(code, fmt.Sprint(check["id"]), fmt.Sprint(check["message"]), "Восстановите файл из проверенного источника, повторите Validate → Sign → Stage → Integrity check; для неизменяемого пакета создайте новую сборку.")
+		add(code, fmt.Sprint(check["id"]), fmt.Sprint(check["message"]), "Восстановите файл из проверенного источника, повторите проверку, подписание, подготовку и проверку целостности; для неизменяемого пакета создайте новую сборку.")
 	}
 	if err := s.verifyManifestSignature(release.Manifest); err != nil {
 		add("manifest-signature-invalid", release.ID, "Подпись манифеста отсутствует или не проходит проверку: "+err.Error(), "Проверьте файл и подпишите пакет доверенным ключом через Admin.")

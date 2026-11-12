@@ -27,7 +27,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 10):
-    raise SystemExit(f"Attestation v2: требуется версия не ниже 0.18.10, получено {version}")
+    raise SystemExit(f"Аттестация v2: требуется версия не ниже 0.18.10, получено {version}")
 
 runtime = read("runtime/runtime/src/windows_attestation_v2.rs")
 require(

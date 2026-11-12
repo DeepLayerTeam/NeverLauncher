@@ -20,7 +20,7 @@
 # Детерминированные регрессионные тесты атак, включая -race:
 python3 scripts/security/certify_03114.py --tier offline --output /tmp/nl-offline.json
 
-# Проверки Guard Runtime Policy, постоянных билетов/сеансов и разрешённых выпусков
+# Проверки политики среды выполнения Guard, постоянных билетов/сеансов и разрешённых выпусков
 # (требуют ВСЕ зависимости Go Backend, а не только тег сборки nopgx):
 python3 scripts/security/certify_03114.py --tier backend-security --output /tmp/nl-backend.json
 

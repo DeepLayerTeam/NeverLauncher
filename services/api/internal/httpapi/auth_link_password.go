@@ -61,7 +61,7 @@ func (s Server) authProviderLinkPassword0291(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		if errors.Is(err, federation.ErrCapabilityUnsupported) || errors.Is(err, federation.ErrProviderNotFound) {
-			writeError(w, http.StatusBadRequest, "provider не поддерживает выбранный способ подтверждения")
+			writeError(w, http.StatusBadRequest, "поставщик авторизации не поддерживает выбранный способ подтверждения")
 			return
 		}
 		if authconnector.CodeOf(err) == authconnector.ErrInvalidCredentials {

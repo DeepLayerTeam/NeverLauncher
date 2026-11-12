@@ -81,7 +81,7 @@ func TestServerBridgeProtocolV3EventRejectsTamper01912(t *testing.T) {
 	tampered = raw
 	tampered.RuntimeID = strings.Repeat("d", 64)
 	if _, err := validateBridgeEvent0194("paper-01912", runtime, fp, tampered, pub, time.Now().UTC(), true); err == nil {
-		t.Fatal("Подменённая привязка Runtime события v3 ошибочно принята")
+		t.Fatal("Подменённая привязка среды выполнения события v3 ошибочно принята")
 	}
 }
 

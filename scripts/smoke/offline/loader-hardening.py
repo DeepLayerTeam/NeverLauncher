@@ -9,7 +9,7 @@ core = tuple(
     int(part) for part in version.split("-", 1)[0].split("+", 1)[0].split(".")[:3]
 )
 if core < (0, 17, 10):
-    raise SystemExit(f"Loader Hardening: требуется версия не ниже 0.17.10, получено {version}")
+    raise SystemExit(f"Усиление защиты загрузчиков: требуется версия не ниже 0.17.10, получено {version}")
 
 
 def read(rel: str) -> str:

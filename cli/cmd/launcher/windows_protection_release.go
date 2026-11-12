@@ -258,7 +258,7 @@ func windowsProtectionBoundaryDigest01812(ver, commit, repository, runID, advers
 
 func buildWindowsProtectionReleaseDocument01812(dir, ver, expectedCommit string) (windowsProtectionReleaseCertificate01812, error) {
 	if !windowsProtectionReleaseRequired01812(ver) {
-		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Windows Protection RC: требуется версия не ниже 0.18.12; получено %s", ver)
+		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Кандидат в выпуск защиты Windows: требуется версия не ниже 0.18.12; получено %s", ver)
 	}
 	commit, err := normalizeSourceCommit01511(expectedCommit)
 	if err != nil {

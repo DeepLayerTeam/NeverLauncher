@@ -842,10 +842,10 @@ func (b *serverBridgeStore) createJoin(user model.User, canonical model.Minecraf
 		return bridgeJoinRecord{}, fmt.Errorf("Запись ServerBridge не найдена или неактивна")
 	}
 	if server.ProjectID != "" && server.ProjectID != req.ProjectID {
-		return bridgeJoinRecord{}, fmt.Errorf("server не привязан к projectId %s", req.ProjectID)
+		return bridgeJoinRecord{}, fmt.Errorf("сервер не привязан к projectId %s", req.ProjectID)
 	}
 	if server.ProfileID != "" && server.ProfileID != req.ProfileID {
-		return bridgeJoinRecord{}, fmt.Errorf("server не привязан к profileId %s", req.ProfileID)
+		return bridgeJoinRecord{}, fmt.Errorf("сервер не привязан к profileId %s", req.ProfileID)
 	}
 	username := strings.TrimSpace(req.Username)
 	if username == "" {

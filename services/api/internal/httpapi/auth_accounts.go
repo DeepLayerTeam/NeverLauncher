@@ -111,7 +111,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if status == http.StatusForbidden {
-			writeError(w, status, "учётная запись недоступна или identity не связана")
+			writeError(w, status, "учётная запись недоступна или не привязана")
 			return
 		}
 		if status == http.StatusBadRequest {

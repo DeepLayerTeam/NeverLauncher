@@ -130,7 +130,7 @@ public final class BundledLibraries implements AutoCloseable {
                 if(expanded>64L*1024*1024)throw new SecurityException("Распакованный размер вложенного JAR превышает лимит");
                 if(name.equalsIgnoreCase("META-INF/MANIFEST.MF")){
                     String data=new String(payload,StandardCharsets.UTF_8).toLowerCase(java.util.Locale.ROOT);
-                    if(data.contains("\nclass-path:")||data.contains("\nmulti-release: true"))throw new SecurityException("Манифест библиотеки содержит внешний classpath или режим multi-release");
+                    if(data.contains("\nclass-path:")||data.contains("\nmulti-release: true"))throw new SecurityException("Манифест библиотеки содержит внешний путь классов или режим нескольких версий (multi-release)");
                 }
                 if(!name.endsWith(".class"))continue;
                 if(name.startsWith("java/")||name.startsWith("javax/")||name.startsWith("jdk/")||name.startsWith("sun/")||name.startsWith("ru/launcher/sdk/")||name.startsWith("com/sun/")||name.startsWith("org/w3c/")||name.startsWith("org/xml/"))throw new SecurityException("Библиотека пытается заменить платформенный SDK");

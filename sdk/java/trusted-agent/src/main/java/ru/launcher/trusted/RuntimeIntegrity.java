@@ -49,16 +49,16 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
 
     static RuntimeIntegrity0505 from(Properties props) throws Exception {
         if (!"true".equals(props.getProperty("integrity.required")))
-            throw new SecurityException("Отсутствует конфигурация контроля целостности Runtime Guard");
+            throw new SecurityException("Отсутствует конфигурация контроля целостности среды выполнения Guard");
         String encodedRoot = props.getProperty("integrity.root");
-        if (encodedRoot == null) throw new SecurityException("Отсутствует корневой каталог контроля целостности Runtime Guard");
+        if (encodedRoot == null) throw new SecurityException("Отсутствует корневой каталог контроля целостности среды выполнения Guard");
         Path root = new File(new String(Base64.getDecoder().decode(encodedRoot), "UTF-8")).getCanonicalFile().toPath();
         if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS))
-            throw new SecurityException("Корневой каталог контроля целостности Runtime Guard недоступен");
+            throw new SecurityException("Корневой каталог контроля целостности среды выполнения Guard недоступен");
         int count;
         try { count = Integer.parseInt(props.getProperty("integrity.count", "-1")); }
-        catch (NumberFormatException ex) { throw new SecurityException("Некорректное количество элементов контроля целостности Runtime Guard", ex); }
-        if (count < 1 || count > LIMIT) throw new SecurityException("Список элементов контроля целостности Runtime Guard пуст или превышает лимит");
+        catch (NumberFormatException ex) { throw new SecurityException("Некорректное количество элементов контроля целостности среды выполнения Guard", ex); }
+        if (count < 1 || count > LIMIT) throw new SecurityException("Список элементов контроля целостности среды выполнения Guard пуст или превышает лимит");
         Map<Path,String> digests = new HashMap<Path,String>();
         Map<Path,String> kinds = new HashMap<Path,String>();
         for (int i = 0; i < count; i++) {
@@ -67,10 +67,10 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
             String kind = props.getProperty("integrity."+i+".kind");
             if (raw == null || hash == null || !hash.matches("[0-9a-f]{64}") ||
                     !("code".equals(kind) || "native".equals(kind)))
-                throw new SecurityException("Некорректный элемент списка контроля целостности Runtime Guard: " + i);
+                throw new SecurityException("Некорректный элемент списка контроля целостности среды выполнения Guard: " + i);
             Path path = new File(new String(Base64.getDecoder().decode(raw), "UTF-8")).toPath().toAbsolutePath().normalize();
             if (!path.startsWith(root) || path.equals(root) || digests.put(path, hash) != null)
-                throw new SecurityException("Файл контроля целостности Runtime Guard находится вне каталога или повторяется: " + i);
+                throw new SecurityException("Файл контроля целостности среды выполнения Guard находится вне каталога или повторяется: " + i);
             kinds.put(path, kind);
         }
         int externalCount;
@@ -158,7 +158,7 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
             throw new SecurityException("Исполняемый объект не является обычным файлом: " + absolute);
         String expected=digests.get(absolute);
         if (expected==null || !expected.equals(digest(absolute)))
-            throw new SecurityException("Подписанный файл Runtime отсутствует или заменён: " + absolute);
+            throw new SecurityException("Подписанный файл среды выполнения отсутствует или заменён: " + absolute);
     }
 
     private void scan() throws Exception {
@@ -196,7 +196,7 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                      name.endsWith(".dylib") || name.endsWith(".jnilib"));
                 if (executable) {
                     Path normalized=path.toAbsolutePath().normalize();
-                    if (!digests.containsKey(normalized)) throw new SecurityException("Неодобренный файл Runtime: "+path);
+                    if (!digests.containsKey(normalized)) throw new SecurityException("Неодобренный файл среды выполнения: "+path);
                 }
             }
         }

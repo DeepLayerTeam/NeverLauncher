@@ -25,7 +25,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 4):
-    raise SystemExit(f"Guard Guard Attestation: требуется версия не ниже 0.13.4, получено {version}")
+    raise SystemExit(f"Аттестация Guard: требуется версия не ниже 0.13.4, получено {version}")
 
 attestation = read("runtime/runtime/src/attestation.rs")
 require(

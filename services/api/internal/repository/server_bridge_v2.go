@@ -363,7 +363,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 	now = now.UTC()
 	if currentRuntimeID == runtime.RuntimeID {
 		if currentDigest == "" || !strings.EqualFold(currentDigest, runtime.IdentityDigest) {
-			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: Идентификатор среды выполнения изменён для существующей записи Runtime", ErrConflict)
+			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: Идентификатор среды выполнения изменён для существующей записи", ErrConflict)
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET
 			fingerprint=CASE WHEN fingerprint='' AND btrim($3)<>'' THEN 'plugin:'||btrim($3) ELSE fingerprint END,
@@ -395,7 +395,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 
 	previousRuntimeID := currentRuntimeID
 	if previousRuntimeID != "" && currentStartedAt.Valid && !runtime.StartedAt.After(currentStartedAt.Time) {
-		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: экземпляр Runtime старше активного", ErrConflict)
+		return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: экземпляр среды выполнения старше активного", ErrConflict)
 	}
 	replacementDetected := previousRuntimeID != "" && currentLastSeenAt.Valid && currentLastSeenAt.Time.After(now.Add(-serverBridgeFreshness0149))
 	transition := "started"
@@ -513,7 +513,7 @@ func (r *SQLRepository) SaveServerBridgeTelemetry(ctx context.Context, serverID 
 		return err
 	}
 	if n, _ := res.RowsAffected(); n != 1 {
-		return fmt.Errorf("%w: активный Runtime изменился либо данные телеметрии устарели", ErrConflict)
+		return fmt.Errorf("%w: активная среда выполнения изменилась либо данные телеметрии устарели", ErrConflict)
 	}
 	// Ограничивайте историю каждого узла, даже если общее обслуживание задерживается.
 	if telemetry.Sequence%64 == 0 {
@@ -560,7 +560,7 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 		return model.ServerBridgeEventAppendResult{}, err
 	}
 	if status != "active" || currentRuntimeEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntimeID), runtimeID) {
-		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: Runtime события неактивен", ErrConflict)
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: Среда выполнения события неактивна", ErrConflict)
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_event_cursors_v3(server_id,runtime_epoch,runtime_id,ack_sequence,updated_at)
 		VALUES($1,$2,$3,0,$4) ON CONFLICT(server_id,runtime_epoch) DO NOTHING`, serverID, runtimeEpoch, runtimeID, now.UTC()); err != nil {
@@ -572,7 +572,7 @@ func (r *SQLRepository) AppendServerBridgeEvents(ctx context.Context, serverID s
 		return model.ServerBridgeEventAppendResult{}, err
 	}
 	if !strings.EqualFold(strings.TrimSpace(cursorRuntime), runtimeID) {
-		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: курсор событий не соответствует Runtime", ErrConflict)
+		return model.ServerBridgeEventAppendResult{}, fmt.Errorf("%w: курсор событий не соответствует среде выполнения", ErrConflict)
 	}
 	inserted := 0
 	var previousBatchSequence int64
@@ -1029,7 +1029,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	// Передачи управления устаревшего v2 не подтверждают текущую пропускную способность маршрутизации. После
 	// установки ограничения оператором разрешены только передачи v3, привязанные к Runtime.
 	if targetOperatorCapacity.Valid && !routingV3 {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: для расчёта ёмкости оператора требуется маршрутизация, привязанная к Runtime", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: для расчёта вместимости, заданной оператором, требуется маршрутизация, привязанная к среде выполнения", ErrConflict)
 	}
 	if routingV3 {
 		if len(targetRuntimeID) != 64 || targetRuntimeEpoch < 1 || targetRouteRevision < 1 || len(targetRouteDigest) != 64 || targetRouteSignature == "" ||
@@ -1113,7 +1113,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: v3 handoff: требуется «сеанс игрока, привязанный к среде выполнения»", ErrConflict)
 	}
 	if expectedCorrelation != "" && !lifecycleTransfer {
-		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: для передачи сеанса игрока нужны источник и назначение, привязанные к Runtime по протоколу v3", ErrConflict)
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: для передачи сеанса игрока нужны источник и назначение, привязанные к среде выполнения по протоколу v3", ErrConflict)
 	}
 	if lifecycleTransfer {
 		h.SessionCorrelationID = strings.ToLower(strings.TrimSpace(sourceJoin.SessionCorrelationID))
@@ -1509,7 +1509,7 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 		return model.ServerBridgeControlCommand{}, false, err
 	}
 	if status != "active" || activeEpoch != c.RuntimeEpoch || !strings.EqualFold(strings.TrimSpace(activeRuntime), c.RuntimeID) {
-		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: Runtime управления неактивен", ErrConflict)
+		return model.ServerBridgeControlCommand{}, false, fmt.Errorf("%w: Среда выполнения управления неактивна", ErrConflict)
 	}
 	if existing, scanErr := scanServerBridgeControl0195(tx.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE server_id=$1 AND requested_by=$2 AND idempotency_key=$3`, c.ServerID, c.RequestedBy, c.IdempotencyKey)); scanErr == nil {
 		if !strings.EqualFold(existing.RequestDigest, c.RequestDigest) {
@@ -1591,7 +1591,7 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 		return model.ServerBridgeControlCommand{}, err
 	}
 	if status != "active" || currentEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntime), runtimeID) {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: Runtime управления неактивен", ErrConflict)
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: Среда выполнения управления неактивна", ErrConflict)
 	}
 	// Истечение аренды, допустимость ожидающих команд и согласование Runtime используют единые авторитетные
 	// часы, даже если время NTP у реплик API различается.

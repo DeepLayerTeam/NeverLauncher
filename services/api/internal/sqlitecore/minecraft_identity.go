@@ -91,7 +91,7 @@ func (a *Auth) MinecraftIdentity(ctx context.Context, userID string) (p model.Mi
 // пользователя немедленно аннулирует токен через auth_epoch.
 func (a *Auth) IssueMinecraftSession(ctx context.Context, Access string, ttl time.Duration) (string, string, error) {
 	if ttl <= 0 || ttl > 24*time.Hour {
-		return "", "", errors.New("Minecraft token TTL: требуется «<=24h»")
+		return "", "", errors.New("Срок действия токена Minecraft не должен превышать 24 часа")
 	}
 	principal, e := a.ValidateAccess(ctx, Access)
 	if e != nil {
@@ -170,7 +170,7 @@ func (a *Auth) ValidateMinecraftSession(ctx context.Context, raw string) (model.
 // сеанс. Владение сеансом проверяется в той же транзакции.
 func (a *Auth) RevokeMinecraftSession(ctx context.Context, userID, id, reason string) error {
 	if userID == "" || id == "" || strings.TrimSpace(reason) == "" {
-		return errors.New("Требуется: owner/session/reason")
+		return errors.New("Требуются поля owner, session и reason")
 	}
 	return a.repo.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		var owner string

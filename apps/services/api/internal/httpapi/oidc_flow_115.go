@@ -234,7 +234,7 @@ func (s Server) writeOIDCError115(w http.ResponseWriter, err error) {
 	case http.StatusBadRequest:
 		writeError(w, status, "Поставщик OIDC не поддерживает вход через браузер")
 	case http.StatusForbidden:
-		writeError(w, status, "учётная запись недоступна или identity не связана")
+		writeError(w, status, "учётная запись недоступна или не привязана")
 	case http.StatusConflict:
 		writeError(w, status, "Внешняя учётная запись конфликтует с существующей учётной записью; требуется явное связывание")
 	case http.StatusServiceUnavailable:

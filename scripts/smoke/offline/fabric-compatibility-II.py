@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 1):
-    raise SystemExit(f"Fabric Compatibility II: требуется версия не ниже 0.17.1, получено {version}")
+    raise SystemExit(f"Совместимость Fabric II: требуется версия не ниже 0.17.1, получено {version}")
 
 
 def read(rel: str) -> str:

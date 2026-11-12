@@ -18,7 +18,7 @@
 | `securityLauncherGuard` | `protectedGameJoinAllowed` | `tamperedGuardJoinDenied` | Desktop → игра → сервер |
 | `securityKeyRevocation` | `currentKeyJoinAllowed` | `revokedKeyJoinDenied` | Backend + игровой сервер |
 | `securityAccountRecovery` | `newDeviceRecoveryAllowed` | `oldRecoveryKeyDenied` | Клиент + backend |
-| `securityNativeSandbox` | `authorizedExtensionBrokerAllowed` | `unauthorizedExtensionAccessDenied` | **Backend native extension host**, не Desktop |
+| `securityNativeSandbox` | `authorizedExtensionBrokerAllowed` | `unauthorizedExtensionAccessDenied` | **нативный хост расширений серверной части**, не Desktop |
 
 Это минимальные обязательные наблюдения; другие проверки предыдущих релизов
 не отменены. Их список **зашит в верификатор**, его нельзя сократить из

@@ -1,6 +1,10 @@
 /** Локализация пользовательских статусов обращений; коды API сохраняются. */
 export function statusRuDesktop(value: string | null | undefined): string {
   const labels: Record<string, string> = {
+    "sandbox-host-socket-already-consumed": "Сокет хоста песочницы уже использован",
+    "sandbox-package-reparse-point-rejected": "Точка повторной обработки в пакете песочницы отклонена",
+    "authorization-denied": "В авторизации отказано",
+    "authorization-revoked": "Авторизация отозвана",
     // События журнала аудита из серверных обработчиков и хранилищ.
     "admin:login": "Вход администратора",
     "admin:login:failed": "Неудачный вход администратора",

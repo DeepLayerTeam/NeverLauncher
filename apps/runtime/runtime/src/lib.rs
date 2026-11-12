@@ -1720,7 +1720,7 @@ async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &Laun
         let rel = rel.to_str().ok_or("Путь к JAR содержит символы вне UTF-8")?.replace('\\', "/");
         paths.insert(rel);
     }
-    // Метаданные Compatibility Engine тоже должны побайтово совпадать с
+    // Метаданные механизма совместимости тоже должны побайтово совпадать с
     // подписанными. Иначе локальное редактирование JSON изменит параметры
     // запуска при том же подписанном релизе и снимке профиля.
     let active=component_catalog_0241::active_files(manifest,transactional_release::active_preset_for_manifest(manifest,root).as_deref())?;

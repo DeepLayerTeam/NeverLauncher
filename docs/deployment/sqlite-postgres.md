@@ -50,4 +50,4 @@ launcher-sqlite backup-verify --backup /private/recovered-core.db
 
 ## Новое в 0.47.3: импорт действующих данных SQLRepository
 
-Описанная выше `sqlite-to-postgres --ack-staging-only` остаётся переносом в **неизменяемый карантин**. Отдельный явный автономный перенос SQLite Core → **рабочий PostgreSQL Repository** описан в [`sqlite-postgres-live.md`](sqlite-postgres-live.md). Он требует чистой полностью мигрированной схемы PostgreSQL, блокирует неподдерживаемое активное состояние безопасности и долговременное состояние, **не** переключает Backend автоматически.
+Описанная выше `sqlite-to-postgres --ack-staging-only` остаётся переносом в **неизменяемый карантин**. Отдельный явный автономный перенос SQLite Core → **рабочее хранилище PostgreSQL** описан в [`sqlite-postgres-live.md`](sqlite-postgres-live.md). Он требует чистой полностью мигрированной схемы PostgreSQL, блокирует неподдерживаемое активное состояние безопасности и долговременное состояние, **не** переключает Backend автоматически.

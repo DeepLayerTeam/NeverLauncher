@@ -24,7 +24,7 @@ if triple(VERSION) < (0, 16, 0):
         f"Production Delivery Release: требуется версия не ниже 0.16.0, получено {VERSION}"
     )
 if "-" in VERSION or "+" in VERSION:
-    raise SystemExit(f"Production Delivery Release: требуется семантическая версия GA, получено {VERSION}")
+    raise SystemExit(f"Промышленный выпуск поставки: требуется семантическая версия GA, получено {VERSION}")
 
 impl = (ROOT / "cli/cmd/launcher/production_delivery_release_0160.go").read_text(
     encoding="utf-8"

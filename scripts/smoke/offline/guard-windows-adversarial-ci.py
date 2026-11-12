@@ -26,7 +26,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 11):
-    raise SystemExit(f"Windows Adversarial CI: требуется версия не ниже 0.18.11, получено {version}")
+    raise SystemExit(f"Проверки противодействия атакам Windows: требуется версия не ниже 0.18.11, получено {version}")
 
 runner = read("scripts/guard_ci/windows_adversarial.py")
 # Объявления сценариев многострочные в промышленном раннере: сохраняйте точные ID,

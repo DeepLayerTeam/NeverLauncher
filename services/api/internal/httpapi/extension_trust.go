@@ -70,7 +70,7 @@ func (s Server) extensionTrustPolicyPut02012(w http.ResponseWriter, r *http.Requ
 	}
 	blocked, sweepErr := s.enforceExtensionTrustRuntime02012(r.Context(), "trust-policy")
 	if sweepErr != nil {
-		writeError(w, 500, "Политика доверия сохранена, но применение в Runtime завершилось ошибкой: "+sweepErr.Error())
+		writeError(w, 500, "Политика доверия сохранена, но её применение в среде выполнения завершилось ошибкой: "+sweepErr.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:trust:policy", p.Mode)

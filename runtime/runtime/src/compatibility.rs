@@ -413,7 +413,7 @@ pub async fn resolve_compatibility(
         // До появления метаданных arguments.jvm старые выпуски Minecraft
         // полагались на лаунчер для путей нативных библиотек, идентичности
         // лаунчера и classpath. Сохраняйте это поведение, чтобы старый Vanilla
-        // запускался общим Compatibility Engine без особого устаревшего пути.
+        // запускался общим механизмом совместимости без особого устаревшего пути.
         raw_jvm_args = vec![
             "-Djava.library.path=${natives_directory}".to_string(),
             "-Dminecraft.launcher.brand=${launcher_name}".to_string(),

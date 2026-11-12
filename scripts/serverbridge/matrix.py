@@ -56,7 +56,7 @@ def load(path: Path) -> dict[str, Any]:
     ids: list[str] = []
     for i, row in enumerate(rows, 1):
         if not isinstance(row, dict):
-            raise SystemExit(f"target #{i}: требуется объект")
+            raise SystemExit(f"Цель №{i}: требуется объект")
         unknown = set(row) - allowed
         if unknown:
             raise SystemExit(f"Цель №{i} содержит неизвестные поля: {sorted(unknown)}")

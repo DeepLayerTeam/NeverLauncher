@@ -138,7 +138,7 @@ sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py verify \
 доступ к /ready, строгие ключи хоста SSH и пробы приложения через его уже
 существующий `launcher-api diagnose growth`: изоляция PostgreSQL, аренда блокировки Redis
 и S3 read/write/delete. Отдельно выполняет AWS SigV4 PUT→GET между
-различными прямыми S3 шлюзами, с TLS hostname verification. Отчёт не
+различными прямыми S3 шлюзами, с проверкой имени узла TLS. Отчёт не
 содержит DSN/секреты; отсутствие права или сервера — ошибка, не PASS.
 
 ## Испытания с имитацией отказов (ТОЛЬКО разрешённая тестовая среда)

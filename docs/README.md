@@ -19,7 +19,7 @@
 - [Матрица Minecraft и Java](clients/compatibility.md).
 - [Скины и плащи](textures/skins-and-capes.md).
 - [ServerBridge](servers/serverbridge.md).
-- [Extensions](extensions/overview.md) и [модель разрешений](extensions/security-and-lifecycle.md).
+- [Расширения](extensions/overview.md) и [модель разрешений](extensions/security-and-lifecycle.md).
 
 ## Надёжность и справочники
 

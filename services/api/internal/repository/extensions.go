@@ -82,7 +82,7 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 		}
 		for _, part := range strings.Split(target.Entrypoint, "/") {
 			if part == "" || part == "." || part == ".." {
-				return model.ExtensionManifest{}, "", fmt.Errorf("target %s entrypoint: требуется «корректный относительный путь без обхода каталогов»", target.Kind)
+				return model.ExtensionManifest{}, "", fmt.Errorf("Точка входа цели %s: требуется корректный относительный путь без выхода из каталога", target.Kind)
 			}
 		}
 		if _, duplicate := seenTargets[target.Kind]; duplicate {

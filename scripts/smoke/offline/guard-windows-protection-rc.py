@@ -26,7 +26,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 12):
-    raise SystemExit(f"Windows Protection RC: требуется версия не ниже 0.18.12, получено {version}")
+    raise SystemExit(f"Кандидат в выпуск защиты Windows: требуется версия не ниже 0.18.12, получено {version}")
 
 impl = read("cli/cmd/launcher/windows_protection_release_01812.go")
 require(

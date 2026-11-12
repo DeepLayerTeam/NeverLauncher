@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3])
 if core < (0, 17, 8):
-    raise SystemExit(f"Loader-native E2E: требуется версия не ниже 0.17.8, получено {version}")
+    raise SystemExit(f"Сквозные проверки нативных загрузчиков: требуется версия не ниже 0.17.8, получено {version}")
 
 
 def read(rel: str) -> str:
