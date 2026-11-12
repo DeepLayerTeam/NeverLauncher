@@ -65,7 +65,7 @@ async fn run(args: Vec<String>) -> Result<(), String> {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         #[cfg(windows)]
         println!(
-            "Guard {}\nИспользование: guard --pipe <local named pipe> --parent-pid <pid> [--protection-profile audit|compat|aggressive]\nНачальный секрет: ровно 32 исходных байта через стандартный ввод.",
+            "Guard {}\nИспользование: guard --pipe <локальный именованный канал> --parent-pid <pid> [--protection-profile audit|compat|aggressive]\nНачальный секрет: ровно 32 исходных байта через стандартный ввод.",
             env!("CARGO_PKG_VERSION")
         );
         #[cfg(target_os = "linux")]

@@ -305,7 +305,7 @@ func validateSQLitePrivateFields0471(raw []byte) error {
 		return err
 	}
 	if token != json.Delim('{') {
-		return errors.New("SQLite HTTP private state: требуется объект")
+		return errors.New("Приватное состояние SQLite HTTP: требуется объект")
 	}
 	seen := map[string]struct{}{}
 	for d.More() {

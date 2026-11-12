@@ -214,7 +214,7 @@ func (s Server) createOperationsBackup880(ctx context.Context) (map[string]any, 
 	backupID := "backup-" + time.Now().UTC().Format("20060102T150405.000000000Z")
 	root := s.operationsBackupRoot880()
 	if err := os.MkdirAll(root, 0o700); err != nil {
-		return nil, fmt.Errorf("не удалось создать backup root: %w", err)
+		return nil, fmt.Errorf("Не удалось создать корневой каталог резервных копий: %w", err)
 	}
 	stage, err := os.MkdirTemp(root, ".stage-"+backupID+"-")
 	if err != nil {
@@ -868,7 +868,7 @@ func (s Server) verifyOperationsBackup880(ctx context.Context, path, backupID st
 		"databaseDump":   databaseDumpStatus,
 		"storageObjects": manifest.StorageObjects,
 		"restoreMode":    "dry-run",
-		"wouldRestore":   []string{"PostgreSQL database.dump при database=true", "storage objects при storage=true"},
+		"wouldRestore":   []string{"PostgreSQL database.dump при database=true", "объекты хранилища при storage=true"},
 	}, nil
 }
 

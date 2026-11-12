@@ -9,7 +9,7 @@ API_URL="http://${API_ADDR}"
 LOG_FILE="${TMPDIR:-/tmp}/launcher-auth-session-smoke.log"
 
 if [[ ! -x "${API_BIN}" ]]; then
-  echo "[Launcher] API binary не найден, собираю offline memory-only" >&2
+  echo "[Launcher] Исполняемый файл API не найден, собирается автономная версия с хранением в памяти" >&2
   ( cd "${ROOT_DIR}/services/api" && go build -tags launcher_nopgx -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o launcher-api ./cmd/launcher-api )
   API_BIN="${ROOT_DIR}/services/api/launcher-api"
 fi
@@ -28,7 +28,7 @@ curl -fsS "${API_URL}/health" | grep -q "${VERSION}"
 
 status=$(curl -sS -o /tmp/nl-auth-smoke-unauth.json -w '%{http_code}' "${API_URL}/api/v1/auth/accounts")
 if [[ "${status}" != "401" ]]; then
-  echo "Ожидался 401 для protected endpoint без токена, получено ${status}" >&2
+  echo "Ожидался 401 для защищённой конечной точки без токена, получено ${status}" >&2
   cat /tmp/nl-auth-smoke-unauth.json >&2 || true
   exit 1
 fi
@@ -73,13 +73,13 @@ status=$(curl -sS -o /tmp/nl-auth-smoke-replay.json -w '%{http_code}' -X POST "$
   -H 'Content-Type: application/json' \
   -d "{\"refreshToken\":\"${replay_old}\"}")
 if [[ "${status}" != "401" ]]; then
-  echo "Ожидался 401 при replay consumed refresh token, получено ${status}" >&2
+  echo "Ожидался 401 при повторном использовании уже использованного токена обновления, получено ${status}" >&2
   cat /tmp/nl-auth-smoke-replay.json >&2 || true
   exit 1
 fi
 status=$(curl -sS -o /tmp/nl-auth-smoke-family-revoked.json -w '%{http_code}' "${API_URL}/api/v1/auth/accounts" -H "Authorization: Bearer ${replay_access}")
 if [[ "${status}" != "401" ]]; then
-  echo "Ожидался 401 для access token из compromised refresh family, получено ${status}" >&2
+  echo "Ожидался 401 для токена доступа из скомпрометированной группы токенов обновления, получено ${status}" >&2
   cat /tmp/nl-auth-smoke-family-revoked.json >&2 || true
   exit 1
 fi

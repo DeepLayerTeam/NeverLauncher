@@ -1044,7 +1044,7 @@ func loadNodeIdentityPublic0199(path string) (bridgeIdentityMaterial0199, error)
 		return bridgeIdentityMaterial0199{}, err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return bridgeIdentityMaterial0199{}, fmt.Errorf("node identity: требуется «обычный файл, не являющийся символической ссылкой:» %s", path)
+		return bridgeIdentityMaterial0199{}, fmt.Errorf("Идентификатор узла: требуется обычный файл, не являющийся символической ссылкой: %s", path)
 	}
 	if err := verifyNodeIdentityPermissions0199(path, info); err != nil {
 		return bridgeIdentityMaterial0199{}, err

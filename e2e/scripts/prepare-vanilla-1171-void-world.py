@@ -170,4 +170,4 @@ if __name__ == '__main__':
     try:
         raise SystemExit(main())
     except (NBTError, EOFError, OSError, ValueError, struct.error) as exc:
-        raise SystemExit(f'[matching-e2e] level.dat validation: ошибка — {exc}') from exc
+        raise SystemExit(f'[matching-e2e] Проверка level.dat: ошибка — {exc}') from exc

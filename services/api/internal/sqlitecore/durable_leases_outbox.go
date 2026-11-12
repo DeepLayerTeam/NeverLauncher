@@ -108,7 +108,7 @@ func (r *Repository) CommitFencedJob(ctx context.Context, jobID, jobToken, scope
 		return
 	}
 	if apply == nil || fence <= 0 {
-		return out, errors.New("fenced commit: требуется «ненулевая операция изменения базы данных и эпоха»")
+		return out, errors.New("Фиксация с защитой от устаревшего владельца: требуются непустая операция изменения базы данных и ненулевая эпоха")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		now := durableNS()

@@ -1088,7 +1088,7 @@ fn ensure_neoforge_bootstrap_ignores_base_client(jvm_args: &mut Vec<String>, cli
         .rsplit('/')
         .next()
         .filter(|value| !value.trim().is_empty())
-        .ok_or_else(|| "ModLauncher base client JAR path не содержит filename".to_string())?;
+        .ok_or_else(|| "Путь к базовому JAR клиента ModLauncher не содержит имени файла".to_string())?;
 
     for arg in jvm_args.iter_mut() {
         let Some(list) = arg.strip_prefix("-DignoreList=") else {
@@ -1229,7 +1229,7 @@ fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
         current.push(value);
         match std::fs::symlink_metadata(&current) {
             Ok(metadata) if metadata.file_type().is_symlink() => {
-                return Err(format!("compatibility path содержит symlink: {}", current.display()));
+                return Err(format!("Путь совместимости содержит символическую ссылку: {}", current.display()));
             }
             Ok(_) => {}
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => break,

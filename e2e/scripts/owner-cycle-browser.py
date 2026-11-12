@@ -271,7 +271,7 @@ async def main():
                 ).wait_for(timeout=20000)
                 receipt["checks"].append("reload-recovered-original-job")
                 await page.get_by_text(
-                    "Подтверждено Backend: channel head обновлён"
+                    "Подтверждено сервером: головная версия канала обновлена"
                 ).wait_for(timeout=90000)
                 published = await data(heads)
                 if (
@@ -294,7 +294,7 @@ async def main():
                 )
                 await page.get_by_role("button", name="Выполнить откат").click()
                 await page.get_by_text(
-                    "Подтверждено Backend: channel head обновлён"
+                    "Подтверждено сервером: головная версия канала обновлена"
                 ).wait_for(timeout=90000)
                 rolled_back = await data(heads)
                 if (

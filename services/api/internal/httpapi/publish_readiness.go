@@ -74,7 +74,7 @@ func (s Server) evaluatePublishReadiness0385(ctx context.Context, lookup package
 		if err != nil && !errors.Is(err, repository.ErrNotFound) {
 			add("integrity-store-unavailable", release.ID, "Не удалось получить результат проверки целостности: "+err.Error(), "Восстановите Backend/repository перед публикацией.")
 		} else if err != nil || integrity.Result != "passed" || integrity.ManifestDigest != md || integrity.ArtifactDigest != fd || !integrity.SignatureVerified || !integrity.FilesVerified || !integrity.CompatibilityVerified {
-			add("integrity-pass-missing", release.ID, "Нет актуального integrity PASS, привязанного к точному манифесту и файлам.", "После исправления ошибок выполните Stage и Integrity check.")
+			add("integrity-pass-missing", release.ID, "Нет актуальной успешной проверки целостности, привязанной к точному манифесту и файлам.", "После исправления ошибок выполните подготовку выпуска и проверку целостности.")
 		}
 	}
 	if repository.IsStableChannel0341(release.Channel) {

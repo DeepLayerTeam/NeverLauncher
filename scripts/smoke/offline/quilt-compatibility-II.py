@@ -89,7 +89,7 @@ require(
     [
         'defaultQuiltMetaBase  = "https://meta.quiltmc.org/v3"',
         "isStableQuiltLoaderVersion",
-        "стабильную %s loader version",
+        "стабильную версию загрузчика %s",
         "profile/json",
         "materializeLoaderLibraries",
         "installed-and-verified",

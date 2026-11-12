@@ -234,7 +234,7 @@ func quarantineCompatibilityArtifact(root, relative, reason string) (bool, error
 		return false, err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return false, fmt.Errorf("повреждённый cache artifact имеет небезопасный тип: %s", relative)
+		return false, fmt.Errorf("Повреждённый артефакт кеша имеет небезопасный тип: %s", relative)
 	}
 	quarantineDir, err := secureClientDestination(root, ".launcher/quarantine")
 	if err != nil {

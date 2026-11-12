@@ -108,7 +108,7 @@ func (r *Repository) CreateDraft(ctx context.Context, projectID, profileID, chan
 }
 func (r *Repository) UpdateDraftManifest(ctx context.Context, projectID, releaseID string, m model.Manifest, actor string) (v model.ReleaseVersion, err error) {
 	if strings.TrimSpace(actor) == "" {
-		return v, errors.New("manifest mutation: требуется автор аудита")
+		return v, errors.New("Изменение манифеста: требуется автор записи аудита")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		current, e := scanRelease(q.QueryRowContext(ctx, "SELECT "+releaseFields+" FROM releases WHERE project_id=? AND id=?", projectID, releaseID))

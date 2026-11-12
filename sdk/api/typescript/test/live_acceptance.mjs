@@ -1,7 +1,7 @@
 // Настоящая межъязыковая проверка SDK, а не имитация клиента через fetch().
 import { NeverLauncherAPI } from '../dist/client.js';
 import { createHash } from 'node:crypto';
-const need = (name) => {const v = process.env[name]; if (!v) throw new Error(`missing live SDK setting ${name}`); return v;};
+const need = (name) => {const v = process.env[name]; if (!v) throw new Error(`Не задан параметр рабочей проверки SDK ${name}`); return v;};
 try {
  const api = new NeverLauncherAPI(need('NL_GA_ORIGIN'), need('NL_GA_BEARER'));
  await api.checkCompatibility();

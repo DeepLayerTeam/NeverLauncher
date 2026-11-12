@@ -35,7 +35,7 @@ fn user_cache_root() -> Result<PathBuf, String> {
         .filter(|p| p.is_absolute())
         .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")));
     let base = path.ok_or("Нет пользовательского каталога кеша (отсутствуют HOME/LOCALAPPDATA)")?;
-    if !base.is_absolute() { return Err("cache base: требуется «абсолютный путь»".into()); }
+    if !base.is_absolute() { return Err("Базовый каталог кеша: требуется абсолютный путь".into()); }
     Ok(base.join("Launcher").join("content-v1"))
 }
 

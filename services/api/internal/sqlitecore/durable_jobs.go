@@ -90,7 +90,7 @@ func (r *Repository) GetDurableJob(ctx context.Context, id string) (j model.Dura
 // Ключи идемпотентности не удаляются автоматически; повтор после сбоя требует учёта сохранённого состояния.
 func (r *Repository) EnqueueDurableJob(ctx context.Context, j model.DurableJob, _ time.Duration) (out model.DurableJob, created bool, err error) {
 	if !durableFieldsNonempty(j.Kind, j.ActorType, j.ActorID, j.Action, j.ResourceType, j.ResourceID, j.IdempotencyKey) || (j.ProjectID != "" && !durableFieldsNonempty(j.ProjectID)) {
-		return out, false, errors.New("durable job: требуется «корректные идентификатор, действие, ресурс и ключ идемпотентности»")
+		return out, false, errors.New("Устойчивое задание: требуются корректные идентификатор, действие, ресурс и ключ идемпотентности")
 	}
 	if j.MaxAttempts == 0 {
 		j.MaxAttempts = 8

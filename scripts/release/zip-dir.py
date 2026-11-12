@@ -14,7 +14,7 @@ if not src.is_dir():
     raise SystemExit(f"Отсутствует: каталог: {src}")
 out.parent.mkdir(parents=True, exist_ok=True)
 if out.is_relative_to(src):
-    raise SystemExit("release directory ZIP output: требуется «вне исходного каталога»")
+    raise SystemExit("Выходной ZIP выпуска должен находиться вне исходного каталога")
 members = []
 for path in sorted(src.rglob("*")):
     if path.is_symlink():

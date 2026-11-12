@@ -624,7 +624,7 @@ async fn save_desktop_config_impl_0352(config: DesktopConfig, complete_for_diges
     }.await;
     if result.is_err(){let _=fs::remove_file(&temp).await;}
     result?;
-    Ok(DesktopBindingResult { status: "saved".into(), config_path: path.to_string_lossy().to_string(), game_directory: cfg.game_directory, message: "desktop binding сохранён и проверен native trust verifier".into() })
+    Ok(DesktopBindingResult { status: "saved".into(), config_path: path.to_string_lossy().to_string(), game_directory: cfg.game_directory, message: "Привязка Desktop сохранена и проверена нативным механизмом доверия".into() })
 }
 #[tauri::command]
 async fn save_desktop_config(config: DesktopConfig)->Result<DesktopBindingResult,String>{
@@ -668,7 +668,7 @@ async fn reset_desktop_binding() -> Result<DesktopBindingResult, String> {
     }
     if fs::metadata(&path).await.is_ok(){fs::remove_file(&path).await.map_err(|e|e.to_string())?;}
     let cfg=default_desktop_config();
-    Ok(DesktopBindingResult {status:"reset".into(),config_path:path.to_string_lossy().to_string(),game_directory:cfg.game_directory,message:"desktop binding сброшен".into()})
+    Ok(DesktopBindingResult {status:"reset".into(),config_path:path.to_string_lossy().to_string(),game_directory:cfg.game_directory,message:"Привязка Desktop сброшена".into()})
 }
 
 #[tauri::command]

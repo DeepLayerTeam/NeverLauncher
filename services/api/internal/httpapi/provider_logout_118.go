@@ -28,7 +28,7 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusNotFound, "provider identity не связана с текущей учётной записью")
+		writeError(w, http.StatusNotFound, "Идентификатор поставщика не связан с текущей учётной записью")
 		return
 	}
 	store, err := s.providerCredentialRepository116()
@@ -38,7 +38,7 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 	}
 	credential, err := store.GetProviderCredentialByIdentity(claims.Sub, identity.ID)
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusConflict, "provider credential отсутствует; Never session не изменена")
+		writeError(w, http.StatusConflict, "Учётные данные поставщика отсутствуют; сеанс Never не изменён")
 		return
 	}
 	if err != nil {

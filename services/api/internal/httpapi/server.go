@@ -285,7 +285,7 @@ func withCORS(next http.Handler, allowedOrigins []string) http.Handler {
 			w.Header().Add("Vary", "Origin")
 			if _, ok := allowed[origin]; !ok {
 				if r.Method == http.MethodOptions {
-					writeError(w, http.StatusForbidden, "CORS origin не разрешён")
+					writeError(w, http.StatusForbidden, "Источник CORS не разрешён")
 					return
 				}
 			} else {

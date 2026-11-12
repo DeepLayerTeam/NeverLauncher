@@ -1388,7 +1388,7 @@ if (
     or 'command.args(["-XshowSettings:properties", "-version"])' not in managed_java
 ):
     fail("кешированная управляемая Java должна выполнять полную самопроверку JVM для целевых ОС и архитектуры")
-if "compatibility path содержит symlink" not in runtime_compat:
+if "Путь совместимости содержит символическую ссылку" not in runtime_compat:
     fail("движок совместимости Runtime должен отклонять символические ссылки в компонентах пути")
 for required in [
     "ensure_neoforge_bootstrap_ignores_base_client",
@@ -2139,28 +2139,28 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
         "subtle.ConstantTimeCompare",
     ]:
         if required not in crypto_identity_0142:
-            fail(f"0.14.2 signed node authentication — не завершено: {required}")
+            fail(f"0.14.2 аутентификация узла с подписью — не завершено: {required}")
     for required in [
         "RotateServerBridgeNodeIdentity",
         "server_bridge_node_nonces_v2",
         '"replayProtection": "postgresql-single-use-nonce"',
     ]:
         if required not in crypto_repo_0142:
-            fail(f"0.14.2 PostgreSQL node identity repository — не завершено: {required}")
+            fail(f"0.14.2 репозиторий идентификаторов узлов PostgreSQL — не завершено: {required}")
     for required in [
         'KeyPairGenerator.getInstance("Ed25519")',
         "privateKeyPkcs8",
         "rw-------",
     ]:
         if required not in crypto_java_identity_0142:
-            fail(f"0.14.2 plugin node private-key lifecycle — не завершено: {required}")
+            fail(f"0.14.2 жизненный цикл закрытого ключа узла плагина — не завершено: {required}")
     for required in [
         "Launcher-ServerBridge-Node-v1",
         "X-Launcher-Node-Signature",
         "identity.sign(canonical)",
     ]:
         if required not in crypto_java_client_0142:
-            fail(f"0.14.2 plugin request signing — не завершено: {required}")
+            fail(f"0.14.2 подпись запросов плагина — не завершено: {required}")
     if "X-Launcher-Server-Token" in crypto_java_client_0142:
         fail("0.14.2 плагин всё ещё использует общий bearer-токен аутентификации ServerBridge")
     if (
@@ -2216,14 +2216,14 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
         "minecraft_joins_0143_terminal_check",
     ]:
         if required not in ticket_migration_0143:
-            fail(f"0.14.3 one-time join migration — не завершено: {required}")
+            fail(f"0.14.3 миграция одноразового подключения — не завершено: {required}")
     for required in [
         "make([]byte, 24)",
         "rand.Read(buf)",
         '"jt_" + base64.RawURLEncoding.EncodeToString(buf)',
     ]:
         if required not in ticket_helper_0143:
-            fail(f"0.14.3 CSPRNG ticket generation — не завершено: {required}")
+            fail(f"0.14.3 генерация билетов криптографически стойким генератором — не завершено: {required}")
     for required in [
         "ConsumeServerBridgeJoinTicket",
         "j.ticket_version=2",
@@ -2234,7 +2234,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
             fail(f"0.14.3 atomic ServerBridge redemption — не завершено: {required}")
     for required in ["ConsumeMinecraftJoin", "status='consumed'", "status='active'"]:
         if required not in minecraft_repo_0143:
-            fail(f"0.14.3 Yggdrasil consume-once repository — не завершено: {required}")
+            fail(f"0.14.3 репозиторий одноразового использования Yggdrasil — не завершено: {required}")
     if (
         "serverbridge-one-time-join-tickets-0143.py" not in preflight
         or "serverbridge-one-time-join-tickets-0143.py" not in ci
@@ -2286,7 +2286,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Контрольная сумма или размер артефакта поставки",
     ]:
         if required not in delivery_0151:
-            fail(f"0.15.1 delivery implementation — не завершено: {required}")
+            fail(f"0.15.1 реализация доставки — не завершено: {required}")
     for required in [
         "writeDeliveryManifest0151(out, ver)",
         "verifyDeliveryManifest0151(out, ver)",
@@ -2362,7 +2362,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "launcher-linux-${arch}-${VERSION}.tar.gz",
     ]:
         if required not in linux_release_0153:
-            fail(f"0.15.3 release staging — не завершено: {required}")
+            fail(f"0.15.3 подготовка выпуска — не завершено: {required}")
     for required in [
         "linux-production:",
         "ubuntu-24.04-arm",
@@ -2430,7 +2430,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "spctl --assess",
     ]:
         if required not in macos_builder_0154:
-            fail(f"0.15.4 macOS production builder — не завершено: {required}")
+            fail(f"0.15.4 сборщик промышленного выпуска macOS — не завершено: {required}")
     for required in [
         "MACOS_PACKAGE_MANIFEST_",
         "MACOS_NOTARIZATION_EVIDENCE.json",
@@ -2445,7 +2445,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "MACOS_NOTARIZATION_EVIDENCE.json",
     ]:
         if required not in macos_release_0154:
-            fail(f"0.15.4 release staging — не завершено: {required}")
+            fail(f"0.15.4 подготовка выпуска — не завершено: {required}")
     for required in [
         "MACOS_DEVELOPER_ID_P12_BASE64",
         "APPLE_NOTARY_PRIVATE_KEY_BASE64",
@@ -2454,7 +2454,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "--production",
     ]:
         if required not in macos_workflow_0154:
-            fail(f"0.15.4 production notarization workflow — не завершено: {required}")
+            fail(f"0.15.4 процесс нотариального заверения промышленного выпуска — не завершено: {required}")
     for required in [
         "MACOS_NOTARIZATION_EVIDENCE.json",
         "MACOS_PACKAGE_MANIFEST_X64.json",
@@ -2537,7 +2537,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "delivery verify-jre",
     ]:
         if required not in jre_workflow_0155:
-            fail(f"0.15.5 Managed JRE production workflow — не завершено: {required}")
+            fail(f"0.15.5 процесс промышленного выпуска управляемой JRE — не завершено: {required}")
     for required in [
         "managed-jre-production:",
         "Управляемая Java II — сквозные проверки Java 8/16/17/21/25 и поставка Temurin 21",
@@ -2545,7 +2545,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "name: launcher-managed-jre-${{ github.sha }}",
     ]:
         if required not in ci:
-            fail(f"0.15.5 Managed JRE main certification не завершена: {required}")
+            fail(f"0.15.5 основная сертификация управляемой JRE не завершена: {required}")
     for required in [
         "Download Managed JRE six-target production assets",
         "path: managed-jre-artifacts",
@@ -2677,7 +2677,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "vanilla-1.20.4-linux-x64",
     ]:
         if target not in targets_0166:
-            fail(f"0.16.6 Java 16/17 actual-client target — отсутствует: {target}")
+            fail(f"0.16.6 Java 16/17 цель реального клиента — отсутствует: {target}")
     for required in [
         "JAVA16_17_VANILLA_0166",
         "Java 16/17 Vanilla 0.16.6",
@@ -2696,7 +2696,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         corpus = vanilla_tests_0166 + release_tests_0166 + matrix_tests_0166
         if required not in corpus:
-            fail(f"0.16.6 Java 16/17 Vanilla regression coverage — отсутствует: {required}")
+            fail(f"0.16.6 Java 16/17 покрытие регрессионными проверками Vanilla — отсутствует: {required}")
 
 
 # В 0.16.7: Vanilla с Java 21 проверяется материализатором, средой исполнения
@@ -2747,7 +2747,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         target = f"vanilla-{version}-linux-x64"
         if target not in targets_0167:
-            fail(f"0.16.7 Java 21 actual-client target — отсутствует: {target}")
+            fail(f"0.16.7 Java 21 цель реального клиента — отсутствует: {target}")
     for required in [
         "JAVA21_VANILLA_0167",
         "Java 21 Vanilla 0.16.7",
@@ -2765,7 +2765,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         corpus = vanilla_tests_0167 + release_tests_0167 + matrix_tests_0167
         if required not in corpus:
-            fail(f"0.16.7 Java 21 Vanilla regression coverage — отсутствует: {required}")
+            fail(f"0.16.7 Java 21 покрытие регрессионными проверками Vanilla — отсутствует: {required}")
 
 
 # В 0.16.8: Vanilla с Java 25 должен иметь исполняемый путь точной версии Java
@@ -2802,7 +2802,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for version in ["26.1", "26.1.1", "26.1.2", "26.3"]:
         target = f"vanilla-{version}-linux-x64"
         if target not in targets_0168:
-            fail(f"0.16.8 Java 25 actual-client target — отсутствует: {target}")
+            fail(f"0.16.8 Java 25 цель реального клиента — отсутствует: {target}")
     for required in [
         "JAVA25_VANILLA_0168",
         "Java 25 Vanilla 0.16.8",
@@ -2820,7 +2820,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         corpus = vanilla_tests_0168 + release_tests_0168 + matrix_tests_0168
         if required not in corpus:
-            fail(f"0.16.8 Java 25 Vanilla regression coverage — отсутствует: {required}")
+            fail(f"0.16.8 Java 25 покрытие регрессионными проверками Vanilla — отсутствует: {required}")
 
 
 # В 0.16.9: кроссплатформенная Vanilla должна запускаться на соответствующих нативных
@@ -2861,7 +2861,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "javaDistribution",
     ]:
         if required not in matrix_0169:
-            fail(f"0.16.9 compatibility host plan — не завершено: {required}")
+            fail(f"0.16.9 план совместимости хоста — не завершено: {required}")
     for required in [
         "runs-on: ${{ matrix.runner }}",
         "matrix.javaDistribution",
@@ -2871,14 +2871,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.16.9 проверка совместимости не привязана к хосту: {required}")
     for required in ["platform-runtime.json", "platformMatched", "runner mismatch"]:
         if required not in compat_case_0169:
-            fail(f"0.16.9 platform evidence — не завершено: {required}")
+            fail(f"0.16.9 подтверждения платформы — не завершено: {required}")
     for required in [
         '--target "$TARGET_OS/$TARGET_ARCH"',
         "xvfb-run",
         '[[ "$TARGET_OS" == "linux" ]]',
     ]:
         if required not in vanilla_case_0169:
-            fail(f"0.16.9 Vanilla native-host certification — не завершено: {required}")
+            fail(f"0.16.9 сертификация нативного хоста Vanilla — не завершено: {required}")
     for required in [
         "target.OS, target.Arch",
         "libraryArtifactAppliesToTarget",
@@ -2893,7 +2893,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "os_name_matches_environment",
     ]:
         if required not in runtime_compat_0169:
-            fail(f"0.16.9 Runtime native filtering — не завершено: {required}")
+            fail(f"0.16.9 фильтрация нативных библиотек среды выполнения — не завершено: {required}")
     if "base.join(platform).join(arch)" not in runtime_core_0169:
         fail("0.16.9 Runtime не изолирует нативные библиотеки по ОС и архитектуре")
     if "cross-platform-vanilla-windows-linux-macos-x64-arm64" not in release_0169:
@@ -2911,7 +2911,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             + release_tests_0169
         )
         if required not in corpus:
-            fail(f"0.16.9 cross-platform regression coverage — отсутствует: {required}")
+            fail(f"0.16.9 кроссплатформенное покрытие регрессионными проверками — отсутствует: {required}")
 
 
 # В 0.16.10: E2E настоящих клиентов II доказывает вход образцовых реальных
@@ -2941,7 +2941,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "installed-and-verified",
     ]:
         if required not in vanilla_01610:
-            fail(f"0.16.10 verified Mojang server materializer — не завершено: {required}")
+            fail(f"0.16.10 проверенный механизм подготовки сервера Mojang — не завершено: {required}")
     for target in [
         "vanilla-1.7.10-linux-x64",
         "vanilla-1.17.1-linux-x64",
@@ -2950,7 +2950,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "vanilla-26.3-linux-x64",
     ]:
         if target not in targets_01610:
-            fail(f"0.16.10 matching-server target — отсутствует: {target}")
+            fail(f"0.16.10 цель соответствующего сервера — отсутствует: {target}")
     if targets_01610.count('"matchingServer": true') < 5:
         fail("В версии 0.16.10 цели не привязаны к пяти контрольным парам совместимых серверов")
     for required in [
@@ -2981,7 +2981,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "matchingServer",
     ]:
         if required not in compat_case_01610:
-            fail(f"0.16.10 compatibility dispatcher — не завершено: {required}")
+            fail(f"0.16.10 диспетчер совместимости — не завершено: {required}")
     for required in [
         "ACTUAL_CLIENT_E2E_II_01610",
         "Actual Client E2E II 0.16.10",
@@ -2989,7 +2989,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "serverVersionMatched",
     ]:
         if required not in matrix_01610:
-            fail(f"0.16.10 matrix matching-server — проверка не завершена: {required}")
+            fail(f"0.16.10 матрица соответствующих серверов — проверка не завершена: {required}")
     for required in [
         "matrix.matchingServer",
         "vanilla-server-install.json",
@@ -2997,7 +2997,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "matching-server.log",
     ]:
         if required not in workflow_01610:
-            fail(f"0.16.10 workflow matching-server evidence — не завершено: {required}")
+            fail(f"0.16.10 подтверждения соответствующего сервера в процессе CI — не завершено: {required}")
     if "actual-client-e2e-II-real-clients-matching-mojang-servers" not in release_01610:
         fail("Сертификация релиза 0.16.10 не привязывает политику совместимых серверов")
     for required in [
@@ -3008,7 +3008,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         corpus = vanilla_tests_01610 + matrix_tests_01610 + release_tests_01610
         if required not in corpus:
-            fail(f"0.16.10 matching-server regression coverage — отсутствует: {required}")
+            fail(f"0.16.10 покрытие регрессионными проверками соответствующих серверов — отсутствует: {required}")
 
 
 # В 0.15.6: единое транзакционное ядро обновления должно реально обновлять файлы, не
@@ -3041,7 +3041,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         'Phase = "verifying"',
     ]:
         if required not in updater_core_0156:
-            fail(f"0.15.6 transactional updater core — не завершено: {required}")
+            fail(f"0.15.6 ядро транзакционного обновления — не завершено: {required}")
     for required in [
         "applyManifestUpdate0156",
         "runUpdaterSelfTest0156",
@@ -3049,7 +3049,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "durable-journal",
     ]:
         if required not in updater_cmd_0156:
-            fail(f"0.15.6 updater command path — не завершено: {required}")
+            fail(f"0.15.6 путь выполнения команды обновления — не завершено: {required}")
     for required in [
         "clientPackageConsumeTransactional0156",
         "client-repair",
@@ -3113,7 +3113,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "macosTreeRollback",
     ]:
         if required not in component_core_0157:
-            fail(f"0.15.7 component transactional updater — не завершено: {required}")
+            fail(f"0.15.7 транзакционное обновление компонентов — не завершено: {required}")
     for required in [
         'case "components":',
         'case "component-self-test":',
@@ -3130,7 +3130,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "exit_handle.exit(0)",
     ]:
         if required not in desktop_0157:
-            fail(f"0.15.7 Desktop self-update handoff — не завершено: {required}")
+            fail(f"0.15.7 передача управления самообновлению Desktop — не завершено: {required}")
     for required in [
         "runtime.exe",
         "launcher-cli.exe",
@@ -3138,14 +3138,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "authenticode-rfc3161",
     ]:
         if required not in windows_0157:
-            fail(f"0.15.7 Windows component package — не завершено: {required}")
+            fail(f"0.15.7 пакет компонентов Windows — не завершено: {required}")
     for required in [
         "COMPONENT_UPDATE_MANIFEST.json",
         "sha256-delivery",
         "runtime",
     ]:
         if required not in linux_0157:
-            fail(f"0.15.7 Linux component package — не завершено: {required}")
+            fail(f"0.15.7 пакет компонентов Linux — не завершено: {required}")
     for required in [
         "COMPONENT_UPDATE_MANIFEST.json",
         "macos-app-bundle",
@@ -3153,7 +3153,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "adhoc-development",
     ]:
         if required not in macos_0157:
-            fail(f"0.15.7 macOS component package — не завершено: {required}")
+            fail(f"0.15.7 пакет компонентов macOS — не завершено: {required}")
     for required in [
         "canonical_arch",
         "canonical_identity",
@@ -3161,7 +3161,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "MacOSPackageArtifact",
     ]:
         if required not in rust_guard_0157:
-            fail(f"0.15.7 Guard canonical package verification — не завершено: {required}")
+            fail(f"0.15.7 проверка канонического пакета Guard — не завершено: {required}")
     for required in [
         "TestComponentUpdateAdjacentCommit0157",
         "TestComponentTreePostVerifyFailureRollsBack0157",
@@ -3289,7 +3289,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "runtime-windows-arm64.exe",
     ]:
         if required not in build_release_0159:
-            fail(f"0.15.9 aggregate release staging — не завершено: {required}")
+            fail(f"0.15.9 aggregate подготовка выпуска — не завершено: {required}")
     for required in [
         "types: [published]",
         "delivery public-e2e",
@@ -3298,7 +3298,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "LAUNCHER_RELEASE_TRUST_POLICY_FILE",
     ]:
         if required not in workflow_0159:
-            fail(f"0.15.9 post-publish workflow — не завершено: {required}")
+            fail(f"0.15.9 процесс после публикации — не завершено: {required}")
     for required in [
         "TestPublicProductionDeliveryMatrix0159CoversSixTargets",
         "TestPublicProductionDeliveryMatrix0159RejectsMissingRuntime",
@@ -3380,14 +3380,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "precheckTrustState0158",
     ]:
         if required not in rv2_01510:
-            fail(f"0.15.10 trust-state migration — не завершено: {required}")
+            fail(f"0.15.10 миграция состояния доверия — не завершено: {required}")
     for required in [
         "removeUpdaterTerminalPayload01510",
         "removeSafeComponentTreePayload01510",
         "migrateComponentUpdateState01510",
     ]:
         if required not in update_01510:
-            fail(f"0.15.10 updater stabilization integration — не завершено: {required}")
+            fail(f"0.15.10 интеграция стабилизации обновления — не завершено: {required}")
     for required in [
         "migrationStabilizationRequired01510",
         "runMigrationStabilizationSelfTest01510",
@@ -3475,7 +3475,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "flat artifact payload содержит symlink",
     ]:
         if required not in artifact_layout_01511:
-            fail(f"0.15.11 exact artifact layout resolver — не завершено: {required}")
+            fail(f"0.15.11 механизм определения точной структуры артефакта — не завершено: {required}")
     if "PRODUCTION_RELEASE_CANDIDATE.json" not in bundle_gate_01511:
         fail("0.15.11 проверка набора выпуска не требует сертификации кандидата")
     for required in [
@@ -3485,7 +3485,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "TestNormalizeSourceCommit01511RejectsPlaceholders",
     ]:
         if required not in rc_tests_01511:
-            fail(f"0.15.11 production candidate — отсутствуют регрессионные тесты: {required}")
+            fail(f"0.15.11 кандидат промышленного выпуска — отсутствуют регрессионные тесты: {required}")
     if "Production release candidate 0.15.11 gate: OK" not in gate_01511:
         fail("0.15.11 обязательная проверка кандидата на промышленный выпуск не завершена")
     if (
@@ -3541,7 +3541,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "immutable version segment",
     ]:
         if required not in build_0160:
-            fail(f"0.16.0 production build integration — не завершено: {required}")
+            fail(f"0.16.0 интеграция промышленной сборки — не завершено: {required}")
     if "PRODUCTION_DELIVERY_RELEASE.json" not in bundle_0160:
         fail(
             "0.16.0 Проверка комплекта выпуска не требует сертификацию промышленной поставки"
@@ -3624,7 +3624,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.17.0 JRE attestation — не завершено: {required}")
     for required in ["certify-jre.py", '"jreCertified"', '"jreExecutableSha256"']:
         if required not in ga_case_0170:
-            fail(f"0.17.0 compatibility target JRE binding — не завершено: {required}")
+            fail(f"0.17.0 привязка JRE к цели совместимости — не завершено: {required}")
     for required in [
         "compatibilityIIGa0170Required",
         "compatibilityLegacyVanilla0170v1Required",
@@ -4061,7 +4061,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Forge Legacy 1.12.2 0.17.4",
     ]:
         if required not in legacy_matrix_0174:
-            fail(f"0.17.4 Forge legacy matrix — не завершено: {required}")
+            fail(f"0.17.4 матрица устаревших версий Forge — не завершено: {required}")
     for required in [
         "forgeLegacy1122_0174",
         "compatibilityForgeLegacy1122_0174Required",
@@ -4147,7 +4147,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "legacy_forge_native_classifier_without_downloads_is_resolved_from_maven_coordinate",
     ]:
         if required not in legacy_runtime_0175:
-            fail(f"0.17.5 Runtime legacy native resolution — не завершено: {required}")
+            fail(f"0.17.5 разрешение устаревших нативных библиотек среды выполнения — не завершено: {required}")
     for required in [
         "mc in ('1.7.10', '1.12.2')",
         "cpw.mods.fml.common.launcher.FMLTweaker",
@@ -4330,7 +4330,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.17.6 NeoForge публичный каталог загрузчиков всё ещё содержит заглушку")
     for required in ["neoforge-install.json", "neoforge-certification.json"]:
         if required not in neo_workflow_0176:
-            fail(f"0.17.6 NeoForge CI raw evidence — отсутствует: {required}")
+            fail(f"0.17.6 исходные подтверждения CI NeoForge — отсутствует: {required}")
     for required in [
         "TestCompatibilityCertificationNeoForgeII0176",
         "TestCompatibilityCertificationNeoForgeII0176BundleRejectsTamperedCoverage",
@@ -4339,7 +4339,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "26.2.0.75",
     ]:
         if required not in neo_tests_0176:
-            fail(f"0.17.6 NeoForge regression coverage — отсутствует: {required}")
+            fail(f"0.17.6 покрытие регрессионными проверками NeoForge — отсутствует: {required}")
     if "NeoForge Compatibility II 0.17.6 gate: OK" not in neo_gate_0176:
         fail("0.17.6 обязательная проверка: NeoForge — проверка не завершена")
     if (
@@ -4505,7 +4505,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loaderNativeClientJoin",
     ]:
         if required not in native_matrix_0178:
-            fail(f"0.17.8 matrix native enforcement — не завершено: {required}")
+            fail(f"0.17.8 принудительное соблюдение матрицы нативных компонентов — не завершено: {required}")
     for required in [
         "LoaderNativeTargets",
         "compatibilityLoaderNativeE2E0178Required",
@@ -4695,7 +4695,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-hardening-0.17.10-content-addressed-cache-pinned-upstream-installer-processor-crash-recovery",
     ]:
         if required not in hardening_release_01710:
-            fail(f"0.17.10 release hardening certification — не завершено: {required}")
+            fail(f"0.17.10 сертификация усиленной защиты выпуска — не завершено: {required}")
     for required in [
         "e2e/runtime/loader-hardening.json",
         "e2e/runtime/loader-hardening-package.json",
@@ -4710,7 +4710,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "test_01710_aggregate_rejects_missing_processor_recovery",
     ]:
         if required not in hardening_tests_01710:
-            fail(f"0.17.10 loader hardening — отсутствует регрессионный тест: {required}")
+            fail(f"0.17.10 усиленная защита загрузчика — отсутствует регрессионный тест: {required}")
     if "Loader Hardening 0.17.10 gate: OK" not in hardening_gate_01710:
         fail("0.17.10 обязательная проверка: усиление защиты загрузчика — проверка не завершена")
     if (
@@ -5264,7 +5264,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "report.hook_engine.intercepted_call_count >= 1",
     ]:
         if required not in hook_test_0184:
-            fail(f"0.18.4 real JVM hook integration regression — отсутствует: {required}")
+            fail(f"0.18.4 регрессионная проверка интеграции реального перехвата JVM — отсутствует: {required}")
     if "Aggressive Hook Engine I 0.18.4 gate: OK" not in hook_gate_0184:
         fail("0.18.4 обязательная проверка: Hook Engine — проверка не завершена")
     if (
@@ -5804,7 +5804,7 @@ for scenario_id, scenario_type in (
     # Проверяйте исполняемые объявления сценариев независимо от форматирования.
     pattern = r'Scenario\(\s*"' + re.escape(scenario_id) + r'"\s*,\s*"' + scenario_type + r'"'
     if not re.search(pattern, adversarial_runner_01811):
-        fail(f"0.18.11 в Windows Adversarial CI отсутствует {scenario_type} scenario: {scenario_id}")
+        fail(f"0.18.11 в Windows Adversarial CI отсутствует сценарий типа {scenario_type}: {scenario_id}")
 for required in (
     "CERTIFIED_JAVA_MAJORS = (8, 16, 17, 21, 25)",
     '"WINDOWS_ADVERSARIAL_CERTIFICATE.json"',
@@ -6041,7 +6041,7 @@ for required in [
     "validateContinuousGuardTicketForMinecraftSession01810",
 ]:
     if required not in server_bridge_0190:
-        fail(f"0.19.0 ServerBridge continuous ticket enforcement — отсутствует: {required}")
+        fail(f"0.19.0 непрерывная проверка билетов ServerBridge — отсутствует: {required}")
 if (
     "guard-windows-protection-ga-0190.py" not in preflight
     or "guard-windows-protection-ga-0190.py" not in ci

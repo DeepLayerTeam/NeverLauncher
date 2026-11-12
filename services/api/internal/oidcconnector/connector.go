@@ -362,7 +362,7 @@ func (c *Connector) verifyTokenWithRefresh(ctx context.Context, raw, nonce strin
 		return verified, nil
 	}
 	if refreshErr := c.refreshMetadata(ctx); refreshErr != nil {
-		return verifiedToken{}, fmt.Errorf("Ошибка: «%v; JWKS refresh»: %w", err, refreshErr)
+		return verifiedToken{}, fmt.Errorf("Ошибка: %v; обновление JWKS: %w", err, refreshErr)
 	}
 	c.mu.RLock()
 	keys = append([]jwk(nil), c.keys...)

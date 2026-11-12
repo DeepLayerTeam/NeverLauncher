@@ -150,7 +150,7 @@ func handleDesktop(args []string) error {
 		return buildDesktopPackage(ver, artifactDir, out, flagValue(args, "--platform", "all"))
 	case "verify":
 		if len(args) < 2 {
-			return errors.New("desktop verify требует путь к каталогу desktop package")
+			return errors.New("desktop verify требует путь к каталогу пакета Desktop")
 		}
 		return verifyDesktopPackage(args[1])
 	default:

@@ -72,7 +72,7 @@ func normalizeLifecycleTransition0204(in model.ExtensionLifecycleTransition) (mo
 		return model.ExtensionLifecycleTransition{}, errors.New("Укажите целевую версию жизненного цикла в формате SemVer")
 	}
 	if in.CurrentVersion != "" && !extensionSemver0201.MatchString(in.CurrentVersion) {
-		return model.ExtensionLifecycleTransition{}, errors.New("current lifecycle version: требуется «версия в формате SemVer или пустое значение»")
+		return model.ExtensionLifecycleTransition{}, errors.New("Текущая версия жизненного цикла: требуется версия в формате SemVer или пустое значение")
 	}
 	in.DesiredState, err = normalizeLifecycleState0204(in.DesiredState)
 	if err != nil {

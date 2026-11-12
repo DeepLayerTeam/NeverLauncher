@@ -543,12 +543,12 @@ func ValidateProduction(cfg Config) error {
 				Releases                 map[string]bridgeReleaseEntry `json:"releases"`
 			}
 			if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &document); err != nil || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
-				problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON ServerBridge 3 security certification metadata некорректна")
+				problems = append(problems, "Метаданные сертификации безопасности ServerBridge 3 в LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON некорректны")
 			} else {
 				bridgeAllowlist = document.Releases
 			}
 		} else if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &bridgeAllowlist); err != nil {
-			problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен быть legacy release map или ServerBridge 3 schemaVersion=3.0")
+			problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен содержать карту выпусков старого формата или ServerBridge 3 с schemaVersion=3.0")
 		}
 		if len(bridgeAllowlist) == 0 {
 			problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен содержать непустой releases")

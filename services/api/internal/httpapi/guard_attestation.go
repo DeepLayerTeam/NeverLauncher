@@ -980,7 +980,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 		CreatedAt: now, ExpiresAt: ticketExpires,
 	}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), ticket); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить Guard launch ticket")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить билет запуска Guard")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-attestation"), Actor: claims.Sub, Action: "guard:attestation:verified", Target: deviceID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})

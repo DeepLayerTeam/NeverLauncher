@@ -109,7 +109,7 @@ for token in (
     "Extensions Registry",
     "Publisher trust",
     "Publish signed .nlext",
-    "Установить verified artifact",
+    "Установить проверенный артефакт",
     "Registry yank",
 ):
     require(token in admin, f"Отсутствует интерфейс реестра расширений в Admin {token}")

@@ -6063,7 +6063,7 @@ function AuthPanel({
     <section className="panel">
       <h3>Вход, сеанс и управление устройствами</h3>
       <p>
-        Launcher {DESKTOP_VERSION} регистрирует отдельную device identity,
+        Launcher {DESKTOP_VERSION} регистрирует отдельный идентификатор устройства,
         подтверждает владение ключом и для hardware P-256 выполняет
         challenge-response proof-of-possession (это НЕ удалённая TPM
         attestation). Стандартный профиль доступен с подтверждённым устройством

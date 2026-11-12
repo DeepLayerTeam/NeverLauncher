@@ -206,7 +206,7 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
     if os_name in {"linux", "windows"}:
         rows = manifest.get("artifacts")
         if not isinstance(rows, list) or len(rows) < 2:
-            die("Отсутствуют package manifest artifacts")
+            die("Отсутствуют артефакты манифеста пакета")
         by_name = {
             str(row.get("name", "")): row for row in rows if isinstance(row, dict)
         }
@@ -409,7 +409,7 @@ def command_result(args: argparse.Namespace) -> int:
     if target is None:
         die(f"Неизвестная цель Guard CI: {args.target_id}")
     if args.signing_mode != target["ciSigningMode"]:
-        die(f"{args.target_id}: signing mode: обнаружено несоответствие")
+        die(f"{args.target_id}: Обнаружено несоответствие режима подписи")
     paths = {
         "package": args.package,
         "launcher": args.launcher,

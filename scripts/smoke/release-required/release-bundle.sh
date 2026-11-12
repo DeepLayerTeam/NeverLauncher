@@ -47,7 +47,7 @@ for required in \
   "${BUNDLE_DIR}/BRIDGE_PLUGIN_MANIFEST.json" \
   "${BUNDLE_DIR}/launcher-desktop-package-${VERSION}.zip"; do
   if [[ ! -s "${required}" ]]; then
-    echo "[Launcher] release-bundle gate: отсутствует обязательный artifact ${required}" >&2
+    echo "[Launcher] release-bundle gate: отсутствует обязательный артефакт ${required}" >&2
     exit 1
   fi
 done

@@ -111,7 +111,7 @@ func handleDevTools03010(args []string) error {
 			return errors.New("Политика тестовой идентификации отклонила запрос: установите LAUNCHER_DEVTOOLS_TEST_MODE=1 и --ack-test-only")
 		}
 		if *duration < time.Second || *duration > 30*time.Minute {
-			return errors.New("fixture duration: требуется «1s..30m»")
+			return errors.New("Длительность тестового сценария: требуется значение от 1s до 30m")
 		}
 		fixture, e := devtools.NewFixtureServer(*user)
 		if e != nil {

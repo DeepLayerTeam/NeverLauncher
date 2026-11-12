@@ -57,7 +57,7 @@ func Acquire(plan Plan) (*InstanceLock, error) {
 	if plan.requireLocalFS {
 		owner, ok := st.Sys().(*syscall.Stat_t)
 		if !ok || owner.Uid != uint32(os.Geteuid()) || st.Mode().Perm()&0077 != 0 {
-			return nil, errors.New("production instance lock parent: требуется «принадлежит служебному пользователю и имеет права 0700»")
+			return nil, errors.New("Родительский каталог блокировки рабочего экземпляра должен принадлежать служебному пользователю и иметь права 0700")
 		}
 		var fs syscall.Statfs_t
 		if err := syscall.Statfs(parent, &fs); err != nil {

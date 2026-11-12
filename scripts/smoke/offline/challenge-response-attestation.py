@@ -57,7 +57,7 @@ need('services/api/internal/httpapi/auth.go', [
 need('apps/desktop/src-tauri/src/device_keys.rs', [
     'validate_device_attestation_payload',
     'pub fn attest_device_payload',
-    'device attestation требует hardware-bound P-256 key',
+    'Аттестация устройства требует аппаратно привязанного ключа P-256',
     'validate_hardware_record(&record)',
     'hardware device attestation signing failed',
     'attestation_payload_is_hardware_only_and_identity_bound',

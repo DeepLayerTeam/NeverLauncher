@@ -512,7 +512,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join, redemption)
 	if !consumedOK {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-replay"), Actor: server.ID, Action: "serverbridge:has-joined:replay-denied", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusConflict, "join ticket уже использован")
+		writeError(w, http.StatusConflict, "Билет подключения уже использован")
 		return
 	}
 	join = consumed

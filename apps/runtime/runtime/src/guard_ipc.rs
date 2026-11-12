@@ -642,7 +642,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
     let raw = std::fs::read(&manifest_path)
         .map_err(|err| format!("не удалось прочитать манифест пакета Windows: {err}"))?;
     let manifest: WindowsPackageManifest = serde_json::from_slice(&raw)
-        .map_err(|err| format!("Windows package manifest повреждён: {err}"))?;
+        .map_err(|err| format!("Манифест пакета Windows повреждён: {err}"))?;
     let canonical_arch = if cfg!(target_arch = "aarch64") { "arm64" } else { "x64" };
     let legacy_identity = manifest.schema_version == "1.0" && manifest.platform == "windows-amd64";
     let canonical_identity = manifest.schema_version == "1.1"
@@ -1239,7 +1239,7 @@ pub async fn run_windows_guard_server(endpoint: String, parent_pid: u32) -> Resu
     {
         let mut bootstrap_stdin = std::io::stdin();
         std::io::Read::read_exact(&mut bootstrap_stdin, &mut bootstrap_secret)
-            .map_err(|err| format!("Guard bootstrap secret не получен: {err}"))?;
+            .map_err(|err| format!("Начальный секрет Guard не получен: {err}"))?;
     }
 
     let started_at_unix = now_unix()?;

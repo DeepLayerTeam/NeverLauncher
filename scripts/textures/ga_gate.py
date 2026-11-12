@@ -230,7 +230,7 @@ def verify(evidence: Path, commit: str, trusted_public_key: str) -> dict:
     if not COMMIT.fullmatch(commit):
         raise GateError("Коммит Git должен содержать 40 шестнадцатеричных символов в нижнем регистре")
     if not re.fullmatch("[a-f0-9]{64}", trusted_public_key):
-        raise GateError("trusted independent Ed25519 public key: требуется «32 байта в шестнадцатеричном формате»")
+        raise GateError("Доверенный независимый открытый ключ Ed25519: требуется 32 байта в шестнадцатеричном формате")
     if evidence.is_symlink() or not evidence.is_dir():
         raise GateError("Каталог подтверждающих данных отсутствует или небезопасен")
     found = {p.name for p in evidence.iterdir()}

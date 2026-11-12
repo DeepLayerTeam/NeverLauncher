@@ -192,7 +192,7 @@ func handleRuntime(args []string) error {
 		}
 		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "subject": args[1], "valid": len(errs) == 0, "errors": errs, "checks": runtimeChecks()})
 		if len(errs) > 0 {
-			return errors.New("launch plan не прошёл проверку")
+			return errors.New("План запуска не прошёл проверку")
 		}
 		return nil
 	default:
@@ -502,7 +502,7 @@ func handleRuntimeFetchMetadata850(args []string) error {
 		}
 		mv, ok := findMojangManifestVersion(manifest, minecraftVersion)
 		if !ok {
-			return fmt.Errorf("версия %s не найдена в version manifest", minecraftVersion)
+			return fmt.Errorf("версия %s не найдена в манифесте версий", minecraftVersion)
 		}
 		result["manifestEntry"] = mv
 		if mv.URL != "" {
@@ -635,7 +635,7 @@ func handleRuntimeVerifyLaunchPlan850(args []string) error {
 	report["subject"] = path
 	printJSON(report)
 	if report["valid"] != true {
-		return errors.New("launch plan не прошёл строгую проверку 0.8.8")
+		return errors.New("План запуска не прошёл строгую проверку 0.8.8")
 	}
 	return nil
 }
@@ -724,7 +724,7 @@ func verifyLaunchPlanStrict850(payload map[string]any) map[string]any {
 		errs = append(errs, "Путь к классам не задан")
 	}
 	if payload["assetObjects"] == nil {
-		warnings = append(warnings, "asset index не приложен; запуск возможен только после отдельной загрузки assets")
+		warnings = append(warnings, "Индекс ресурсов не приложен; запуск возможен только после отдельной загрузки ресурсов")
 	}
 	return map[string]any{"schemaVersion": "0.8.8", "toolVersion": version, "valid": len(errs) == 0, "errors": errs, "warnings": warnings, "checks": []string{"no-fallback", "main-class", "classpath-no-wildcards", "args-present", "schema", "safe-paths"}}
 }

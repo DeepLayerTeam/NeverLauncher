@@ -18,7 +18,7 @@ func (s Server) manifestSigningPrivateKey() (ed25519.PrivateKey, error) {
 	seedHex := strings.TrimSpace(s.Config.ManifestSigningPrivateKey)
 	if seedHex == "" {
 		if strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod") {
-			return nil, errors.New("LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY обязателен для production publish")
+			return nil, errors.New("LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY обязателен для промышленной публикации")
 		}
 		dev := sha256.Sum256([]byte("Ключ подписи Launcher для разработки — запрещено использовать в рабочей среде"))
 		seedHex = hex.EncodeToString(dev[:])
@@ -95,7 +95,7 @@ func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 		return err
 	}
 	if !ed25519.Verify(ed25519.PublicKey(declaredPublicKey), payload, signature) {
-		return errors.New("Ed25519 signature manifest не прошла криптографическую проверку")
+		return errors.New("Подпись Ed25519 манифеста не прошла криптографическую проверку")
 	}
 	return s.enforceGameTrustVerify02312(manifest)
 }

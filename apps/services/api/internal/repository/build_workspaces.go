@@ -128,7 +128,7 @@ func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 		}
 	case "built":
 		if old.State != "staged" || len(next.BuildDigest) != 64 || next.PackageID == "" {
-			return errors.New("built workspace: требуется «подготовленные входные данные, пакет и контрольная сумма сборки SHA-256»")
+			return errors.New("Собранная рабочая область: требуются подготовленные входные данные, пакет и контрольная сумма сборки SHA-256")
 		}
 		if _, err := hex.DecodeString(next.BuildDigest); err != nil {
 			return errors.New("Некорректное значение: «контрольная сумма сборки»")

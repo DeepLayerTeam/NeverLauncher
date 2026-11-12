@@ -35,7 +35,7 @@ func testServer(t *testing.T) http.Handler {
 	}
 	store := storage.NewLocalStorage(cfg.StorageLocalPath)
 	if _, _, err := store.Save("demo-project", "demo-project-vanilla-3.4.0", "README.txt", strings.NewReader("")); err != nil {
-		t.Fatalf("не удалось подготовить storage fixture: %v", err)
+		t.Fatalf("Не удалось подготовить тестовое хранилище: %v", err)
 	}
 	return Server{Version: "2.2.0-test", Config: cfg, Repo: repository.NewMemoryRepository(cfg.PublicURL), Storage: store}.Handler()
 }
@@ -57,10 +57,10 @@ func TestHealthAndPublicManifest(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("manifest endpoint вернул статус %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Конечная точка манифеста вернула статус %d: %s", res.Code, res.Body.String())
 	}
 	if !strings.Contains(res.Body.String(), "demo-project") {
-		t.Fatalf("manifest endpoint вернул неожиданный ответ: %s", res.Body.String())
+		t.Fatalf("Конечная точка манифеста вернула неожиданный ответ: %s", res.Body.String())
 	}
 }
 
@@ -73,10 +73,10 @@ func TestAdminAuthAndStorageHealth(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK {
-		t.Fatalf("storage health вернул статус %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Проверка работоспособности хранилища вернула статус %d: %s", res.Code, res.Body.String())
 	}
 	if !strings.Contains(res.Body.String(), "local") {
-		t.Fatalf("storage health не содержит драйвер local: %s", res.Body.String())
+		t.Fatalf("Ответ проверки хранилища не содержит драйвер local: %s", res.Body.String())
 	}
 }
 
@@ -247,7 +247,7 @@ func TestCanonicalAuthSessionEnforcement(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"id":"local"`) || !strings.Contains(res.Body.String(), `"healthy":true`) {
-		t.Fatalf("federation providers вернули неожиданный ответ %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Список поставщиков федерации вернул неожиданный ответ %d: %s", res.Code, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/accounts", nil)
@@ -265,7 +265,7 @@ func TestCanonicalAuthSessionEnforcement(t *testing.T) {
 		t.Fatalf("v1 login вернул статус %d: %s", res.Code, res.Body.String())
 	}
 	if !strings.Contains(res.Body.String(), `"provider":"local"`) {
-		t.Fatalf("v1 login не прошёл через local federation provider: %s", res.Body.String())
+		t.Fatalf("Вход через API v1 не прошёл через локального поставщика федерации: %s", res.Body.String())
 	}
 	var loginPayload struct {
 		Data struct {
@@ -287,7 +287,7 @@ func TestCanonicalAuthSessionEnforcement(t *testing.T) {
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"provider":"local"`) || !strings.Contains(res.Body.String(), `"subject":"admin"`) {
-		t.Fatalf("canonical identities вернули неожиданный ответ %d: %s", res.Code, res.Body.String())
+		t.Fatalf("Канонические идентификаторы вернули неожиданный ответ %d: %s", res.Code, res.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/accounts", nil)

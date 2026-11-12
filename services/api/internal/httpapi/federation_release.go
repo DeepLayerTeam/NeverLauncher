@@ -36,7 +36,7 @@ func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request
 	}
 	connector, ok := s.Federation.Connector(providerID)
 	if !ok {
-		writeError(w, http.StatusNotFound, "auth provider не найден")
+		writeError(w, http.StatusNotFound, "Поставщик аутентификации не найден")
 		return
 	}
 	meta := authconnector.NormalizedMetadata(connector.Metadata())
@@ -55,13 +55,13 @@ func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request
 	}
 	tx, err := s.openOIDCTransaction115(sealed)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось подготовить linking transaction")
+		writeError(w, http.StatusInternalServerError, "Не удалось подготовить транзакцию привязки")
 		return
 	}
 	tx.LinkUserID = claims.Sub
 	sealed, err = s.sealOIDCTransaction115(tx)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось защитить linking transaction")
+		writeError(w, http.StatusInternalServerError, "Не удалось защитить транзакцию привязки")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
@@ -88,7 +88,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 	}
 	connector, ok := s.Federation.Connector(providerID)
 	if !ok {
-		writeError(w, http.StatusNotFound, "auth provider не найден")
+		writeError(w, http.StatusNotFound, "Поставщик аутентификации не найден")
 		return
 	}
 	meta := authconnector.NormalizedMetadata(connector.Metadata())
@@ -102,7 +102,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 	}
 	tx, err := s.openOIDCTransaction115(req.Transaction)
 	if err != nil || tx.LinkUserID == "" || tx.LinkUserID != claims.Sub || tx.ProviderID != providerID || req.State == "" || req.State != tx.State || strings.TrimSpace(req.Code) == "" {
-		writeError(w, http.StatusUnauthorized, "provider linking transaction недействителен или истёк")
+		writeError(w, http.StatusUnauthorized, "Транзакция привязки поставщика недействительна или истекла")
 		return
 	}
 	if !s.claimBrowserTransaction0525(w, r, tx) {
@@ -118,7 +118,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 	identity, err := s.Federation.LinkAuthenticatedIdentity(claims.Sub, providerID, proof)
 	if err != nil {
 		if authconnector.CodeOf(err) == authconnector.ErrConflict || errors.Is(err, repository.ErrConflict) {
-			writeError(w, http.StatusConflict, "provider identity уже связана с другой учётной записью")
+			writeError(w, http.StatusConflict, "Идентификатор поставщика уже связан с другой учётной записью")
 			return
 		}
 		s.writeOIDCError115(w, err)

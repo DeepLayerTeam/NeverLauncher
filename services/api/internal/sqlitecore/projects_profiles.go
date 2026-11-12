@@ -65,7 +65,7 @@ func (r *Repository) ListProjects(ctx context.Context) (out []model.Project, err
 }
 func (r *Repository) SaveProject(ctx context.Context, p model.Project, actor string) (model.Project, error) {
 	if strings.TrimSpace(actor) == "" {
-		return model.Project{}, errors.New("project mutation: требуется автор аудита")
+		return model.Project{}, errors.New("Изменение проекта: требуется автор записи аудита")
 	}
 	p.ID = strings.TrimSpace(p.ID)
 	p.Name = strings.TrimSpace(p.Name)
@@ -145,7 +145,7 @@ func (r *Repository) GetProfile(ctx context.Context, projectID, profileID string
 // с неизменяемой историей в одной BEGIN IMMEDIATE / FULL-sync COMMIT.
 func (r *Repository) SaveProfile(ctx context.Context, p model.Profile, actor string) (actual model.Profile, err error) {
 	if strings.TrimSpace(actor) == "" {
-		return actual, errors.New("profile mutation: требуется автор аудита")
+		return actual, errors.New("Изменение профиля: требуется автор записи аудита")
 	}
 	p.Name = strings.TrimSpace(p.Name)
 	p.ID = strings.TrimSpace(p.ID)
@@ -262,7 +262,7 @@ func (r *Repository) ListProfileRevisions(ctx context.Context, projectID, profil
 
 func (r *Repository) SaveChannel(ctx context.Context, c model.ReleaseChannel, actor string) (model.ReleaseChannel, error) {
 	if strings.TrimSpace(actor) == "" {
-		return c, errors.New("channel mutation: требуется автор аудита")
+		return c, errors.New("Изменение канала: требуется автор записи аудита")
 	}
 	c.ID = strings.TrimSpace(c.ID)
 	c.Name = strings.TrimSpace(c.Name)

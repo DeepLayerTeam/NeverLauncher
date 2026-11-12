@@ -485,7 +485,7 @@ func buildClientPackage(clientDir, project, profile, channel, ver, baseURL strin
 			return err
 		}
 		if d.Type()&os.ModeSymlink != 0 {
-			return fmt.Errorf("client package запрещает symlink: %s", path)
+			return fmt.Errorf("Пакет клиента запрещает символические ссылки: %s", path)
 		}
 		if d.IsDir() {
 			name := d.Name()
@@ -1011,7 +1011,7 @@ func validateClientPackagePath(path string) error {
 	lower := strings.ToLower(path)
 	for _, forbidden := range []string{".env", "id_rsa", "id_ed25519", ".pem", ".key"} {
 		if strings.Contains(lower, forbidden) {
-			return fmt.Errorf("запрещённый файл client package: %s", path)
+			return fmt.Errorf("Запрещённый файл пакета клиента: %s", path)
 		}
 	}
 	return nil

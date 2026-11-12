@@ -93,7 +93,7 @@ func withReleaseTrustStateLock01510(path string, fn func() error) error {
 		}
 		var existing releaseTrustStateLock01510
 		if err := json.Unmarshal(existingRaw, &existing); err != nil || existing.PID <= 0 {
-			return errors.New("release trust-state lock повреждён; удалите lock только после проверки отсутствия активного verifier")
+			return errors.New("Блокировка состояния доверия выпуска повреждена; удалите её только после проверки отсутствия активного процесса проверки")
 		}
 		if updaterProcessAlive0156(existing.PID) {
 			return fmt.Errorf("Состояние доверия выпуска занято процессом проверки, PID=%d", existing.PID)
@@ -102,7 +102,7 @@ func withReleaseTrustStateLock01510(path string, fn func() error) error {
 			return fmt.Errorf("Удаление устаревшей блокировки состояния доверия релиза: %w", err)
 		}
 	}
-	return errors.New("не удалось получить release trust-state lock")
+	return errors.New("Не удалось получить блокировку состояния доверия выпуска")
 }
 
 func validateComponentUpdateState01510(state componentUpdateState0157) error {

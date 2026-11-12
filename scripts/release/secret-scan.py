@@ -77,7 +77,7 @@ def scan_zip(path: Path) -> list[str]:
                 continue
             name = info.filename
             if suspicious_path(name):
-                issues.append(f"{name}: secret-like path запрещён в release archive")
+                issues.append(f"{name}: Путь, похожий на секрет, запрещён в архиве выпуска")
             if info.file_size <= 2 * 1024 * 1024:
                 issues.extend(scan_content(name, zf.read(info)))
     return issues
@@ -96,7 +96,7 @@ def scan_tar(path: Path) -> list[str]:
                 )
                 continue
             if suspicious_path(name):
-                issues.append(f"{name}: secret-like path запрещён в release archive")
+                issues.append(f"{name}: Путь, похожий на секрет, запрещён в архиве выпуска")
             if member.size <= 2 * 1024 * 1024:
                 extracted = tf.extractfile(member)
                 if extracted is not None:

@@ -67,7 +67,7 @@ func (p microsoftIssuerPolicy) ValidateTokenIssuer(discoveredIssuer string, clai
 	}
 	instantiatedDiscovery := replaceTenantTemplate(strings.TrimSuffix(strings.TrimSpace(discoveredIssuer), "/"), tid)
 	if !strings.EqualFold(instantiatedDiscovery, issuer) {
-		return fmt.Errorf("Издатель, найденный через Microsoft discovery, не соответствует арендатору токена")
+		return fmt.Errorf("Издатель, найденный в метаданных Microsoft, не соответствует арендатору токена")
 	}
 	if strings.TrimSpace(signingKeyIssuer) == "" {
 		return fmt.Errorf("У ключа подписи Microsoft отсутствуют метаданные издателя")

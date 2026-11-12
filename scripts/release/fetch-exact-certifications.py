@@ -321,7 +321,7 @@ def fetch_matrix(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(matrix_raw)
     print(
-        f"[release-certification] {label}: Принят точный коммит {commit} from run {run_id}",
+        f"[release-certification] {label}: Принят точный коммит {commit} из запуска {run_id}",
         flush=True,
     )
     return True

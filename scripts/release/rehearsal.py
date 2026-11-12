@@ -67,7 +67,7 @@ def architecture(content: bytes, target: str) -> None:
     elif system == "linux":
         require(
             len(content) >= 20 and content[:6] == b"\x7fELF\x02\x01",
-            "Требуется ELF64 с порядком байтов little endian",
+            "Требуется ELF64 с порядком байтов от младшего к старшему (little-endian)",
         )
         require(
             struct.unpack_from("<H", content, 18)[0] == {"x64": 62, "arm64": 183}[arch],

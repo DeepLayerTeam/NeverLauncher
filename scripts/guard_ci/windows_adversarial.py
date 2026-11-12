@@ -35,7 +35,7 @@ SCENARIOS = (
         "sensor-early-load",
         "compatibility",
         "guard_sensor_agentpath_loads_before_jvm_startup",
-        "Sensor загружается и проходит startup proof до Java main",
+        "Датчик загружается и подтверждает запуск до входа в Java main",
     ),
     Scenario(
         "trusted-module-lifecycle",
@@ -59,7 +59,7 @@ SCENARIOS = (
         "hotspot-jit",
         "compatibility",
         "guard_jvm_aware_protection_accepts_certified_hotspot_jit",
-        "Штатный HotSpot JIT допускается без false positive",
+        "Штатный HotSpot JIT допускается без ложных срабатываний",
     ),
     Scenario(
         "unsigned-module",
@@ -71,13 +71,13 @@ SCENARIOS = (
         "code-page-drift",
         "adversarial",
         "guard_memory_integrity_fail_closed_on_executable_image_code_page_drift",
-        "Изменение executable image page обнаруживается после восстановления protection",
+        "Изменение исполняемой страницы образа обнаруживается после восстановления защиты",
     ),
     Scenario(
         "private-exec-thread",
         "adversarial",
         "guard_thread_integrity_fail_closed_on_private_executable_thread_start",
-        "Поток из MEM_PRIVATE executable memory блокируется",
+        "Поток из исполняемой памяти MEM_PRIVATE блокируется",
     ),
     Scenario(
         "startup-instrumentation",
@@ -95,7 +95,7 @@ SCENARIOS = (
         "foreign-executable-allocation",
         "adversarial",
         "guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
-        "Executable private allocation вне jvm.dll provenance блокируется",
+        "Выделение приватной исполняемой памяти вне доверенного происхождения jvm.dll блокируется",
     ),
 )
 SCENARIO_BY_ID = {row.id: row for row in SCENARIOS}

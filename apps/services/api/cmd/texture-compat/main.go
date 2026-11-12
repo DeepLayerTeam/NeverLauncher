@@ -270,7 +270,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 			continue
 		}
 		if kind == "SKIN" && entry.Metadata.Model != "" && entry.Metadata.Model != "slim" {
-			return report, errors.New("Minecraft skin model: требуется «default или slim»")
+			return report, errors.New("Модель скина Minecraft: требуется default или slim")
 		}
 		model := "classic"
 		if entry.Metadata.Model == "slim" {

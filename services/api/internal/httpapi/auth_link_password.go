@@ -53,7 +53,7 @@ func (s Server) authProviderLinkPassword0291(w http.ResponseWriter, r *http.Requ
 	linked, proof, err := s.Federation.LinkPasswordIdentity(r.Context(), user.ID, providerID, authconnector.PasswordRequest{Identifier: req.Identifier, Secret: req.Password})
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) || authconnector.CodeOf(err) == authconnector.ErrConflict {
-			writeError(w, http.StatusConflict, "external identity уже связана с другим пользователем")
+			writeError(w, http.StatusConflict, "Внешний идентификатор уже связан с другим пользователем")
 			return
 		}
 		if errors.Is(err, federation.ErrLinkingDisabled) {

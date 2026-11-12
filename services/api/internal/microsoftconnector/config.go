@@ -179,14 +179,14 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	if cfg.Tenant == "consumers" {
 		if len(allowedTenantSet) > 0 {
 			if _, ok := allowedTenantSet[personalMicrosoftTenantID]; !ok || len(allowedTenantSet) != 1 {
-				return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: authority consumers принимает только арендатора личных учётных записей Microsoft", cfg.ID)
+				return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: Центр авторизации consumers принимает только арендатора личных учётных записей Microsoft", cfg.ID)
 			}
 		}
 		allowedTenantSet[personalMicrosoftTenantID] = struct{}{}
 	}
 	if cfg.Tenant == "organizations" {
 		if _, ok := allowedTenantSet[personalMicrosoftTenantID]; ok {
-			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: authority organizations не может разрешать личные учётные записи Microsoft", cfg.ID)
+			return RuntimeConfig{}, fmt.Errorf("Коннектор Microsoft %q: Центр авторизации organizations не допускает личные учётные записи Microsoft", cfg.ID)
 		}
 	}
 

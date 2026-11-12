@@ -139,7 +139,7 @@ func (s Server) authPasskeyRegisterComplete117(w http.ResponseWriter, r *http.Re
 	}
 	id, err := randomToken("pkc")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать credential id")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать идентификатор учётных данных")
 		return
 	}
 	credential := passkeyCredential117{ID: id, UserID: claims.Sub, CredentialID: result.CredentialID, UserHandle: s.webauthnUserHandle117(claims.Sub), PublicKeyCOSE: result.PublicKeyCOSE, Algorithm: result.Algorithm, SignCount: result.SignCount, AAGUID: result.AAGUID, Transports: normalizeTransports117(req.Credential.Response.Transports), FriendlyName: name, BackupEligible: result.BackupEligible, BackedUp: result.BackedUp, Status: "active"}
@@ -209,7 +209,7 @@ func (s Server) authPasskeyMFALoginComplete117(w http.ResponseWriter, r *http.Re
 	}
 	tx, err := s.State.Passkeys.consumeChallenge(req.TransactionToken, "passkey-mfa-login")
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "MFA transaction недействительна или истекла")
+		writeError(w, http.StatusUnauthorized, "Транзакция многофакторной аутентификации недействительна или истекла")
 		return
 	}
 	credential, result, err := s.verifyPasskeyAssertion117(req.Credential, tx.Challenge, tx.UserID)
@@ -269,7 +269,7 @@ func (s Server) authPasskeyStepUpComplete117(w http.ResponseWriter, r *http.Requ
 	}
 	tx, err := s.State.Passkeys.consumeChallenge(req.TransactionToken, "passkey-step-up")
 	if err != nil || tx.UserID != claims.Sub || metadataString117(tx.Metadata, "sessionId") != claims.SessionID {
-		writeError(w, http.StatusUnauthorized, "step-up transaction недействительна")
+		writeError(w, http.StatusUnauthorized, "Транзакция дополнительной аутентификации недействительна")
 		return
 	}
 	credential, result, err := s.verifyPasskeyAssertion117(req.Credential, tx.Challenge, claims.Sub)
@@ -309,7 +309,7 @@ func (s Server) authMFAStepUpTOTP117(w http.ResponseWriter, r *http.Request) {
 	}
 	ok, reason := s.State.Security.verifySecondFactor(claims.Sub, req.TOTP, req.RecoveryCode)
 	if !ok || reason == "mfa-not-enabled" {
-		writeError(w, http.StatusUnauthorized, "требуется действительный TOTP или recovery code")
+		writeError(w, http.StatusUnauthorized, "Требуется действительный код TOTP или код восстановления")
 		return
 	}
 	method := "totp"

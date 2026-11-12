@@ -43,4 +43,4 @@ if __name__ == '__main__':
         if a.check:
             if not dest.exists() or dest.read_text()!=body:raise SystemExit(f'Сгенерированный SDK отличается от ожидаемого: {rel}')
         else: dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(body)
-    print(f'{len(OPS)} операций OpenAPI: реестры SDK {"checked" if a.check else "written"}')
+    print(f'{len(OPS)} операций OpenAPI: реестры SDK {"проверены" if a.check else "записаны"}')

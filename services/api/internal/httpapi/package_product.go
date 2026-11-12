@@ -508,7 +508,7 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	}
 	updated, err = s.Repo.UpdateVersionStatus(updated.ProjectID, updated.ID, "signed")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить package status: "+err.Error())
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить состояние пакета: "+err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "package:sign", lookup.Release.ID)

@@ -306,7 +306,7 @@ func (r *Repository) ApplyExtensionInstall326(ctx context.Context, v SQLiteExten
 		return out, errors.New("Некорректное значение: «операция установки расширения»")
 	}
 	if v.State == "enabled" && (v.Version == "" || !isHex256(v.PackageDigest)) {
-		return out, errors.New("enabled extension: требуется «проверенный пакет»")
+		return out, errors.New("Включённое расширение: требуется проверенный пакет")
 	}
 	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		if e := authorizedExtensionActor(ctx, q, v.Scope, v.ScopeID, v.Actor); e != nil {

@@ -147,7 +147,7 @@ func (s Server) packageIntegrityCheck0212(w http.ResponseWriter, r *http.Request
 	}
 	defer unlock()
 	if lookup.Release.Status == "published" {
-		writeError(w, http.StatusConflict, "published release immutable; integrity history доступна через validations")
+		writeError(w, http.StatusConflict, "Опубликованный выпуск неизменяем; история проверок целостности доступна через validations")
 		return
 	}
 	if lookup.Release.Status != "staged" && lookup.Release.Status != "integrity-failed" && lookup.Release.Status != "integrity-passed" {
@@ -288,7 +288,7 @@ func (s Server) packageRuntimeEvidence0212(w http.ResponseWriter, r *http.Reques
 	keyID := strings.TrimSpace(req.KeyID)
 	pub, ok := keys[keyID]
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "runtime validation signer key не доверен")
+		writeError(w, http.StatusUnauthorized, "Ключ подписи проверки среды выполнения не является доверенным")
 		return
 	}
 	canonical, err := canonicalRuntimeEvidence0212(e)
@@ -361,7 +361,7 @@ func (s Server) packageValidations0212(w http.ResponseWriter, r *http.Request) {
 func (s Server) projectValidationPolicyGet0212(w http.ResponseWriter, r *http.Request) {
 	p, err := s.Repo.GetProjectValidationPolicy(r.Context(), r.PathValue("projectId"))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "validation policy не найдена")
+		writeError(w, http.StatusNotFound, "Политика проверки не найдена")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": p})

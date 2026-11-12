@@ -20,7 +20,7 @@ func ParseRoots(raw string) (map[string]string, error) {
 		return nil, e
 	}
 	if len(m) != 0 {
-		return nil, errors.New("shared filesystem broker: требуется доступ к файлам относительно дескриптора с принудительной проверкой ядром на этой платформе")
+		return nil, errors.New("Посредник общей файловой системы: требуется доступ к файлам относительно дескриптора с принудительной проверкой ядром на этой платформе")
 	}
 	return map[string]string{}, nil
 }

@@ -259,7 +259,7 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 	}
 	deviceID, err := randomToken("dev")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать device id")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать идентификатор устройства")
 		return
 	}
 	challengeID, err := randomToken("dtc")

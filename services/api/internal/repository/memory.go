@@ -764,7 +764,7 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	identity.UserID = strings.TrimSpace(identity.UserID)
 	if identity.Provider == "" || identity.Subject == "" || identity.UserID == "" {
-		return model.AuthIdentity{}, fmt.Errorf("userId, provider и subject identity обязательны")
+		return model.AuthIdentity{}, fmt.Errorf("Идентификатор пользователя (userId), поставщик (provider) и идентификатор субъекта обязательны")
 	}
 	if _, err := r.GetUser(identity.UserID); err != nil {
 		return model.AuthIdentity{}, err

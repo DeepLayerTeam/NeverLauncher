@@ -53,10 +53,10 @@ func NewSQLRepository(driverName, dsn string, publicURL string) Repository {
 
 func (r *SQLRepository) check() error {
 	if r == nil {
-		return errors.New("sql repository не инициализирован")
+		return errors.New("Репозиторий SQL не инициализирован")
 	}
 	if r.initErr != nil {
-		return fmt.Errorf("postgres driver недоступен: %w", r.initErr)
+		return fmt.Errorf("Драйвер PostgreSQL недоступен: %w", r.initErr)
 	}
 	if r.db == nil {
 		return errors.New("postgres db handle отсутствует")
@@ -745,7 +745,7 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	identity.UserID = strings.TrimSpace(identity.UserID)
 	if identity.Provider == "" || identity.Subject == "" || identity.UserID == "" {
-		return model.AuthIdentity{}, fmt.Errorf("userId, provider и subject identity обязательны")
+		return model.AuthIdentity{}, fmt.Errorf("Идентификатор пользователя (userId), поставщик (provider) и идентификатор субъекта обязательны")
 	}
 	if _, err := r.GetUser(identity.UserID); err != nil {
 		return model.AuthIdentity{}, err

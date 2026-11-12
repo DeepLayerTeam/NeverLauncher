@@ -48,7 +48,7 @@ func (s Server) adminExtensionVersion0201(w http.ResponseWriter, r *http.Request
 	version := strings.TrimSpace(r.PathValue("version"))
 	item, err := s.Repo.GetExtensionVersion(r.Context(), id, version)
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "extension version не найдена")
+		writeError(w, http.StatusNotFound, "Версия расширения не найдена")
 		return
 	}
 	if err != nil {
