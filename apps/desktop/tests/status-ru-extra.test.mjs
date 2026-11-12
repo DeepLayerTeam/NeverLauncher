@@ -1,3 +1,4 @@
+import { browserErrorRu } from "../src/status-ru.ts";
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { statusRuDesktop } from '../src/status-ru.ts';
@@ -202,4 +203,16 @@ test('События аудита из серверных обработчико
     assert.equal(statusRuDesktop(code), expected, code);
   }
   assert.equal(statusRuDesktop('external:unknown:action'), 'external:unknown:action');
+});
+test('Ошибки браузера, файлов и JSON локализованы без потери неизвестных деталей', () => {
+  assert.equal(browserErrorRu(new Error("Unexpected end of JSON input")), "JSON-данные обрываются или не содержат полного документа");
+  assert.equal(browserErrorRu(new Error("Permission denied")), "Недостаточно разрешений для выполнения операции");
+  assert.equal(browserErrorRu(new Error("No space left on device")), "Недостаточно свободного места на диске");
+  assert.equal(browserErrorRu(new Error("Failed to construct 'URL': Invalid URL")), "Некорректный адрес URL");
+  assert.equal(browserErrorRu(new Error("Неизвестный код X123")), "Неизвестный код X123");
+});
+
+test('Русское сообщение сохраняет контекст, прерывание не считается тайм-аутом', () => {
+  assert.equal(browserErrorRu(new Error('Ошибка загрузки отчёта: ERR_CONNECTION_RESET')), 'Ошибка загрузки отчёта: ERR_CONNECTION_RESET');
+  assert.equal(browserErrorRu('AbortError'), 'Операция прервана');
 });

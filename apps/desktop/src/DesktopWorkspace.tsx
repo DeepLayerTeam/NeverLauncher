@@ -1,3 +1,4 @@
+import { browserErrorRu } from "./status-ru";
 import { statusRuDesktop } from "./status-ru";
 import { serverKindRu } from "./desktop_experience";
 import React, { useMemo, useState } from "react";
@@ -328,7 +329,7 @@ export function ServersWorkspace0353({
               await save();
               setSaved(true);
             } catch (e) {
-              setSaveError(String(e));
+              setSaveError(browserErrorRu(e));
             } finally {
               setSaving(false);
             }

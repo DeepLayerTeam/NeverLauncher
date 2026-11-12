@@ -12,7 +12,7 @@ import (
 )
 
 // PasswordCAS0295 обязателен для безопасного обновления пароля после успешной
-// проверки. Compare-and-swap отклоняет параллельный сброс.
+// проверки. Атомарная проверка и замена отклоняет параллельный сброс.
 type PasswordCAS0295 interface {
 	ReplacePasswordIfMatch0295(context.Context, string, string, string) (bool, error)
 }

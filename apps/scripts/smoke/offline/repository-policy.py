@@ -218,7 +218,7 @@ for rel, forbidden in forbidden_ui.items():
             fail(f"{rel}: запрещён устаревший/англоязычный UI-текст: {needle}")
 
 
-# 6. P3.2v3 production hardening: auth/storage/backup/CORS должны быть fail-closed.
+# 6. P3.2v3 усиление защиты промышленной среды: авторизация, хранилище, резервное копирование и CORS должны безопасно отказывать.
 config_go = read("services/api/internal/config/config.go")
 admin_handlers = read("services/api/internal/httpapi/admin_handlers.go")
 api_main = read("services/api/cmd/launcher-api/main.go")
@@ -1560,7 +1560,7 @@ for required in [
 ]:
     if required not in production_release_workflow:
         fail(
-            f"production release не ждёт exact-commit Compatibility/Device Trust certification: {required}"
+            f"промышленный выпуск не ожидает сертификации совместимости и доверия к устройствам для точного коммита: {required}"
         )
 
 
@@ -3224,7 +3224,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "LAUNCHER_RELEASE_TRUST_STATE_FILE",
     ]:
         if required not in build_release_0158:
-            fail(f"0.15.8 production release trust input — отсутствует: {required}")
+            fail(f"0.15.8 отсутствует входной материал доверия для промышленного выпуска: {required}")
     for required in [
         "TestReleaseVerificationV2TrustLifecycleAndAntiRollback",
         "TestReleaseTrustPolicyRejectsTampering",
@@ -3452,7 +3452,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.15.11 release integration — не завершено: {required}")
     for required in [
         "PRODUCTION_RC_REQUIRED",
-        "Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort",
+        "Кандидат на промышленный выпуск требует полного набора сертификационных проверок совместимости, доверия к устройствам и Guard CI",
         'git -C "${ROOT_DIR}" diff --quiet HEAD --',
         "release candidate-verify",
         "PRODUCTION_RELEASE_CANDIDATE.json",
@@ -3487,12 +3487,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in rc_tests_01511:
             fail(f"0.15.11 production candidate — отсутствуют регрессионные тесты: {required}")
     if "Production release candidate 0.15.11 gate: OK" not in gate_01511:
-        fail("0.15.11 mandatory Production Release Candidate — проверка не завершена")
+        fail("0.15.11 обязательная проверка кандидата на промышленный выпуск не завершена")
     if (
         "production-release-candidate-01511.py" not in preflight
         or "production-release-candidate-01511.py" not in ci
     ):
-        fail("0.15.11 Production Release Candidate — проверка не подключена к предварительным проверкам и CI")
+        fail("0.15.11 проверка кандидата на промышленный выпуск не подключена к предварительным проверкам и CI")
 
 
 # В 0.16.0: выпуск производственной поставки переводит кандидата точного коммита в стабильную
@@ -5035,7 +5035,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "arm_module_guard",
     ]:
         if required not in sensor_bootstrap_0182:
-            fail(f"0.18.2 Guard Sensor fail-closed bootstrap — не завершено: {required}")
+            fail(f"0.18.2 безопасная первичная настройка датчика Guard — не завершено: {required}")
     # Сертификация Vanilla использует общий bootstrap; запуск игры использует более
     # строгий prepare_sensor_command_for_game с привязкой к манифесту, добавленный
     # позже. Оба пути должны аутентифицировать Sensor до продолжения.

@@ -23,13 +23,15 @@ export function httpStatusRu(response: Pick<Response, 'status'>): string {
 export function networkErrorRu(value: unknown): string {
   const message = value instanceof Error ? value.message : String(value ?? '');
   if (!message.trim()) return 'Причина не указана';
+  if (/[А-Яа-яЁё]/.test(message)) return message;
   if (/^(?:(?:TypeError|NetworkError):\s*)?(?:Failed to fetch|Network request failed|Load failed|fetch failed)$/i.test(message.trim()))
     return 'Не удалось выполнить сетевой запрос';
   if (/^NetworkError when attempting to fetch resource\.?$/i.test(message.trim()))
     return 'Сетевая ошибка при обращении к серверу';
   if (/^(?:AbortError:\s*)?(?:The operation was aborted|The user aborted a request|This operation was aborted)\.?$/i.test(message.trim()))
     return 'Операция прервана';
-  if (/^(?:AbortError|TimeoutError):?$/i.test(message.trim())) return 'Время ожидания операции истекло';
+  if (/^AbortError:?$/i.test(message.trim())) return 'Операция прервана';
+  if (/^TimeoutError:?$/i.test(message.trim())) return 'Время ожидания операции истекло';
   if (/^getaddrinfo ENOTFOUND\b|^connect (?:ETIMEDOUT|ECONNREFUSED)\b/i.test(message.trim()))
     return 'Не удалось подключиться к серверу (ошибка сети)';
   // Распространённые ошибки сети в WebView/браузерах Windows, Linux и macOS.
@@ -49,6 +51,20 @@ export function networkErrorRu(value: unknown): string {
     return 'Сетевое соединение потеряно или недоступно';
   if (/^An SSL error has occurred/i.test(message.trim()))
     return 'Не удалось установить защищённое соединение';
+  const detail = message.trim().replace(/^(?:Error|TypeError|SyntaxError|DOMException|NotAllowedError|NotSupportedError|SecurityError|InvalidStateError|QuotaExceededError|DataError|OperationError|NotReadableError|NotFoundError|TimeoutError|AbortError):\s*/i, '');
+  if (/^(?:Unexpected end of JSON input|JSON\.parse: unexpected end of data.*)$/i.test(detail)) return 'JSON-данные обрываются или не содержат полного документа';
+  if (/^(?:Unexpected token .*in JSON.*|JSON\.parse:.*|Expected .* in JSON at position .*|.*is not valid JSON)$/i.test(detail)) return 'Некорректный формат JSON';
+  if (/^(?:The user denied permission|Permission denied|Access is denied|Access denied|Operation not permitted)\.?$/i.test(detail)) return 'Недостаточно разрешений для выполнения операции';
+  if (/^(?:The request is not allowed by the user agent or the platform in the current context.*|The operation is insecure\.?)$/i.test(detail)) return 'Операция запрещена настройками безопасности браузера';
+  if (/^(?:The operation is not supported|Not supported|Not implemented)\.?$/i.test(detail)) return 'Операция не поддерживается';
+  if (/^(?:The operation timed out|Operation timed out|Request timed out|Timeout expired)\.?$/i.test(detail)) return 'Время ожидания операции истекло';
+  if (/^(?:File not found|No such file or directory)\.?$/i.test(detail)) return 'Файл или каталог не найден';
+  if (/^(?:No space left on device|Disk full|There is not enough space on the disk)\.?$/i.test(detail)) return 'Недостаточно свободного места на диске';
+  if (/^(?:The quota has been exceeded|Quota exceeded|QuotaExceededError)\.?$/i.test(detail)) return 'Превышен допустимый объём хранилища';
+  if (/^(?:The file could not be read|The object can not be read|The object cannot be read|NotReadableError)\.?$/i.test(detail)) return 'Не удалось прочитать файл или объект';
+  if (/^(?:Invalid URL|Failed to construct 'URL': Invalid URL)\.?$/i.test(detail)) return 'Некорректный адрес URL';
+  if (/^(?:The string to be decoded is not correctly encoded|The string contains invalid characters)\.?$/i.test(detail)) return 'Некорректная кодировка входных данных';
+  if (/^(?:The operation failed for an operation-specific reason|OperationError)\.?$/i.test(detail)) return 'Не удалось завершить криптографическую операцию';
   return message;
 }
 

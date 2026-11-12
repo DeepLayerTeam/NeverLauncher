@@ -1,3 +1,4 @@
+import { browserErrorRu } from "./status-ru";
 import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -64,7 +65,7 @@ export default function PlayerMigration0339({
         if (!cancelled) setSuggestions(paths);
       })
       .catch((err) => {
-        if (!cancelled) setError(String(err));
+        if (!cancelled) setError(browserErrorRu(err));
       });
     return () => {
       cancelled = true;
@@ -95,7 +96,7 @@ export default function PlayerMigration0339({
       );
     } catch (err) {
       setPreview(null);
-      setError(String(err));
+      setError(browserErrorRu(err));
     } finally {
       setBusy(false);
     }
@@ -121,7 +122,7 @@ export default function PlayerMigration0339({
       }
       onAdopted();
     } catch (err) {
-      setError(String(err));
+      setError(browserErrorRu(err));
     } finally {
       setBusy(false);
     }

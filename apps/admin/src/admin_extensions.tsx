@@ -1,3 +1,4 @@
+import { networkErrorRu } from "./api/client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { httpStatusRu } from "./api/client";
 import { auditHref, recoveryAdvice } from "./admin/lifecycle";
@@ -191,7 +192,7 @@ function AdminExtensionFrame({
         if (!cancelled) setHtml(data.html);
       })
       .catch((err: Error) => {
-        if (!cancelled) setError(err.message);
+        if (!cancelled) setError(networkErrorRu(err));
       });
     return () => {
       cancelled = true;

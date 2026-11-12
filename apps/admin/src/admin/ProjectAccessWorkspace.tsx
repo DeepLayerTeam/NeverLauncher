@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, IndeterminateApiError, requestJSON } from '../api/client';
@@ -40,7 +41,7 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
       requestJSON<{items:ProjectRoleUser0387[]}>(backendUrl, '/api/v1/admin/users', token),
       requestJSON<{items:ProjectRole0387[]}>(backendUrl, '/api/v1/admin/roles', token),
     ]).then(([u,r]) => {if(live){setUsers(u.items ?? []);setRoles(r.items ?? []);}})
-      .catch(err => {if(live) setError(err instanceof Error ? err.message : String(err));});
+      .catch(err => {if(live) setError(networkErrorRu(err));});
     return () => { live = false; };
   }, [backendUrl, token]);
 
@@ -66,15 +67,15 @@ export function ProjectAccessWorkspace0387({ backendUrl, token, projectId, onSte
         setError('Права пользователя изменены другим администратором. Обновите список перед повторной попыткой.');
         await refresh().catch(() => undefined);
       } else if (err instanceof ApiError && [401,403,428].includes(err.status)) {
-        setError(`${err.message}. Проверьте право users:manage и выполните повторную проверку MFA с ключом доступа.`);
-      } else setError(err instanceof Error ? err.message : String(err));
+        setError(`${networkErrorRu(err)}. Проверьте право users:manage и выполните повторную проверку MFA с ключом доступа.`);
+      } else setError(networkErrorRu(err));
     } finally { setBusy(false); }
   }
 
   return <article className="subcard" aria-label="Доступ операторов к проекту">
     <h3>Доступ операторов к проекту</h3>
     <p className="muted">Назначения действуют только для проекта <strong>{projectId || 'не выбран'}</strong>. Права экземпляра, хоста и Backend не выдаются через projectRoles. Для изменения требуется актуальное многофакторное подтверждение, защищённое от фишинга и записывается в аудит.</p>
-    <div className="buttonRow"><button disabled={busy} onClick={() => void refresh().catch(e => setError(String(e)))}>Обновить пользователей и роли</button><button disabled={busy} onClick={() => void onStepUp().catch(e => setError(String(e)))}>Подтвердить многофакторную проверку ключом доступа</button></div>
+    <div className="buttonRow"><button disabled={busy} onClick={() => void refresh().catch(e => setError(networkErrorRu(e)))}>Обновить пользователей и роли</button><button disabled={busy} onClick={() => void onStepUp().catch(e => setError(networkErrorRu(e)))}>Подтвердить многофакторную проверку ключом доступа</button></div>
     <label className="field">Пользователь
       <select value={selectedUserId} onChange={event => setSelectedUserId(event.target.value)} disabled={busy || !projectId}>
         <option value="">Выберите пользователя</option>

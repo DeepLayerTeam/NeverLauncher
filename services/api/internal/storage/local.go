@@ -26,7 +26,7 @@ func NewLocalStorage(root string) *LocalStorage {
 
 func (s *LocalStorage) Driver() string { return "local" }
 
-// RootPath возвращает canonical local-storage root для maintenance restore.
+// RootPath возвращает канонический корневой каталог локального хранилища для восстановления при обслуживании.
 func (s *LocalStorage) RootPath() string { return s.root }
 
 func (s *LocalStorage) Save(projectID, versionID, relativePath string, reader io.Reader) (string, int64, error) {

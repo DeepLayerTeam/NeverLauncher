@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import type { ReleaseApi } from '../api/release';
@@ -6,7 +7,7 @@ import {type Catalog0248,type CatalogSnapshot0248,type CatalogPreview0248,type C
  freshComponent0248,listAvailableFiles0248,lintCatalog0248,splitLines0248,parseRelations0248,formatRelations0248,renameComponent0248,removeComponent0248,validComponentID0248} from './component-editor-model-0248';
 
 type Section='components'|'categories'|'groups'|'presets';
-const errText=(e:unknown)=>e instanceof Error?e.message:String(e);
+const errText=(e:unknown)=>networkErrorRu(e);
 const lines=(values:string[]|undefined)=>(values||[]).join('\n');
 function TextField({label,value,onChange,disabled=false}:{label:string;value:string;onChange:(v:string)=>void;disabled?:boolean}){
  return <label className="field"><span>{label}</span><input disabled={disabled} value={value} onChange={e=>onChange(e.target.value)}/></label>;

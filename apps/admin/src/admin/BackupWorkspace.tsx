@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import React, { useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
 import { auditHref } from './lifecycle';
@@ -37,11 +38,11 @@ export function BackupWorkspace({ backendUrl, token, canRestore }: { backendUrl:
     const value = await api<Status>('/api/v1/operations/backup/status');
     setData(value);
   }
-  useEffect(() => { let active = true; requestJSON<Status>(backendUrl, '/api/v1/operations/backup/status', token).then(value => { if (active) setData(value); }).catch(e => { if (active) setError(e.message); }); return () => { active = false; }; }, [backendUrl, token]);
+  useEffect(() => { let active = true; requestJSON<Status>(backendUrl, '/api/v1/operations/backup/status', token).then(value => { if (active) setData(value); }).catch(e => { if (active) setError(networkErrorRu(e)); }); return () => { active = false; }; }, [backendUrl, token]);
   const choose = (id: string) => { setSelected(id); setInspection(null); setVerified(null); setRestore(null); setConfirmId(''); setDatabase(false); setStorage(false); setNotice(''); setError(''); };
   async function run(label: string, operation: () => Promise<void>) {
     setBusy(label); setError(''); setNotice('');
-    try { await operation(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(''); }
+    try { await operation(); } catch (e) { setError(networkErrorRu(e)); } finally { setBusy(''); }
   }
   function create() { void run('create', async () => {
     if (!window.confirm('Создать резервную копию PostgreSQL и файлового хранилища? Операция может временно блокировать изменения.')) return;

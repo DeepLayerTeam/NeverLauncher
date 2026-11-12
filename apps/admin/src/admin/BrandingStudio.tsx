@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import React, {useRef,useState} from 'react';
 import {readPng0355,signBranding0355,validateBrand0355,verifyBootstrap0355,type Branding0355} from './branding_0355';
 
@@ -45,11 +46,11 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
     <div className="formGrid">
       <article className="subcard">
         <h3>1. Подписанный пакет владельца</h3>
-        <label className="field">Исходный bootstrap.signed.json<input type="file" accept=".json,application/json" onChange={e=>choose(e.target.files?.[0],'source').catch(e=>setError(String(e)))} /></label>
+        <label className="field">Исходный bootstrap.signed.json<input type="file" accept=".json,application/json" onChange={e=>choose(e.target.files?.[0],'source').catch(e=>setError(networkErrorRu(e)))} /></label>
         <label className="field">Закреплённый корневой публичный ключ Ed25519 (64 шестнадцатеричных символа)<input value={root} spellCheck={false} onChange={e=>{setRoot(e.target.value);setLoaded(null)}} /></label>
-        <label className="field">Политика доверия для делегированного режима v2 (для v1 не выбирайте)<input type="file" accept=".json,application/json" onChange={e=>choose(e.target.files?.[0],'policy').catch(e=>setError(String(e)))} /></label>
+        <label className="field">Политика доверия для делегированного режима v2 (для v1 не выбирайте)<input type="file" accept=".json,application/json" onChange={e=>choose(e.target.files?.[0],'policy').catch(e=>setError(networkErrorRu(e)))} /></label>
         {policy&&<button onClick={()=>{setPolicy('');setLoaded(null)}}>Убрать политику доверия</button>}
-        <div className="buttonRow"><button disabled={!source||!root||!projectId} onClick={()=>inspect().catch(e=>{setLoaded(null);setError(String(e))})}>Проверить исходную подпись</button></div>
+        <div className="buttonRow"><button disabled={!source||!root||!projectId} onClick={()=>inspect().catch(e=>{setLoaded(null);setError(networkErrorRu(e))})}>Проверить исходную подпись</button></div>
         {loaded&&<p className="success">Подпись проверена · проект {loaded.projectId} · профиль {loaded.profileId} · формат подписанного пакета {loaded.schema}</p>}
       </article>
       <article className="subcard">
@@ -62,7 +63,7 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
         </div>
         <label className="field">Язык оформления<select value={brand.locale||'ru'} onChange={e=>change('locale',e.target.value)}><option value="ru">Русский</option><option value="en">Английский</option></select></label>
         {([['logoPng','Логотип'],['iconPng','Иконка приложения'],['splashPng','Заставка запуска']] as const).map(([field,label])=><label className="field" key={field}>{label} · PNG до 128 KiB
-          <input type="file" accept="image/png" onChange={e=>{const f=e.target.files?.[0];if(f)readPng0355(f).then(s=>change(field,s)).catch(err=>setError(String(err)))}}/>
+          <input type="file" accept="image/png" onChange={e=>{const f=e.target.files?.[0];if(f)readPng0355(f).then(s=>change(field,s)).catch(err=>setError(networkErrorRu(err)))}}/>
           {brand[field]&&<button type="button" onClick={()=>change(field,'')}>Удалить {label.toLowerCase()}</button>}
         </label>)}
         <h4>Новости и ссылки (до 5)</h4>
@@ -97,7 +98,7 @@ export function BrandingStudio0355({projectId,canSign}:{projectId:string;canSign
         <input ref={privateInput} type="file" accept=".key,.txt" onChange={e=>setSeedFile(e.target.files?.[0]??null)}/>
       </label>
       <p className="muted">Для v1 нужен корневой ключевой материал, для v2 — материал активного делегированного ключа начальной загрузки из загруженной политики доверия. При несовпадении ключа подписание отклоняется.</p>
-      <div className="buttonRow"><button disabled={!canSign||!loaded||!previewValid||!seedFile||busy} onClick={()=>signedDownload().catch(err=>setError(String(err)))}>{busy?'Подписание…':'Подписать и скачать bootstrap.signed.json'}</button></div>
+      <div className="buttonRow"><button disabled={!canSign||!loaded||!previewValid||!seedFile||busy} onClick={()=>signedDownload().catch(err=>setError(networkErrorRu(err)))}>{busy?'Подписание…':'Подписать и скачать bootstrap.signed.json'}</button></div>
       {status&&<p className="success" role="status">{status}</p>}
       {error&&<p className="error" role="alert">{error}</p>}
     </article>

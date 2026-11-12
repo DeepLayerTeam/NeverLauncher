@@ -65,7 +65,7 @@ SCENARIOS = (
         "unsigned-module",
         "adversarial",
         "guard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots",
-        "Неподписанная DLL вне trusted roots приводит к fail-closed",
+        "Неподписанная DLL вне доверенных корневых каталогов приводит к безопасному отказу",
     ),
     Scenario(
         "code-page-drift",
@@ -89,7 +89,7 @@ SCENARIOS = (
         "live-debugger",
         "adversarial",
         "guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach",
-        "Live DebugActiveProcess attach приводит к fail-closed",
+        "Подключение отладчика через DebugActiveProcess приводит к безопасному отказу",
     ),
     Scenario(
         "foreign-executable-allocation",

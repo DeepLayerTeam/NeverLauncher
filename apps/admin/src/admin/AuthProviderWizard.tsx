@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
@@ -121,7 +122,7 @@ export function AuthProviderWizard02910({
     }
   }, [backendUrl, token]);
   useEffect(() => {
-    void load().catch((e) => setError(String(e)));
+    void load().catch((e) => setError(networkErrorRu(e)));
   }, [load]);
   const request = (path: string, body: unknown) =>
     requestJSON<Record<string, unknown>>(backendUrl, path, token, {
@@ -143,7 +144,7 @@ export function AuthProviderWizard02910({
     try {
       await operation();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -345,8 +346,8 @@ export function AuthProviderWizard02910({
       )}
       <h3>3. Поэтапное внедрение и история ревизий</h3>
       <p className="muted">
-        Активация и откат требуют повторной многофакторной аутентификации, устойчивой к фишингу и
-        compare-and-swap версии. Новый коннектор проверяется непосредственно
+        Активация и откат требуют повторной многофакторной аутентификации, устойчивой к фишингу, а также
+        атомарной проверки и замены версии. Новый коннектор проверяется непосредственно
         перед применением. При ошибке текущая конфигурация не изменяется.
       </p>
       {heads.length === 0 ? (

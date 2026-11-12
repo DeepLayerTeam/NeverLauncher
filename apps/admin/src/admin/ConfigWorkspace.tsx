@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, requestJSON } from '../api/client';
 import { recoveryAdvice } from './lifecycle';
@@ -45,14 +46,14 @@ export function ConfigWorkspace({ backendUrl, token }: { backendUrl: string; tok
     requestJSON<Revision>(backendUrl, '/api/v1/admin/config', token),
     requestJSON<{ items: Revision[] }>(backendUrl, '/api/v1/admin/config/revisions', token),
   ]).then(([now, history]) => { if (active) { setCurrent(now); setDraft({ ...now.settings }); setRevisions(history.items ?? []); } })
-    .catch(e => { if (active) setError(e.message); }); return () => { active = false; }; }, [backendUrl, token]);
+    .catch(e => { if (active) setError(networkErrorRu(e)); }); return () => { active = false; }; }, [backendUrl, token]);
   function change<K extends keyof OperationalSettings>(key: K, value: OperationalSettings[K]) {
     setDraft(old => old ? { ...old, [key]: value } : old); setPreview(null); setRestore(null); setConfirmed('');
   }
   function explain(e: unknown) {
     const err = e as ApiError;
     const advice = err.reasonCode === 'revision_conflict' ? 'Настройки изменены в другой вкладке или другим администратором. Обновите страницу и повторите проверку.' : recoveryAdvice(err.message);
-    setError(`${err.message}. ${advice}`);
+    setError(`${networkErrorRu(err)}. ${advice}`);
   }
   async function run<T>(fn: () => Promise<T>, after: (result: T) => Promise<void> | void) {
     setBusy(true); setError(''); setNotice('');

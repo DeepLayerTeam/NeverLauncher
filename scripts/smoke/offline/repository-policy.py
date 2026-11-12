@@ -218,7 +218,7 @@ for rel, forbidden in forbidden_ui.items():
             fail(f"{rel}: запрещён устаревший/англоязычный UI-текст: {needle}")
 
 
-# 6. P3.2v3 production hardening: auth/storage/backup/CORS должны быть fail-closed.
+# 6. P3.2v3 усиление защиты промышленной среды: авторизация, хранилище, резервное копирование и CORS должны безопасно отказывать.
 config_go = read("services/api/internal/config/config.go")
 admin_handlers = read("services/api/internal/httpapi/admin_handlers.go")
 api_main = read("services/api/cmd/launcher-api/main.go")
@@ -771,7 +771,7 @@ for rel in [
     "scripts/release/zip-dir.py",
 ]:
     if not (ROOT / rel).is_file():
-        fail(f"отсутствует production release utility: {rel}")
+        fail(f"отсутствует утилита промышленного выпуска: {rel}")
 for required in [
     "source-package.py",
     "secret-scan.py",
@@ -792,7 +792,7 @@ if (
     or "Build and cryptographically verify complete release bundle"
     not in production_release_workflow
 ):
-    fail("dedicated production workflow не собирает полный production release bundle")
+    fail("отдельный процесс промышленного выпуска не собирает полный комплект выпуска")
 if (
     "release-bundle:" in ci
     or "windows-production-signed:" in ci
@@ -1560,7 +1560,7 @@ for required in [
 ]:
     if required not in production_release_workflow:
         fail(
-            f"production release не ждёт exact-commit Compatibility/Device Trust certification: {required}"
+            f"промышленный выпуск не ожидает сертификации совместимости и доверия к устройствам для точного коммита: {required}"
         )
 
 
@@ -2021,7 +2021,7 @@ if (
 ):
     fail("Проверка «0.13.3 process policy gate» не подключена к предварительным проверкам и CI")
 if "runtime/process policy 0.13.3 gate OK" not in policy_gate_0133:
-    fail("Не завершена реализация «0.13.3 mandatory process policy release gate»")
+    fail("Не завершена реализация «0.13.3 обязательная проверка политики процессов перед выпуском»")
 
 
 # В 0.13.9: кроссплатформенная CI-матрица Guard и сертификация выпуска.
@@ -2099,7 +2099,7 @@ if (
 ):
     fail("Проверка «0.13.9 Guard release certification gate» не подключена к предварительным проверкам и CI")
 if "cross-platform Guard CI matrix + release certification gate" not in guard_gate_0139:
-    fail("Не завершена реализация «0.13.9 mandatory Guard release gate»")
+    fail("Не завершена реализация «0.13.9 обязательная проверка Guard перед выпуском»")
 if not (ROOT / "cli/cmd/launcher/guard_ci_release_test.go").is_file():
     fail("Отсутствуют регрессионные тесты «0.13.9 Guard release certification»")
 
@@ -2192,7 +2192,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
                 f"0.14.2 В E2E миграции отсутствует проверка логического значения PostgreSQL: {required}"
             )
     if "Cryptographic Node Identities gate" not in crypto_gate_0142:
-        fail("Не завершена реализация «0.14.2 mandatory cryptographic identity release gate»")
+        fail("Не завершена реализация «0.14.2 обязательная проверка криптографической идентификации перед выпуском»")
 
 # В 0.14.3: одноразовые билеты входа. Разрешение привязано к идентичности,
 # атомарно используется единожды и содержит сохраняемое доказательство погашения.
@@ -2261,7 +2261,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
                 f"0.14.3 В E2E миграции отсутствует проверка логического значения PostgreSQL: {required}"
             )
     if "One-Time Join Tickets gate" not in ticket_gate_0143:
-        fail("Не завершена реализация «0.14.3 mandatory one-time join ticket release gate»")
+        fail("Не завершена реализация «0.14.3 обязательная проверка одноразовых билетов подключения перед выпуском»")
 
 
 # В 0.15.1: производственная поставка начинается с инвентаря, сформированного по
@@ -2371,7 +2371,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in ci:
             fail(f"Неполная реализация «0.15.3 Linux native CI matrix»: {required}")
     if "LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR" not in production_release_workflow:
-        fail("Отсутствует подключение «0.15.3 Linux production release staging»")
+        fail("Отсутствует подключение «0.15.3 подготовка промышленного выпуска Linux»")
     for required in [
         "LINUX_PRODUCTION_EVIDENCE.json",
         "LINUX_PACKAGE_MANIFEST_X64.json",
@@ -3339,7 +3339,7 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
         "device-trust-release-0130.py" not in preflight
         or "device-trust-release-0130.py" not in ci
     ):
-        fail("Проверка «0.13.0 Device Trust Release gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.13.0 проверка доверия к устройствам перед выпуском» не подключена к предварительным проверкам и CI")
 
 # Миграция и стабилизация 0.15.10: проверьте перенос состояния, блокировки и
 # восстановление.
@@ -3452,7 +3452,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.15.11 release integration»: {required}")
     for required in [
         "PRODUCTION_RC_REQUIRED",
-        "Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort",
+        "Кандидат на промышленный выпуск требует полного набора сертификационных проверок совместимости, доверия к устройствам и Guard CI",
         'git -C "${ROOT_DIR}" diff --quiet HEAD --',
         "release candidate-verify",
         "PRODUCTION_RELEASE_CANDIDATE.json",
@@ -3570,12 +3570,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 f"0.16.0 Отсутствуют регрессионные тесты промышленной поставки: {required}"
             )
     if "Production Delivery Release 0.16.0 gate: OK" not in gate_0160:
-        fail("Не завершена реализация «0.16.0 mandatory Production Delivery Release gate»")
+        fail("Не завершена реализация «0.16.0 обязательная проверка промышленной доставки перед выпуском»")
     if (
         "production-delivery-release-0160.py" not in preflight
         or "production-delivery-release-0160.py" not in ci
     ):
-        fail("Проверка «0.16.0 Production Delivery Release gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.16.0 проверка промышленной доставки перед выпуском» не подключена к предварительным проверкам и CI")
 
 # В 0.17.0: Minecraft Compatibility II GA связывает каждый PASS с
 # конкретным бинарником JRE. Исправления сохраняют всю старую матрицу
@@ -5035,7 +5035,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "arm_module_guard",
     ]:
         if required not in sensor_bootstrap_0182:
-            fail(f"Неполная реализация «0.18.2 Guard Sensor fail-closed bootstrap»: {required}")
+            fail(f"Неполная реализация «0.18.2 безопасная первичная настройка датчика Guard»: {required}")
     # Сертификация Vanilla использует общий bootstrap; запуск игры использует более
     # строгий prepare_sensor_command_for_game с привязкой к манифесту, добавленный
     # позже. Оба пути должны аутентифицировать Sensor до продолжения.

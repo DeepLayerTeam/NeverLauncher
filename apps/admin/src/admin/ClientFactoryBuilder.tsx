@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -42,7 +43,7 @@ type Envelope<T> = { data: T; error?: { message: string } };
 const ended = (state: string) =>
   ["completed", "failed", "cancelled", "interrupted"].includes(state);
 const readableError = (e: unknown) =>
-  e instanceof Error ? e.message : String(e);
+  networkErrorRu(e);
 const key = (workspace: string) => `launcher.clientfactory.${workspace}`;
 const targets = [
   "windows/x86_64",

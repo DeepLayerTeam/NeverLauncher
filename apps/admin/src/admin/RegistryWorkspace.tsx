@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import React, { useEffect, useState } from "react";
 import { requestJSON, httpStatusRu } from "../api/client";
 import { TextInput } from "../components/primitives";
@@ -153,11 +154,11 @@ export function RegistryWorkspace({
   } | null>(null);
 
   useEffect(() => {
-    loadRegistry().catch((err: Error) => setError(err.message));
-    loadExtensionHosts().catch((err: Error) => setError(err.message));
+    loadRegistry().catch((err: Error) => setError(networkErrorRu(err)));
+    loadExtensionHosts().catch((err: Error) => setError(networkErrorRu(err)));
   }, [backendUrl, token]);
   useEffect(() => {
-    loadExtensionInstalls().catch((err: Error) => setError(err.message));
+    loadExtensionInstalls().catch((err: Error) => setError(networkErrorRu(err)));
   }, [backendUrl, token, extensionScope, extensionScopeId]);
 
   async function loadRegistry() {
@@ -569,7 +570,7 @@ export function RegistryWorkspace({
         <button
           onClick={() =>
             Promise.all([loadExtensionInstalls(), loadExtensionHosts()]).catch(
-              (err: Error) => setError(err.message),
+              (err: Error) => setError(networkErrorRu(err)),
             )
           }
         >
@@ -609,7 +610,7 @@ export function RegistryWorkspace({
         />
         <button
           onClick={() =>
-            loadRegistry().catch((err: Error) => setError(err.message))
+            loadRegistry().catch((err: Error) => setError(networkErrorRu(err)))
           }
         >
           Найти
@@ -642,7 +643,7 @@ export function RegistryWorkspace({
                 runRegistryAction(
                   "Издатель реестра",
                   createRegistryPublisher,
-                ).catch((err) => setError(err.message))
+                ).catch((err) => setError(networkErrorRu(err)))
               }
             >
               Создать / обновить издателя
@@ -652,7 +653,7 @@ export function RegistryWorkspace({
                 runRegistryAction(
                   "Ключ издателя",
                   addRegistryPublisherKey,
-                ).catch((err) => setError(err.message))
+                ).catch((err) => setError(networkErrorRu(err)))
               }
             >
               Добавить доверенный ключ
@@ -703,7 +704,7 @@ export function RegistryWorkspace({
                 runRegistryAction(
                   "Публикация в реестре",
                   publishRegistryArtifact,
-                ).catch((err) => setError(err.message))
+                ).catch((err) => setError(networkErrorRu(err)))
               }
             >
               Проверить подпись и опубликовать
@@ -767,7 +768,7 @@ export function RegistryWorkspace({
                       "Установка из реестра",
                       () => installRegistryVersion(item),
                       item.extensionId,
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Подготовить и установить проверенный пакет
@@ -779,7 +780,7 @@ export function RegistryWorkspace({
                       "Канал реестра",
                       () => setRegistryVersionChannel(item),
                       item.extensionId,
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Назначить канал
@@ -788,7 +789,7 @@ export function RegistryWorkspace({
                   onClick={() =>
                     runRegistryAction("Загрузка из реестра", () =>
                       downloadRegistryArtifact(item),
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Скачать .nlext
@@ -801,7 +802,7 @@ export function RegistryWorkspace({
                       "Отзыв версии из реестра",
                       () => yankRegistryVersion(item),
                       item.extensionId,
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Отозвать версию
@@ -907,7 +908,7 @@ export function RegistryWorkspace({
                             "Запуск хоста",
                             () => hostAction(item, "start"),
                             item.extensionId,
-                          ).catch((err) => setError(err.message))
+                          ).catch((err) => setError(networkErrorRu(err)))
                         }
                       >
                         Запустить хост
@@ -923,7 +924,7 @@ export function RegistryWorkspace({
                             "Остановка хоста",
                             () => hostAction(item, "stop"),
                             item.extensionId,
-                          ).catch((err) => setError(err.message))
+                          ).catch((err) => setError(networkErrorRu(err)))
                         }
                       >
                         Остановить хост
@@ -935,7 +936,7 @@ export function RegistryWorkspace({
                             "Перезапуск хоста",
                             () => hostAction(item, "restart"),
                             item.extensionId,
-                          ).catch((err) => setError(err.message))
+                          ).catch((err) => setError(networkErrorRu(err)))
                         }
                       >
                         Перезапустить хост
@@ -960,7 +961,7 @@ export function RegistryWorkspace({
                       "Включение расширения",
                       () => lifecycleAction(item, "enable"),
                       item.extensionId,
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Включить
@@ -972,7 +973,7 @@ export function RegistryWorkspace({
                       "Отключение расширения",
                       () => lifecycleAction(item, "disable"),
                       item.extensionId,
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Отключить
@@ -984,7 +985,7 @@ export function RegistryWorkspace({
                       "Обновление расширения",
                       () => updateInstalledExtension(item),
                       item.extensionId,
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Обновить
@@ -995,7 +996,7 @@ export function RegistryWorkspace({
                       "Откат расширения",
                       () => lifecycleAction(item, "rollback"),
                       item.extensionId,
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Откатить
@@ -1008,7 +1009,7 @@ export function RegistryWorkspace({
                       "Удаление расширения",
                       () => lifecycleAction(item, "uninstall"),
                       item.extensionId,
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Удалить

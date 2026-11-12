@@ -299,7 +299,7 @@ func (r *Repository) GetExtensionInstall326(ctx context.Context, id, scope, scop
 	return
 }
 
-// Установка через compare-and-swap с неизменяемыми поколениями; отзыв отключает активные установки.
+// Установка с атомарной проверкой и заменой неизменяемых поколений; отзыв отключает активные установки.
 // Сохраняется только проверенный выбор пакета, а исполнение расширения — отдельный этап.
 func (r *Repository) ApplyExtensionInstall326(ctx context.Context, v SQLiteExtensionInstall, expected int64) (out SQLiteExtensionInstall, err error) {
 	if !durableFieldsNonempty(v.ExtensionID, v.Actor) || (v.Scope != "global" && v.Scope != "project") || (v.Scope == "project" && v.ScopeID == "") || expected < 0 || !map[string]bool{"enabled": true, "disabled": true, "absent": true, "error": true}[v.State] {

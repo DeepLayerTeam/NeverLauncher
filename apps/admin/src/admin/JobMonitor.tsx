@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
@@ -21,7 +22,7 @@ export function JobMonitor({ backendUrl, token, projectId, initialId = '', canPu
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const api = <T,>(path: string, init?: RequestInit) => requestJSON<T>(backendUrl, path, token, init);
-  const explain = (e: unknown) => { const reason = e instanceof Error ? e.message : String(e); return `${reason}. ${recoveryAdvice(reason)}`; };
+  const explain = (e: unknown) => { const reason = e instanceof Error ? e.message : String(e); return `${networkErrorRu(e)}. ${recoveryAdvice(reason)}`; };
   async function reloadPage(nextOffset = offset, nextFilter = filter) {
     const params = new URLSearchParams({ projectId, limit: '25', offset: String(nextOffset) });
     if (nextFilter) params.set('status', nextFilter);

@@ -64,7 +64,7 @@ def load_matrix(path: Path, expected_commit: str) -> dict[str, Any]:
     ):
         fail(f"Матрица Guard CI должна содержать schemaVersion=1.0 и productVersion={VERSION}")
     if matrix.get("status") != "passed" or matrix.get("errors") not in ([], None):
-        fail("Матрица Guard CI не подтверждает успешную проверку по принципу fail-closed")
+        fail("Матрица Guard CI не подтверждает успешную проверку безопасного отказа")
     commit = str(matrix.get("commit", "")).strip()
     run_id = str(matrix.get("runId", "")).strip()
     repository = str(matrix.get("repository", "")).strip()

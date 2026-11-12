@@ -1,3 +1,4 @@
+import { browserErrorRu } from "./status-ru";
 import { statusRuDesktop } from "./status-ru";
 import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
@@ -27,10 +28,10 @@ export function HWIDRisk0299({ backendUrl, token, deviceId }: Props) {
     const [state, history] = await Promise.all([request(''), request('/appeals')]);
     setStatus(state); setAppeals(history.items || []);
   }
-  useEffect(() => { void reload().catch(err => setMessage(String(err))); }, [token, deviceId, backendUrl]);
+  useEffect(() => { void reload().catch(err => setMessage(browserErrorRu(err))); }, [token, deviceId, backendUrl]);
   async function run(action: () => Promise<unknown>, note: string) {
     setBusy(true); setMessage('');
-    try { await action(); await reload(); setMessage(note); } catch (err) { setMessage(String(err)); } finally { setBusy(false); }
+    try { await action(); await reload(); setMessage(note); } catch (err) { setMessage(browserErrorRu(err)); } finally { setBusy(false); }
   }
   return <section className="panel" aria-label="Риск HWID">
     <h4>HWID: добровольная оценка риска и восстановление</h4>

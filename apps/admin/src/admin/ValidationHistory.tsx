@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from 'react';
 import { ReleaseApi, type ValidationAuditReport03412 } from '../api/release';
@@ -22,14 +23,14 @@ export function ValidationHistory03412({api,packageId}:Props) {
       setReport(value);
       setEvents(old=>cursor===0 ? value.attempts : [...old,...value.attempts]);
       setNext(value.nextBefore);
-    } catch (e) {setError(e instanceof Error?e.message:String(e));}
+    } catch (e) {setError(networkErrorRu(e));}
     finally {setBusy(false)}
   },[api,packageId]);
   useEffect(()=>{setReport(null);setSelected(null);setEvents([]);setNext(0);void load(0);},[load]);
   async function drill(runId:string) {
     setBusy(true);setError('');
     try {setSelected(await api.validationRun(packageId,runId));}
-    catch(e){setError(e instanceof Error?e.message:String(e));}
+    catch(e){setError(networkErrorRu(e));}
     finally{setBusy(false)}
   }
   if (!packageId) return null;

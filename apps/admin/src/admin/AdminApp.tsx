@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import React, { useEffect, useState } from "react";
 import { AdminExtensions } from "../admin_extensions_0208";
 import { RegistryWorkspace } from "./RegistryWorkspace";
@@ -974,7 +975,7 @@ export function AdminApp() {
       })
       .catch((err: Error) => {
         if (live) {
-          setError(err.message);
+          setError(networkErrorRu(err));
           setStatus("offline");
         }
       });
@@ -995,7 +996,7 @@ export function AdminApp() {
         }
       })
       .catch((err: Error) => {
-        if (live) setError(err.message);
+        if (live) setError(networkErrorRu(err));
       });
     return () => {
       live = false;
@@ -1040,7 +1041,7 @@ export function AdminApp() {
         }
       })
       .catch((err: Error) => {
-        if (live) setError(err.message);
+        if (live) setError(networkErrorRu(err));
       });
     return () => {
       live = false;
@@ -1189,7 +1190,7 @@ export function AdminApp() {
                 }
                 onClick={() =>
                   runAction("Создание пакета", createPackage).catch((err) =>
-                    setError(err.message),
+                    setError(networkErrorRu(err)),
                   )
                 }
               >
@@ -1207,7 +1208,7 @@ export function AdminApp() {
                         { method: "POST" },
                       ),
                     ),
-                  ).catch((err) => setError(err.message))
+                  ).catch((err) => setError(networkErrorRu(err)))
                 }
               >
                 Проверить
@@ -1222,7 +1223,7 @@ export function AdminApp() {
                       token,
                       { method: "POST" },
                     ),
-                  ).catch((err) => setError(err.message))
+                  ).catch((err) => setError(networkErrorRu(err)))
                 }
               >
                 Проверка целостности
@@ -1263,7 +1264,7 @@ export function AdminApp() {
                 }
                 onClick={() =>
                   runAction("Загрузка файла пакета", uploadPackageFile).catch(
-                    (err) => setError(err.message),
+                    (err) => setError(networkErrorRu(err)),
                   )
                 }
               >
@@ -1333,7 +1334,7 @@ export function AdminApp() {
                     }
                     onClick={() =>
                       createProject().catch((err: Error) =>
-                        setError(err.message),
+                        setError(networkErrorRu(err)),
                       )
                     }
                   >
@@ -1356,7 +1357,7 @@ export function AdminApp() {
                             body: JSON.stringify(projectForm),
                           },
                         ),
-                      ).catch((err) => setError(err.message))
+                      ).catch((err) => setError(networkErrorRu(err)))
                     }
                   >
                     Обновить
@@ -1503,7 +1504,7 @@ export function AdminApp() {
                         token,
                         { method: "POST", body: JSON.stringify(channelForm) },
                       ),
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Создать
@@ -1518,7 +1519,7 @@ export function AdminApp() {
                         token,
                         { method: "PATCH", body: JSON.stringify(channelForm) },
                       ),
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Обновить
@@ -1582,7 +1583,7 @@ export function AdminApp() {
                         method: "POST",
                         body: JSON.stringify(userForm),
                       }),
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Создать
@@ -1604,7 +1605,7 @@ export function AdminApp() {
                           }),
                         },
                       ),
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Обновить
@@ -1619,7 +1620,7 @@ export function AdminApp() {
                         token,
                         { method: "POST" },
                       ),
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Отключить
@@ -1634,7 +1635,7 @@ export function AdminApp() {
                         token,
                         { method: "POST" },
                       ),
-                    ).catch((err) => setError(err.message))
+                    ).catch((err) => setError(networkErrorRu(err)))
                   }
                 >
                   Включить
@@ -1888,7 +1889,7 @@ export function AdminApp() {
               </label>
               <button
                 onClick={() =>
-                  login().catch((err: Error) => setError(err.message))
+                  login().catch((err: Error) => setError(networkErrorRu(err)))
                 }
               >
                 {token ? "Войти заново" : "Войти"}
@@ -1896,7 +1897,7 @@ export function AdminApp() {
               <button
                 onClick={() =>
                   passwordlessPasskeyLogin().catch((err: Error) =>
-                    setError(err.message),
+                    setError(networkErrorRu(err)),
                   )
                 }
               >
@@ -1911,7 +1912,7 @@ export function AdminApp() {
                 <button
                   onClick={() =>
                     refreshSession().catch((err: Error) =>
-                      setError(err.message),
+                      setError(networkErrorRu(err)),
                     )
                   }
                 >
@@ -1919,7 +1920,7 @@ export function AdminApp() {
                 </button>
                 <button
                   onClick={() =>
-                    logout().catch((err: Error) => setError(err.message))
+                    logout().catch((err: Error) => setError(networkErrorRu(err)))
                   }
                 >
                   Выйти
@@ -1927,7 +1928,7 @@ export function AdminApp() {
                 <button
                   onClick={() =>
                     registerPasskey().catch((err: Error) =>
-                      setError(err.message),
+                      setError(networkErrorRu(err)),
                     )
                   }
                 >
@@ -1935,7 +1936,7 @@ export function AdminApp() {
                 </button>
                 <button
                   onClick={() =>
-                    stepUpPasskey().catch((err: Error) => setError(err.message))
+                    stepUpPasskey().catch((err: Error) => setError(networkErrorRu(err)))
                   }
                 >
                   Подтвердить ключ доступа
@@ -1953,7 +1954,7 @@ export function AdminApp() {
                 </select>
                 <button
                   onClick={() =>
-                    saveMfaPolicy().catch((err: Error) => setError(err.message))
+                    saveMfaPolicy().catch((err: Error) => setError(networkErrorRu(err)))
                   }
                 >
                   Сохранить политику многофакторной аутентификации
@@ -2177,7 +2178,7 @@ export function AdminApp() {
                 </h2>
                 <button
                   onClick={() =>
-                    loadActive().catch((err: Error) => setError(err.message))
+                    loadActive().catch((err: Error) => setError(networkErrorRu(err)))
                   }
                 >
                   Обновить данные

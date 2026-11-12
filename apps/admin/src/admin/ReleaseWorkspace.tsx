@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, {
   useCallback,
@@ -64,7 +65,7 @@ const empty = (
   jobId: "",
   step: "project",
 });
-const printable = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const printable = (e: unknown) => (networkErrorRu(e));
 const isPassed = (v: ValidationReport | null) =>
   v?.integrity?.result === "passed";
 

@@ -1,3 +1,4 @@
+import { browserErrorRu } from "./status-ru";
 import React, { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -67,7 +68,7 @@ export function ComponentPortability02410({
       })
       .catch((e) => {
         if (!cancelled)
-          setError(`Миграция установленного выбора: ${String(e)}`);
+          setError(`Миграция установленного выбора: ${browserErrorRu(e)}`);
       });
     return () => {
       cancelled = true;
@@ -87,7 +88,7 @@ export function ComponentPortability02410({
         if (!cancelled) setAutomaticDiff(d);
       })
       .catch((e) => {
-        if (!cancelled) setError(`Проверка файлов миграции: ${String(e)}`);
+        if (!cancelled) setError(`Проверка файлов миграции: ${browserErrorRu(e)}`);
       });
     return () => {
       cancelled = true;
@@ -108,7 +109,7 @@ export function ComponentPortability02410({
       })
       .catch((e) => {
         if (!cancelled)
-          setError(`Проверка импортированных файлов: ${String(e)}`);
+          setError(`Проверка импортированных файлов: ${browserErrorRu(e)}`);
       });
     return () => {
       cancelled = true;
@@ -154,7 +155,7 @@ export function ComponentPortability02410({
         "Выбор экспортирован. Тот же JSON доступен ниже для ручного сохранения.",
       );
     } catch (e) {
-      setError(String(e));
+      setError(browserErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -176,7 +177,7 @@ export function ComponentPortability02410({
       setImported(null);
       setInput("");
     } catch (e) {
-      setError(String(e));
+      setError(browserErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -290,7 +291,7 @@ export function ComponentPortability02410({
               setInput(data);
               await importSelection(data);
             } catch (err) {
-              setError(String(err));
+              setError(browserErrorRu(err));
             }
           }}
         />
@@ -307,7 +308,7 @@ export function ComponentPortability02410({
         <button
           disabled={busy || transferBusy || !input.trim()}
           onClick={() =>
-            void importSelection(input).catch((e) => setError(String(e)))
+            void importSelection(input).catch((e) => setError(browserErrorRu(e)))
           }
         >
           Проверить импорт

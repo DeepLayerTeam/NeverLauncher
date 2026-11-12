@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
@@ -28,16 +29,16 @@ export function GravitImportPanel({backendUrl,token,projectId,onChanged}:{backen
  async function loadFile(file:File|null){setInputFile(file);setSource(null);setError('');if(!file)return;
   if(file.size>1024*1024){setError('Максимальный размер JSON — 1 МБ');return}
   try {const value:unknown=JSON.parse(await file.text());if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Ожидается JSON-объект ClientProfile');setSource(value)}
-  catch(e){setError(`Некорректный JSON: ${String(e)}`)}
+  catch(e){setError(`Некорректный JSON: ${networkErrorRu(e)}`)}
  }
  const payload=()=>({id,name,loaderHint,source});
  const post=async<T,>(endpoint:string,body:unknown)=>requestJSON<T>(backendUrl,`${url}/${endpoint}`,token,{method:'POST',body:JSON.stringify(body)});
  async function inspect(){if(!source)return;setBusy(true);setError('');setReport(null);setCreated(null);
-  try {setReport(await post<Report>('inspect-gravit',payload()))}catch(e){setError(String(e))}finally{setBusy(false)}
+  try {setReport(await post<Report>('inspect-gravit',payload()))}catch(e){setError(networkErrorRu(e))}finally{setBusy(false)}
  }
  async function commit(){if(!source||!report?.ready)return;setBusy(true);setError('');
   try {const value=await post<Imported>('import-gravit',{...payload(),sourceSha256:report.sourceSha256,channel,version:releaseVersion});setCreated(value);await onChanged()}
-  catch(e){setError(`${String(e)}. При сетевой ошибке проверьте список профилей и рабочую область перед повторной попыткой.`)}finally{setBusy(false)}
+  catch(e){setError(`${networkErrorRu(e)}. При сетевой ошибке проверьте список профилей и рабочую область перед повторной попыткой.`)}finally{setBusy(false)}
  }
  function downloadReport(){if(!report)return;const body=JSON.stringify(report,null,2)+'\n';const u=URL.createObjectURL(new Blob([body],{type:'application/json'}));
   try{const a=document.createElement('a');a.href=u;a.download=`gravit-import-${id||'profile'}.report.json`;a.click()}finally{setTimeout(()=>URL.revokeObjectURL(u),1000)}

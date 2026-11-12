@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ClientFactoryBuilder02710 } from "./ClientFactoryBuilder02710";
@@ -79,7 +80,7 @@ type Validation0384 = {
   profileRevision: number;
 };
 type Diff0384 = { revision: number; items: FileDifference0384[] };
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const message = (e: unknown) => (networkErrorRu(e));
 
 export function BuildWorkspacePanel({
   base,

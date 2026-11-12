@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
@@ -27,9 +28,9 @@ export function OfficialProviderWorkspace02611({ backendUrl, token }: { backendU
     requestJSON<Revision>(backendUrl, '/api/v1/admin/official-provider', token),
     requestJSON<{ items: Revision[] }>(backendUrl, '/api/v1/admin/official-provider/history', token),
   ]).then(([v,h]) => { if (alive) { setCurrent(v); setDraft({...v.settings}); setHistory(h.items??[]); }})
-    .catch(e => { if (alive) setError(e.message); }); return () => { alive = false; }; }, [backendUrl, token]);
+    .catch(e => { if (alive) setError(networkErrorRu(e)); }); return () => { alive = false; }; }, [backendUrl, token]);
   function update(p: Partial<Policy>) { setDraft(old => old ? { ...old, ...p } : null); setNotice(''); }
-  async function perform(task: () => Promise<void>) { setBusy(true);setError('');setNotice('');try { await task(); }catch(e){ setError(e instanceof Error ? e.message : String(e));}finally{setBusy(false);} }
+  async function perform(task: () => Promise<void>) { setBusy(true);setError('');setNotice('');try { await task(); }catch(e){ setError(networkErrorRu(e));}finally{setBusy(false);} }
   const changed = !!current && !!draft && JSON.stringify(current.settings) !== JSON.stringify(draft);
   return <section className="card wide"><div className="registryHeading"><div><h2>Провайдер Microsoft / Xbox / Minecraft</h2><p className="muted">Настройки собственного общедоступного приложения Microsoft. Поддерживаются только личные учётные записи Microsoft; секреты и токены здесь не вводятся.</p></div><button disabled={busy} onClick={() => void perform(refresh)}>Обновить</button></div>
     {draft && current ? <>

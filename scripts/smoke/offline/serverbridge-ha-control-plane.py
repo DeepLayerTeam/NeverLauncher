@@ -17,7 +17,7 @@ def require(text, needles, label):
 version = read("VERSION").strip()
 parts = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if parts < (0, 19, 11):
-    raise SystemExit(f"HA Control Plane: требуется версия не ниже 0.19.11, получено {version}")
+    raise SystemExit(f"Высокодоступная плоскость управления: требуется версия не ниже 0.19.11, получено {version}")
 
 control = read("services/api/internal/httpapi/server_bridge_control_0195.go")
 repo = read("services/api/internal/repository/server_bridge_v2.go")

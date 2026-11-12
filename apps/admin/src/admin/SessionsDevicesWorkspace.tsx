@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
@@ -31,13 +32,13 @@ export function SessionsDevicesWorkspace({ backendUrl, token, adminAccess, onCur
     Promise.all([
       requestJSON<{items:Session[]}>(backendUrl, '/api/v1/auth/sessions', token),
       adminAccess ? requestJSON<{items:Device[]}>(backendUrl, '/api/v1/admin/auth/devices', token) : Promise.resolve({items: [] as Device[]}),
-    ]).then(([self, managed]) => { if(live) {setSessions(self.items??[]);setDevices(managed.items??[])} }).catch(e => { if(live) setError(e.message); });
+    ]).then(([self, managed]) => { if(live) {setSessions(self.items??[]);setDevices(managed.items??[])} }).catch(e => { if(live) setError(networkErrorRu(e)); });
     return () => { live = false; };
   }, [backendUrl, token, adminAccess]);
   async function perform(id: string, handler: () => Promise<string>) {
     setBusy(id); setError(''); setResult('');
     try { const message = await handler(); setResult(message); if (id !== "current-session") await refresh(); }
-    catch (e) { const reason = e instanceof Error ? e.message : String(e); setError(`${reason} — ${recoveryAdvice(reason)}`); }
+    catch (e) { const reason = e instanceof Error ? e.message : String(e); setError(`${networkErrorRu(e)} — ${recoveryAdvice(reason)}`); }
     finally { setBusy(''); }
   }
   const revoke = (item: Session) => void perform(item.current ? "current-session" : item.id, async () => {

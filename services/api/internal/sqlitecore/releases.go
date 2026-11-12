@@ -149,7 +149,7 @@ func (r *Repository) UpdateDraftManifest(ctx context.Context, projectID, release
 
 func verifyTrustedSignature(m model.Manifest, roots []ed25519.PublicKey) error {
 	if len(roots) == 0 {
-		return errors.New("production release: требуется «настроенный доверенный корневой ключ Ed25519»")
+		return errors.New("Промышленный выпуск: требуется настроенный доверенный корневой ключ Ed25519")
 	}
 	// Подписанный черновик не является запускаемым промышленным релизом. Перед
 	// записью опубликованного head канала требуйте минимальные исполняемые

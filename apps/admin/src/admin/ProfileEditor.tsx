@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import React, {useEffect, useState} from 'react';
 import {requestJSON, ApiError, IndeterminateApiError} from '../api/client';
 import type {Profile} from '../api/admin';
@@ -28,7 +29,7 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
     let current=true;
     if(!projectId || !selectedProfile)return;
     requestJSON<{items:Snapshot[]}>(backendUrl,`/api/v1/projects/${encodeURIComponent(projectId)}/profiles/${encodeURIComponent(selectedProfile.id)}/revisions`,token)
-      .then(v=>{if(current)setHistory(v.items||[])}).catch(e=>{if(current)setError(`История профиля: ${e instanceof Error?e.message:String(e)}`)});
+      .then(v=>{if(current)setHistory(v.items||[])}).catch(e=>{if(current)setError(`История профиля: ${networkErrorRu(e)}`)});
     return()=>{current=false};
   },[backendUrl,token,projectId,selectedProfile?.id,selectedProfile?.revision]);
   const edit=<K extends keyof Fields>(key:K,value:Fields[K])=>{setForm(old=>({...old,[key]:value}));setDirty(true);setError('');setNotice('')};
@@ -50,8 +51,8 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
       }
     }catch(e){
       if(e instanceof ApiError && e.status===409)setError('Ревизия уже изменилась. Скопируйте свои изменения и обновите профиль перед повтором.');
-      else if(e instanceof IndeterminateApiError)setError(e.message);
-      else setError(e instanceof Error?e.message:String(e));
+      else if(e instanceof IndeterminateApiError)setError(networkErrorRu(e));
+      else setError(networkErrorRu(e));
     }finally{setWorking(false)}
   }
   function restore(){

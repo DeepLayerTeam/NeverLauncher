@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import React, { useCallback, useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
 import { navigate } from "./routing";
@@ -75,7 +76,7 @@ export function BackendOperations0289({
   useEffect(() => {
     let alive = true;
     void refresh().catch((e) => {
-      if (alive) setError(String(e));
+      if (alive) setError(networkErrorRu(e));
     });
     return () => {
       alive = false;
@@ -97,7 +98,7 @@ export function BackendOperations0289({
       );
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -181,7 +182,7 @@ export function BackendOperations0289({
       <div className="buttonRow">
         <button
           disabled={busy}
-          onClick={() => void refresh().catch((e) => setError(String(e)))}
+          onClick={() => void refresh().catch((e) => setError(networkErrorRu(e)))}
         >
           Обновить состояние
         </button>

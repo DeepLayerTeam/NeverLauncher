@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import React, { useEffect, useState } from "react";
 import { GuardPolicyOperations05011 } from "./GuardPolicyOperations05011";
 import { requestJSON } from "../api/client";
@@ -65,7 +66,7 @@ export function SupportDiagnostics03510({
       setOperator(bundle);
       setReports(Array.isArray(inbox.items) ? inbox.items : []);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setLoading(false);
     }

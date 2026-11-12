@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "../api/client";
@@ -110,11 +111,11 @@ const showProblem = (error: unknown) => {
   if (error instanceof ApiError) {
     if (error.status === 401) return "Сессия истекла. Войдите заново.";
     if (error.status === 403)
-      return `Недостаточно полномочий или требуется повторная дополнительная MFA-проверка: ${error.message}`;
+      return `Недостаточно полномочий или требуется повторная дополнительная MFA-проверка: ${networkErrorRu(error)}`;
     if (error.status === 409)
-      return `Конфликт состояния сервера или ключа идемпотентности: ${error.message}`;
+      return `Конфликт состояния сервера или ключа идемпотентности: ${networkErrorRu(error)}`;
   }
-  return error instanceof Error ? error.message : "Неизвестная ошибка";
+  return networkErrorRu(error);
 };
 const readPending = (
   projectId: string,

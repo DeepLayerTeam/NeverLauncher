@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, requestJSON } from '../api/client';
@@ -38,7 +39,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
     setPolicy(p); setOptions(o.items ?? []); setExceptions(e.items ?? []);
     setPolicyHistory(h.items ?? []); setExceptionHistory(eh.items ?? []);
   }, [backendUrl, token, qp]);
-  useEffect(() => { let active = true; setPolicy(blank); setError(''); refresh().catch(e => { if (active) setError(String(e)); }); return () => { active = false; }; }, [refresh]);
+  useEffect(() => { let active = true; setPolicy(blank); setError(''); refresh().catch(e => { if (active) setError(networkErrorRu(e)); }); return () => { active = false; }; }, [refresh]);
   const change = <K extends keyof Policy,>(key: K, value: Policy[K]) => setPolicy(p => ({ ...p, [key]: value }));
   async function savePolicy() {
     if (busy) return;
@@ -49,7 +50,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
       setPolicy(next); await refresh(); setMessage('Политика сохранена; настройки применяются сервером при следующем обращении.');
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) await refresh();
-      setError(e instanceof Error ? e.message : String(e));
+      setError(networkErrorRu(e));
     } finally { setBusy(false); }
   }
   async function readPlayerHistory() {
@@ -58,7 +59,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
     try {
       const result = await requestJSON<{ items: PlayerChange[] }>(backendUrl, `/api/v1/admin/textures/players/${encodeURIComponent(userId.trim())}/history${qp}`, token);
       setPlayerHistory(result.items ?? []);
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setError(networkErrorRu(e)); }
   }
   async function saveException() {
     if (!userId.trim() || busy) return;
@@ -67,7 +68,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
       await requestJSON(backendUrl, `/api/v1/admin/textures/exceptions/${encodeURIComponent(userId.trim())}${qp}`, token,
         { method: 'PUT', body: JSON.stringify({ kind, decision, reason: exceptionReason }) });
       await refresh(); setMessage('Решение пользователя сохранено и зафиксировано в истории.');
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setError(networkErrorRu(e)); }
     finally { setBusy(false); }
   }
   const preview = (digest: string) => digest && scope === ''
@@ -126,7 +127,7 @@ export function TextureManagement0259({ backendUrl, token, projectId }: { backen
       <label className="field">Максимум файлов на игрока<input type="number" min={1} max={10000} value={policy.maxBlobsPerPlayer} onChange={e => change('maxBlobsPerPlayer', Number(e.target.value))}/></label>
       <label className="field">Причина изменения<input value={reason} maxLength={500} minLength={3} onChange={e => setReason(e.target.value)}/></label>
       <button onClick={savePolicy} disabled={busy || reason.trim().length < 3}>Сохранить политику (многофакторная проверка)</button>
-      <button onClick={() => refresh().catch(e => setError(String(e)))} disabled={busy}>Перезагрузить</button>
+      <button onClick={() => refresh().catch(e => setError(networkErrorRu(e)))} disabled={busy}>Перезагрузить</button>
     </fieldset>
     <fieldset disabled={busy}>
       <legend>Индивидуальные исключения</legend>

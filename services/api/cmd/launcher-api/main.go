@@ -507,7 +507,7 @@ func newRepository(cfg config.Config) repository.Repository {
 		}
 		return r
 	default:
-		log.Fatalf("неизвестный LAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён", cfg.RepositoryDriver)
+		log.Fatalf("Неизвестный LAUNCHER_REPOSITORY_DRIVER=%q: безопасный отказ, переход на хранилище в памяти запрещён", cfg.RepositoryDriver)
 		return nil
 	}
 }

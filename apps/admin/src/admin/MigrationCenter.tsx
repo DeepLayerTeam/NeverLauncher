@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
@@ -595,7 +596,7 @@ export function MigrationCenter0331({
         token,
       )
         .then(setRuns)
-        .catch((e: Error) => setError(e.message));
+        .catch((e: Error) => setError(networkErrorRu(e)));
   }, [backendUrl, token, projectId]);
 
   async function reportAction03313(action: "generate" | "review" | "status") {
@@ -641,7 +642,7 @@ export function MigrationCenter0331({
         setReview03313(reviewed);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -721,7 +722,7 @@ export function MigrationCenter0331({
       );
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
       await refresh(runId).catch(() => undefined);
     } finally {
       setBusy(false);
@@ -810,7 +811,7 @@ export function MigrationCenter0331({
       setRollbackPlan03312(result);
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
       await refresh(runId).catch(() => undefined);
     } finally {
       setBusy(false);
@@ -834,7 +835,7 @@ export function MigrationCenter0331({
       setRunId(saved.id);
       await refresh(saved.id);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -854,7 +855,7 @@ export function MigrationCenter0331({
       await refresh(runId);
     } catch (e) {
       // При ошибочном или неопределённом ответе перечитайте сохранённое состояние перед повторной отправкой.
-      setError(String(e));
+      setError(networkErrorRu(e));
       await refresh(runId).catch(() => undefined);
     } finally {
       setBusy(false);
@@ -886,7 +887,7 @@ export function MigrationCenter0331({
       setCompatibility(result);
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
       await refresh(runId).catch(() => undefined);
     } finally {
       setBusy(false);
@@ -913,7 +914,7 @@ export function MigrationCenter0331({
       );
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
       await refresh(runId).catch(() => undefined);
     } finally {
       setBusy(false);
@@ -937,7 +938,7 @@ export function MigrationCenter0331({
       setIdentities(result);
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
       await refresh(runId).catch(() => undefined);
     } finally {
       setBusy(false);
@@ -956,7 +957,7 @@ export function MigrationCenter0331({
       );
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
       await refresh(runId).catch(() => undefined);
     } finally {
       setBusy(false);
@@ -995,7 +996,7 @@ export function MigrationCenter0331({
         await refresh(runId);
       } else setCredentialPreview(report);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
       await refresh(runId).catch(() => undefined);
     } finally {
       setBusy(false);
@@ -1037,7 +1038,7 @@ export function MigrationCenter0331({
         await refresh(runId);
       } else setSecurityPreview(result);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -1054,7 +1055,7 @@ export function MigrationCenter0331({
       );
       setSecurity(result);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -1082,7 +1083,7 @@ export function MigrationCenter0331({
       setContentPreview(result.content);
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -1132,7 +1133,7 @@ export function MigrationCenter0331({
         setContentState(null);
       }
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -1150,7 +1151,7 @@ export function MigrationCenter0331({
         ),
       );
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -1169,7 +1170,7 @@ export function MigrationCenter0331({
       );
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -1226,7 +1227,7 @@ export function MigrationCenter0331({
         URL.revokeObjectURL(url);
       }
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -1249,7 +1250,7 @@ export function MigrationCenter0331({
       setModules0338(result);
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
       await refresh(runId).catch(() => undefined);
     } finally {
       setBusy(false);
@@ -1268,7 +1269,7 @@ export function MigrationCenter0331({
       setBridgeStatus0446(status);
     } catch (e) {
       setBridgeStatus0446(null);
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -1311,7 +1312,7 @@ export function MigrationCenter0331({
       setBridgeStatus0446(null);
       await refresh(runId);
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -1352,7 +1353,7 @@ export function MigrationCenter0331({
           value={runId}
           onChange={(e) => {
             setRunId(e.target.value);
-            void refresh(e.target.value).catch((err) => setError(String(err)));
+            void refresh(e.target.value).catch((err) => setError(networkErrorRu(err)));
           }}
         >
           <option value="">Выберите запуск миграции</option>
@@ -1366,7 +1367,7 @@ export function MigrationCenter0331({
       <div className="buttonRow">
         <button
           disabled={busy || !runId}
-          onClick={() => void refresh(runId).catch((e) => setError(String(e)))}
+          onClick={() => void refresh(runId).catch((e) => setError(networkErrorRu(e)))}
         >
           Обновить
         </button>

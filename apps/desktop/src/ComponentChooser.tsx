@@ -1,3 +1,4 @@
+import { browserErrorRu } from "./status-ru";
 import React, { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -106,7 +107,7 @@ export function ComponentChooser0247({
         if (!cancelled) setCurrent(result);
       })
       .catch((e) => {
-        if (!cancelled) setCurrentError(String(e));
+        if (!cancelled) setCurrentError(browserErrorRu(e));
       });
     return () => {
       cancelled = true;
@@ -135,7 +136,7 @@ export function ComponentChooser0247({
         }
       })
       .catch((e) => {
-        if (!cancelled) setError(String(e));
+        if (!cancelled) setError(browserErrorRu(e));
       })
       .finally(() => {
         if (!cancelled) setWorking(false);
@@ -180,7 +181,7 @@ export function ComponentChooser0247({
         added: choice.added,
       });
     } catch (e) {
-      setActionError(String(e));
+      setActionError(browserErrorRu(e));
     }
   }
   function changePreset(base: string) {
@@ -415,7 +416,7 @@ export function ComponentChooser0247({
                         );
                         setDiff(updated);
                       } catch (e) {
-                        setError(String(e));
+                        setError(browserErrorRu(e));
                       } finally {
                         setInstalling(false);
                       }
@@ -448,7 +449,7 @@ export function ComponentChooser0247({
                   await installSelection(pending.value);
                   setPending(null);
                 } catch (e) {
-                  setError(String(e));
+                  setError(browserErrorRu(e));
                 } finally {
                   setInstalling(false);
                 }

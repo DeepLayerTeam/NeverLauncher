@@ -1068,7 +1068,7 @@ func remoteCall0284(args []string) error {
 	// Транспорт Go рассматривает Idempotency-Key как разрешение повторить запрос на
 	// переиспользованном повреждённом соединении. Побочные эффекты хоста НЕЛЬЗЯ повторять после
 	// неопределённого ответа: полностью отключите повторное использование соединения и
-	// восстанавливайте результат только через read-only endpoint квитанции.
+	// восстанавливайте результат только через точку API квитанции, доступную только для чтения.
 	client := &http.Client{Timeout: 90 * time.Second, Transport: &http.Transport{TLSClientConfig: tlsConfig, DisableKeepAlives: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	action := flagValue(args, "--action", "status")
 	var method, path string

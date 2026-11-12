@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useEffect, useRef, useState } from "react";
 import { requestJSON } from "../api/client";
@@ -152,7 +153,7 @@ export function OperationsWorkspace({
       return;
     let active = true;
     const id = window.setInterval(() => {
-      if (active) refresh(jobId).catch((err) => setError(String(err.message)));
+      if (active) refresh(jobId).catch((err) => setError(networkErrorRu(err)));
     }, 2000);
     return () => {
       active = false;
@@ -241,7 +242,7 @@ export function OperationsWorkspace({
         await refresh(created.id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(networkErrorRu(err));
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -294,7 +295,7 @@ export function OperationsWorkspace({
       setJobId(next.id);
       await refresh(next.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(networkErrorRu(e));
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -349,7 +350,7 @@ export function OperationsWorkspace({
       setJob(next);
       await refresh(job.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(networkErrorRu(err));
     } finally {
       setBusy(false);
     }
@@ -535,7 +536,7 @@ export function OperationsWorkspace({
             <button
               disabled={!jobId || busy}
               onClick={() =>
-                refresh().catch((err) => setError(String(err.message)))
+                refresh().catch((err) => setError(networkErrorRu(err)))
               }
             >
               Обновить

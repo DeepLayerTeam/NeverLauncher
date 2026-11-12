@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import React, { useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
 import { GravitImportPanel } from "./GravitImportPanel";
@@ -77,7 +78,7 @@ export function ProfileManagementWorkspace({
           if (live) setPresets(result.items ?? []);
         })
         .catch((e) => {
-          if (live) setError(String(e));
+          if (live) setError(networkErrorRu(e));
         });
     return () => {
       live = false;
@@ -114,7 +115,7 @@ export function ProfileManagementWorkspace({
       }
       setNotice(`${label}: выполнено`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(networkErrorRu(e));
     } finally {
       setBusy(false);
     }

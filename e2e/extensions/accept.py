@@ -155,7 +155,7 @@ def main():
         report['status'] = 'pass'
     except Exception as error:
         report['failure'] = str(error)
-        print(f'Приёмка расширений завершилась отказом по принципу fail-closed: {error}', file=sys.stderr, flush=True)
+        print(f'Приёмка расширений завершилась безопасным отказом: {error}', file=sys.stderr, flush=True)
         returncode = 1
     else:
         print(f"ПРОЙДЕНО: реальные сквозные проверки расширений, подписанных пакетов и негативных сценариев для {args.target}")

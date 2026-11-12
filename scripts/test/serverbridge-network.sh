@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Выполняйте настоящие тесты хоста/JVM/отказов и полный Minecraft E2E для 14
-# целей. Принцип fail-closed: отсутствие Docker/JAR/Go/Java нельзя компенсировать
+# целей. Принцип безопасного отказа: отсутствие Docker/JAR/Go/Java нельзя компенсировать
 # заглушками.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

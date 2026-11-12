@@ -16,7 +16,7 @@
 | Admin | `apps/admin/` | Веб-интерфейс управления |
 | Desktop | `apps/desktop/` | React + Tauri: конфигурация, проверка файлов и запуск клиентов |
 | CLI `nl` | `cli/` | Установка, администрирование, манифесты, диагностика, сборка и проверка релизов |
-| Runtime / Guard | `runtime/` | Minecraft/JRE runtime, загрузки, контроль целостности и защитные механизмы |
+| Runtime / Guard | `runtime/` | Среда выполнения Minecraft/JRE, загрузки, контроль целостности и защитные механизмы |
 | ServerBridge | `plugins/`, `serverbridge/` | Интеграции Minecraft-серверов и прокси, управление узлами |
 | Extensions | `extensions/`, `sdk/`, `examples/extensions/` | Расширения и SDK |
 | Контракты и проверки | `schemas/`, `compatibility/`, `device-trust/`, `e2e/`, `scripts/` | OpenAPI, проверка версий, матрицы и выпускные проверки |

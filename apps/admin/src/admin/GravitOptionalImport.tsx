@@ -1,3 +1,4 @@
+import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React,{useState} from 'react';
 import type {ReleaseApi} from '../api/release';
@@ -20,7 +21,7 @@ export function GravitOptionalImport02411({api,packageId,revision,enabled,onCand
  }
  async function inspect(){setBusy(true);setError('');setResult(null);
   try{setResult(await api.componentEditorGravitPreview(packageId,revision,source))}
-  catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(false)}
+  catch(e){setError(networkErrorRu(e))}finally{setBusy(false)}
  }
  function downloadReport(){if(!result)return;const body=JSON.stringify({format:result.migration.format,sourceSha256:result.migration.sourceSha256,ready:result.canApply,fields:result.migration.fields,summary:result.migration.summary,validation:result.preview},null,2)+'\n';const u=URL.createObjectURL(new Blob([body],{type:'application/json'}));
   try{const a=document.createElement('a');a.href=u;a.download='gravit-optional-migration-report.json';a.click()}finally{URL.revokeObjectURL(u)}

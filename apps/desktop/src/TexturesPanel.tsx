@@ -1,3 +1,4 @@
+import { browserErrorRu } from "./status-ru";
 import React, {
   useCallback,
   useEffect,
@@ -235,7 +236,7 @@ export function TexturesPanel0258({
         if (!controller.signal.aborted) setHistory(Array.isArray(v) ? v : []);
       })
       .catch((e) => {
-        if (!controller.signal.aborted) setError(String(e));
+        if (!controller.signal.aborted) setError(browserErrorRu(e));
       });
     return () => controller.abort();
   }, [client, kind, showHistory, realm, identity]);
@@ -341,7 +342,7 @@ export function TexturesPanel0258({
         );
     } catch (e) {
       if (!controller.signal.aborted) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(browserErrorRu(e));
         if (e instanceof TextureServiceError0258 && e.status === 409)
           await refresh().catch(() => undefined);
       }

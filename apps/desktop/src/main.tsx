@@ -1,4 +1,4 @@
-import { statusRuDesktop } from "./status-ru";
+import { browserErrorRu, statusRuDesktop } from "./status-ru";
 import { serverKindRu } from "./desktop_experience";
 import {
   offlineLaunchSettings0358,
@@ -60,38 +60,6 @@ import {
   type NativeTransfer0354,
   type Recovery0354,
 } from "./download_experience_0354";
-
-/** Перевод типовых ошибок браузера без изменения диагностических кодов API. */
-function browserErrorRu(error: unknown): string {
-  const message = String(error ?? '');
-  if (/^(?:(?:TypeError|NetworkError):\s*)?(?:Failed to fetch|Network request failed|Load failed|fetch failed)$/i.test(message.trim()))
-    return 'Не удалось выполнить сетевой запрос';
-  if (/^(?:TypeError: )?NetworkError when attempting to fetch resource\.?$/i.test(message))
-    return 'Сетевая ошибка при обращении к серверу';
-  if (/^(?:AbortError:\s*)?(?:The operation was aborted|The user aborted a request|This operation was aborted)\.?$/i.test(message.trim()))
-    return 'Операция прервана';
-  if (/^(?:AbortError|TimeoutError):?$/i.test(message.trim())) return 'Время ожидания операции истекло';
-  if (/^getaddrinfo ENOTFOUND\b|^connect (?:ETIMEDOUT|ECONNREFUSED)\b/i.test(message.trim()))
-    return 'Не удалось подключиться к серверу (ошибка сети)';
-  // Распространённые ошибки сети в WebView/браузерах Windows, Linux и macOS.
-  if (/\b(?:ERR_CONNECTION_REFUSED|ECONNREFUSED)\b/i.test(message))
-    return 'Соединение с сервером отклонено (ERR_CONNECTION_REFUSED)';
-  if (/\b(?:ERR_NAME_NOT_RESOLVED|ENOTFOUND|EAI_AGAIN)\b/i.test(message))
-    return 'Не удалось определить адрес сервера (ошибка DNS)';
-  if (/\b(?:ERR_CONNECTION_TIMED_OUT|ETIMEDOUT)\b/i.test(message))
-    return 'Превышено время ожидания соединения с сервером';
-  if (/\b(?:ERR_CONNECTION_RESET|ECONNRESET)\b/i.test(message))
-    return 'Сервер разорвал соединение';
-  if (/\b(?:ERR_INTERNET_DISCONNECTED|ENETUNREACH|ERR_NETWORK_CHANGED)\b/i.test(message))
-    return 'Сеть недоступна или соединение изменилось';
-  if (/\bERR_CERT_[A-Z_]+\b/i.test(message))
-    return 'Не удалось проверить сертификат защищённого соединения';
-  if (/^(?:The network connection was lost|Network is unreachable)\.?$/i.test(message.trim()))
-    return 'Сетевое соединение потеряно или недоступно';
-  if (/^An SSL error has occurred/i.test(message.trim()))
-    return 'Не удалось установить защищённое соединение';
-  return message;
-}
 
 /** Локализованный HTTP-статус для журналов и сообщений интерфейса. */
 export function httpStatusRu(response: Pick<Response, 'status'>): string {
@@ -4450,7 +4418,7 @@ function App() {
         "Состав пакета проверен нативным процессом. Просмотрите поля перед экспортом или отправкой.",
       );
     } catch (e) {
-      setDiagnosticStatus03510(`Предпросмотр не выполнен: ${String(e)}`);
+      setDiagnosticStatus03510(`Предпросмотр не выполнен: ${browserErrorRu(e)}`);
     } finally {
       setDiagnosticBusy03510(false);
     }
@@ -4467,7 +4435,7 @@ function App() {
       setDiagnosticPreview03510(null);
       setDiagnosticConsent03510(false);
     } catch (e) {
-      setDiagnosticStatus03510(`Экспорт не выполнен: ${String(e)}`);
+      setDiagnosticStatus03510(`Экспорт не выполнен: ${browserErrorRu(e)}`);
     } finally {
       setDiagnosticBusy03510(false);
     }
@@ -6636,7 +6604,7 @@ function ConflictPreservation0359({
         if (active) setPreview(r);
       })
       .catch((e) => {
-        if (active) setError(String(e));
+        if (active) setError(browserErrorRu(e));
       });
     return () => {
       active = false;
@@ -6660,7 +6628,7 @@ function ConflictPreservation0359({
       setArchive(result.archiveDirectory || "");
       await refresh();
     } catch (e) {
-      setError(String(e));
+      setError(browserErrorRu(e));
     } finally {
       setBusy(false);
     }
@@ -6704,7 +6672,7 @@ function ConflictPreservation0359({
       )}
       <button
         disabled={transferBusy || busy}
-        onClick={() => void refresh().catch((e) => setError(String(e)))}
+        onClick={() => void refresh().catch((e) => setError(browserErrorRu(e)))}
       >
         Обновить список
       </button>
