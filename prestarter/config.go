@@ -133,10 +133,10 @@ func VerifyEnvelopeWithPolicy(data []byte, pinnedKeyHex string, policy *TrustPol
 	}
 	if envelope.SchemaVersion == "2.0" {
 		if policy == nil || envelope.TrustEpoch != policy.Epoch {
-			return cfg, "", errors.New("Требуется делегированная политика bootstrap с подписью корневого ключа и указанием эпохи")
+			return cfg, "", errors.New("Требуется делегированная политика начального запуска с подписью корневого ключа и указанием эпохи")
 		}
 		if envelope.KeyID == "" {
-			return cfg, "", errors.New("Отсутствует keyId ключа подписи bootstrap")
+			return cfg, "", errors.New("Отсутствует идентификатор ключа подписи начального запуска (keyId)")
 		}
 	}
 	raw, err := base64.StdEncoding.DecodeString(envelope.Payload)
@@ -162,11 +162,11 @@ func VerifyEnvelopeWithPolicy(data []byte, pinnedKeyHex string, policy *TrustPol
 			break
 		}
 		if !delegated {
-			return cfg, "", errors.New("Ключ подписи bootstrap не делегирован подписанной политикой")
+			return cfg, "", errors.New("Ключ подписи начального запуска не делегирован подписанной политикой")
 		}
 	}
 	if err != nil || len(sig) != ed25519.SignatureSize || !ed25519.Verify(ed25519.PublicKey(key), bootstrapSignaturePayload02312(raw, envelope), sig) {
-		return cfg, "", errors.New("Подписанная конфигурация bootstrap не прошла проверку Ed25519")
+		return cfg, "", errors.New("Подписанная конфигурация начального запуска не прошла проверку Ed25519")
 	}
 	if err := decodeStrict(raw, &cfg); err != nil {
 		return cfg, "", err
@@ -204,7 +204,7 @@ func validateArtifact(a Artifact) error {
 }
 func (c Config) Validate() error {
 	if c.SchemaVersion != "1.0" || !validID(c.ProjectID) || !validID(c.ProfileID) || !validID(c.Channel) {
-		return errors.New("Недопустимая идентификация bootstrap")
+		return errors.New("Недопустимый идентификатор конфигурации начального запуска")
 	}
 	if c.BackendURL != "" {
 		u, e := url.Parse(c.BackendURL)
@@ -234,7 +234,7 @@ func (c Config) Validate() error {
 		}
 	}
 	if c.Manifest.Size > 16*1024*1024 || c.JavaManifest.Size > 8*1024*1024 {
-		return errors.New("Превышен предельный размер манифеста bootstrap")
+		return errors.New("Превышен предельный размер манифеста начального запуска")
 	}
 	if !validDigest(c.Manifest.SHA256) || !validDigest(c.JavaManifest.SHA256) {
 		return errors.New("Хеш манифеста должен быть закреплён")
@@ -254,7 +254,7 @@ func (c Config) Validate() error {
 	seen := map[string]bool{}
 	for _, t := range c.Targets {
 		if (t.OS != "linux" && t.OS != "windows" && t.OS != "darwin") || (t.Arch != "amd64" && t.Arch != "arm64") {
-			return errors.New("В конфигурации bootstrap указана неподдерживаемая ОС или архитектура")
+			return errors.New("В конфигурации начального запуска указана неподдерживаемая ОС или архитектура")
 		}
 		id := t.OS + "/" + t.Arch
 		if seen[id] {

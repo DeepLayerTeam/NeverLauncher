@@ -25,7 +25,7 @@ public final class JavaExtensionHost {
         }
         String target=System.getenv().getOrDefault("LAUNCHER_EXTENSION_TARGET","backend");
         if("backend".equals(target)){
-            if(args.length!=0)throw new IllegalArgumentException("Хост Backend не принимает аргументы");
+            if(args.length!=0)throw new IllegalArgumentException("Хост серверной части не принимает аргументы");
             ExtensionRunner.runManagedFromHost(className,System.getenv());
         }else if("cli".equals(target)){
             if(args.length==0)throw new IllegalArgumentException("Для хоста CLI требуется команда");

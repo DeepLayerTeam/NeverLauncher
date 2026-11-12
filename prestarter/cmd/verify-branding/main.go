@@ -47,7 +47,7 @@ func run() error {
 	var policy *prestarter.TrustPolicy
 	if *policyFile != "" {
 		if envelope.SchemaVersion != "2.0" {
-			return errors.New("Устаревший bootstrap нельзя использовать с делегированной политикой доверия")
+			return errors.New("Устаревшую схему начального запуска нельзя использовать с делегированной политикой доверия")
 		}
 		p, e := read(*policyFile, 128*1024)
 		if e != nil {
@@ -59,7 +59,7 @@ func run() error {
 		}
 		policy = &verified
 	} else if envelope.SchemaVersion == "2.0" {
-		return errors.New("Для делегированного bootstrap необходим параметр --trust-policy")
+		return errors.New("Для делегированного начального запуска необходим параметр --trust-policy")
 	}
 	cfg, digest, e := prestarter.VerifyEnvelopeWithPolicy(raw, strings.TrimSpace(string(root)), policy)
 	if e != nil {

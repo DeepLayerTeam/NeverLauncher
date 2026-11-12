@@ -287,7 +287,7 @@ public final class LauncherApiClient {
             int selected = extractJsonInt(raw, "negotiatedProtocolVersion");
             List<String> enabled = extractJsonStringArray(raw, "features");
             if (selected != BridgeDefaults.PROTOCOL_VERSION) {
-                throw new IOException("Обнаружено понижение версии протокола ServerBridge v3: Backend выбрал " + selected);
+                throw new IOException("Обнаружено понижение версии протокола ServerBridge v3: серверная часть выбрала " + selected);
             }
             for (String required : BridgeProtocolSecurity.REQUIRED_FEATURES) {
                 if (!enabled.contains(required)) throw new IOException("Обнаружено снижение требований безопасности ServerBridge: отсутствует " + required);
@@ -500,7 +500,7 @@ public final class LauncherApiClient {
         BridgeControlCommand command = new BridgeControlCommand(serverId, commandId, runtimeId, runtimeEpoch, identityEpoch, type, payload, payloadSha256,
             deliverySequence, channelId, leaseToken, attempt, issuedAt, expiresAt, securityProfile, capabilityDigest,
             v3SigningPublicKey, v3SigningKeyFingerprint, v3Signature, previousV3SigningPublicKey, previousV3SigningKeyFingerprint, previousV3Signature);
-        if (!controlTrust.verify(command)) throw new GeneralSecurityException("Не пройдена проверка подписи управляющей команды или доверия к Backend");
+        if (!controlTrust.verify(command)) throw new GeneralSecurityException("Не пройдена проверка подписи управляющей команды или доверия к серверной части");
 
         BridgeControlJournal.State state = controlJournal.state(command);
         BridgeControlResult result;
@@ -602,7 +602,7 @@ public final class LauncherApiClient {
     static void requireEventStream0515(BridgeProtocolNegotiation protocol) throws IOException {
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION ||
             !protocol.features().contains(BridgeDefaults.FEATURE_EVENT_STREAM)) {
-            throw new IOException("Поток событий ServerBridge недоступен на согласованном Backend; сохраняемые события оставлены в очереди");
+            throw new IOException("Поток событий ServerBridge недоступен на согласованной серверной части; сохраняемые события оставлены в очереди");
         }
     }
 

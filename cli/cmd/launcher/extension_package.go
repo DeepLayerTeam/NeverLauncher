@@ -900,7 +900,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 		}
 		sig, err := base64.StdEncoding.DecodeString(envelope.Signature)
 		if err != nil || len(sig) != ed25519.SignatureSize {
-			return nil, errors.New("signature.ed25519 содержит некорректную Ed25519 signature")
+			return nil, errors.New("Файл signature.ed25519 содержит некорректную подпись Ed25519")
 		}
 		if !strings.HasPrefix(envelope.KeyFingerprint, "sha256:") || len(envelope.KeyFingerprint) != len("sha256:")+64 {
 			return nil, errors.New("signature.ed25519 содержит некорректный keyFingerprint")

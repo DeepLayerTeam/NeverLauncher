@@ -363,7 +363,7 @@ func (r *SQLRepository) TouchServerBridgeNodeRuntimeHeartbeat(ctx context.Contex
 	now = now.UTC()
 	if currentRuntimeID == runtime.RuntimeID {
 		if currentDigest == "" || !strings.EqualFold(currentDigest, runtime.IdentityDigest) {
-			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: идентификатор среды выполнения изменён для существующего runtime id", ErrConflict)
+			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: Идентификатор среды выполнения изменён для существующей записи Runtime", ErrConflict)
 		}
 		res, err := tx.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET
 			fingerprint=CASE WHEN fingerprint='' AND btrim($3)<>'' THEN 'plugin:'||btrim($3) ELSE fingerprint END,

@@ -28,7 +28,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	// перезапуск.
 	if strings.EqualFold(strings.TrimSpace(cfg.RepositoryDriver), "sqlite") {
 		if strings.TrimSpace(cfg.SQLiteCoordinatorPath) == "" {
-			return fmt.Errorf("SQLite HTTP backend: требуется «путь к устойчивому координатору SQLite»")
+			return fmt.Errorf("Серверная часть HTTP на SQLite: требуется путь к координатору SQLite с постоянным хранилищем")
 		}
 		if filepath.Clean(cfg.SQLiteCoordinatorPath) == filepath.Clean(cfg.DatabaseDSN) {
 			return fmt.Errorf("Хранилищу SQLite и координатору требуются разные файлы с поддержкой блокировок")

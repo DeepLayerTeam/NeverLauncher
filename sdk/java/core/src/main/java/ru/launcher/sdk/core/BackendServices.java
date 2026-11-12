@@ -49,7 +49,7 @@ public final class BackendServices {
     private static String text(Map<String,Object> raw,String key) {
         Object v=raw.get(key);
         if(v==null)return "";
-        if(!(v instanceof String s))throw new IllegalArgumentException("Недопустимое поле Backend: " + key);
+        if(!(v instanceof String s))throw new IllegalArgumentException("Недопустимое поле серверной части: " + key);
         return s;
     }
     private static String required(Map<String,Object> raw,String key) {
@@ -57,18 +57,18 @@ public final class BackendServices {
     }
     private static boolean bool(Map<String,Object> raw,String key) {
         Object n=raw.get(key);
-        if(!(n instanceof Boolean b))throw new IllegalArgumentException("Недопустимое логическое значение Backend: "+key);
+        if(!(n instanceof Boolean b))throw new IllegalArgumentException("Недопустимое логическое значение серверной части: "+key);
         return b;
     }
     private static long number(Map<String,Object> raw,String key) {
         Object n=raw.get(key);
         if(!(n instanceof Number value)||value.longValue()!=value.doubleValue()||value.longValue()<0)
-            throw new IllegalArgumentException("Некорректное число Backend: "+key);
+            throw new IllegalArgumentException("Некорректное число в ответе серверной части: "+key);
         return value.longValue();
     }
     private static int narrow(Map<String,Object> raw,String key) {
         long v=number(raw,key);
-        if(v>Integer.MAX_VALUE)throw new IllegalArgumentException("Переполнение целочисленного значения Backend: "+key);
+        if(v>Integer.MAX_VALUE)throw new IllegalArgumentException("Переполнение целочисленного значения в ответе серверной части: "+key);
         return (int)v;
     }
     private static Project project(Map<String,Object> m) {
@@ -101,7 +101,7 @@ public final class BackendServices {
         params.put("offset",offset);params.put("limit",limit);
         var response=call(operation,params);
         Object raw=response.get("items");
-        if(!(raw instanceof List<?> items)||items.size()>limit)throw new IllegalArgumentException("Некорректная страница данных Backend");
+        if(!(raw instanceof List<?> items)||items.size()>limit)throw new IllegalArgumentException("Некорректная страница данных серверной части");
         List<T> decoded=new ArrayList<>(items.size());
         for(Object item:items) {
             Map<String,Object> map=Json.object(item);
@@ -110,19 +110,19 @@ public final class BackendServices {
             // проектов.
             Object expected=base.get("projectId");
             if(expected!=null && !Objects.equals(expected,map.get("projectId")))
-                throw new SecurityException("Ответ Backend относится к другому проекту");
+                throw new SecurityException("Ответ серверной части относится к другому проекту");
             decoded.add(value);
         }
         Integer next=null;
         if(response.containsKey("nextOffset")) {
             long n=number(response,"nextOffset");
-            if(n<=offset||n>1_000_000)throw new IllegalArgumentException("Некорректный указатель выборки Backend");
+            if(n<=offset||n>1_000_000)throw new IllegalArgumentException("Некорректный указатель выборки серверной части");
             next=(int)n;
         }
         return new Page<>(decoded,next);
     }
     private static void checkScope(String projectId,String expected) {
-        if(!projectId.equals(expected))throw new SecurityException("Ответ Backend относится к другому проекту");
+        if(!projectId.equals(expected))throw new SecurityException("Ответ серверной части относится к другому проекту");
     }
 
     /** Требуется project:read и глобальное разрешение для расширения глобальной области действия. */

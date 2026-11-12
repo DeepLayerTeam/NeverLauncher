@@ -33,7 +33,7 @@ func scanRelease(s interface{ Scan(...any) error }) (model.ReleaseVersion, error
 		return v, e
 	}
 	if v.ProjectID != v.Manifest.ProjectID || v.ProfileID != v.Manifest.ProfileID || v.Channel != v.Manifest.Channel || v.Version != v.Manifest.Version {
-		return v, errors.New("Несоответствие: release/manifest идентификатор")
+		return v, errors.New("Идентификатор релиза не совпадает с идентификатором манифеста")
 	}
 	v.PublishedAt = ts(published)
 	return v, nil

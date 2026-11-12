@@ -6,7 +6,7 @@
 
 ## Полная минимальная установка, включая HTTP/Coordinator SQLite и файлы проекта
 
-1. Остановите API и всех писателей файлов. Создайте согласованную автономную копию штатным установщиком:
+1. Остановите API и все процессы записи файлов. Создайте согласованную автономную копию штатным установщиком:
 
    ```sh
    python3 scripts/install/minimal-install.py backup --root /var/lib/launcher-minimal --destination /private/backups/minimal-2026-10-29

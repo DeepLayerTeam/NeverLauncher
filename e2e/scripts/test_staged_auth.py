@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import staged_auth_0347 as auth
+import staged_auth as auth
 
 OFFICIAL = {
     "username": "ActualPlayer",
@@ -125,7 +125,7 @@ class AuthBoundaryTests(unittest.TestCase):
             def fake(base, path, **kw):
                 if "validate" in path:
                     return 204, None
-                raise auth.ProviderRejected("guard trust policy denied")
+                raise auth.ProviderRejected("Guard: отказ по политике доверия")
 
             with patch.object(auth, "provider_request", side_effect=fake):
                 result = auth.guard_denial_probe(CUSTOM, f)

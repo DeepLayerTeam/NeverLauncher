@@ -115,7 +115,7 @@ func Run(ctx context.Context, opts Options) error {
 		}
 		policyBytes, err := os.ReadFile(policyFile)
 		if err != nil {
-			return fmt.Errorf("Для делегированного bootstrap требуется локально установленная политика с подписью корневого ключа: %w", err)
+			return fmt.Errorf("Для делегированного начального запуска требуется локально установленная политика с подписью корневого ключа: %w", err)
 		}
 		policy, err := AcceptTrustPolicy(filepath.Join(store.root, "trust"), opts.TrustedKey, policyBytes, time.Now().UTC())
 		if err != nil {
@@ -124,7 +124,7 @@ func Run(ctx context.Context, opts Options) error {
 		cfg, digest, e = VerifyEnvelopeWithPolicy(raw, opts.TrustedKey, &policy)
 	} else {
 		if st, err := readPolicyState02312(filepath.Join(store.root, "trust", "trust-state.json")); err != nil || st.Epoch > 0 {
-			return errors.New("После активации делегированного доверия устаревший bootstrap запрещён")
+			return errors.New("После активации делегированного доверия устаревшая схема начального запуска запрещена")
 		}
 		cfg, digest, e = VerifyEnvelope(raw, opts.TrustedKey)
 	}
@@ -132,7 +132,7 @@ func Run(ctx context.Context, opts Options) error {
 		return e
 	}
 	if env.SchemaVersion == "2.0" && !strings.EqualFold(cfg.ProfilePublicKey, opts.TrustedKey) {
-		return errors.New("Делегированный корневой ключ доверия игры должен совпадать с закреплённым корневым ключом bootstrap")
+		return errors.New("Делегированный корневой ключ доверия игры должен совпадать с закреплённым корневым ключом начального запуска")
 	}
 	target, e := cfg.SelectTarget()
 	if e != nil {
@@ -172,12 +172,12 @@ func Run(ctx context.Context, opts Options) error {
 		if active, currentErr := p.current(); currentErr == nil && active.Release == installed.Release {
 			if previous != nil {
 				if restoreErr := p.activate(active, *previous); restoreErr != nil {
-					return fmt.Errorf("Ошибка bootstrap: %v; не удалось активировать последнюю исправную версию: %w", e, restoreErr)
+					return fmt.Errorf("Ошибка начального запуска: %v; не удалось активировать последнюю исправную версию: %w", e, restoreErr)
 				}
 			} else {
 				// При первичной установке нет последнего исправного слота. Не оставляйте активным выпуск, не прошедший проверку, Java или синхронизацию. Проверенные по хешу байты останутся в кэше для дальнейшего восстановления.
 				if rollbackErr := p.deactivateFailedFirstRun(active); rollbackErr != nil {
-					return fmt.Errorf("Ошибка bootstrap: %v; не удалось откатить первоначальную активацию: %w", e, rollbackErr)
+					return fmt.Errorf("Ошибка начального запуска: %v; не удалось откатить первоначальную активацию: %w", e, rollbackErr)
 				}
 			}
 		}
@@ -230,7 +230,7 @@ func (p *installer) cleanupInterruptedStages() error {
 			return err
 		}
 		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-			return errors.New("Небезопасная запись в промежуточной области прерванного bootstrap")
+			return errors.New("Небезопасная запись в промежуточной области прерванного начального запуска")
 		}
 		if err := os.RemoveAll(path); err != nil {
 			return err
@@ -313,7 +313,7 @@ func (p *installer) verifyConfig(raw []byte) (Config, string, error) {
 		return VerifyEnvelopeWithPolicy(raw, p.key, &policy)
 	}
 	if state, err := readPolicyState02312(filepath.Join(p.store.root, "trust", "trust-state.json")); err != nil || state.Epoch > 0 {
-		return Config{}, "", errors.New("Устаревший bootstrap заблокирован после активации делегированного доверия")
+		return Config{}, "", errors.New("Устаревшая схема начального запуска заблокирована после активации делегированного доверия")
 	}
 	return VerifyEnvelope(raw, p.key)
 }
@@ -448,7 +448,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 		return e
 	}
 	if profile.ProjectID != p.config.ProjectID || profile.ProfileID != p.config.ProfileID || profile.Channel != p.config.Channel {
-		return errors.New("Подписанный профиль не соответствует идентификатору bootstrap")
+		return errors.New("Подписанный профиль не соответствует идентификатору начального запуска")
 	}
 	if opts.LaunchProfile && (!profile.Runtime.Launch.OfflineMode || !validUsername(opts.Username)) {
 		return errors.New("Прямой запуск профиля требует подписанного offlineMode и --username (3–16 символов); профили с авторизацией запускаются через Desktop")
@@ -485,7 +485,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 		return fmt.Errorf("Установка или восстановление профиля: %w (%s)", e, result)
 	}
 	if !opts.NoDesktop && p.config.BackendURL == "" {
-		return errors.New("Для первого запуска Desktop без участия пользователя требуется подписанный backendUrl в bootstrap")
+		return errors.New("Для первого запуска Desktop без участия пользователя требуется подписанный адрес серверной части (backendUrl) в конфигурации начального запуска")
 	}
 	if !opts.NoDesktop {
 		// Установка без интерфейса и прямой запуск CLI не должны изменять или требовать каталог начальной настройки Desktop. Он нужен только для запуска Desktop.
@@ -571,7 +571,7 @@ func (p *installer) ensureDesktopConfig(username string, offline bool) (string, 
 			return "", err
 		}
 	} else if _, err := os.Lstat(filepath.Join(dir, "trust-policy.signed.json")); err == nil {
-		return "", errors.New("Устаревший bootstrap не может заменить делегированную подготовку Desktop")
+		return "", errors.New("Устаревшая схема начального запуска не может заменить делегированную подготовку Desktop")
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}

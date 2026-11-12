@@ -175,13 +175,13 @@ public final class NeverLauncherAPI {
     /** Совместимость N-1: в 0.45.11 отсутствовал заголовок контракта; определяющая версия находится в /ready. */
     public void checkCompatibility() throws IOException,InterruptedException {
         var response=http.send(HttpRequest.newBuilder(base.resolve("/ready")).timeout(Duration.ofSeconds(10)).GET().build(),HttpResponse.BodyHandlers.ofString());
-        if(response.statusCode()!=200)throw new IOException("Backend не готов: "+response.statusCode());
+        if(response.statusCode()!=200)throw new IOException("Серверная часть не готова: "+response.statusCode());
         var contract=response.headers().firstValue("X-Launcher-API-Contract");
         if(contract.isPresent()) {
             if(!contract.get().equals(CONTRACT_VERSION))throw new IOException("Несовместимый контракт OpenAPI: "+contract.get());
             return;
         }
         var data=Json.object(Json.parse(response.body()));var version=data.get("version");
-        if(!"0.45.11".equals(version) && !"0.45.12".equals(version))throw new IOException("Неподдерживаемая старая версия Backend");
+        if(!"0.45.11".equals(version) && !"0.45.12".equals(version))throw new IOException("Устаревшая версия серверной части не поддерживается");
     }
 }

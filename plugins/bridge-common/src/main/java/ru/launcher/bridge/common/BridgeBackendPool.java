@@ -15,14 +15,14 @@ final class BridgeBackendPool {
     private final long cooldownMillis;
 
     BridgeBackendPool(List<String> bases, long cooldownMillis) {
-        if (bases == null || bases.isEmpty()) throw new IllegalArgumentException("Необходимо указать хотя бы одну конечную точку Backend");
+        if (bases == null || bases.isEmpty()) throw new IllegalArgumentException("Необходимо указать хотя бы одну конечную точку серверной части");
         this.bases = List.copyOf(bases);
         this.blockedUntilMillis = new AtomicLongArray(this.bases.size());
         this.cooldownMillis = Math.max(250L, cooldownMillis);
     }
 
     List<Endpoint> candidates(String relative) {
-        if (relative == null || relative.isBlank() || relative.charAt(0) != '/') throw new IllegalArgumentException("Относительный путь Backend должен начинаться с /");
+        if (relative == null || relative.isBlank() || relative.charAt(0) != '/') throw new IllegalArgumentException("Относительный путь серверной части должен начинаться с /");
         int start = Math.floorMod(active.get(), bases.size());
         long now = System.currentTimeMillis();
         List<Endpoint> healthy = new ArrayList<>(bases.size());

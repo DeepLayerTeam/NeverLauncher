@@ -267,7 +267,7 @@ func SignedEnvelopeDelegated(payload []byte, private ed25519.PrivateKey, policyR
 		return nil, e
 	}
 	if !strings.EqualFold(config.ProfilePublicKey, rootHex) {
-		return nil, errors.New("Корневой ключ доверия игры не закреплён за корневым ключом bootstrap")
+		return nil, errors.New("Корневой ключ доверия игры не закреплён за корневым ключом начального запуска")
 	}
 	policy, _, e := VerifyTrustPolicy(policyRaw, rootHex, time.Now().UTC())
 	if e != nil {

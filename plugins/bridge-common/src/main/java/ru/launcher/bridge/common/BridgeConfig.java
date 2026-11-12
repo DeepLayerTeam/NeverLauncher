@@ -168,7 +168,7 @@ public final class BridgeConfig {
         if (!(scheme.equals("http") || scheme.equals("https")) || uri.getHost() == null || uri.getRawQuery() != null || uri.getRawFragment() != null)
             throw new IllegalArgumentException("URL серверной части для ServerBridge должен использовать HTTP(S): " + value);
         String path = uri.getRawPath();
-        if (path != null && !path.isEmpty() && !path.equals("/")) throw new IllegalArgumentException("Адрес Backend ServerBridge не должен содержать путь: " + value);
+        if (path != null && !path.isEmpty() && !path.equals("/")) throw new IllegalArgumentException("Адрес серверной части ServerBridge не должен содержать путь: " + value);
         return trimSlash(value);
     }
 

@@ -37,7 +37,7 @@ def selected_components(manifest, choice):
     presets = {p["id"]: p["components"] for p in cat.get("presets", [])}
     if base:
         if base not in presets:
-            raise ValueError("Неизвестное значение: подписанный набор настроек" + base)
+            raise ValueError("Неизвестный подписанный набор настроек: " + base)
         roots = set(presets[base])
     else:
         roots = {c["id"] for c in cat["components"] if c.get("default")}
@@ -53,7 +53,7 @@ def selected_components(manifest, choice):
                 or not ID.fullmatch(term[1:])
                 or term[1:] in seen
             ):
-                raise ValueError("Некорректное значение: либо повторяющийся пользовательский выбор")
+                raise ValueError("Некорректный или повторяющийся пользовательский выбор")
             ident = term[1:]
             seen.add(ident)
             if ident not in by_id:
@@ -77,7 +77,7 @@ def selected_components(manifest, choice):
             return
         c = by_id.get(ident)
         if c is None:
-            raise ValueError("Неизвестное значение: зависимость")
+            raise ValueError("Неизвестная зависимость")
         selected.add(ident)
         for dep in c.get("dependencies", []):
             include(dep["id"], chain + (ident,))

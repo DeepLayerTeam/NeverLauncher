@@ -64,7 +64,7 @@ func (s Server) signManifest(manifest model.Manifest) (model.Manifest, error) {
 
 func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 	if manifest.Signature == nil || !strings.EqualFold(manifest.Signature.Algorithm, "Ed25519") {
-		return errors.New("manifest не имеет Ed25519-подписи")
+		return errors.New("Манифест не содержит подпись Ed25519")
 	}
 	declaredPublicKey, err := hex.DecodeString(strings.TrimSpace(manifest.Signature.PublicKey))
 	if err != nil || len(declaredPublicKey) != ed25519.PublicKeySize {
@@ -83,7 +83,7 @@ func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 	}
 	signature, err := hex.DecodeString(strings.TrimSpace(manifest.Signature.Signature))
 	if err != nil || len(signature) != ed25519.SignatureSize {
-		return errors.New("manifest содержит некорректную Ed25519 signature")
+		return errors.New("Манифест содержит некорректную подпись Ed25519")
 	}
 	if err := model.ValidateManifestSchema(manifest); err != nil {
 		return err

@@ -36,7 +36,7 @@ func validatePng0355(raw string, max, maxWidth, maxHeight int) error {
 		return nil
 	}
 	if len(raw) > base64.StdEncoding.EncodedLen(max) {
-		return errors.New("Размер PNG превышает ограничение подписанного bootstrap")
+		return errors.New("Размер PNG превышает ограничение подписанной конфигурации начального запуска")
 	}
 	data, err := base64.StdEncoding.Strict().DecodeString(raw)
 	if err != nil || len(data) < 24 || len(data) > max || !bytes.Equal(data[:8], pngMagic0355) || !bytes.Equal(data[12:16], []byte("IHDR")) || binary.BigEndian.Uint32(data[8:12]) != 13 ||

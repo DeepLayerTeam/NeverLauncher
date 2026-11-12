@@ -73,7 +73,7 @@ public final class BridgeRuntimeIdentity {
     public static BridgeRuntimeIdentity capture(BridgeConfig config, NodeIdentity identity, BridgeRuntimeDescriptor descriptor)
         throws GeneralSecurityException {
         if (config == null || identity == null || descriptor == null) {
-            throw new GeneralSecurityException("Для идентификатора Runtime нужны конфигурация, идентификатор узла и описание платформы");
+            throw new GeneralSecurityException("Для идентификации среды выполнения нужны конфигурация, идентификатор узла и описание платформы");
         }
         String serverId = clean(config.serverId);
         String fingerprint = identity.fingerprint();

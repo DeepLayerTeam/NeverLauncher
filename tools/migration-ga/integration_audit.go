@@ -261,11 +261,11 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("Ошибка проверки готовности Backend: %w", err)
+		return fmt.Errorf("Ошибка проверки готовности серверной части: %w", err)
 	}
 	if res.StatusCode != 200 {
 		res.Body.Close()
-		return fmt.Errorf("Backend не готов: HTTP %d", res.StatusCode)
+		return fmt.Errorf("Серверная часть не готова: HTTP %d", res.StatusCode)
 	}
 	body, err := io.ReadAll(io.LimitReader(res.Body, 16<<10+1))
 	res.Body.Close()
@@ -273,7 +273,7 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 		return err
 	}
 	if len(body) > 16<<10 || json.Unmarshal(body, &ready) != nil || ready.Status != "ready" || ready.Repository != "postgres" || ready.Checks["repository"] != "ok" || ready.Checks["migrations"] == "" {
-		return errors.New("Backend не подтверждает наличие работающего перенесённого репозитория PostgreSQL")
+		return errors.New("Серверная часть не подтверждает наличие работающего перенесённого репозитория PostgreSQL")
 	}
 	readRun := func() (migrationAuditRun0491, error) {
 		var r migrationAuditRun0491
@@ -282,10 +282,10 @@ func executeIntegrationAudit0491(ctx context.Context, opts liveIntegrationOption
 	}
 	run, err := readRun()
 	if err != nil {
-		return fmt.Errorf("Ошибка чтения состояния миграции Backend: %w", err)
+		return fmt.Errorf("Ошибка чтения состояния миграции серверной части: %w", err)
 	}
 	if run.ID != opts.Run || run.ProjectID != opts.Project || run.SourceKind != "gravit" {
-		return errors.New("Миграция Backend относится к другому проекту или источнику")
+		return errors.New("Миграция серверной части относится к другому проекту или источнику")
 	}
 	pg, psqlSHA, err := postgresSnapshot0491(ctx, opts)
 	if err != nil {
@@ -341,7 +341,7 @@ func matchIntegrationSnapshot0491(opts liveIntegrationOptions0491, run migration
 	}
 	m, e := pg.Migration, pg.Extension
 	if m.ID != run.ID || m.ProjectID != run.ProjectID || m.SourceKind != run.SourceKind || m.Status != run.Status || m.Step != run.Step || m.Revision != run.Revision {
-		return errors.New("Миграция PostgreSQL не совпадает с данными Backend API")
+		return errors.New("Миграция PostgreSQL не совпадает с данными API серверной части")
 	}
 	if e.ExtensionID != opts.Extension || e.Scope != opts.Scope || e.ScopeID != opts.ScopeID || e.CurrentState != "enabled" || !e.Enabled || e.CurrentVersion == "" || e.Generation < 1 {
 		return errors.New("Расширение Java в PostgreSQL не является активной установкой")

@@ -46,8 +46,8 @@ def provider_request(base, path, *, method='GET', data=None, token=None):
         if exc.code in (408,425,429) or exc.code>=500:
             raise ProviderUnavailable('Внешний провайдер временно недоступен') from None
         body=exc.read(2048).decode('utf-8','replace').lower()
-        if 'trust policy denied' in body: raise ProviderRejected(('guard ' if 'guard' in body else '')+'trust policy denied') from None
-        if 'integrity policy denied' in body: raise ProviderRejected(('guard ' if 'guard' in body else '')+'integrity policy denied') from None
+        if 'trust policy denied' in body or 'отказ по политике доверия' in body: raise ProviderRejected(('Guard: ' if 'guard' in body else '')+'отказ по политике доверия') from None
+        if 'integrity policy denied' in body or 'отказ по политике целостности' in body: raise ProviderRejected(('Guard: ' if 'guard' in body else '')+'отказ по политике целостности') from None
         raise ProviderRejected('Провайдер отклонил запрос аутентификации') from None
     except (urllib.error.URLError,TimeoutError,OSError) as exc:
         raise ProviderUnavailable('Нет сетевого соединения с внешним провайдером') from None
@@ -178,7 +178,7 @@ def guard_denial_probe(active, denied_path):
         provider_request(base,'/sessionserver/session/minecraft/join',method='POST',data=payload)
     except ProviderRejected as exc:
         # Недостаточно только кода состояния: требуется отказ по политике, сформированный Backend.
-        if 'trust policy denied' not in str(exc) and 'integrity policy denied' not in str(exc):
+        if not any(reason in str(exc).lower() for reason in ('trust policy denied', 'integrity policy denied', 'отказ по политике доверия', 'отказ по политике целостности')):
             raise ProviderRejected('Вход отклонён без проверяемой причины из политики доверия или Guard') from None
-        return {'negativeGuardJoinDenied':'guard' in str(exc), 'negativeDeviceTrustJoinDenied':True}
+        return {'negativeGuardJoinDenied':'guard' in str(exc).lower(), 'negativeDeviceTrustJoinDenied':True}
     raise ProviderRejected('Учётная запись, которой запрещён вход, смогла присоединиться')

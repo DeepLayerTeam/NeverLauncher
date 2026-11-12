@@ -130,13 +130,13 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
     if not DIGEST.fullmatch(expected_sha256):
         raise WritebackError("Необходимо указать ожидаемый SHA-256 источника")
     if backup.parent.resolve() != source.parent.resolve() or backup == source or backup.exists() or backup.is_symlink():
-        raise WritebackError("Для резервная копия требуется: новый файл в каталоге Database.json")
+        raise WritebackError("Для резервной копии требуется новый файл в каталоге, содержащем Database.json")
     if not UUID.fullmatch(user_uuid):
         raise WritebackError("Некорректное значение: UUID")
     secret = b""
     if operation == "set-password":
         if password_file is None:
-            raise WritebackError("Требуется: приватный файл паролей")
+            raise WritebackError("Требуется закрытый файл паролей")
         secret = read_regular(Path(password_file), max_bytes=4096)
     elif password_file is not None:
         raise WritebackError("Файл паролей не поддерживается для этой операции")
@@ -146,7 +146,7 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
     lock_fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(lock_fd, "a+b") as lock:
         if not stat.S_ISREG(os.fstat(lock.fileno()).st_mode) or os.fstat(lock.fileno()).st_nlink != 1:
-            raise WritebackError("Небезопасное значение: файл блокировки")
+            raise WritebackError("Небезопасный файл блокировки")
         os.fchmod(lock.fileno(), 0o600)
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         before = read_regular(source)
@@ -156,7 +156,7 @@ def writeback(*, source, backup, expected_sha256, operation, user_uuid,
         after = change(before, operation=operation, user_uuid=user_uuid, username=username,
                        secret=secret, allow_legacy=allow_legacy, password_format=password_format)
         if before == after:
-            raise WritebackError("Отсутствует: изменение содержимого")
+            raise WritebackError("Содержимое не изменилось")
         name = None
         try:
             fd, name = tempfile.mkstemp(dir=source.parent, prefix=".fileauth-")

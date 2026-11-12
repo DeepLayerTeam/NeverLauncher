@@ -177,7 +177,7 @@ func (c *Client) CheckCompatibility(ctx context.Context) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Backend ещё не готов: %d", resp.StatusCode)
+		return fmt.Errorf("Серверная часть ещё не готова: %d", resp.StatusCode)
 	}
 	contract := resp.Header.Get("X-Launcher-API-Contract")
 	if contract != "" {
@@ -193,7 +193,7 @@ func (c *Client) CheckCompatibility(ctx context.Context) error {
 		return err
 	}
 	if info.Version != "0.45.11" && info.Version != "0.45.12" {
-		return fmt.Errorf("Совместимость Backend %q с v1 не подтверждена", info.Version)
+		return fmt.Errorf("Совместимость серверной части %q с v1 не подтверждена", info.Version)
 	}
 	return nil
 }

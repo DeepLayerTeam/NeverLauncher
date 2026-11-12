@@ -254,11 +254,11 @@ func (i *installation) verifiedSlot(slot string) (*record, error) {
 	releaseDir := filepath.Join(i.base, "releases", r.Release)
 	raw, err := regular(filepath.Join(releaseDir, "bootstrap.signed.json"), 1024*1024)
 	if err != nil || digest(raw) != r.ConfigHash {
-		return nil, errors.New("Установленный bootstrap отсутствует или повреждён")
+		return nil, errors.New("Установленная конфигурация начального запуска отсутствует или повреждена")
 	}
 	cfg, id, err := verifyBundleConfig02312(releaseDir, raw, i.key)
 	if err != nil || id+"-"+runtime.GOOS+"-"+runtime.GOARCH != r.Release {
-		return nil, errors.New("Несовпадение подписи или платформы установленного bootstrap")
+		return nil, errors.New("Несовпадение подписи или платформы установленной конфигурации начального запуска")
 	}
 	art, err := cfg.InstallerFor(runtime.GOOS, runtime.GOARCH)
 	if err != nil || art.SHA256 != r.BinaryHash || verifyFile(filepath.Join(releaseDir, binaryName()), art) != nil {

@@ -77,7 +77,7 @@ public final class BridgeEventJournal {
     public synchronized void acknowledge(long ack) throws IOException {
         if (ack <= ackSequence) return;
         long highest = pending.isEmpty() ? ackSequence : pending.lastKey();
-        if (ack > highest) throw new IOException("Подтверждённый Backend номер события превышает максимальный номер в очереди");
+        if (ack > highest) throw new IOException("Номер события, подтверждённый серверной частью, превышает максимальный номер в очереди");
         appendLine("A\t" + ack);
         pending.headMap(ack, true).clear();
         ackSequence = ack;

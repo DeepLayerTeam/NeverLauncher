@@ -323,7 +323,7 @@ func getJSON(ctx context.Context, client *http.Client, endpoint, token string, o
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("Backend миграции вернул HTTP %d", res.StatusCode)
+		return fmt.Errorf("Серверная часть миграции вернула HTTP %d", res.StatusCode)
 	}
 	b, e := io.ReadAll(io.LimitReader(res.Body, maxDocument+1))
 	if e != nil {
@@ -346,7 +346,7 @@ func checkBackendURL(raw string) error {
 		return e
 	}
 	if u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || u.Host == "" {
-		return errors.New("Адрес Backend должен содержать только схему, хост и порт")
+		return errors.New("Адрес серверной части должен содержать только схему, хост и порт")
 	}
 	if u.Scheme == "https" {
 		return nil

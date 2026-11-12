@@ -88,8 +88,8 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     }
 
     public synchronized void start() throws Exception {
-        if (stopping.get()) throw new IllegalStateException("Runtime завершает работу");
-        if (state != null) throw new IllegalStateException("Runtime уже запущен");
+        if (stopping.get()) throw new IllegalStateException("Среда выполнения завершает работу");
+        if (state != null) throw new IllegalStateException("Среда выполнения уже запущена");
         state = loadState();
         scheduleHeartbeat(0);
         RuntimeState current = state;
@@ -370,7 +370,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     }
 
     private void ensureRunning() {
-        if (state == null || stopping.get()) throw new IllegalStateException("Runtime не активен");
+        if (state == null || stopping.get()) throw new IllegalStateException("Среда выполнения не активна");
     }
 
     private Thread daemonThread(Runnable task, String role) {

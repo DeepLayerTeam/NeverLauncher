@@ -271,7 +271,7 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     if signing_team.is_empty(){return Err("Отсутствует: Team ID подписи пакета macOS".into())}
     for (path, expected_identifier) in [(desktop.as_path(), "ru.skif4er.launcher"), (guard, "ru.skif4er.launcher.guard")] {
         let sig=verify_macos_code_signature(path)?;
-        if !sig.valid||!sig.hardened_runtime||!sig.library_validation{return Err(format!("Не пройдена проверка Hardened Runtime в macOS: {}",path.display()))}
+        if !sig.valid||!sig.hardened_runtime||!sig.library_validation{return Err(format!("Не пройдена проверка усиленной защиты среды выполнения (Hardened Runtime) в macOS: {}",path.display()))}
         if sig.team_identifier.as_deref()!=Some(signing_team.as_str()){return Err(format!("Команда разработчика в подписи macOS не совпадает: {}",path.display()))}
         if sig.identifier.as_deref()!=Some(expected_identifier){return Err(format!("Идентификатор подписи кода macOS для {} не совпадает: ожидался {expected_identifier}, получено {:?}",path.display(),sig.identifier))}
     }

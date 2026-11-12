@@ -73,7 +73,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
     }
 
     public synchronized void start() throws Exception {
-        if (stopping.get()) throw new IllegalStateException("Runtime завершает работу");
+        if (stopping.get()) throw new IllegalStateException("Среда выполнения завершает работу");
         if (state != null) return;
         state = loadState();
         scheduleHeartbeat(0);

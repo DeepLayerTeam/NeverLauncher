@@ -119,17 +119,17 @@ class Backend:
                     raw = resp.read(MAX_RESPONSE + 1)
             except HTTPError as exc:
                 # НЕ выводите тело ошибки сервера: оно может содержать секреты.
-                raise MigrationError("Backend отклонил запрос %s %s (HTTP %d)" % (method, path, exc.code)) from None
+                raise MigrationError("Серверная часть отклонила запрос %s %s (HTTP %d)" % (method, path, exc.code)) from None
             except (OSError, URLError) as exc:
-                raise MigrationError("Ошибка передачи данных Backend: %s" % type(exc).__name__) from None
+                raise MigrationError("Ошибка передачи данных серверной части: %s" % type(exc).__name__) from None
             if len(raw) > MAX_RESPONSE:
-                raise MigrationError("Ответ Backend превышает 4 МиБ")
+                raise MigrationError("Ответ серверной части превышает 4 МиБ")
             try:
                 obj = json.loads(raw)
             except (ValueError, UnicodeError):
-                raise MigrationError("Ответ Backend не содержит корректный JSON") from None
+                raise MigrationError("Ответ серверной части не содержит корректный JSON") from None
             if not isinstance(obj, dict):
-                raise MigrationError("Некорректный формат: ответ Backend")
+                raise MigrationError("Некорректный формат ответа серверной части")
             return obj.get("data", obj)
         if source is not None:
             size, before = source_hash(source)
@@ -192,7 +192,7 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
     root = "/api/v1/admin/migration-runs/" + quote(run_id, safe="")
     inventory = api.request("GET", root + "/inventory")
     if inventory.get("sourceSha256") != digest or inventory.get("sourceBytes") != size:
-        raise MigrationError("Исходный ZIP не совпадает с сохранённым каталогом Backend")
+        raise MigrationError("Исходный ZIP не совпадает с сохранённым каталогом серверной части")
     mapped = api.request("POST", root + "/identities", source=source)
     verified = api.request("POST", root + "/identities/verify")
     if mapped.get("entriesSha256") != verified.get("entriesSha256") or mapped.get("summary") != verified.get("summary"):
@@ -200,7 +200,7 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
     h = {"X-Gravit-Password-Format": password_format}
     preview = api.request("POST", root + "/credentials/preview", source=source, headers=h)
     if preview.get("dryRun") is not True:
-        raise MigrationError("Backend не выполнил предварительную проверку учётных данных")
+        raise MigrationError("Серверная часть не выполнила предварительную проверку учётных данных")
     counts = verify_preview(inventory, verified, preview, run_id, digest)
     receipt = {"version": "0.49.4", "runId": run_id, "sourceSha256": digest, "sourceBytes": size, "identitySHA256": verified.get("entriesSha256"), "credentialCounts": counts, "mode": mode, "status": "prepared"}
     if mode == "prepare":

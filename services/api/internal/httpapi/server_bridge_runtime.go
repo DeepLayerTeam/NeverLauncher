@@ -223,7 +223,7 @@ func (b *serverBridgeStore) markRuntimeHeartbeat0192(serverID, serverType, plugi
 	}
 	if server.RuntimeID == runtime.RuntimeID {
 		if server.RuntimeIdentityDigest == "" || !strings.EqualFold(server.RuntimeIdentityDigest, runtime.IdentityDigest) {
-			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: идентификатор среды выполнения изменён для существующего runtime id", repository.ErrConflict)
+			return model.ServerBridgeRuntimeTransition{}, fmt.Errorf("%w: Идентификатор среды выполнения изменён для существующей записи Runtime", repository.ErrConflict)
 		}
 		server.ProtocolVersion = protocolVersion
 		server.LastHeartbeatAt = now
