@@ -2275,7 +2275,7 @@ func javaMajorVersion(javaPath string) (int, error) {
 	ver := text[start+1 : start+1+end]
 	parts := strings.Split(ver, ".")
 	if len(parts) == 0 {
-		return 0, fmt.Errorf("не удалось разобрать Java version %q", ver)
+		return 0, fmt.Errorf("не удалось разобрать версию Java %q", ver)
 	}
 	majorText := parts[0]
 	if majorText == "1" && len(parts) > 1 {

@@ -31,14 +31,14 @@ type RedisLimiter struct {
 func NewRedis(rawURL string) (*RedisLimiter, error) {
 	rawURL = strings.TrimSpace(rawURL)
 	if rawURL == "" {
-		return nil, errors.New("Пустое значение: Redis URL")
+		return nil, errors.New("Пустой URL Redis")
 	}
 	if !strings.Contains(rawURL, "://") {
 		rawURL = "redis://" + rawURL
 	}
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("Некорректное значение: Redis URL: %w", err)
+		return nil, fmt.Errorf("Некорректный URL Redis: %w", err)
 	}
 	if parsed.Scheme != "redis" && parsed.Scheme != "rediss" {
 		return nil, fmt.Errorf("Не поддерживается: схема Redis %q", parsed.Scheme)
@@ -223,7 +223,7 @@ func readRESP(r *bufio.Reader) (any, error) {
 		}
 		return items, nil
 	default:
-		return nil, fmt.Errorf("Неизвестное значение: префикс Redis RESP %q", prefix)
+		return nil, fmt.Errorf("Неизвестный префикс протокола RESP Redis %q", prefix)
 	}
 }
 

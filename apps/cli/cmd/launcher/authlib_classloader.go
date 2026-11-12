@@ -99,7 +99,7 @@ func compatReadRequest0279(path string) (compatRequest0279, error) {
 
 func compatValidateJar0279(path, digest, prefix string) error {
 	if !strings.HasPrefix(path, prefix) || !strings.HasSuffix(strings.ToLower(path), ".jar") {
-		return fmt.Errorf("compatibility JAR: требуется «в каталоге %s:» %q", prefix, path)
+		return fmt.Errorf("JAR совместимости должен находиться в каталоге %s: %q", prefix, path)
 	}
 	if err := validateVanillaRelativePath(path); err != nil {
 		return err
@@ -131,7 +131,7 @@ func compatValidateLock0279(lock *compatLock0279) error {
 		return errors.New("Java 8 не поддерживает module-path или --add-opens")
 	}
 	if lock.AuthMode == "yggdrasil" && len(lock.JavaAgents) == 0 {
-		return errors.New("Для Yggdrasil требуется явно закреплённый Java Agent")
+		return errors.New("Для Yggdrasil требуется явно закреплённый агент Java")
 	}
 	seen := map[string]bool{}
 	register := func(path, sha, prefix string) error {
@@ -228,7 +228,7 @@ func verifyCompatibilityJar0279(path string, agent bool) error {
 		total += entry.UncompressedSize64
 		if strings.EqualFold(entry.Name, "META-INF/MANIFEST.MF") && agent {
 			if entry.UncompressedSize64 > 64<<10 {
-				return errors.New("Манифест Java Agent превышает допустимый размер")
+				return errors.New("Манифест агента Java превышает допустимый размер")
 			}
 			f, e := entry.Open()
 			if e != nil {
@@ -243,7 +243,7 @@ func verifyCompatibilityJar0279(path string, agent bool) error {
 				return closeErr
 			}
 			if len(manifest) > 64<<10 {
-				return errors.New("Манифест Java Agent превышает допустимый размер")
+				return errors.New("Манифест агента Java превышает допустимый размер")
 			}
 			primary := string(manifest)
 			if i := strings.Index(primary, "\n\n"); i >= 0 {

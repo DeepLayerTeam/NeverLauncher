@@ -637,7 +637,7 @@ fn debug_instrumentation_tamper_event(message: &str) -> RawModuleEvent {
 #[track_caller]
 fn guard_fail_closed_abort() -> ! {
     let site = std::panic::Location::caller();
-    eprintln!("Guard Sensor: аварийная остановка при ошибке проверки: {}:{}", site.file(), site.line());
+    eprintln!("Датчик Guard: аварийная остановка при ошибке проверки: {}:{}", site.file(), site.line());
     std::process::abort();
 }
 
@@ -685,7 +685,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
     .is_err()
     {
         channel.secret.zeroize();
-        eprintln!("Guard Sensor: не удалось отправить сигнал активности при запуске");
+        eprintln!("Датчик Guard: не удалось отправить сигнал активности при запуске");
         std::process::abort();
     }
 
@@ -1237,7 +1237,7 @@ pub extern "system" fn Agent_OnLoad(
             return JNI_ERR;
         }
         Err(err) => {
-            eprintln!("Guard Sensor: не удалось инициализировать проверку целостности памяти: {err}");
+            eprintln!("Датчик Guard: не удалось инициализировать проверку целостности памяти: {err}");
             memory_integrity::shutdown();
             let _ = hook_engine::shutdown_restore();
             jvm_awareness::shutdown();

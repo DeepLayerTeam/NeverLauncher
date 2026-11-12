@@ -68,7 +68,7 @@ func handleExtensionGA0210(args []string) error {
 	case "upgrade-source":
 		return extensionUpgradeSource0210(args[1:])
 	default:
-		return fmt.Errorf("Неизвестное значение: команда финальной проверки расширений %q; используйте status|contract|upgrade-source", args[0])
+		return fmt.Errorf("Неизвестная команда финальной проверки расширений %q; используйте status|contract|upgrade-source", args[0])
 	}
 }
 

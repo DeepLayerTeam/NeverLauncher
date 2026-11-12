@@ -18,7 +18,7 @@ func (p microsoftIssuerPolicy) ValidateDiscoveryIssuer(_ string, discoveredIssue
 	switch p.tenantMode {
 	case "common", "organizations":
 		if !strings.EqualFold(discoveredIssuer, template) {
-			return fmt.Errorf("Издатель Microsoft Discovery: требуется шаблон, независимый от арендатора, %q", template)
+			return fmt.Errorf("Издатель в метаданных Microsoft: требуется шаблон, независимый от арендатора, %q", template)
 		}
 	case "consumers":
 		personal := p.authorityBase + "/" + personalMicrosoftTenantID + "/v2.0"

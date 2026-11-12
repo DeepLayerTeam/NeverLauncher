@@ -22,7 +22,7 @@ func verifyOfficialGAReceipt0270(dir, version, expectedCommit string) error {
 		return nil
 	}
 	if !officialGACommit0270.MatchString(expectedCommit) {
-		return errors.New("official Minecraft GA: требуется точный коммит исходников")
+		return errors.New("Промышленная приёмка официальной авторизации Minecraft: требуется точный коммит исходников")
 	}
 	path := filepath.Join(dir, officialGACertification0270)
 	fi, err := os.Lstat(path)

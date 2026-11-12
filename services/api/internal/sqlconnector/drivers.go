@@ -20,7 +20,7 @@ func openDatabase(cfg RuntimeConfig) (*sql.DB, error) {
 	case "mysql", "mariadb":
 		mysqlCfg, err := mysql.ParseDSN(cfg.DSN)
 		if err != nil {
-			return nil, fmt.Errorf("Разбор: MySQL/MariaDB DSN: %w", err)
+			return nil, fmt.Errorf("Разбор DSN MySQL/MariaDB: %w", err)
 		}
 		if err := validateMySQLTLS(cfg, mysqlCfg); err != nil {
 			return nil, err

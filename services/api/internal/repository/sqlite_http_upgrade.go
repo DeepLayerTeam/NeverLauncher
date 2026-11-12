@@ -274,7 +274,7 @@ func preflightHTTPUpgrade0472(ctx context.Context, store *sqlitedurable.Store, e
 			return err
 		}
 		if count != 1 || version != 1 || seq < 1 {
-			return fmt.Errorf("Несовместимое состояние SQLite HTTP: version=%d, sequence=%d, rows=%d", version, seq, count)
+			return fmt.Errorf("Несовместимое состояние SQLite HTTP: версия=%d, последовательность=%d, строк=%d", version, seq, count)
 		}
 		sum := sha256.Sum256(raw)
 		if hex.EncodeToString(sum[:]) != sha {

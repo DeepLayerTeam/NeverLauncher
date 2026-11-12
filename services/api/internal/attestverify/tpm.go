@@ -176,7 +176,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 	if symmetric != tpmNull || curve != tpmNISTP256 || kdf != tpmNull {
-		return nil, nil, errors.New("Не поддерживается: открытые параметры ECC TPM")
+		return nil, nil, errors.New("Открытые параметры ECC TPM не поддерживаются")
 	}
 	x, e := p.tpm2b(32)
 	if e != nil {
@@ -195,7 +195,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	copy(point[33:], y)
 	X, Y := elliptic.Unmarshal(elliptic.P256(), point)
 	if X == nil || Y == nil {
-		return nil, nil, errors.New("Некорректное значение: точка ECC TPM")
+		return nil, nil, errors.New("Некорректная точка эллиптической кривой TPM")
 	}
 	h := sha256.Sum256(payload)
 	name := make([]byte, 34)
@@ -301,7 +301,7 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 			return e
 		}
 		if c.end() != nil || len(r) == 0 || len(s) == 0 || !ecdsa.Verify(pub, digest[:], new(big.Int).SetBytes(r), new(big.Int).SetBytes(s)) {
-			return errors.New("Некорректное значение: подпись сертификации ECDSA TPM")
+			return errors.New("Некорректная подпись сертификации TPM по алгоритму ECDSA")
 		}
 	case tpmRSASSA, tpmRSAPSS:
 		pub, ok := public.(*rsa.PublicKey)
@@ -321,7 +321,7 @@ func parseSignature(raw []byte, public crypto.PublicKey, attest []byte) error {
 			e = rsa.VerifyPSS(pub, crypto.SHA256, digest[:], sig, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: crypto.SHA256})
 		}
 		if e != nil {
-			return errors.New("Некорректное значение: подпись сертификации RSA TPM")
+			return errors.New("Некорректная подпись сертификации TPM по алгоритму RSA")
 		}
 	default:
 		return errors.New("Не поддерживается: схема подписи ключа аттестации TPM")

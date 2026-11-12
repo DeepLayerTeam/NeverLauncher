@@ -132,7 +132,7 @@ func guardHistoryRead05011(root, key string, active *guardCompatVerified0502) ([
 			return nil, fmt.Errorf("Некорректное значение: история Guard %s: %w", entry.Name(), err)
 		}
 		if guardHistoryName05011(v) != entry.Name() {
-			return nil, errors.New("Несоответствие: история Guard filename/content")
+			return nil, errors.New("Имя файла истории Guard не соответствует его содержимому")
 		}
 		if currentRoot != "" && currentRoot != v.RootSHA256 {
 			return nil, errors.New("Изменился доверенный ключ истории политик Guard")

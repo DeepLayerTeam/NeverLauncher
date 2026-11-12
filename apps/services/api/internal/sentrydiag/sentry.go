@@ -30,13 +30,13 @@ type destination struct {
 func parseDSN(raw string) (destination, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u == nil {
-		return destination{}, errors.New("Некорректное значение: DSN Sentry")
+		return destination{}, errors.New("Некорректный DSN Sentry")
 	}
 	if u.User == nil || u.User.Username() == "" || u.Hostname() == "" || u.RawQuery != "" || u.Fragment != "" {
 		return destination{}, errors.New("В DSN Sentry отсутствует публичный ключ или хост")
 	}
 	if _, hasPassword := u.User.Password(); hasPassword {
-		return destination{}, errors.New("Не поддерживается: «секретный ключ DSN Sentry»")
+		return destination{}, errors.New("Секретный ключ в DSN Sentry не поддерживается")
 	}
 	if u.Scheme != "https" { // HTTP допускается только через loopback, что удобно для локальных развёртываний.
 		if u.Scheme != "http" || (u.Hostname() != "localhost" && net.ParseIP(u.Hostname()) == nil || (net.ParseIP(u.Hostname()) != nil && !net.ParseIP(u.Hostname()).IsLoopback())) {

@@ -1406,7 +1406,7 @@ func secureHTTPClient() *http.Client {
 		Timeout: 2 * time.Minute,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 6 {
-				return errors.New("слишком много HTTP redirect")
+				return errors.New("слишком много перенаправлений HTTP")
 			}
 			return validateRemoteURL(req.URL.String())
 		},

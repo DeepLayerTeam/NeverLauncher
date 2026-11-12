@@ -32,10 +32,10 @@ func factoryReadSource0401(root string, f struct {
 		return nil, errors.New("Некорректный размер или хеш SHA-256 результата Client Factory")
 	}
 	if f.Path == "" || filepath.IsAbs(f.Path) || strings.ContainsAny(f.Path, "\\\x00") {
-		return nil, errors.New("Некорректное значение: результат Client Factory путь")
+		return nil, errors.New("Некорректный путь результата Client Factory")
 	}
 	if stat, err := os.Lstat(root); err != nil || !stat.IsDir() || stat.Mode()&os.ModeSymlink != 0 {
-		return nil, errors.New("Некорректное значение: результат Client Factory корень")
+		return nil, errors.New("Некорректный корневой каталог результата Client Factory")
 	}
 	full := root
 	for _, part := range strings.Split(f.Path, "/") {
@@ -61,7 +61,7 @@ func factoryReadSource0401(root string, f struct {
 		return nil, err
 	}
 	if !stat.Mode().IsRegular() || stat.Size() != f.Size {
-		return nil, errors.New("Несоответствие: результат Client Factory size/type")
+		return nil, errors.New("Размер или тип результата Client Factory не совпадает с ожидаемым")
 	}
 	b, err := io.ReadAll(io.LimitReader(file, f.Size+1))
 	if err != nil {

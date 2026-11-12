@@ -146,7 +146,7 @@ func hostValidateJavaProfile0283(config serverBridgeHostConfig01910) error {
 	switch config.LaunchMode {
 	case "java-jar", "java-args-file":
 		if config.MainClass != "" || config.Module != "" || len(config.Classpath) != 0 || len(config.Modulepath) != 0 {
-			return errors.New("В режимах java-jar и java-args-file нельзя одновременно задавать главный класс, модуль или параметры classpath")
+			return errors.New("В режимах java-jar и java-args-file нельзя одновременно задавать главный класс, модуль или параметры пути классов")
 		}
 	case "java-main-class":
 		if config.ServerJar != "" || config.JavaArgsFile != "" {

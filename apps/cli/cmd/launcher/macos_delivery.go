@@ -141,7 +141,7 @@ func inspectMacOSMachOBytes0154(data []byte) (macOSMachOInfo0154, error) {
 	}
 	// 64-битная сигнатура Mach-O в обратном порядке байтов (MH_MAGIC_64) записана на диске как cf fa ed fe.
 	if !bytes.Equal(data[:4], []byte{0xcf, 0xfa, 0xed, 0xfe}) {
-		return macOSMachOInfo0154{}, fmt.Errorf("Неподдерживаемая сигнатура Mach-O %x; требуется 64-разрядный образ little-endian", data[:4])
+		return macOSMachOInfo0154{}, fmt.Errorf("Неподдерживаемая сигнатура Mach-O %x; требуется 64-разрядный образ с порядком байтов от младшего к старшему", data[:4])
 	}
 	cpuType := binary.LittleEndian.Uint32(data[4:8])
 	info := macOSMachOInfo0154{CPUType: cpuType}
@@ -557,7 +557,7 @@ func verifyMacOSNativePackage0154(packagePath, expectedTeamID string) error {
 		return fmt.Errorf("Ошибка: просмотр данных подписи через codesign: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	if !strings.Contains(string(output), "TeamIdentifier="+expectedTeamID) || !strings.Contains(string(output), "runtime") {
-		return errors.New("Несовпадение: Team ID или Hardened Runtime нативного пакета macOS")
+		return errors.New("Не совпадает идентификатор команды разработчиков или настройка усиленной защиты среды выполнения нативного пакета macOS")
 	}
 	return nil
 }

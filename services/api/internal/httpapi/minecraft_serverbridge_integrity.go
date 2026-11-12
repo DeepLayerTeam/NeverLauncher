@@ -199,7 +199,7 @@ func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, launcherSe
 	minecraftAccessToken = strings.TrimSpace(minecraftAccessToken)
 	if minecraftAccessToken == "" {
 		if required {
-			return model.MinecraftSession{}, errors.New("minecraftAccessToken обязателен для integrity-enforced ServerBridge join")
+			return model.MinecraftSession{}, errors.New("minecraftAccessToken обязателен для подключения через ServerBridge с проверкой целостности")
 		}
 		return model.MinecraftSession{}, nil
 	}

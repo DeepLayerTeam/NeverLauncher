@@ -471,7 +471,7 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 				// 0.31.7 набор модулей/JVM без закреплённой версии не является
 				// сертифицированным Runtime.
 				if platform == "windows" && guardRuntimePolicyRequired0317(s.Version) && len(profiles) == 0 {
-					return nil, fmt.Errorf("Для выпуска Guard %s под Windows требуются runtimeProfiles для Guard Runtime Trust", version)
+					return nil, fmt.Errorf("Для выпуска Guard %s под Windows требуются runtimeProfiles для проверки доверия к среде выполнения Guard", version)
 				}
 				normalizedRuntimes[platform] = profiles
 				normalizedPlatforms[platform] = artifacts

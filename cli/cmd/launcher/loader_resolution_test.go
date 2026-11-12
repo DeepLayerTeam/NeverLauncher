@@ -50,7 +50,7 @@ func TestLoaderResolutionLockRoundTripAndTamperDetection(t *testing.T) {
 	if err := os.WriteFile(path, append(bad, '\n'), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := readLoaderResolutionLock(path, "fabric", "1.21.1", "latest-stable"); err == nil || !strings.Contains(err.Error(), "reproducibility SHA-256 mismatch") {
+	if _, err := readLoaderResolutionLock(path, "fabric", "1.21.1", "latest-stable"); err == nil || !strings.Contains(err.Error(), "Не совпадает SHA-256 воспроизводимости блокировки загрузчика") {
 		t.Fatalf("Изменённая блокировка должна отклоняться проверкой воспроизводимости, получено: %v", err)
 	}
 }

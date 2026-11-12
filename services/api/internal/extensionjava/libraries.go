@@ -141,7 +141,7 @@ func inspectLibraries0482(zr *zip.ReadCloser, outerClasses map[string]bool) ([]L
 				}
 				lower := strings.ToLower(strings.ReplaceAll(string(data), "\r\n", "\n"))
 				if strings.Contains("\n"+lower, "\nclass-path:") || strings.Contains("\n"+lower, "\nmulti-release: true") {
-					return nil, 0, 0, errors.New("Вложенная библиотека не должна использовать внешний classpath или multi-release")
+					return nil, 0, 0, errors.New("Вложенная библиотека не должна использовать внешний путь классов или режим нескольких версий (multi-release)")
 				}
 			}
 			if strings.HasPrefix(fn, "META-INF/versions/") {

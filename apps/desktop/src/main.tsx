@@ -2259,7 +2259,7 @@ function App() {
           accessTokenBindingEpoch(authSession.accessToken) ||
         challenge.policyId !== measuredBootPolicyId0315.trim()
       ) {
-        throw new Error("Несовпадение TPM Quote: запрос, сеанс, эпоха или политика");
+        throw new Error("Несовпадение данных аттестации TPM Quote: запрос, сеанс, эпоха или политика");
       }
       setMeasuredBootStatus0315(
         `Подтверждение TPM: ${challenge.pcrSelection} · политика ${challenge.policyId}`,

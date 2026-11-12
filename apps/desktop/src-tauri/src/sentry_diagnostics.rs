@@ -12,7 +12,7 @@ static DIAGNOSTIC_DSN: OnceLock<Option<Destination>> = OnceLock::new();
 struct Destination { ingest: String, key: String, dsn: String }
 
 fn destination(dsn: &str) -> Result<Destination, String> {
-    let u = reqwest::Url::parse(dsn).map_err(|_| "Некорректное значение: DSN Sentry".to_string())?;
+    let u = reqwest::Url::parse(dsn).map_err(|_| "Некорректный DSN Sentry".to_string())?;
     let host = u.host_str().ok_or("В DSN Sentry не указан хост")?;
     if u.scheme() != "https" && !(u.scheme() == "http" && (host == "localhost" || host == "127.0.0.1" || host == "[::1]")) {
         return Err("Для отправки событий в Sentry требуется HTTPS".into());

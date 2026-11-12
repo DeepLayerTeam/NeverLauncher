@@ -112,10 +112,10 @@ func validateLoaderResolutionLock(lock *loaderResolutionLock, loader, minecraft,
 			return errors.New("В файле фиксации разрешения загрузчика отсутствует SHA-256 профиля среды выполнения")
 		}
 		if !compatibilitySHA256RE.MatchString(strings.ToLower(lock.MaterializationSHA256)) {
-			return errors.New("файл фиксации выбора загрузчика не содержит materialization SHA-256")
+			return errors.New("файл фиксации выбора загрузчика не содержит SHA-256 подготовленных файлов")
 		}
 		if !compatibilitySHA256RE.MatchString(strings.ToLower(lock.ReproducibilitySHA256)) {
-			return errors.New("файл фиксации выбора загрузчика не содержит reproducibility SHA-256")
+			return errors.New("файл фиксации выбора загрузчика не содержит SHA-256 воспроизводимости сборки")
 		}
 	}
 	return nil

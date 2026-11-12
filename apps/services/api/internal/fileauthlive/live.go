@@ -193,7 +193,7 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 		return nil, err
 	}
 	if !os.SameFile(before, opened) || opened.Size() > fileauth.MaxDatabaseBytes || !opened.Mode().IsRegular() {
-		return nil, errors.New("Превышен допустимый размер: «файл FileAuth Database.json изменился во время открытия или»")
+		return nil, errors.New("Файл FileAuth Database.json изменился при открытии, превышает допустимый размер или не является обычным файлом")
 	}
 	data, err := io.ReadAll(io.LimitReader(f, fileauth.MaxDatabaseBytes+1))
 	if err != nil {

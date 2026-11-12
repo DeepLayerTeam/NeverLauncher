@@ -43,7 +43,7 @@ class WindowsPostloadProvenanceTests(unittest.TestCase):
             "fn module_worker(", 1
         )[0]
         self.assertIn("std::process::abort()", func)
-        self.assertIn("Guard Sensor: аварийная остановка при ошибке проверки", func)
+        self.assertIn("Датчик Guard: аварийная остановка при ошибке проверки", func)
         worker = source.split("fn module_worker(", 1)[1].split(
             'pub extern "system" fn Agent_OnLoad(', 1
         )[0]
