@@ -26,6 +26,40 @@ public final class LauncherAPI {
     private final String token;
     private final HttpClient http;
 
+    /** Русское пояснение при отсутствии сообщения сервера. */
+    private static String httpStatusRu(int status) {
+        String explanation = switch (status) {
+            case 300 -> "Выбор из нескольких вариантов";
+            case 301 -> "Ресурс перемещён";
+            case 302 -> "Ресурс временно перемещён";
+            case 303 -> "См. другой ресурс";
+            case 304 -> "Ресурс не изменился";
+            case 307 -> "Временное перенаправление";
+            case 308 -> "Постоянное перенаправление";
+            case 400 -> "Некорректный запрос";
+            case 401 -> "Требуется авторизация";
+            case 403 -> "Доступ запрещён";
+            case 404 -> "Не найдено";
+            case 405 -> "Метод запроса не разрешён";
+            case 406 -> "Нет подходящего формата ответа";
+            case 408 -> "Время ожидания запроса истекло";
+            case 409 -> "Конфликт данных";
+            case 410 -> "Ресурс больше недоступен";
+            case 413 -> "Слишком большой запрос";
+            case 415 -> "Неподдерживаемый формат данных";
+            case 422 -> "Не удалось обработать запрос";
+            case 423 -> "Ресурс заблокирован";
+            case 429 -> "Слишком много запросов";
+            case 500 -> "Внутренняя ошибка сервера";
+            case 501 -> "Операция не поддерживается сервером";
+            case 502 -> "Ошибка шлюза";
+            case 503 -> "Сервис временно недоступен";
+            case 504 -> "Время ответа сервера истекло";
+            default -> "Ошибка запроса к серверу";
+        };
+        return "HTTP " + status + ": " + explanation;
+    }
+
     public static final class ApiException extends RuntimeException {
         public final int status;
         public final String code, requestId;
@@ -92,7 +126,7 @@ public final class LauncherAPI {
             catch(RuntimeException ignored) {}
             Map<String,Object> e=data instanceof Map?Json.object(data):Map.of();
             throw new ApiException(response.statusCode(),String.valueOf(e.getOrDefault("code","")),
-                String.valueOf(e.getOrDefault("message",e.getOrDefault("error","HTTP "+response.statusCode()))),
+                String.valueOf(e.getOrDefault("message",e.getOrDefault("error",httpStatusRu(response.statusCode())))),
                 response.headers().firstValue("X-Correlation-ID").orElse(""));
         }
         return bytes;
@@ -138,7 +172,7 @@ public final class LauncherAPI {
                 catch (RuntimeException ignored) { }
                 Map<String,Object> e = data instanceof Map ? Json.object(data) : Map.of();
                 throw new ApiException(response.statusCode(), String.valueOf(e.getOrDefault("code", "")),
-                    String.valueOf(e.getOrDefault("message", e.getOrDefault("error", "HTTP " + response.statusCode()))),
+                    String.valueOf(e.getOrDefault("message", e.getOrDefault("error", httpStatusRu(response.statusCode())))),
                     response.headers().firstValue("X-Correlation-ID").orElse(""));
             }
             var declared = response.headers().firstValueAsLong("Content-Length");

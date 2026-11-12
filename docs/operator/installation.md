@@ -33,7 +33,7 @@ python3 scripts/operations/operator_accept_04513.py live \
   --report /var/tmp/launcher-minimal-acceptance.json
 ```
 
-Скрипт читает обе базы SQLite только для проверки целостности, проверяет каталоги и публичное HTTPS `/ready`, но **не** создаёт администратора и не проводит restore.
+Скрипт читает обе базы SQLite только для проверки целостности, проверяет каталоги и публичное HTTPS `/ready`, но **не** создаёт администратора и не проводит восстановление.
 
 ## Стандартный режим (Standard) — Docker Compose, PostgreSQL, TLS, первый администратор
 

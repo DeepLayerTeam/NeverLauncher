@@ -2283,7 +2283,7 @@ func javaMajorVersion(javaPath string) (int, error) {
 	}
 	major, err := strconv.Atoi(majorText)
 	if err != nil {
-		return 0, fmt.Errorf("не удалось разобрать Java major %q", ver)
+		return 0, fmt.Errorf("не удалось разобрать основную версию Java %q", ver)
 	}
 	return major, nil
 }

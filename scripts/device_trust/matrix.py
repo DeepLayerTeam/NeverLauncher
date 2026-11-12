@@ -329,7 +329,7 @@ def render_markdown(
         f"Запуск GitHub Actions: `{run_id}`  ",
         f"Репозиторий: `{repository}`",
         "",
-        "Protocol E2E проверяет Device Trust Release 0.13.0 на реальном PostgreSQL с migration stabilization 0.12.10: sealed migration baseline 0018, registration/replay protection, session binding epoch, device-bound refresh, dual-proof rotation, permanent fingerprint tombstone, ServerBridge binding invalidation, revocation cascade, risk step-up, P-256 challenge-response attestation protocol и runtime release/readiness contract.",
+        "Сквозная проверка протокола доверия устройств версии 0.13.0 на настоящем PostgreSQL с учётом стабилизации миграций 0.12.10: закреплённая базовая миграция 0018, регистрация и защита от повторного воспроизведения, эпоха привязки сеанса, обновление токена с привязкой к устройству, ротация с двумя доказательствами, постоянная отметка отзыва отпечатка, аннулирование привязки ServerBridge, каскадный отзыв, дополнительная проверка при повышенном риске, аттестация P-256 по схеме запрос-ответ и контракт выпуска и готовности среды выполнения.",
         "",
         "Важно: P-256 challenge-response в этой матрице доказывает серверную проверку владения зарегистрированным ключом, но **не** vendor TPM/Secure Enclave provenance. Native Windows/macOS/Linux targets доказывают компиляцию и security-policy unit tests; headless CI не объявляется доказательством фактической работы OS secure storage/TPM/Secure Enclave на конкретном пользовательском устройстве.",
         "",

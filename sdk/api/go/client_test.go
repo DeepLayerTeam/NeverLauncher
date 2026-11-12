@@ -89,3 +89,24 @@ func TestLegacyAndIncompatible(t *testing.T) {
 		t.Fatal(ContractVersion)
 	}
 }
+
+func TestHTTPFallbackRussian(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Correlation-ID", "fallback-1")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("unavailable"))
+	}))
+	defer server.Close()
+	c, err := New(server.URL, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = c.Call(context.Background(), "get_projects", nil, nil, nil, nil, "")
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.Status != 503 || apiErr.RequestID != "fallback-1" || apiErr.Message != "HTTP 503: Сервис временно недоступен" {
+		t.Fatalf("Неверная ошибка: %v", err)
+	}
+	if httpStatusRu(599) != "HTTP 599: Ошибка запроса к серверу" {
+		t.Fatal("Неверное пояснение неизвестного статуса")
+	}
+}

@@ -34,12 +34,74 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("API Launcher: статус=%d, код=%q, идентификатор запроса=%q: %s", e.Status, e.Code, e.RequestID, e.Message)
 }
 
+// httpStatusRu используется только при отсутствии сообщения сервера.
+func httpStatusRu(status int) string {
+	var explanation string
+	switch status {
+	case 300:
+		explanation = "Выбор из нескольких вариантов"
+	case 301:
+		explanation = "Ресурс перемещён"
+	case 302:
+		explanation = "Ресурс временно перемещён"
+	case 303:
+		explanation = "См. другой ресурс"
+	case 304:
+		explanation = "Ресурс не изменился"
+	case 307:
+		explanation = "Временное перенаправление"
+	case 308:
+		explanation = "Постоянное перенаправление"
+	case 400:
+		explanation = "Некорректный запрос"
+	case 401:
+		explanation = "Требуется авторизация"
+	case 403:
+		explanation = "Доступ запрещён"
+	case 404:
+		explanation = "Не найдено"
+	case 405:
+		explanation = "Метод запроса не разрешён"
+	case 406:
+		explanation = "Нет подходящего формата ответа"
+	case 408:
+		explanation = "Время ожидания запроса истекло"
+	case 409:
+		explanation = "Конфликт данных"
+	case 410:
+		explanation = "Ресурс больше недоступен"
+	case 413:
+		explanation = "Слишком большой запрос"
+	case 415:
+		explanation = "Неподдерживаемый формат данных"
+	case 422:
+		explanation = "Не удалось обработать запрос"
+	case 423:
+		explanation = "Ресурс заблокирован"
+	case 429:
+		explanation = "Слишком много запросов"
+	case 500:
+		explanation = "Внутренняя ошибка сервера"
+	case 501:
+		explanation = "Операция не поддерживается сервером"
+	case 502:
+		explanation = "Ошибка шлюза"
+	case 503:
+		explanation = "Сервис временно недоступен"
+	case 504:
+		explanation = "Время ответа сервера истекло"
+	default:
+		explanation = "Ошибка запроса к серверу"
+	}
+	return fmt.Sprintf("HTTP %d: %s", status, explanation)
+}
+
 var segment = regexp.MustCompile(`\{([^{}]+)\}`)
 
 func New(baseURL, token string) (*Client, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil || u == nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" && u.Path != "/" {
-		return nil, errors.New("Некорректное значение: API базовый URL")
+		return nil, errors.New("Некорректный базовый URL API")
 	}
 	host := u.Hostname()
 	ip := net.ParseIP(host)
@@ -151,13 +213,13 @@ func (c *Client) Request(ctx context.Context, method, path string, query url.Val
 			msg = e.Error
 		}
 		if msg == "" {
-			msg = http.StatusText(result.StatusCode)
+			msg = httpStatusRu(result.StatusCode)
 		}
 		return &APIError{Status: result.StatusCode, Code: e.Code, Message: msg, RequestID: result.Header.Get("X-Correlation-ID")}
 	}
 	if response != nil && len(bytes.TrimSpace(data)) > 0 {
 		if err := json.Unmarshal(data, response); err != nil {
-			return fmt.Errorf("Декодирование: API ответ: %w", err)
+			return fmt.Errorf("Ошибка декодирования ответа API: %w", err)
 		}
 	}
 	return nil
@@ -257,7 +319,7 @@ func (c *Client) CallRaw(ctx context.Context, operationID string, params map[str
 			message = e.Error
 		}
 		if message == "" {
-			message = http.StatusText(resp.StatusCode)
+			message = httpStatusRu(resp.StatusCode)
 		}
 		return nil, &APIError{Status: resp.StatusCode, Code: e.Code, Message: message, RequestID: resp.Header.Get("X-Correlation-ID")}
 	}
@@ -350,7 +412,7 @@ func (c *Client) RequestStream(ctx context.Context, method, path string, query u
 			message = parsed.Error
 		}
 		if message == "" {
-			message = http.StatusText(resp.StatusCode)
+			message = httpStatusRu(resp.StatusCode)
 		}
 		return 0, &APIError{Status: resp.StatusCode, Code: parsed.Code, Message: message, RequestID: resp.Header.Get("X-Correlation-ID")}
 	}

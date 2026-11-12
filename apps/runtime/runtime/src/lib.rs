@@ -1097,7 +1097,7 @@ pub async fn launch_with_timeout(
     launch_with_timeout_matching(manifest, root, java_path, username, pinned_public_key, max_runtime_seconds, None).await
 }
 
-/// Принимается только изолированный loopback-сервер оператора с соответствующей конфигурацией.
+/// Принимается только изолированный сервер оператора на локальном интерфейсе с соответствующей конфигурацией.
 /// Запускается та же проверенная подписанная установка с обычным планом запуска.
 pub async fn launch_with_timeout_matching(
     manifest: &Manifest,

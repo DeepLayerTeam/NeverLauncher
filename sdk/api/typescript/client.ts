@@ -6,6 +6,39 @@ const MAX_BODY = 8 * 1024 * 1024;
 const MAX_STREAM_BODY = 1024 * 1024 * 1024;
 export type ResponseType = 'json' | 'text' | 'bytes' | 'stream';
 
+/** Русское пояснение используется, только если сервер не передал сообщение ошибки. */
+function httpStatusRu(status: number): string {
+  const explanations: Record<number, string> = {
+    300: 'Выбор из нескольких вариантов',
+    301: 'Ресурс перемещён',
+    302: 'Ресурс временно перемещён',
+    303: 'См. другой ресурс',
+    304: 'Ресурс не изменился',
+    307: 'Временное перенаправление',
+    308: 'Постоянное перенаправление',
+    400: 'Некорректный запрос',
+    401: 'Требуется авторизация',
+    403: 'Доступ запрещён',
+    404: 'Не найдено',
+    405: 'Метод запроса не разрешён',
+    406: 'Нет подходящего формата ответа',
+    408: 'Время ожидания запроса истекло',
+    409: 'Конфликт данных',
+    410: 'Ресурс больше недоступен',
+    413: 'Слишком большой запрос',
+    415: 'Неподдерживаемый формат данных',
+    422: 'Не удалось обработать запрос',
+    423: 'Ресурс заблокирован',
+    429: 'Слишком много запросов',
+    500: 'Внутренняя ошибка сервера',
+    501: 'Операция не поддерживается сервером',
+    502: 'Ошибка шлюза',
+    503: 'Сервис временно недоступен',
+    504: 'Время ответа сервера истекло',
+  };
+  return `HTTP ${status}: ${explanations[status] ?? 'Ошибка запроса к серверу'}`;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, readonly code: string, message: string, readonly requestId: string) { super(message); this.name = 'ApiError'; }
 }
@@ -116,7 +149,7 @@ export class LauncherAPI {
         const decoded = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw));
         if (decoded && typeof decoded === 'object' && !Array.isArray(decoded)) error = decoded;
       } catch { /* Даже ошибки не в формате JSON содержат статус и идентификатор запроса. */ }
-      throw new ApiError(response.status, String(error.code ?? ''), String(error.message ?? error.error ?? response.statusText), response.headers.get('x-correlation-id') ?? '');
+      throw new ApiError(response.status, String(error.code ?? ''), String(error.message ?? error.error ?? httpStatusRu(response.status)) || httpStatusRu(response.status), response.headers.get('x-correlation-id') ?? '');
     }
     if (type === 'bytes') return raw as T;
     const text = new TextDecoder('utf-8', { fatal: true }).decode(raw);

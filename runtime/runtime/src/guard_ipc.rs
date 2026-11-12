@@ -304,7 +304,7 @@ impl GuardSupervisor {
             let running = handle
                 .child
                 .try_wait()
-                .map_err(|err| format!("не удалось проверить Guard process: {err}"))?
+                .map_err(|err| format!("не удалось проверить процесс Guard: {err}"))?
                 .is_none();
             if running {
                 if let Ok(status) = send_command(handle, "status").await {

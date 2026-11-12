@@ -53,7 +53,7 @@ def inspect(binary: Path, frontend: Path, commit: str) -> dict:
             or path.stat().st_size == 0
             or not path.resolve().is_relative_to(frontend.resolve())
         ):
-            raise ValueError("Ресурс production-сборки небезопасен или пуст")
+            raise ValueError("Ресурс промышленной сборки небезопасен или пуст")
     return {
         "schemaVersion": "launcher.rc.desktop-build.v1",
         "version": version,

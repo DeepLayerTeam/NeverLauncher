@@ -55,7 +55,7 @@ func Matches(policy Policy, server, project, profile, channel, release, catalog,
 }
 
 // Конфигурация по умолчанию намеренно использует устаревшее поведение; перед
-// включением защищённого режима входа в production оператор должен задать
+// включением защищённого режима входа в промышленной среде оператор должен задать
 // REQUIRE_PLAN_POLICY=1.
 func Required() bool {
 	return os.Getenv("LAUNCHER_SERVERBRIDGE_REQUIRE_PLAN_POLICY") == "1" || os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE") != "" || os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY") != ""

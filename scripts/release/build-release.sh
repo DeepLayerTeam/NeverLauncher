@@ -725,7 +725,7 @@ fi
 require_file "${RELEASE_CLI}"
 
 if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
-  log "Проверка манифеста и свидетельств Managed JRE для шести целевых нативных сред Java"
+  log "Проверка манифеста и свидетельств управляемой JRE для шести целевых нативных сред Java"
   # DELIVERY_MANIFEST.json будет сформирован release build ниже; до этого проверяем source artifacts через production Go tests/static gate.
   python3 "${ROOT_DIR}/scripts/smoke/offline/managed-jre-distribution-0155.py"
 fi

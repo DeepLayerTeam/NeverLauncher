@@ -341,7 +341,7 @@ func IsProductionEnvironment(environment string) bool {
 }
 
 // ValidateProduction проверяет конфигурацию, которую нельзя безопасно исправить fallback-логикой.
-// В production ошибки считаются фатальными и должны останавливать запуск API.
+// В промышленной среде ошибки считаются фатальными и должны останавливать запуск API.
 func ValidateProduction(cfg Config) error {
 	if !IsProductionEnvironment(cfg.Environment) {
 		return nil

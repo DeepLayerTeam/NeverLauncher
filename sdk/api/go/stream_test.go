@@ -45,7 +45,7 @@ func TestRealStreamingMultipartAndBinary0463(t *testing.T) {
 	}
 	var limited bytes.Buffer
 	_, err = c.RequestStream(context.Background(), "POST", "/api/v1/admin/projects/one/versions/two/files", url.Values{"source": {"integration"}}, bytes.NewReader(payload), "multipart/form-data; boundary=fixed", &limited, 100, "upload-1")
-	if err == nil || !strings.Contains(err.Error(), "size limit") {
+	if err == nil || !strings.Contains(err.Error(), "Поток API превышает настроенное ограничение размера") {
 		t.Fatalf("Обход ограничения: %v", err)
 	}
 }

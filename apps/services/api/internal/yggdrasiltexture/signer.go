@@ -109,7 +109,7 @@ var ephemeral struct {
 	err    error
 }
 
-// Ключ локального процесса только для разработки: в production нужен постоянный ключ на диске.
+// Ключ локального процесса только для разработки: в промышленной среде нужен постоянный ключ на диске.
 func DevelopmentSigner() (*Signer, error) {
 	ephemeral.once.Do(func() {
 		k, err := rsa.GenerateKey(rand.Reader, 2048)

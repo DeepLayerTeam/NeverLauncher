@@ -43,7 +43,7 @@ class WindowsPostloadProvenanceTests(unittest.TestCase):
             "fn module_worker(", 1
         )[0]
         self.assertIn("std::process::abort()", func)
-        self.assertIn("Guard Sensor fail-closed abort", func)
+        self.assertIn("Guard Sensor: аварийная остановка при ошибке проверки", func)
         worker = source.split("fn module_worker(", 1)[1].split(
             'pub extern "system" fn Agent_OnLoad(', 1
         )[0]
@@ -78,7 +78,7 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         self.assertIn("GetModuleHandleExW(flags, address as *const u16", source)
         self.assertIn("TransitionOrigin::ForeignNative =>", source)
         self.assertIn("FOREIGN_EXECUTABLE_TRANSITIONS.fetch_add(1", source)
-        self.assertIn("outside jvm.dll provenance", source)
+        self.assertIn("вне проверенного происхождения jvm.dll", source)
         self.assertNotIn("DISABLE_JVM_GUARD", source)
 
     def test_opengl_dispatcher_from_certified_jdk_or_system32(self):
@@ -123,7 +123,7 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
             "timeout(MODULE_RUNTIME_EVENT_TIMEOUT, server.read_exact(&mut packet)).await",
             loop,
         )
-        self.assertIn("Module Guard heartbeat timeout", loop)
+        self.assertIn("Module Guard: превышено время ожидания сигнала работоспособности", loop)
         self.assertIn("fail_closed(&state, pid, &reason, 0)", loop)
         self.assertIn(
             "parse_event_packet(&packet, secret, pid, expected_sequence)", loop
@@ -141,9 +141,9 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
             "pending_unloads.entry(*base).or_insert_with(Instant::now)", source
         )
         self.assertIn("if first_missing.elapsed() >= UNLOAD_EVENT_GRACE", source)
-        self.assertIn("module base reused before authenticated unload", source)
+        self.assertIn("Module Guard: базовый адрес модуля использован повторно до подтверждённой выгрузки", source)
         self.assertIn("validate_loaded_module(&module.path)", source)
-        self.assertIn("Module Guard module path drift", source)
+        self.assertIn("Module Guard: путь модуля по адресу 0x{base:X} изменился", source)
 
     def test_ack_still_requires_signed_packet_and_bounded_deadline(self):
         source = (ROOT / "runtime/guard-sensor/src/continuous_guard.rs").read_text(
@@ -153,7 +153,7 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         self.assertIn("mac.verify_slice", source)
         self.assertIn("нарушение последовательности Guard-ACK", source)
         self.assertIn("Несовпадение: цепочка событий подтверждения непрерывного контроля Guard", source)
-        self.assertIn("Guard-ACK heartbeat timeout", source)
+        self.assertIn("Превышено время ожидания сигнала активности Guard-ACK", source)
 
     def test_lwjgl_native_is_pinned_to_materialized_platform_directory(self):
         source = (ROOT / "runtime/guard-sensor/src/jvm_awareness.rs").read_text(
@@ -173,8 +173,8 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         self.assertIn("std::fs::symlink_metadata(&loaded)", region)
         self.assertIn("std::fs::canonicalize(expected)", region)
         self.assertIn("expected_path.starts_with(launch_root)", region)
-        self.assertIn("rejected reparse/symlink native path", region)
-        self.assertIn("LWJGL loaded outside certified natives directory", region)
+        self.assertIn("Guard отклонил путь к нативному модулю через символическую ссылку или точку повторного разбора", region)
+        self.assertIn("LWJGL загружен вне сертифицированного каталога нативных библиотек", region)
         self.assertIn(
             "GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN",
             region,
@@ -183,7 +183,7 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         self.assertIn("RUNTIME_NATIVE_LOAD_FAILED.store(true", region)
         self.assertIn("register_loaded_native_dispatcher(module)", hooks)
         self.assertIn("VERIFIED_LWJGL_IMAGE.get().is_some_and", source)
-        self.assertIn("LWJGL image content changed", source)
+        self.assertIn("Изменилось содержимое модуля LWJGL, контролируемого Guard для JVM", source)
         self.assertIn("reconcile_first_runtime_native_transition()?;", source)
         self.assertIn("FOREIGN_EXECUTABLE_TRANSITIONS.compare_exchange(", source)
         self.assertIn("TransitionOrigin::ForeignNative =>", source)
@@ -215,8 +215,8 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
 
     def test_abort_diagnostics_include_rejected_reason(self):
         source = (ROOT / "runtime/guard-sensor/src/lib.rs").read_text(encoding="utf-8")
-        self.assertIn("Guard JVM-Aware violation:", source)
-        self.assertIn("Guard Continuous Guard ACK violation:", source)
+        self.assertIn("Guard JVM-Aware: обнаружено нарушение:", source)
+        self.assertIn("Непрерывная защита Guard: нарушение протокола подтверждения ACK:", source)
         self.assertIn("guard_fail_closed_abort();", source)
 
 
@@ -242,13 +242,15 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
             "flattenLWJGLWindowsNatives(stagingDir, extracted, target.Arch)", source
         )
         self.assertIn("extracted = append(extracted, aliases...)", source)
+        self.assertIn("file := vanillaDownloadedFile{Path:", source)
+        self.assertIn("SHA256: sum", source)
         self.assertIn(
-            "publishFiles = append(publishFiles, vanillaDownloadedFile{", source
+            "publishFiles = append(publishFiles, file)", source
         )
         self.assertIn('"windows/" + classifierArch + "/org/lwjgl/"', source)
         self.assertIn("secureClientDestination(root, clean)", source)
         self.assertIn("secureClientDestination(root, base)", source)
-        self.assertIn("LWJGL Windows native filename collision", source)
+        self.assertIn("Конфликт имён нативных файлов LWJGL Windows", source)
         self.assertIn("writeAtomicBytes(to, data, 0o644)", source)
 
     def test_classpath_lwjgl_extracts_only_into_pinned_client_directory(self):
@@ -284,7 +286,7 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         self.assertIn("if matched == 2 || matched == 3", source)
         self.assertIn("Sha256::digest(std::fs::read(&canonical_certified)", source)
         self.assertIn("file_sha256.as_slice() != expected_digest.as_slice()", source)
-        self.assertIn("extracted LWJGL differs from certified package image", source)
+        self.assertIn("Извлечённый LWJGL отличается от сертифицированного образа пакета", source)
         self.assertIn("LWJGL_REGISTRATION_LOCK.lock()", source)
         self.assertIn("existing.file_sha256 != file_sha256", source)
         self.assertIn("MAX_ADDITIONAL_LWJGL_IMAGES", source)
@@ -293,9 +295,9 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         )
         self.assertIn("is_verified_lwjgl_caller(address)", source)
         self.assertIn("check_verified_lwjgl_image(native)?;", source)
-        self.assertIn("too many verified LWJGL modules", source)
-        self.assertIn("rejected reparse/symlink native path", source)
-        self.assertIn("За пределами закреплённого корневого каталога клиента", source)
+        self.assertIn("Превышено допустимое число проверенных модулей LWJGL", source)
+        self.assertIn("Guard отклонил путь к нативному модулю через символическую ссылку или точку повторного разбора", source)
+        self.assertIn("Проверенный LWJGL находится вне закреплённого корневого каталога клиента", source)
         self.assertIn("RUNTIME_NATIVE_LOAD_FAILED.store(true", source)
         launch = (ROOT / "runtime/runtime/src/lib.rs").read_text(encoding="utf-8")
         self.assertIn("compatibility::pin_windows_lwjgl_extract_path(", launch)
@@ -315,7 +317,7 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         self.assertIn("now.kind != MEM_IMAGE", memory)
         self.assertIn("if !copied_all", memory)
         self.assertIn("digest.update(&buffer[..chunk])", memory)
-        self.assertIn("Guard Memory Integrity code-page drift", memory)
+        self.assertIn("Guard: изменение кодовой страницы по адресу", memory)
 
     def test_java21_tooling_retries_setup_but_skips_failure(self):
         workflow = (ROOT / ".github/workflows/compatibility.yml").read_text(
@@ -325,7 +327,7 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         self.assertEqual(workflow.count("steps.java21_tooling.outcome == 'failure'"), 2)
         self.assertEqual(
             workflow.count(
-                "name: Retry Java 21 tooling after transient extraction failure"
+                "name: Повторная установка инструментов Java 21 после временного сбоя распаковки"
             ),
             2,
         )

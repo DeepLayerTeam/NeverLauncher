@@ -971,7 +971,7 @@ func readExtensionZipEntry0202(entry *zip.File, limit int64) ([]byte, error) {
 
 func hashExtensionZipEntry0202(entry *zip.File, limit int64) (string, int64, error) {
 	if entry.UncompressedSize64 > uint64(limit) {
-		return "", 0, fmt.Errorf("entry %s превышает limit", entry.Name)
+		return "", 0, fmt.Errorf("Запись %s превышает допустимый предел", entry.Name)
 	}
 	reader, err := entry.Open()
 	if err != nil {

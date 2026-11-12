@@ -36,9 +36,9 @@ class EmbeddedCLIAssetsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             src = Path(directory)
             (src / 'nginx.conf').write_text('server {}')
-            with self.assertRaisesRegex(ValueError, 'template list drift'):
+            with self.assertRaisesRegex(ValueError, 'Набор шаблонов рабочего развёртывания изменился'):
                 module.bundle(src, 'production/', '*')
-            with self.assertRaisesRegex(ValueError, 'unexpectedly incomplete'):
+            with self.assertRaisesRegex(ValueError, 'Каталог миграций неожиданно неполон'):
                 module.bundle(src, 'sql/', '*.sql')
 
 

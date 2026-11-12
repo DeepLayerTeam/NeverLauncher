@@ -21,3 +21,10 @@ test('Настоящий HTTP, авторизация, статусы и оши�
   assert.ok(Object.keys(OPERATIONS).length >= 450);
  } finally { await new Promise(resolve=>server.close(resolve)); }
 });
+
+ test('Русское пояснение HTTP при отсутствии сообщения сервера', async () => {
+  const c = new LauncherAPI('https://example.test', '', async () => new Response('unavailable', {status:503, statusText:'Service Unavailable', headers:{'X-Correlation-ID':'fallback-1'}}));
+  await assert.rejects(c.call('get_projects'), e => e instanceof ApiError && e.status === 503 && e.requestId === 'fallback-1' && e.message === 'HTTP 503: Сервис временно недоступен');
+  const original = new LauncherAPI('https://example.test', '', async () => new Response(JSON.stringify({code:'custom',message:'Original server message'}), {status:403}));
+  await assert.rejects(original.call('get_projects'), e => e instanceof ApiError && e.code === 'custom' && e.message === 'Original server message');
+ });

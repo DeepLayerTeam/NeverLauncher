@@ -88,7 +88,7 @@ func (s *S3Storage) SaveContext(ctx context.Context, projectID, versionID, relat
 		return "", 0, fmt.Errorf("не удалось синхронизировать временный S3 upload: %w", err)
 	}
 	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
-		return "", 0, fmt.Errorf("не удалось перемотать временный S3 upload: %w", err)
+		return "", 0, fmt.Errorf("не удалось вернуться к началу временного файла загрузки в S3: %w", err)
 	}
 	payloadHash := hex.EncodeToString(hasher.Sum(nil))
 

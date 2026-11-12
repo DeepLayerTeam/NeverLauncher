@@ -23,6 +23,9 @@ public final class ClientTest {
    } else if(e.getRequestURI().getRawPath().equals("/api/v1/redirect")) {
     e.getResponseHeaders().set("Location", "http://127.0.0.1:1/api/v1/leak");
     e.sendResponseHeaders(307,-1);e.close();return;
+   } else if(e.getRequestURI().getRawPath().equals("/api/v1/fallback-error")) {
+    e.getResponseHeaders().set("X-Correlation-ID","fallback-1");
+    e.sendResponseHeaders(503,-1);e.close();return;
    } else if(e.getRequestURI().getRawPath().equals("/api/v1/stream-error")) {
     byte[] b="{\"code\":\"denied\",\"message\":\"no access\"}".getBytes(StandardCharsets.UTF_8);
     e.getResponseHeaders().set("X-Correlation-ID","stream-req-1");
@@ -50,6 +53,9 @@ public final class ClientTest {
     throw new AssertionError("обход ограничения потока");} catch(IOException expected) {if(!expected.getMessage().contains("лимит размера"))throw expected;}
    try {c.requestStream("GET","/api/v1/redirect",Map.of(),null,null,new ByteArrayOutputStream(),1024,"");
     throw new AssertionError("выполнен запрещённый переход");}catch(NeverLauncherAPI.ApiException expected){if(expected.status!=307)throw expected;}
+   try {c.requestStream("GET","/api/v1/fallback-error",Map.of(),null,null,new ByteArrayOutputStream(),1024,"");
+    throw new AssertionError("Отсутствует ошибка HTTP");}catch(NeverLauncherAPI.ApiException expected){
+     if(expected.status!=503 || !expected.requestId.equals("fallback-1") || !expected.getMessage().equals("HTTP 503: Сервис временно недоступен"))throw expected;}
    try {c.requestStream("GET","/api/v1/stream-error",Map.of(),null,null,new ByteArrayOutputStream(),1024,"");
     throw new AssertionError("ошибка проигнорирована");}catch(NeverLauncherAPI.ApiException expected){
      if(expected.status!=403 || !expected.code.equals("denied") || !expected.requestId.equals("stream-req-1"))throw expected;}

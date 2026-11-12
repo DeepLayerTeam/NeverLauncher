@@ -373,7 +373,7 @@ func (s Server) findUserByEmail(email string) (model.User, bool) {
 func hashPassword(password string) string {
 	encoded, err := hashPasswordArgon2id(password)
 	if err != nil {
-		// В production ошибка Argon2id должна останавливать создание/смену пароля.
+		// В промышленной среде ошибка Argon2id должна останавливать создание/смену пароля.
 		// Сигнатура старого Repository interface не возвращает ошибку, поэтому
 		// оставляем явный panic вместо тихого возврата слабого SHA-256.
 		panic(err)

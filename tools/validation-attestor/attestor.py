@@ -1403,7 +1403,7 @@ def main():
     p.add_argument(
         "--managed-java-sha",
         required=True,
-        help="SHA-256 зафиксированного манифеста Managed JRE",
+        help="SHA-256 зафиксированного манифеста управляемой JRE",
     )
     p.add_argument(
         "--server-bundle-file",

@@ -40,7 +40,7 @@ func NewPostgresRepository(dsn string, publicURL string) Repository {
 }
 
 // NewSQLRepository создаёт repository поверх database/sql.
-// driverName намеренно вынесен наружу: production-сборка может регистрировать
+// driverName намеренно вынесен наружу: промышленная сборка может регистрировать
 // github.com/lib/pq как "postgres" или pgx stdlib как "pgx".
 func NewSQLRepository(driverName, dsn string, publicURL string) Repository {
 	driverName = strings.TrimSpace(driverName)

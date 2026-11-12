@@ -29,4 +29,4 @@ scripts/test/serverbridge-host-faults-04112.sh
 
 ## Границы проверки
 
-Скрипт запускает реальные процессы Java, но не настоящие сборки Minecraft Paper/Fabric/Velocity. Для сертификации production всё ещё требуются интеграционные тесты PostgreSQL и полный набор тестов Backend с работающим PostgreSQL и заданными инструментами Go (Go 1.27.3).
+Скрипт запускает реальные процессы Java, но не настоящие сборки Minecraft Paper/Fabric/Velocity. Для сертификации промышленного выпуска всё ещё требуются интеграционные тесты PostgreSQL и полный набор тестов Backend с работающим PostgreSQL и заданными инструментами Go (Go 1.27.3).

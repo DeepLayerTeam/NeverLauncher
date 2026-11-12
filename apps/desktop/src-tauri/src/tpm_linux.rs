@@ -41,7 +41,7 @@ fn parse_ak_handle(input: &str) -> Result<String, String> {
 
 // Конфигурация hardware-enclave для Launcher использует app_name=launcher-desktop. В
 // версии 0.2.10 добавлен -unsigned для неподписанных сборок разработчика. Разрешены
-// только стандартные каталоги приложений XDG; путь от frontend принимать нельзя.
+// только стандартные каталоги приложений XDG; путь от клиентского интерфейса принимать нельзя.
 fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
     if label.len()<10 || label.len()>96 || !label.bytes().all(|b| b.is_ascii_alphanumeric() || b=='-') {
         return Err("Некорректное значение: метка аппаратного хранилища TPM".into());

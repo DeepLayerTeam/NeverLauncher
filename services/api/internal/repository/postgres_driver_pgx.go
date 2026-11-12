@@ -5,7 +5,7 @@ package repository
 
 import _ "github.com/jackc/pgx/v5/stdlib"
 
-// Этот файл регистрирует pgx database/sql driver для production-сборки Backend API.
+// Этот файл регистрирует pgx database/sql driver для промышленной сборки серверного API.
 // Имя драйвера: pgx.
 //
 // Настройка по умолчанию:

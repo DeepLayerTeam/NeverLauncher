@@ -260,7 +260,7 @@ def main() -> int:
         if not HEX64.fullmatch(digest):
             die(f"{target}: внутренняя проверка SHA-256 не пройдена")
         if row.get("sha256") != digest:
-            die(f"{target}: manifest SHA-256: не совпадает с JAR")
+            die(f"{target}: SHA-256 манифеста не совпадает с JAR")
         field = HASH_FIELDS[target]
         values = policy.get(field)
         if values != [digest]:

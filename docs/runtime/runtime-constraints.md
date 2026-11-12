@@ -2,7 +2,7 @@
 
 ## Что выполняется
 
-В production используются `model.ValidateManifestSchema` (и его ограничения Runtime только для v2), `adminVersionManifestUpdate`, проверки целостности публикации выпуска и функции `runtime::{verify_manifest_signature,create_launch_plan_with_credentials,launch_with_timeout}`. Новые поля хранятся в существующем подписанном JSON Manifest v2; менять схему SQL не требуется. Содержимое и подписи прежних Manifest v1 не изменяются.
+В промышленной среде используются `model.ValidateManifestSchema` (и его ограничения Runtime только для v2), `adminVersionManifestUpdate`, проверки целостности публикации выпуска и функции `runtime::{verify_manifest_signature,create_launch_plan_with_credentials,launch_with_timeout}`. Новые поля хранятся в существующем подписанном JSON-манифесте v2; менять схему SQL не требуется. Содержимое и подписи прежних Manifest v1 не изменяются.
 
 ### Пример полей манифеста v2
 

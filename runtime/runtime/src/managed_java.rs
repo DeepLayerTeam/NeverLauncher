@@ -130,7 +130,7 @@ pub async fn ensure_managed_java(
     runtime_root_override: Option<&Path>,
 ) -> Result<ManagedJavaResult, String> {
     if required_major == 0 {
-        return Err("Для Managed Java требуется majorVersion > 0".to_string());
+        return Err("Для управляемой Java требуется majorVersion > 0".to_string());
     }
     validate_managed_java_major(required_major)?;
     let distribution = normalize_distribution(distribution)?;
@@ -159,7 +159,7 @@ pub async fn ensure_managed_java(
         return Ok(recovered);
     }
     if managed_java_offline() {
-        return Err("Для автономной Managed Java требуется локально закреплённый манифест дистрибутива либо уже проверенная установленная среда выполнения".into());
+        return Err("Для автономной управляемой Java требуется локально закреплённый манифест дистрибутива либо уже проверенная установленная среда выполнения".into());
     }
 
     // Другие поддерживаемые основные версии ищутся в выпусках Adoptium после проверки существующей установки и автономной политики.
@@ -234,7 +234,7 @@ pub async fn ensure_managed_java_from_distribution(
     }
 
     let manifest: ManagedJREDistributionManifest = serde_json::from_slice(&manifest_bytes)
-        .map_err(|err| format!("Ошибка JSON-манифеста Managed JRE: {err}"))?;
+        .map_err(|err| format!("Ошибка JSON-манифеста управляемой JRE: {err}"))?;
     if manifest.schema_version != "1.0"
         || manifest.product != "Launcher"
         || manifest.distribution != "temurin"
@@ -242,7 +242,7 @@ pub async fn ensure_managed_java_from_distribution(
         || manifest.major_version != required_major
         || manifest.product_version != env!("CARGO_PKG_VERSION")
     {
-        return Err("Несовпадение идентификатора или схемы манифеста Managed JRE".to_string());
+        return Err("Несовпадение идентификатора или схемы манифеста управляемой JRE".to_string());
     }
 
     let (platform, arch) = distribution_platform()?;
@@ -252,12 +252,12 @@ pub async fn ensure_managed_java_from_distribution(
         .filter(|target| target.platform == platform && target.architecture == arch);
     let target = matching_targets
         .next()
-        .ok_or_else(|| format!("В манифесте Managed JRE отсутствует целевая платформа {platform}/{arch}"))?;
+        .ok_or_else(|| format!("В манифесте управляемой JRE отсутствует целевая платформа {platform}/{arch}"))?;
     if matching_targets.next().is_some() {
         return Err(format!("Манифест управляемой JRE содержит повторяющуюся платформу {platform}/{arch}"));
     }
     if target.distribution != distribution || target.major_version != required_major {
-        return Err("Несовпадение дистрибутива или основной версии целевой Managed JRE".to_string());
+        return Err("Несовпадение дистрибутива или основной версии целевой управляемой JRE".to_string());
     }
     validate_distribution_target(&target, &platform)?;
     let (record_os, record_arch) = adoptium_platform()?;
@@ -298,16 +298,16 @@ impl DistributionArchiveBase {
         validate_distribution_archive_name(archive)?;
         match self {
             Self::Remote(base) => {
-                let url = base.join(archive).map_err(|err| format!("Недопустимый URL архива Managed JRE: {err}"))?;
+                let url = base.join(archive).map_err(|err| format!("Недопустимый URL архива управляемой JRE: {err}"))?;
                 validate_https_url(url.as_str())?;
                 Ok((url.to_string(), None))
             }
             Self::Local(base) => {
                 let path = base.join(archive);
-                let canonical_base = std::fs::canonicalize(base).map_err(|err| format!("Не удалось привести базовый путь Managed JRE к каноническому виду: {err}"))?;
-                let canonical_path = std::fs::canonicalize(&path).map_err(|err| format!("Ошибка архива Managed JRE {}: {err}", path.display()))?;
+                let canonical_base = std::fs::canonicalize(base).map_err(|err| format!("Не удалось привести базовый путь управляемой JRE к каноническому виду: {err}"))?;
+                let canonical_path = std::fs::canonicalize(&path).map_err(|err| format!("Ошибка архива управляемой JRE {}: {err}", path.display()))?;
                 if !canonical_path.starts_with(&canonical_base) {
-                    return Err("Путь к архиву Managed JRE выходит за пределы каталога манифеста".to_string());
+                    return Err("Путь к архиву управляемой JRE выходит за пределы каталога манифеста".to_string());
                 }
                 Ok((canonical_path.to_string_lossy().to_string(), Some(canonical_path)))
             }
@@ -318,11 +318,11 @@ impl DistributionArchiveBase {
 async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, DistributionArchiveBase), String> {
     let location = location.trim();
     if location.is_empty() {
-        return Err("Местоположение манифеста Managed JRE не задано".to_string());
+        return Err("Местоположение манифеста управляемой JRE не задано".to_string());
     }
     if location.to_ascii_lowercase().starts_with("https://") {
         if managed_java_offline() { return Err("В автономном режиме запрещено получать манифест из сети".into()); }
-        let url = Url::parse(location).map_err(|err| format!("Недопустимый URL манифеста Managed JRE: {err}"))?;
+        let url = Url::parse(location).map_err(|err| format!("Недопустимый URL манифеста управляемой JRE: {err}"))?;
         validate_https_url(location)?;
         let client = managed_java_http_client()?;
         let response = managed_java_send_with_retry(
@@ -331,22 +331,22 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
             &format!("Launcher/{} ManagedJRE", env!("CARGO_PKG_VERSION")),
         )
         .await
-        .map_err(|err| format!("Ошибка загрузки манифеста Managed JRE: {err}"))?;
+        .map_err(|err| format!("Ошибка загрузки манифеста управляемой JRE: {err}"))?;
         if !response.status().is_success() {
-            return Err(format!("Ошибка HTTP при получении манифеста Managed JRE: {}", response.status()));
+            return Err(format!("Ошибка HTTP при получении манифеста управляемой JRE: {}", response.status()));
         }
         if response.content_length().unwrap_or_default() > 8 * 1024 * 1024 {
-            return Err("Манифест Managed JRE превышает 8 МиБ".to_string());
+            return Err("Манифест управляемой JRE превышает 8 МиБ".to_string());
         }
-        let bytes = response.bytes().await.map_err(|err| format!("Ошибка чтения содержимого манифеста Managed JRE: {err}"))?;
+        let bytes = response.bytes().await.map_err(|err| format!("Ошибка чтения содержимого манифеста управляемой JRE: {err}"))?;
         if bytes.len() > 8 * 1024 * 1024 {
-            return Err("Манифест Managed JRE превышает 8 МиБ".to_string());
+            return Err("Манифест управляемой JRE превышает 8 МиБ".to_string());
         }
         let mut base = url;
         base.set_query(None);
         base.set_fragment(None);
         {
-            let mut segments = base.path_segments_mut().map_err(|_| "URL манифеста Managed JRE не может использоваться как базовый адрес".to_string())?;
+            let mut segments = base.path_segments_mut().map_err(|_| "URL манифеста управляемой JRE не может использоваться как базовый адрес".to_string())?;
             segments.pop_if_empty();
             segments.pop();
             segments.push("");
@@ -357,41 +357,41 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
         return Err("Манифест управляемой JRE поддерживает только адрес HTTPS или локальный путь".to_string());
     }
     let path = PathBuf::from(location);
-    let original_metadata = std::fs::symlink_metadata(&path).map_err(|err| format!("Ошибка метаданных манифеста Managed JRE {}: {err}", path.display()))?;
+    let original_metadata = std::fs::symlink_metadata(&path).map_err(|err| format!("Ошибка метаданных манифеста управляемой JRE {}: {err}", path.display()))?;
     if original_metadata.file_type().is_symlink() {
-        return Err("Локальный файл манифеста Managed JRE не должен быть символической ссылкой".to_string());
+        return Err("Локальный файл манифеста управляемой JRE не должен быть символической ссылкой".to_string());
     }
-    let canonical = std::fs::canonicalize(&path).map_err(|err| format!("Ошибка манифеста Managed JRE {}: {err}", path.display()))?;
-    let metadata = std::fs::symlink_metadata(&canonical).map_err(|err| format!("Ошибка метаданных манифеста Managed JRE: {err}"))?;
+    let canonical = std::fs::canonicalize(&path).map_err(|err| format!("Ошибка манифеста управляемой JRE {}: {err}", path.display()))?;
+    let metadata = std::fs::symlink_metadata(&canonical).map_err(|err| format!("Ошибка метаданных манифеста управляемой JRE: {err}"))?;
     if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() > 8 * 1024 * 1024 {
-        return Err("Недопустимый локальный файл манифеста Managed JRE".to_string());
+        return Err("Недопустимый локальный файл манифеста управляемой JRE".to_string());
     }
-    let bytes = fs::read(&canonical).await.map_err(|err| format!("Ошибка чтения манифеста Managed JRE: {err}"))?;
+    let bytes = fs::read(&canonical).await.map_err(|err| format!("Ошибка чтения манифеста управляемой JRE: {err}"))?;
     let base = canonical.parent().ok_or_else(|| "У манифеста управляемой JRE нет родительского каталога".to_string())?.to_path_buf();
     Ok((bytes, DistributionArchiveBase::Local(base)))
 }
 
 fn validate_distribution_target(target: &ManagedJREDistributionTarget, platform: &str) -> Result<(), String> {
     if target.release_name.trim().is_empty() || target.semver.trim().is_empty() {
-        return Err("Метаданные целевого выпуска Managed JRE пусты".to_string());
+        return Err("Метаданные целевого выпуска управляемой JRE пусты".to_string());
     }
     let checksum = normalize_sha256(&target.sha256)?;
     let source_checksum = normalize_sha256(&target.source_sha256)?;
     if checksum != source_checksum {
-        return Err("Целевой выпуск Managed JRE должен сохранять точный SHA-256 архива поставщика".to_string());
+        return Err("Целевой выпуск управляемой JRE должен сохранять точный SHA-256 архива поставщика".to_string());
     }
     if target.size == 0 || target.size > MAX_RUNTIME_ARCHIVE_SIZE {
-        return Err("Недопустимый размер целевого архива Managed JRE".to_string());
+        return Err("Недопустимый размер целевого архива управляемой JRE".to_string());
     }
     validate_https_url(&target.source_url)?;
     validate_distribution_archive_name(&target.archive)?;
     validate_distribution_java_entry(&target.java_entry, platform)?;
     match platform {
         "windows" if target.format != "zip" || !target.archive.to_ascii_lowercase().ends_with(".zip") => {
-            Err("Для Managed JRE на Windows требуется архив ZIP".to_string())
+            Err("Для управляемой JRE на Windows требуется архив ZIP".to_string())
         }
         "linux" | "macos" if target.format != "tar.gz" || !target.archive.to_ascii_lowercase().ends_with(".tar.gz") => {
-            Err(format!("Для Managed JRE на платформе {platform} требуется архив tar.gz"))
+            Err(format!("Для управляемой JRE на платформе {platform} требуется архив tar.gz"))
         }
         _ => Ok(()),
     }
@@ -400,7 +400,7 @@ fn validate_distribution_target(target: &ManagedJREDistributionTarget, platform:
 fn validate_distribution_archive_name(value: &str) -> Result<(), String> {
     let path = Path::new(value);
     if value.trim().is_empty() || path.is_absolute() || path.components().any(|part| !matches!(part, Component::Normal(_))) || path.components().count() != 1 {
-        return Err("Имя архива Managed JRE должно быть безопасным именем файла без компонентов пути".to_string());
+        return Err("Имя архива управляемой JRE должно быть безопасным именем файла без компонентов пути".to_string());
     }
     Ok(())
 }
@@ -409,11 +409,11 @@ fn validate_distribution_java_entry(value: &str, platform: &str) -> Result<(), S
     let normalized = value.replace('\\', "/");
     let path = Path::new(&normalized);
     if normalized.is_empty() || path.is_absolute() || path.components().any(|part| !matches!(part, Component::Normal(_))) {
-        return Err("Небезопасное значение javaEntry в Managed JRE".to_string());
+        return Err("Небезопасное значение javaEntry в управляемой JRE".to_string());
     }
     let expected = if platform == "windows" { "/bin/java.exe" } else { "/bin/java" };
     if !normalized.to_ascii_lowercase().ends_with(expected) {
-        return Err("javaEntry Managed JRE не указывает на bin/java".to_string());
+        return Err("javaEntry управляемой JRE не указывает на bin/java".to_string());
     }
     Ok(())
 }
@@ -587,11 +587,11 @@ fn managed_java_http_client() -> Result<Client, String> {
     let mut builder = Client::builder();
     if let Ok(proxy) = std::env::var("LAUNCHER_MANAGED_JAVA_PROXY") {
         if !proxy.trim().is_empty() {
-            let url = Url::parse(&proxy).map_err(|e| format!("Недопустимый URL прокси Managed Java: {e}"))?;
+            let url = Url::parse(&proxy).map_err(|e| format!("Недопустимый URL прокси управляемой Java: {e}"))?;
             if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() {
-                return Err("Прокси Managed Java должен использовать HTTP(S)".into());
+                return Err("Прокси управляемой Java должен использовать HTTP(S)".into());
             }
-            builder = builder.proxy(reqwest::Proxy::all(&proxy).map_err(|e| format!("Ошибка прокси Managed Java: {e}"))?);
+            builder = builder.proxy(reqwest::Proxy::all(&proxy).map_err(|e| format!("Ошибка прокси управляемой Java: {e}"))?);
         }
     }
     builder
@@ -603,7 +603,7 @@ fn managed_java_http_client() -> Result<Client, String> {
             attempt.follow()
         }))
         .build()
-        .map_err(|err| format!("не удалось создать Managed Java HTTP client: {err}"))
+        .map_err(|err| format!("не удалось создать HTTP-клиент управляемой Java: {err}"))
 }
 
 async fn managed_java_send_with_retry(client: &Client, url: &str, user_agent: &str) -> Result<reqwest::Response, String> {
@@ -612,7 +612,7 @@ async fn managed_java_send_with_retry(client: &Client, url: &str, user_agent: &s
         match client.get(url).header("User-Agent", user_agent).send().await {
             Ok(response) => {
                 if response.url().scheme() != "https" {
-                    return Err("Перенаправление Managed Java понизило соединение с HTTPS".to_string());
+                    return Err("Перенаправление управляемой Java перевело соединение с HTTPS на менее безопасный протокол".to_string());
                 }
                 let status = response.status().as_u16();
                 let retryable = matches!(status, 408 | 425 | 429 | 500 | 502 | 503 | 504);
@@ -702,7 +702,7 @@ async fn ensure_managed_archive(runtime_root: &Path, source_url: &str,
     };
     if let Some(source) = local_archive.or(offline_source.as_deref()) {
         if !verify_file_sha256(source, checksum, size).await? {
-            return Err("Несовпадение SHA-256 или размера локального архива Managed Java".into());
+            return Err("Несовпадение SHA-256 или размера локального архива управляемой Java".into());
         }
         let tmp = downloads.join(format!(".{checksum}-{:016x}.partial", rand::random::<u64>()));
         let result = async {
@@ -733,10 +733,10 @@ async fn ensure_managed_archive(runtime_root: &Path, source_url: &str,
                 }
             }
         }
-        if !last_error.is_empty() { return Err(format!("Ошибка проверенной загрузки Managed Java: {last_error}")); }
+        if !last_error.is_empty() { return Err(format!("Ошибка проверенной загрузки управляемой Java: {last_error}")); }
     }
     if !verify_file_sha256(&archive, checksum, size).await? {
-        return Err("Целостность архива Managed Java изменилась до публикации в кеше".into());
+        return Err("Целостность архива управляемой Java изменилась до публикации в кеше".into());
     }
     lease.publish(&file, &archive).await?;
     Ok(archive)
@@ -753,9 +753,9 @@ pub async fn revalidate_managed_java_before_spawn(java_executable: &str) -> Resu
         let record_path = directory.join(".runtime.json");
         if !record_path.exists() { continue; }
         let raw = fs::read(&record_path).await
-            .map_err(|e| format!("Запись Managed Java недоступна перед запуском: {e}"))?;
+            .map_err(|e| format!("Запись управляемой Java недоступна перед запуском: {e}"))?;
         let record: ManagedJavaRecord = serde_json::from_slice(&raw)
-            .map_err(|e| format!("Запись Managed Java повреждена перед запуском: {e}"))?;
+            .map_err(|e| format!("Запись управляемой Java повреждена перед запуском: {e}"))?;
         let verified = validate_installed_runtime(directory, record.major_version,
             &record.distribution, true).await?
             .ok_or_else(|| "Установка управляемой Java изменилась после планирования запуска".to_string())?;
@@ -768,7 +768,7 @@ pub async fn revalidate_managed_java_before_spawn(java_executable: &str) -> Resu
     // Управляемый Runtime с удалёнными метаданными не должен незаметно превращаться в доверенный пользовательский путь Java.
     if let Ok(root) = managed_runtime_root() {
         if java.starts_with(&root) {
-            return Err("Запись Managed Java отсутствует перед запуском".into());
+            return Err("Запись управляемой Java отсутствует перед запуском".into());
         }
     }
     Ok(())
@@ -782,11 +782,11 @@ pub async fn select_java_executable(
 ) -> Result<(String, Option<ManagedJavaResult>), String> {
     if let Some(custom) = custom_path.filter(|value| !value.trim().is_empty()) {
         if !allow_custom_path {
-            return Err("профиль запрещает custom Java path".to_string());
+            return Err("профиль запрещает пользовательский путь к Java".to_string());
         }
         let info = super::check_java(Some(custom.clone()), Some(required_major)).await?;
         if !info.found || info.detected_major_version != Some(required_major) {
-            return Err(format!("custom Java отклонена: требуется Java {required_major}, {}", info.message));
+            return Err(format!("Пользовательская Java отклонена: требуется Java {required_major}, {}", info.message));
         }
         return Ok((custom, None));
     }
@@ -795,7 +795,7 @@ pub async fn select_java_executable(
     if normalized == "system" {
         let info = super::check_java(Some("java".to_string()), Some(required_major)).await?;
         if !info.found || info.detected_major_version != Some(required_major) {
-            return Err(format!("system Java не соответствует Java {required_major}: {}", info.message));
+            return Err(format!("Системная Java не соответствует Java {required_major}: {}", info.message));
         }
         return Ok(("java".to_string(), None));
     }
@@ -936,7 +936,7 @@ fn validate_managed_java_major(major: u32) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!(
-            "Managed Java {} поддерживает Java 8/16/17/21/25; запрошена Java {major}",
+            "Управляемая Java {} поддерживает Java 8/16/17/21/25; запрошена Java {major}",
             env!("CARGO_PKG_VERSION")
         ))
     }
@@ -1012,7 +1012,7 @@ async fn extract_tar_gz(archive: &Path, destination: &Path) -> Result<(), String
         .stderr(Stdio::piped())
         .output()
         .await
-        .map_err(|err| format!("tar недоступен для Managed Java: {err}"))?;
+        .map_err(|err| format!("tar недоступен для управляемой Java: {err}"))?;
     if !list.status.success() {
         return Err(format!("Не удалось проверить содержимое архива командой tar -tzf: {}", String::from_utf8_lossy(&list.stderr)));
     }
@@ -1247,7 +1247,7 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
         archive_sha256: record.archive_sha256,
         archive_size: record.archive_size,
         cached,
-        message: if cached { "Управляемая Java найдена в проверенном кеше среды выполнения" } else { "Managed Java установлена и проверена" }.to_string(),
+        message: if cached { "Управляемая Java найдена в проверенном кеше среды выполнения" } else { "Управляемая Java установлена и проверена" }.to_string(),
     }))
 }
 
@@ -1553,7 +1553,7 @@ fn managed_runtime_root() -> Result<PathBuf, String> {
     if let Ok(value) = std::env::var("HOME") {
         return Ok(PathBuf::from(value).join(".local").join("share").join("Launcher").join("runtimes"));
     }
-    Err("не удалось определить каталог Managed Java; задайте LAUNCHER_RUNTIME_DIR".to_string())
+    Err("не удалось определить каталог управляемой Java; задайте LAUNCHER_RUNTIME_DIR".to_string())
 }
 
 fn adoptium_platform() -> Result<(String, String), String> {
@@ -1600,7 +1600,7 @@ fn normalize_distribution(value: &str) -> Result<String, String> {
 fn normalize_sha256(value: &str) -> Result<String, String> {
     let value = value.trim().to_ascii_lowercase();
     if value.len() != 64 || !value.chars().all(|ch| ch.is_ascii_hexdigit()) {
-        return Err("Adoptium checksum должен быть SHA-256 hex".to_string());
+        return Err("Контрольная сумма Adoptium должна быть шестнадцатеричным SHA-256".to_string());
     }
     Ok(value)
 }
@@ -1613,7 +1613,7 @@ fn validate_https_url(value: &str) -> Result<(), String> {
         || url.password().is_some()
         || url.fragment().is_some()
     {
-        return Err("Managed Java разрешает только HTTPS URL".to_string());
+        return Err("Управляемая Java разрешает только URL с HTTPS".to_string());
     }
     Ok(())
 }
