@@ -50,7 +50,7 @@ func ValidateRuntimeConstraints0223(m Manifest) error {
 			return fmt.Errorf("Флаг пути или точки входа JVM %q должен задаваться типизированными полями", arg)
 		}
 		if strings.HasPrefix(lower, "-xbootclasspath") || strings.HasPrefix(lower, "--class-path=") || strings.HasPrefix(lower, "--module-path=") || strings.HasPrefix(lower, "--patch-module=") || strings.HasPrefix(lower, "--upgrade-module-path=") || strings.HasPrefix(lower, "-xx:onerror=") || strings.HasPrefix(lower, "-xx:onoutofmemoryerror=") || strings.HasPrefix(lower, "-javaagent:") || strings.HasPrefix(lower, "-agentpath:") || strings.HasPrefix(lower, "-agentlib:") {
-			return fmt.Errorf("Неподдерживаемое переопределение bootstrap, пути или агента JVM: %q", arg)
+			return fmt.Errorf("Неподдерживаемое переопределение начальной загрузки, пути или агента JVM: %q", arg)
 		}
 		if strings.HasPrefix(lower, "-xmx") || strings.HasPrefix(lower, "-xms") {
 			match := heapSize0223.FindStringSubmatch(arg)

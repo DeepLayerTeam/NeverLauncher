@@ -152,7 +152,7 @@ func (r *Report) evaluatePostgres(p PostgreSQL) {
 		r.issue("warning", "postgres.connections", fmt.Sprintf("%d/%d", p.ActiveConnections, p.MaxConnections), "Использовано не менее 80 % от max_connections", "Устраните утечки и простаивающие соединения, настройте ограниченные пулы; рассмотрите PgBouncer перед увеличением числа реплик API")
 	}
 	if p.PendingJobs >= QueueWarningSize {
-		r.issue("warning", "jobs.pending", fmt.Sprint(p.PendingJobs), "Не менее 500 ожидающих заданий", "Проверьте сбойные обработчики и частоту повторов; увеличивайте параллелизм только после проверки аренды и механизма fencing")
+		r.issue("warning", "jobs.pending", fmt.Sprint(p.PendingJobs), "Не менее 500 ожидающих заданий", "Проверьте сбойные обработчики и частоту повторов; увеличивайте параллелизм только после проверки аренды и механизма изоляции прежнего владельца")
 	}
 	if p.OldestPendingJobSeconds > OldestJobWarning.Seconds() && p.PendingJobs > 0 {
 		r.issue("warning", "jobs.oldest_pending", fmt.Sprintf("%.0fs", p.OldestPendingJobSeconds), "Самое старое задание ожидает более 60 секунд", "Проверьте состояние обработчиков, производительность БД и политику повторного запуска заданий")

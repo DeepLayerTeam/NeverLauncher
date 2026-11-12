@@ -442,7 +442,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
             continue;
         }
         // Зависшее тело HTTP не должно сохранять на экране устаревшие ненулевые
-        // скорость/ETA до тайм-аута чтения. Heartbeat пересчитывает скользящее окно,
+        // скорость/ETA до тайм-аута чтения. Сигнал активности пересчитывает скользящее окно,
         // даже когда ни один активный обработчик не выдаёт байты.
         let outcome = tokio::time::timeout(Duration::from_secs(1), workers.join_next()).await;
         let outcome = match outcome {

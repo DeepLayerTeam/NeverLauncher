@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 1):
-    raise SystemExit(f"Delivery Manifest: требуется версия не ниже 0.15.1, получено {VERSION}")
+    raise SystemExit(f"Манифест поставки: требуется версия не ниже 0.15.1, получено {VERSION}")
 
 
 def read(rel: str) -> str:

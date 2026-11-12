@@ -438,7 +438,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
-	// Проверяйте точный runtime allowlist выпуска/платформы ПОСЛЕ погашения
+	// Проверяйте точный список разрешённых сред выполнения выпуска/платформы ПОСЛЕ погашения
 	// challenge, чтобы его состояние нельзя было повторно использовать при
 	// обновлении политики.
 	runtimePolicyDigest, err := verifyGuardRuntimePolicy0317(policy, device.Platform, req.Attestation.ContinuousEvidence)

@@ -75,7 +75,7 @@ def verify_runtime(
     jar = jar / "artifacts/plugins" / f"launcher-{service}-bridge-{version}.jar"
     observed_digest = proof.get("bridgeJarSha256")
     if not isinstance(observed_digest, str) or not HEX64.fullmatch(observed_digest):
-        raise ValueError("Отсутствует точный дайджест развёрнутого JAR ServerBridge")
+        raise ValueError("Отсутствует точная контрольная сумма развёрнутого JAR ServerBridge")
     if jar.is_symlink() or not jar.is_file() or jar.stat().st_size == 0:
         raise ValueError("Отсутствует собранный JAR ServerBridge нужной версии")
     checksum(jar, observed_digest)

@@ -353,7 +353,7 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 		return errors.New("Некорректное значение: заголовок манифеста доставки")
 	}
 	if strings.TrimSpace(expectedVersion) != "" && manifest.Version != strings.TrimSpace(expectedVersion) {
-		return fmt.Errorf("Версия манифеста доставки не совпадает: manifest=%s, ожидалось=%s", manifest.Version, expectedVersion)
+		return fmt.Errorf("Версия манифеста поставки не совпадает: получено %s, ожидалось %s", manifest.Version, expectedVersion)
 	}
 	if len(manifest.Artifacts) == 0 {
 		return errors.New("В манифесте доставки отсутствуют артефакты")

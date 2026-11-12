@@ -253,7 +253,7 @@ def apply_host(directory, project):
                 state["phase"] = "manual-recovery-required"
                 journal(directory, state)
                 raise RollingError("Не удалось обновить узел и подтвердить прежний процесс; проверьте остановленный узел") from recovery
-            raise RollingError("Обновление узла не удалось; прежний образ API/worker восстановлен и проверен") from error
+            raise RollingError("Обновление узла не удалось; прежний образ API и фонового обработчика восстановлен и проверен") from error
 
 
 def rollback_host_locked(directory, project, *, expected=None):

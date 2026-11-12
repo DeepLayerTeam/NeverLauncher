@@ -9,7 +9,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 16, 5):
-    raise SystemExit(f"Managed Java II: требуется версия не ниже 0.16.5, получено {VERSION}")
+    raise SystemExit(f"Управляемая Java II: требуется версия не ниже 0.16.5, получено {VERSION}")
 
 
 def read(rel: str) -> str:

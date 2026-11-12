@@ -56,7 +56,7 @@ func safeAddress(ip netip.Addr) bool {
 	return true
 }
 
-// Пустой allowlist разрешает публичные HTTPS DNS-хосты; записи в allowlist
+// При пустом списке разрешений допускаются публичные DNS-хосты с HTTPS; записи в списке разрешений
 // должны быть точными именами хостов. Маски и совпадения суффиксов не поддерживаются.
 type Fetcher struct {
 	hosts  map[string]bool

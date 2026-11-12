@@ -243,7 +243,7 @@ def apply_windows_brand_icon(executable, branding):
     if not asset:
         return
     if sys.platform != "win32":
-        raise RuntimeError("Ресурсы значка Windows необходимо создавать на Windows runner для выпуска")
+        raise RuntimeError("Ресурсы значка Windows необходимо создавать на узле сборки под Windows")
     import ctypes
     from ctypes import wintypes
 
@@ -434,7 +434,7 @@ def package_linux(args, stage, key, out, version):
 
 def package_macos(args, stage, key, out, version):
     if sys.platform != "darwin":
-        raise RuntimeError("Для подписанного пакета macOS требуется runner под macOS")
+        raise RuntimeError("Для подписанного пакета macOS требуется узел сборки под macOS")
     with tempfile.TemporaryDirectory() as tmp:
         app = pathlib.Path(tmp) / "Launcher.app"
         macos = app / "Contents" / "MacOS"

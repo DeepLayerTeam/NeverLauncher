@@ -433,7 +433,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 	}
 	defer reader.Close()
 	if size != item.Artifact.Size {
-		return "", errors.New("Несовпадение: «размер артефакта реестра в хранилище»")
+		return "", errors.New("Размер артефакта реестра в хранилище не совпадает")
 	}
 	tmp, err := os.CreateTemp("", "launcher-registry-install-*.nlext")
 	if err != nil {
@@ -453,7 +453,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 		return "", err
 	}
 	if written != item.Artifact.Size || hex.EncodeToString(h.Sum(nil)) != item.Artifact.SHA256 {
-		return "", errors.New("«содержимое артефакта реестра» не совпадает с «неизменяемыми метаданными»")
+		return "", errors.New("Содержимое артефакта реестра не соответствует неизменяемым метаданным")
 	}
 	if err := tmp.Sync(); err != nil {
 		return "", err
@@ -474,7 +474,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 		return "", err
 	}
 	if verified.PackageIdentity != item.Artifact.PackageIdentity || verified.SHA256 != item.Artifact.SHA256 || verified.Manifest.ID != item.ExtensionID || verified.Manifest.Version != item.Version || verified.Manifest.Publisher != item.PublisherID {
-		return "", errors.New("«подтверждённый идентификатор артефакта» не совпадает с «версией реестра»")
+		return "", errors.New("Подтверждённый идентификатор артефакта не соответствует версии реестра")
 	}
 	ok = true
 	return path, nil

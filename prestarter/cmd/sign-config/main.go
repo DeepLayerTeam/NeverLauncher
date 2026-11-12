@@ -15,7 +15,7 @@ func main() {
 	out := flag.String("out", "", "Выходной подписанный JSON")
 	policyPath := flag.String("trust-policy", "", "Файл делегированной политики доверия, подписанной корневым ключом")
 	rootKey := flag.String("root-public-key", "", "Предварительно установленный публичный корневой ключ Ed25519 (64 hex)")
-	keyID := flag.String("key-id", "", "Идентификатор делегированного ключа подписи bootstrap")
+	keyID := flag.String("key-id", "", "Идентификатор делегированного ключа подписи конфигурации начальной загрузки")
 	flag.Parse()
 	if *payload == "" || *keyPath == "" || *out == "" {
 		fmt.Fprintln(os.Stderr, "Необходимо указать --payload, --private-key-file и --out")

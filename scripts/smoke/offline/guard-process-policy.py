@@ -97,7 +97,7 @@ require(
         "enforce_runtime_process(&mut child)",
         "windows_process_policy",
         "runtime_policy: Some(runtime_policy)",
-        "Windows runtime/process policy enforcement failed",
+        "не удалось применить политику Runtime и процессов Windows",
     ],
     "Строгая политика процессов наблюдателя Runtime",
 )

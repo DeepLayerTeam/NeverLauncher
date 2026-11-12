@@ -146,7 +146,7 @@ func loadComponents0249(filename, trustedKey string, allowUnsigned bool) (compon
 		return out, errors.New("После манифеста обнаружены лишние данные JSON")
 	}
 	if out.Wire.SchemaVersion != "3.0" {
-		return out, fmt.Errorf("Для компонентов необходим Manifest v3, получено %q", out.Wire.SchemaVersion)
+		return out, fmt.Errorf("Для компонентов необходим манифест v3, получено %q", out.Wire.SchemaVersion)
 	}
 	if len(out.Wire.ComponentCatalog) == 0 || len(out.Wire.Files) == 0 || len(out.Wire.ProfileSnapshot) == 0 {
 		return out, errors.New("Манифест v3 должен содержать каталог, файлы и снимок профиля")

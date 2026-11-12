@@ -112,7 +112,7 @@ func TestServerBridgeRuntimeIdentity0192DetectsReplacementAndRestart(t *testing.
 		t.Fatalf("Не обнаружена одновременная замена: %+v, ошибка=%v", repl, err)
 	}
 
-	// Поздний heartbeat заменённой JVM не должен возвращать
+	// Запоздалый сигнал активности заменённой JVM не должен возвращать
 	// активную среду к прежнему поколению процесса.
 	if _, err := store.markRuntimeHeartbeat0192("paper-runtime-0192", "paper", "0.19.2", 3, base); err == nil || !strings.Contains(err.Error(), "экземпляр Runtime старше активного") {
 		t.Fatalf("Заменённый Runtime вновь получил активное состояние: %v", err)

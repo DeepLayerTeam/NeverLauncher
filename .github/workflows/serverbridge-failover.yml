@@ -76,7 +76,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Проверить выдачу lease, время и fencing с двумя реальными соединениями PostgreSQL
+      - name: Проверить выдачу аренды, время и изоляцию прежнего владельца с двумя реальными соединениями PostgreSQL
         working-directory: services/api
         run: go test -race -count=1 ./internal/repository -run 'Test(ServerBridgeControl0195Postgres|ServerBridgeHAControlPlane01911MultiReplica)'
       - name: Проверить версию и форматирование gofmt

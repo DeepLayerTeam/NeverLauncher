@@ -70,7 +70,7 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 	if err := banned(fields); err != nil {
 		return err
 	}
-	// Требуйте точного совпадения ID, чтобы staging-конфигурация не заменила чужого
+	// Требуйте точного совпадения ID, чтобы конфигурация промежуточной среды не заменила чужого
 	// издателя/провайдера при активации.
 	var identity struct {
 		ID string `json:"id"`

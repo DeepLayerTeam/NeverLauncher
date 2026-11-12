@@ -48,7 +48,7 @@ import java.util.function.Consumer;
  * Производственная среда ServerBridge семейства Bukkit, общая
  * для артефактов CraftBukkit, Spigot, Paper, Purpur и Folia.
  *
- * Планировщик Bukkit не используется для сетевого ввода-вывода. Heartbeat выполняются
+ * Планировщик Bukkit не используется для сетевого ввода-вывода. Сигналы активности отправляются
  * выделенным фоновым executor, предотвращая задержки главного потока старых серверов
  * и недопустимые предположения о глобальном или региональном планировщике Folia. Вход
  * проверяется в AsyncPlayerPreLoginEvent до допуска пользователя сервером.
@@ -531,7 +531,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             if (executor == null || executor.isShutdown() || stopping.get())
                 return BridgeControlResult.failed("shutdown_scheduler_unavailable");
             try {
-                // Отложенная постановка в очередь не должна блокировать heartbeat и обработчик ввода-вывода событий.
+                // Отложенная постановка в очередь не должна блокировать сигнал активности и обработчик ввода-вывода событий.
                 executor.schedule(() -> {
                     try { scheduleBukkitTask(Bukkit::shutdown); }
                     catch (RuntimeException e) { getLogger().severe("Не удалось запланировать остановку Minecraft: " + safeError(e)); }

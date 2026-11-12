@@ -252,7 +252,7 @@ func writeTrustAtomic02312(path string, value any) error {
 	return nil
 }
 
-// SignedEnvelopeDelegated подписывает реальные данные bootstrap только подписантом, которому
+// SignedEnvelopeDelegated подписывает реальные данные начальной загрузки только подписантом, которому
 // предоставила полномочия политика, подписанная корнем. Производственный подписант использует это,
 // а Prestarter не применяет метод доверия при первом использовании.
 func SignedEnvelopeDelegated(payload []byte, private ed25519.PrivateKey, policyRaw []byte, rootHex, keyID string) ([]byte, error) {

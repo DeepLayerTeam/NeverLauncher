@@ -914,7 +914,7 @@ def snapshot(
 
 def verify_snapshot(folder: Path) -> dict:
     if not folder.is_dir() or folder.is_symlink():
-        raise DrillError("snapshot: требуется настоящий каталог")
+        raise DrillError("Снимок: требуется существующий каталог")
     manifest_file = folder / "manifest.json"
     if manifest_file.is_symlink() or not manifest_file.is_file() or manifest_file.stat().st_size > 16 * 1024 * 1024:
         raise DrillError("Манифест снимка небезопасен или превышает допустимый размер")

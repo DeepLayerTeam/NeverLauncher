@@ -5,7 +5,7 @@
 ## Маршруты оператора
 
 1. [Установка и первый владелец](installation.md): Minimal/Standard/Network-HA, TLS, зависимости и контроль запуска.
-2. [Резервное копирование и восстановление](backup-recovery.md): минимальная SQLite, Standard PostgreSQL, миры и Network-HA fencing.
+2. [Резервное копирование и восстановление](backup-recovery.md): минимальная SQLite, Standard PostgreSQL, миры и изоляция прежнего владельца в отказоустойчивой сети.
 3. [Обновление и откат](upgrades.md): изменения БД, API, CLI, Bridge, Desktop, Runtime, Guard и расширений.
 4. [HA, инциденты и восстановление](ha-incidents.md): диагностический пакет, alerting, отказ инфраструктуры, RPO/RTO.
 5. [Безопасность и релиз](security-delivery.md): secrets, сертификаты, подписанные пакеты, API/SDK и миграция Gravit.

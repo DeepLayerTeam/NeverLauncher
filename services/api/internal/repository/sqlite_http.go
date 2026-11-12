@@ -239,7 +239,7 @@ func decodeSQLiteHTTPDocument0471(raw []byte) (sqliteHTTPState0372, error) {
 		return state, err
 	}
 	if tok != json.Delim('{') {
-		return state, errors.New("SQLite HTTP snapshot: требуется объект")
+		return state, errors.New("Снимок SQLite HTTP должен быть объектом")
 	}
 	seen := make(map[string]struct{}, len(expected))
 	for decoder.More() {

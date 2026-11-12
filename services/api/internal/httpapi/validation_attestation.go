@@ -256,7 +256,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if !validationHex0345.MatchString(s.Config.ValidationTrustedRunnerImageSHA2560345) || p.RunnerImageSHA256 != s.Config.ValidationTrustedRunnerImageSHA2560345 {
-		deny(errors.New("Недоверенный или не настроенный закреплённый образ runner"))
+		deny(errors.New("Закреплённый образ исполнителя не является доверенным или не настроен"))
 		return
 	}
 	if p.PackageID != r.PathValue("packageId") {

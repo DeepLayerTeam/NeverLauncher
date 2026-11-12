@@ -237,7 +237,7 @@ func compatibilityRetryDelay(resp *http.Response, attempt int) time.Duration {
 
 func replaceDirectoryAtomicPortable(staging, dst string) error {
 	if staging == "" || dst == "" {
-		return errors.New("Для атомарной замены каталога необходимы staging и destination")
+		return errors.New("Для атомарной замены необходимы промежуточный и целевой каталоги")
 	}
 	if info, err := os.Lstat(staging); err != nil {
 		return fmt.Errorf("Атомарная подготовка каталога: %w", err)

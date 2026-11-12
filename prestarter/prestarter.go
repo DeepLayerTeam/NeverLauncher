@@ -454,7 +454,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 		return errors.New("Прямой запуск профиля требует подписанного offlineMode и --username (3–16 символов); профили с авторизацией запускаются через Desktop")
 	}
 	if profile.Runtime.Java.Major == 0 || profile.Runtime.Java.Distribution != "temurin" {
-		return errors.New("Неподдерживаемое подписанное требование Managed Java")
+		return errors.New("Неподдерживаемое подписанное требование управляемой Java")
 	}
 	javaManifest, e := p.prepareJavaManifest(ctx, opts)
 	if e != nil {
@@ -470,14 +470,14 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	major := strconv.FormatUint(uint64(profile.Runtime.Java.Major), 10)
 	result, e := runChild(ctx, runtimeBin, env, "java", "ensure", "--major", major, "--distribution", profile.Runtime.Java.Distribution, "--manifest", javaManifest, "--manifest-sha256", p.config.JavaManifest.SHA256)
 	if e != nil {
-		return fmt.Errorf("Установка Managed Java: %w (%s)", e, result)
+		return fmt.Errorf("Установка управляемой Java: %w (%s)", e, result)
 	}
 	var java javaResult
 	if e = json.Unmarshal([]byte(result), &java); e != nil {
-		return fmt.Errorf("Результат Managed Java: %w", e)
+		return fmt.Errorf("Результат установки управляемой Java: %w", e)
 	}
 	if java.Major != profile.Runtime.Java.Major || java.Distribution != "temurin" || java.JavaExecutable == "" {
-		return errors.New("Managed Java не вернула проверенную среду выполнения для подписанного профиля")
+		return errors.New("Управляемая Java не предоставила проверенную среду выполнения для подписанного профиля")
 	}
 	// Подписанный локальный манифест уже доступен: повторная загрузка неподписанного манифеста не требуется.
 	result, e = runChild(ctx, runtimeBin, env, "sync-local", "--manifest", manifestPath, "--root", p.gameRoot, "--pinned-public-key", p.config.ProfilePublicKey)

@@ -511,7 +511,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         return Ok(());
     }
     let result = (|| -> Result<(), String> {
-        // Сериализуйте повторные уведомления LoadLibrary и регистрацию из пути heartbeat. Перехваты VirtualAlloc не берут блокировки.
+        // Сериализуйте повторные уведомления LoadLibrary и регистрацию из обработчика сигнала активности. Перехваты VirtualAlloc не берут блокировки.
         let _registration_guard = LWJGL_REGISTRATION_LOCK.lock()
             .map_err(|_| "Повреждена блокировка регистрации нативных модулей Guard".to_string())?;
         let launch_root = VERIFIED_NATIVE_LAUNCH_ROOT.get()

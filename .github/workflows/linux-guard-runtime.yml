@@ -47,7 +47,7 @@ jobs:
           cargo build --manifest-path runtime/runtime/Cargo.toml --bin guard --bin runtime
       - name: "Регрессионные проверки реальных процессов Linux через /proc и внедрённых ELF"
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib linux_runtime_guard_0508 -- --nocapture
-      - name: Проверить аутентифицированный IPC Guard Linux и heartbeat без перезапуска
+      - name: Проверить аутентифицированный IPC Guard Linux и сигналы активности без перезапуска
         env:
           XDG_RUNTIME_DIR: ${{ runner.temp }}/nl-guard-ipc
         run: |

@@ -632,7 +632,7 @@ type ServerBridgeRuntimeIdentity struct {
 	IdentityDigest      string
 }
 
-// ServerBridgeRuntimeTransition описывает изменения после сохранения подписанного heartbeat процесса.
+// ServerBridgeRuntimeTransition описывает изменения после сохранения подписанного сигнала активности процесса.
 type ServerBridgeRuntimeTransition struct {
 	RuntimeID           string    `json:"runtimeId"`
 	RuntimeEpoch        int64     `json:"runtimeEpoch"`

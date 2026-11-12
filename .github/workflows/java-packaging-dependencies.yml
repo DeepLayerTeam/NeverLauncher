@@ -45,7 +45,7 @@ jobs:
         run: |
           javac --release 17 -cp sdk/java/core/build/classes -d sdk/java/core/build/test-classes sdk/java/core/src/test/java/ru/launcher/sdk/core/ModulePackaging0482Tests.java
           java -cp sdk/java/core/build/classes:sdk/java/core/build/test-classes ru.launcher.sdk.core.ModulePackaging0482Tests examples/extensions/java-dependencies/build/package/backend/java-dependencies.jar
-      - name: Проверить настоящий исполняемый хост, HTTP-рукопожатие, запуск, callback, heartbeat и завершение
+      - name: Проверить настоящий исполняемый хост, HTTP-рукопожатие, запуск, обратный вызов, сигналы активности и завершение
         run: python3 examples/extensions/java-dependencies/test-runner.py
   java-signed-package-inspection:
     runs-on: ubuntu-24.04

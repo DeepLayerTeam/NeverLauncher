@@ -2530,7 +2530,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "launcher-jre-temurin21-",
     ]:
         if required not in jre_release_0155:
-            fail(f"0.15.5 release JRE staging — не завершено: {required}")
+            fail(f"0.15.5: подготовка выпуска JRE не завершена: {required}")
     for required in [
         "Managed JRE Production Delivery",
         "managed-jre-distribution.py",
@@ -5256,7 +5256,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.4 Hook Engine отчёт — отсутствует: {required}")
     for required in ["GUARD_SENSOR_PROTOCOL_VERSION: u32 = 3", "NGSENS04"]:
         if required not in hook_bootstrap_0184:
-            fail(f"0.18.4 protocol-v3 bootstrap — не завершено: {required}")
+            fail(f"0.18.4: начальная загрузка протокола v3 не завершена: {required}")
     for required in [
         "report.module_guard.hook_engine.active",
         "report.module_guard.hook_engine.hooked_slot_count > 0",
@@ -5813,7 +5813,7 @@ for required in (
     '"sensorAndFixtureHashesBound": True',
 ):
     if required not in adversarial_runner_01811:
-        fail(f"0.18.11 Windows Adversarial CI runner — отсутствует инвариант: {required}")
+        fail(f"0.18.11: в узле CI для состязательных проверок Windows отсутствует инвариант: {required}")
 if not re.search(r'"cargo"\s*,\s*"test"\s*,\s*"--manifest-path"\s*,\s*"runtime/runtime/Cargo.toml"', adversarial_runner_01811):
     fail("0.18.11 CI проверки атак в Windows не выполняет настоящие тесты Cargo")
 for required in [

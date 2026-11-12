@@ -13,7 +13,7 @@ import (
 )
 
 // Строгая автономная приёмочная проверка только на чтение. Она никогда не
-// превращает квитанцию staging в разрешение запустить промышленный PostgreSQL
+// превращает квитанцию промежуточного импорта в разрешение запустить промышленный PostgreSQL
 // Backend.
 func runPGCutoverCheck0475(args []string) int {
 	fs := flag.NewFlagSet("sqlite-to-postgres-cutover-check", flag.ContinueOnError)

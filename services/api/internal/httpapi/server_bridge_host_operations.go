@@ -313,7 +313,7 @@ func (s Server) serverBridgeHostStatus04111(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	// processAlive хоста означает только наблюдение процесса Supervisor. Подписанный
-	// heartbeat игры — независимое наблюдение, сообщаемое отдельно.
+	// сигнал активности игры — независимое наблюдение, сообщаемое отдельно.
 	writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{
 		"host": host, "observedAt": time.Now().UTC(), "bridge": map[string]any{
 			"serverId": node.ID, "status": node.Status, "runtimeId": node.RuntimeID,

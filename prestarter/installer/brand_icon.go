@@ -14,7 +14,7 @@ import (
 	prestarter "github.com/DeepLayerTeam/Launcher/prestarter"
 )
 
-// materializeBrandIcon записывает только декодированные изображения из проверенного bootstrap,
+// materializeBrandIcon записывает только декодированные изображения из проверенной конфигурации начальной загрузки,
 // подписанного владельцем. Windows Explorer ожидает ICO, Linux принимает PNG.
 func materializeBrandIcon(dir string, brand *prestarter.Branding) (string, error) {
 	if brand == nil || brand.IconPNG == "" {

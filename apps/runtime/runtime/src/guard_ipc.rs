@@ -1018,18 +1018,18 @@ fn validate_integrity_evidence(
         || evidence.boundary.expected_parent_pid != launcher_pid
         || evidence.boundary.observed_parent_pid != launcher_pid
     {
-        return Err("Несовпадение: «привязка свидетельства целостности Guard к PID»".to_string());
+        return Err("Свидетельство целостности Guard привязано к неверному PID".to_string());
     }
 
     let expected_digest = recompute_evidence_sha256(evidence)?;
     let actual_digest = decode_hex_32(&evidence.evidence_sha256, "evidenceSha256")?;
     if !constant_time_eq(&expected_digest, &actual_digest) {
-        return Err("Ошибка проверки хеша доказательств целостности Guard".to_string());
+        return Err("Не удалось проверить контрольную сумму свидетельства целостности Guard".to_string());
     }
     let expected_proof = integrity_session_proof(&handle.session_key, &actual_digest);
     let actual_proof = decode_hex_32(&evidence.session_proof, "integritySessionProof")?;
     if !constant_time_eq(&expected_proof, &actual_proof) {
-        return Err("Ошибка: «проверка доказательства сеанса контроля целостности Guard»".to_string());
+        return Err("Не удалось проверить доказательство сеанса контроля целостности Guard".to_string());
     }
     Ok(())
 }
@@ -1072,7 +1072,7 @@ fn validate_guard_process_policy(
         .id()
         .ok_or_else(|| "Во время проверки политики не удалось определить PID дочернего процесса Guard".to_string())?;
     if policy.pid != guard_pid {
-        return Err("Несовпадение: «привязка PID политики процессов Guard для Windows»".to_string());
+        return Err("Политика процессов Guard для Windows привязана к неверному PID".to_string());
     }
     validate_windows_guard_policy_report(policy, handle.protection_profile)
 }

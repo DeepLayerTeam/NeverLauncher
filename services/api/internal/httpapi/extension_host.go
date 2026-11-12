@@ -116,7 +116,7 @@ func (s Server) extensionHostRestart0205(w http.ResponseWriter, r *http.Request)
 }
 
 // extensionHostProbe0491 выполняет настоящий аутентифицированный health RPC внутри
-// установленного Java Host, а не просто проверяет heartbeat супервизора в памяти.
+// установленного Java Host, а не просто проверяет сигнал активности супервизора в памяти.
 // Маршрут требует право extension:manage; CallJavaRPC0304 повторно проверяет доверие
 // и отзыв Java перед возвратом результата.
 func (s Server) extensionHostProbe0491(w http.ResponseWriter, r *http.Request) {

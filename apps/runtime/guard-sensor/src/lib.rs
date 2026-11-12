@@ -666,10 +666,10 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
     // Отправляйте аутентифицированное событие жизнеспособности сразу после
     // запуска исполнителя и успешного первого настоящего снимка потоков. В
     // коротком Java-процессе ожидание двух секунд перед первым событием Module
-    // Guard приводило к нулю heartbeat в законном сертификате жизненного
+    // Guard приводило к нулевому числу сигналов активности в законном сертификате жизненного
     // цикла. В отличие от локального увеличения счётчика, это проходит полный
     // подписанный поток событий с sequence, HMAC и проверкой цепочки,
-    // используемый для всех следующих heartbeat. Дорогие проверки целостности
+    // используемый для всех следующих сигналов активности. Дорогие проверки целостности
     // остаются независимо обязательными с прежней периодичностью.
     let startup_heartbeat = RawModuleEvent {
         reason: MODULE_EVENT_REASON_HEARTBEAT,
@@ -959,7 +959,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 sequence,
                 event_chain,
             ) {
-                eprintln!("Непрерывная защита Guard: нарушение подтверждения ACK: {}", err.chars().take(240).collect::<String>());
+                eprintln!("Непрерывная защита Guard: нарушение протокола подтверждения ACK: {}", err.chars().take(240).collect::<String>());
                 let tamper = continuous_guard::tamper_event(
                     MODULE_EVENT_REASON_CONTINUOUS_TAMPER,
                     &err,

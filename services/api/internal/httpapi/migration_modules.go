@@ -304,7 +304,7 @@ func modulesMatch0446(a, b gm.Report) bool {
 }
 
 // Резервирование регистрации НЕ доказывает наличие активного соединения ServerBridge.
-// Проверяем фактическое состояние узла после подписанного heartbeat среды выполнения;
+// Проверяем фактическое состояние узла после подписанного сигнала активности среды выполнения;
 // наличие строки БД или открытого ключа само по себе не означает готовности.
 func migrationBridgeLive0446(node bridgeServerRecord, project, profile, fingerprint string, now time.Time) (string, string) {
 	if node.ProjectID != project || node.ProfileID != profile || node.KeyAlgorithm != "ed25519" || node.KeyFingerprint != fingerprint || node.IdentityEpoch < 1 {

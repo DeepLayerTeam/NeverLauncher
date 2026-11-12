@@ -396,7 +396,7 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
         let Ok(_module_pin) = pin_module(module.base) else {
             // Обычная выгрузка способна совпасть по времени со снимком модулей.
             // Module Guard контролирует жизненный цикл; всё ещё загруженный
-            // модуль перепроверяется при следующем согласовании heartbeat.
+            // модуль перепроверяется при следующем согласовании сигнала активности.
             continue;
         };
         let records = collect_hook_candidates(&module)?;
@@ -433,14 +433,14 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
 }
 
 // Модуль может начать использовать импорты сразу после возврата LoadLibrary. Если согласовывать IAT лишь
-// раз в две секунды по heartbeat, переходы памяти в новых модулях JVM/LWJGL будут пропущены. Этот код
+// раз в две секунды по сигналу активности, переходы памяти в новых модулях JVM/LWJGL будут пропущены. Этот код
 // вызывается только после возврата нативного загрузчика, никогда из DllMain или LdrDllNotification.
 fn reconcile_after_library_load(module: *mut c_void) {
     if module.is_null() {
         return;
     }
     // LWJGL может выделять исполняемый код сразу после загрузки. До обычного согласования IAT проверьте и
-    // закрепите точный нативный образ; JVM-Aware heartbeat должен отказать, если регистрация отклонена.
+    // закрепите точный нативный образ; сигнал активности защиты JVM должен завершиться отказом, если регистрация отклонена.
     if let Err(err) = crate::jvm_awareness::register_loaded_native_dispatcher(module) {
         eprintln!("Guard: отклонена нативная регистрация JVM-Aware: {err}");
     }
@@ -454,7 +454,7 @@ fn reconcile_after_library_load(module: *mut c_void) {
     }
     if let Err(err) = reconcile_locked(&mut state).and_then(|_| verify_locked(&mut state)) {
         // Ошибка установки перехвата не должна незаметно разрешать происхождение исполняемой памяти. Обязательный
-        // heartbeat Hook Engine в обработчике приводит к отказу.
+        // сигнал активности механизма перехватов в обработчике приводит к отказу.
         state.healthy = false;
         eprintln!("Guard Hook Engine: ошибка согласования состояния после загрузки: {err}");
     }

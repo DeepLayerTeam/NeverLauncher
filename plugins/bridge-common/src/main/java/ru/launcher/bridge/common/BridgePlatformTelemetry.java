@@ -7,7 +7,7 @@ import java.util.Locale;
 
 /**
  * Потокобезопасный объект значений, создаваемый адаптером платформы в потоке,
- * где безопасно обращаться к Minecraft/proxy API. HTTP heartbeat не вызывает
+ * где безопасно обращаться к Minecraft/proxy API. HTTP-сигнал активности не вызывает
  * API платформы напрямую, а читает только последний неизменяемый снимок.
  */
 public record BridgePlatformTelemetry(

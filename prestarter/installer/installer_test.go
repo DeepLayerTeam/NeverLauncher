@@ -166,7 +166,7 @@ func TestRepairCorruptedInstalledPrestarterFromRetainedOffline(t *testing.T) {
 	}
 }
 
-// Отменённый bootstrap никогда не публикует новый активный слот. В частности, прерванная
+// Отменённая начальная загрузка никогда не публикует новый активный слот. В частности, прерванная
 // переустановка обязана сохранить ранее проверенное поколение.
 func TestCanceledBootstrapNeverAdvancesActiveRelease0240(t *testing.T) {
 	root := t.TempDir()

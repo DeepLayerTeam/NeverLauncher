@@ -22,7 +22,7 @@ const PAGE_EXECUTE_WRITECOPY: u32 = 0x80;
 const PAGE_GUARD: u32 = 0x100;
 const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 0x0000_0004;
 // Большая нагрузка запуска HotSpot может превысить очередь на 1024 события до
-// двухсекундного heartbeat целостности образов. Сохраняйте все события происхождения;
+// двухсекундного сигнала активности проверки целостности образов. Сохраняйте все события происхождения;
 // настоящее переполнение по-прежнему приводит к отказу в drain_transitions().
 const MEMORY_TRANSITION_RING_CAPACITY: usize = 32768;
 const MAX_HASHABLE_IMAGE_REGION: usize = 256 * 1024 * 1024;

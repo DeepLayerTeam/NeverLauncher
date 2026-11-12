@@ -375,7 +375,7 @@ func verifyManagedJREArchive0155(dir string, target ManagedJRETarget0155) error 
 		return fmt.Errorf("Управляемая JRE %s/%s не совпадает с оригинальным архивом поставщика", target.Platform, target.Architecture)
 	}
 	if !validHTTPSURL0155(target.SourceURL) {
-		return fmt.Errorf("Требуемый формат для Managed JRE %s/%s sourceUrl: HTTPS", target.Platform, target.Architecture)
+		return fmt.Errorf("Адрес sourceUrl управляемой JRE %s/%s должен использовать HTTPS", target.Platform, target.Architecture)
 	}
 	var javaEntry string
 	if target.Platform == "windows" {
@@ -425,7 +425,7 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 			return fmt.Errorf("Неожиданное значение: целевая платформа управляемой JRE %s, архив=%s", key, target.Archive)
 		}
 		if _, duplicate := targetByKey[key]; duplicate {
-			return fmt.Errorf("Обнаружен дубликат: Managed JRE цель %s", key)
+			return fmt.Errorf("Повторяющаяся целевая платформа управляемой JRE: %s", key)
 		}
 		expectedVendorOS := map[string]string{"windows": "windows", "linux": "linux", "macos": "mac"}[target.Platform]
 		expectedVendorArch := map[string]string{"x64": "x64", "arm64": "aarch64"}[target.Architecture]

@@ -20,7 +20,7 @@ type processRole0455 struct {
 }
 
 // В Network HA роли нужно назначать явно: иначе каждый API случайно запускает
-// фоновых потребителей, а неправильно настроенный worker может открывать публичные
+// фоновых потребителей, а неправильно настроенный фоновый обработчик может открывать публичные
 // маршруты.
 func parseProcessRole0455(raw, deployment string) (processRole0455, error) {
 	role := strings.ToLower(strings.TrimSpace(raw))
@@ -77,7 +77,7 @@ func workerProbeHandler0455(last *atomic.Int64, backend http.Handler) http.Handl
 			return
 		}
 		if backend != nil {
-			// Не объявляйте работающий worker готовым, когда недоступны Redis/S3,
+			// Не объявляйте работающий фоновый обработчик готовым, когда недоступны Redis/S3,
 			// федерация или PostgreSQL: используйте реальную проверку готовности Backend.
 			backend.ServeHTTP(w, r)
 			return

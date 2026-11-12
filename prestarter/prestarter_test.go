@@ -189,7 +189,7 @@ func TestFailedFirstBootstrapDoesNotLeaveUnlaunchableActiveRelease(t *testing.T)
 	}
 	// Восстановите подписанный источник и запустите повторно. Кэш и манифест можно использовать ещё раз.
 	parts["runtime"] = baseParts()["runtime"]
-	// Тест меняет только подписанные данные bootstrap и офлайновый объект.
+	// Тест меняет только подписанные данные начальной загрузки и офлайновый объект.
 	repaired, key := generateConfig(t, identityConfig(parts))
 	if err := os.WriteFile(opts.ConfigPath, repaired, 0600); err != nil {
 		t.Fatal(err)
