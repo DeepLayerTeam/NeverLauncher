@@ -83,7 +83,7 @@ Backend включает внутреннюю систему аутентифи�
 
 ## Работающий Gravit FileAuthSystem — 0.42.6
 
-Launcher умеет проверять вход непосредственно по **доступному только для чтения** `FileAuthSystem/Database.json` Gravit; прежний одноразовый импорт остаётся. Коннектор включается отдельно, не смешивается с `local` и не читает `Sessions.json`. UUID Gravit — неизменяемый внешний идентификатор субъекта и утверждение `minecraftUuid`. Launcher выдаёт собственные сеансы и **не** импортирует роли администраторов Gravit, access-токены, разрешения, скины и исходные сеансы.
+Launcher умеет проверять вход непосредственно по **доступному только для чтения** `FileAuthSystem/Database.json` Gravit; прежний одноразовый импорт остаётся. Коннектор включается отдельно, не смешивается с `local` и не читает `Sessions.json`. UUID Gravit — неизменяемый внешний идентификатор субъекта и утверждение `minecraftUuid`. Launcher выдаёт собственные сеансы и **не** импортирует роли администраторов Gravit, токены доступа, разрешения, скины и исходные сеансы.
 
 ```sh
 LAUNCHER_AUTH_FILE_PROVIDERS_JSON='[{"id":"gravit-files","displayName":"Gravit FileAuth","databasePath":"/run/launcher/gravit/FileAuthSystem/Database.json","passwordFormat":"phpass","provisioning":{"mode":"jit","defaultRole":"player"}}]'

@@ -30,7 +30,7 @@ func handleProduction(args []string) error {
 
 func handleAdminOps9100(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные adminops-подкоманды: status, readiness, diagnostics, backup")
+		return errors.New("Доступные подкоманды администрирования: status, readiness, diagnostics, backup")
 	}
 	backend := adminBackendURL(args)
 	if backend == "" {

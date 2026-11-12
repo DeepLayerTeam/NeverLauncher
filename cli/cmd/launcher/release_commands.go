@@ -316,7 +316,7 @@ func handleRelease(args []string) error {
 		printJSON(plan)
 		return nil
 	default:
-		return fmt.Errorf("Неизвестная подкоманда release: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда управления выпусками: %s", args[0])
 	}
 }
 
@@ -1038,7 +1038,7 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 		return fmt.Errorf("Некорректное значение: RELEASE_MANIFEST.json: %w", err)
 	}
 	if strings.TrimSpace(manifest.Version) == "" {
-		return errors.New("RELEASE_MANIFEST.json не содержит version")
+		return errors.New("RELEASE_MANIFEST.json не содержит поле version")
 	}
 	if err := verifySingleNodeGABundle0330(dir, manifest.Version, manifest.SourceCommit, ""); err != nil {
 		return fmt.Errorf("Ошибка GA на одном узле для 0.33.0: %w", err)
@@ -1445,7 +1445,7 @@ func releaseBundleVersion(dir string) (string, error) {
 		return "", err
 	}
 	if strings.TrimSpace(payload.Version) == "" {
-		return "", errors.New("RELEASE_MANIFEST.json не содержит version")
+		return "", errors.New("RELEASE_MANIFEST.json не содержит поле version")
 	}
 	return strings.TrimSpace(payload.Version), nil
 }

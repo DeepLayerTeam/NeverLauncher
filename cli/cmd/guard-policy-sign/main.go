@@ -23,8 +23,8 @@ const domain = "Launcher-Guard-Compatibility-v1\n"
 
 func main() {
 	mode := flag.String("mode", "sign", "sign, keygen, revoke или rollback")
-	current := flag.String("current", "", "Текущий подписанный контейнер политики для revoke/rollback")
-	previous := flag.String("previous", "", "Предыдущий подписанный контейнер политики для rollback")
+	current := flag.String("current", "", "Текущий подписанный контейнер политики для отзыва или отката")
+	previous := flag.String("previous", "", "Предыдущий подписанный контейнер политики для отката")
 	revokeDigest := flag.String("revoke-digest", "", "Хеши SHA-256 через запятую")
 	revokeTransform := flag.String("revoke-transform", "", "Идентификаторы преобразований через запятую")
 	policy := flag.String("policy", "", "Исходный JSON-файл политики")

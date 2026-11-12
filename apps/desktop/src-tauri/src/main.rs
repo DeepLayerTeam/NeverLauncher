@@ -2053,19 +2053,19 @@ fn main() {
     }
     #[cfg(windows)]
     if let Err(err) = runtime::ensure_windows_production_hardening() {
-        eprintln!("Ошибка: промышленное усиление защиты Launcher Desktop в Windows: {err}");
+        eprintln!("Ошибка: усиление защиты промышленной сборки Launcher Desktop в Windows: {err}");
         std::process::exit(70);
     }
 
     #[cfg(target_os = "linux")]
     if let Err(err) = runtime::linux_policy::ensure_linux_production_hardening() {
-        eprintln!("Ошибка: промышленное усиление защиты Launcher Desktop в Linux: {err}");
+        eprintln!("Ошибка: усиление защиты промышленной сборки Launcher Desktop в Linux: {err}");
         std::process::exit(70);
     }
 
     #[cfg(target_os = "macos")]
     if let Err(err) = runtime::macos_policy::ensure_macos_production_hardening() {
-        eprintln!("Ошибка: промышленное усиление защиты Launcher Desktop в macOS: {err}");
+        eprintln!("Ошибка: усиление защиты промышленной сборки Launcher Desktop в macOS: {err}");
         std::process::exit(70);
     }
 

@@ -218,7 +218,7 @@ func verifyReleaseTrustPolicy0158(policy releaseTrustPolicy0158, rootPublicKeyPa
 		rootPublicKeyPath = strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if rootPublicKeyPath == "" {
-		return "", errors.New("Для проверки выпуска по протоколу Release Verification v2 требуется внешний открытый корневой ключ")
+		return "", errors.New("Для проверки выпуска по протоколу проверки релизов v2 (Release Verification v2) требуется внешний открытый корневой ключ")
 	}
 	root, err := loadEd25519PublicKey(rootPublicKeyPath)
 	if err != nil {
@@ -395,7 +395,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		resolvedRoot = strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE"))
 	}
 	if resolvedRoot == "" {
-		return releaseVerificationV2Context{}, errors.New("Для проверки выпуска по протоколу Release Verification v2 требуется внешний открытый корневой ключ")
+		return releaseVerificationV2Context{}, errors.New("Для проверки выпуска по протоколу проверки релизов v2 (Release Verification v2) требуется внешний открытый корневой ключ")
 	}
 	if err := ensureKeyOutsideReleaseBundle(dir, resolvedRoot); err != nil {
 		return releaseVerificationV2Context{}, fmt.Errorf("Ошибка корневого доверенного ключа: %w", err)

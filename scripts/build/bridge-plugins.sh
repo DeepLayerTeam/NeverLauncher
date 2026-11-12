@@ -64,14 +64,14 @@ done
 for platform in velocity bungeecord waterfall; do
   artifact="$OUT/launcher-${platform}-bridge-${VERSION}.jar"
   jar tf "$artifact" | grep -q '^ru/launcher/bridge/proxy/ProxyBridgeRuntime.class$' || {
-    echo "[Launcher] В артефакте отсутствуют классы Runtime семейства прокси: $(basename "$artifact")" >&2
+    echo "[Launcher] В артефакте отсутствуют классы среды выполнения семейства прокси: $(basename "$artifact")" >&2
     exit 1
   }
 done
 for platform in bungeecord waterfall; do
   artifact="$OUT/launcher-${platform}-bridge-${VERSION}.jar"
   jar tf "$artifact" | grep -q '^ru/launcher/bridge/bungee/BungeeFamilyBridgePlugin.class$' || {
-    echo "[Launcher] В артефакте отсутствуют классы Runtime семейства Bungee: $(basename "$artifact")" >&2
+    echo "[Launcher] В артефакте отсутствуют классы среды выполнения семейства Bungee: $(basename "$artifact")" >&2
     exit 1
   }
   jar tf "$artifact" | grep -q '^bungee.yml$' || {
@@ -149,7 +149,7 @@ PY_QUILT_META
 for platform in forge neoforge; do
   artifact="$OUT/launcher-${platform}-bridge-${VERSION}.jar"
   jar tf "$artifact" | grep -q '^ru/launcher/bridge/modloader/ModLoaderBridgeRuntime.class$' || {
-    echo "[Launcher] В артефакте отсутствуют классы Runtime семейства загрузчиков модов: $(basename "$artifact")" >&2
+    echo "[Launcher] В артефакте отсутствуют классы среды выполнения семейства загрузчиков модов: $(basename "$artifact")" >&2
     exit 1
   }
 done
@@ -161,8 +161,8 @@ jar tf "$OUT/launcher-neoforge-bridge-${VERSION}.jar" | grep -q '^META-INF/neofo
   echo "[Launcher] Отсутствует neoforge.mods.toml для NeoForge" >&2
   exit 1
 }
-jar tf "$OUT/launcher-sponge-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/sponge/LauncherSpongeBridge.class$' || { echo "[Launcher] Отсутствует класс Runtime Sponge" >&2; exit 1; }
-jar tf "$OUT/launcher-vanilla-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/vanilla/LauncherVanillaBridge.class$' || { echo "[Launcher] Отсутствует вспомогательный класс Runtime Vanilla" >&2; exit 1; }
+jar tf "$OUT/launcher-sponge-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/sponge/LauncherSpongeBridge.class$' || { echo "[Launcher] Отсутствует класс среды выполнения Sponge" >&2; exit 1; }
+jar tf "$OUT/launcher-vanilla-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/vanilla/LauncherVanillaBridge.class$' || { echo "[Launcher] Отсутствует вспомогательный класс среды выполнения Vanilla" >&2; exit 1; }
 jar tf "$OUT/launcher-vanilla-bridge-${VERSION}.jar" | grep -q '^ru/launcher/bridge/vanilla/VanillaRconClient.class$' || { echo "[Launcher] Отсутствует клиент Vanilla RCON" >&2; exit 1; }
 
 (

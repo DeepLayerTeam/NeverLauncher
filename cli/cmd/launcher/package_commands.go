@@ -71,7 +71,7 @@ func loadRuntimePrivateKey0212(path string) (ed25519.PrivateKey, error) {
 
 func handlePipeline(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные pipeline-подкоманды: plan, channels, status, stage, integrity-check, smoke-test, validations, runtime-sign, runtime-submit, policy-get, policy-set, publish, rollback, audit")
+		return errors.New("Доступные подкоманды конвейера: plan, channels, status, stage, integrity-check, smoke-test, validations, runtime-sign, runtime-submit, policy-get, policy-set, publish, rollback, audit")
 	}
 	out := flagValue(args, "--output", "")
 	project := flagValue(args, "--project", "")
@@ -191,7 +191,7 @@ func handlePipeline(args []string) error {
 		}
 		var evidence runtimeEvidenceCLI0212
 		if err := json.Unmarshal(raw, &evidence); err != nil {
-			return fmt.Errorf("JSON-доказательства Runtime: %w", err)
+			return fmt.Errorf("Свидетельства Runtime в формате JSON: %w", err)
 		}
 		if evidence.SchemaVersion != "launcher/runtime-validation/v1" || evidence.PackageID == "" || evidence.ManifestDigest == "" || evidence.TargetID == "" {
 			return errors.New("В подтверждении Runtime отсутствует каноническая схема, пакет, манифест или целевая платформа")
@@ -220,7 +220,7 @@ func handlePipeline(args []string) error {
 		}
 		var body map[string]any
 		if err := json.Unmarshal(raw, &body); err != nil {
-			return fmt.Errorf("JSON-доказательства Runtime: %w", err)
+			return fmt.Errorf("Свидетельства Runtime в формате JSON: %w", err)
 		}
 		payload, err := httpJSONWithAuth("POST", backend+"/api/v1/packages/"+url.PathEscape(packageID)+"/runtime-validations/evidence", body, token)
 		if err != nil {

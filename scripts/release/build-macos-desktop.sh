@@ -100,7 +100,7 @@ codesign --verify --deep --strict --verbose=2 "${APP}"
 if [[ "${MODE}" == "production" ]]; then
   for signed in "${MACOS_DIR}/guard" "${MACOS_DIR}/launcher-desktop"; do
     codesign -dv --verbose=4 "${signed}" 2>&1 | grep -F "TeamIdentifier=${TEAM_ID}" >/dev/null || { echo "Не совпадает команда подписи для ${signed}" >&2; exit 1; }
-    codesign -dv --verbose=4 "${signed}" 2>&1 | grep -E 'flags=.*runtime' >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${signed}" >&2; exit 1; }
+    codesign -dv --verbose=4 "${signed}" 2>&1 | grep -E 'flags=.*runtime' >/dev/null || { echo "Отсутствует флаг усиленной защиты среды выполнения (Hardened Runtime) для ${signed}" >&2; exit 1; }
   done
 fi
 

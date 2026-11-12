@@ -140,7 +140,7 @@ EOF_PLIST
     if [[ "${MODE}" == "production" ]]; then
       details="$(codesign -dv --verbose=4 "${file}" 2>&1)"
       grep -F "TeamIdentifier=${TEAM_ID}" <<<"${details}" >/dev/null || { echo "Не совпадает TeamIdentifier файла ${file}" >&2; exit 1; }
-      grep -E 'flags=.*runtime' <<<"${details}" >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${file}" >&2; exit 1; }
+      grep -E 'flags=.*runtime' <<<"${details}" >/dev/null || { echo "Отсутствует флаг усиленной защиты среды выполнения (Hardened Runtime) для ${file}" >&2; exit 1; }
     fi
   done
 
@@ -163,10 +163,10 @@ EOF_PLIST
   if [[ "${MODE}" == "production" ]]; then
     app_details="$(codesign -dv --verbose=4 "${APP_ROOT}" 2>&1)"
     grep -F "TeamIdentifier=${TEAM_ID}" <<<"${app_details}" >/dev/null || { echo "Не совпадает TeamIdentifier приложения ${APP_ROOT}" >&2; exit 1; }
-    grep -E 'flags=.*runtime' <<<"${app_details}" >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${APP_ROOT}" >&2; exit 1; }
+    grep -E 'flags=.*runtime' <<<"${app_details}" >/dev/null || { echo "Отсутствует флаг усиленной защиты среды выполнения (Hardened Runtime) для ${APP_ROOT}" >&2; exit 1; }
     desktop_details="$(codesign -dv --verbose=4 "${MACOS_DIR}/launcher-desktop" 2>&1)"
     grep -F "TeamIdentifier=${TEAM_ID}" <<<"${desktop_details}" >/dev/null || { echo "Не совпадает TeamIdentifier файла ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
-    grep -E 'flags=.*runtime' <<<"${desktop_details}" >/dev/null || { echo "Отсутствует флаг Hardened Runtime для ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
+    grep -E 'flags=.*runtime' <<<"${desktop_details}" >/dev/null || { echo "Отсутствует флаг усиленной защиты среды выполнения (Hardened Runtime) для ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
   fi
 
   NOTARY_ZIP="${WORK_ROOT}/launcher-${arch}-notary.zip"

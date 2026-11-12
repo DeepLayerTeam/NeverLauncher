@@ -412,7 +412,7 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 		return o, errors.New("Для Client Factory необходимо указать --minecraft")
 	}
 	if !o.StrictUpstream {
-		return o, errors.New("Client Factory: требуется строгая проверка контрольной суммы исходного источника")
+		return o, errors.New("Client Factory: требуется строгая проверка контрольной суммы источника")
 	}
 	if o.Workers == 0 {
 		o.Workers = 12

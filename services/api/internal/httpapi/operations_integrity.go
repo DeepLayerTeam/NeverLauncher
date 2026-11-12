@@ -144,7 +144,7 @@ func (s Server) operationsMigrationsStatus(w http.ResponseWriter, r *http.Reques
 		MigrationStatus(context.Context) (dbmigrate.Status, error)
 	})
 	if !ok {
-		writeError(w, http.StatusBadRequest, "repository не поддерживает SQL migrations")
+		writeError(w, http.StatusBadRequest, "Репозиторий не поддерживает миграции SQL")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
@@ -162,7 +162,7 @@ func (s Server) operationsMigrationsApply(w http.ResponseWriter, r *http.Request
 		ApplyMigrations(context.Context) (dbmigrate.Status, error)
 	})
 	if !ok {
-		writeError(w, http.StatusBadRequest, "repository не поддерживает SQL migrations")
+		writeError(w, http.StatusBadRequest, "Репозиторий не поддерживает миграции SQL")
 		return
 	}
 	unlock := s.beginMaintenanceExclusive()

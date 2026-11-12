@@ -168,7 +168,7 @@ func handleExtensionEmergency02012(args []string) error {
 
 func handleExtensionRecovery02012(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension recovery-подкоманды: export, import, backup, restore")
+		return errors.New("Доступные подкоманды восстановления расширений: export, import, backup, restore")
 	}
 	backend, token, err := extensionTrustBackend02012(args)
 	if err != nil {

@@ -124,7 +124,7 @@ func operationsSupportSummaryModel() map[string]any {
 
 func handleSecurity(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные security-подкоманды: check, hardening, supply-chain, keys, rotate-key, revocation-list, trust-policy, trust-verify, sbom, provenance, attest, verify-signature, manifest-policy, release-policy, desktop-policy")
+		return errors.New("Доступные подкоманды безопасности: check, hardening, supply-chain, keys, rotate-key, revocation-list, trust-policy, trust-verify, sbom, provenance, attest, verify-signature, manifest-policy, release-policy, desktop-policy")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -292,7 +292,7 @@ func writeOrPrintJSON(out string, payload any) error {
 
 func handleBackup(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные backup-подкоманды: status, create, inspect, restore-dry-run, restore, audit-export, diagnostics-bundle")
+		return errors.New("Доступные подкоманды резервного копирования: status, create, inspect, restore-dry-run, restore, audit-export, diagnostics-bundle")
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
@@ -371,7 +371,7 @@ func handleBackup(args []string) error {
 		}
 		return errors.New("backup diagnostics-bundle требует --backend <url> и --token/LAUNCHER_TOKEN")
 	default:
-		return fmt.Errorf("неизвестная backup-подкоманда: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда резервного копирования: %s", args[0])
 	}
 }
 
@@ -558,7 +558,7 @@ func handleTenantAudit(args []string) error {
 func handleMigrate(args []string) error {
 	if len(args)>0 && args[0]=="gravit" {return handleMigrationWorkflow0331(args[1:])}
 	if len(args) < 1 {
-		return errors.New("доступные migrate-подкоманды: plan, apply, rollback")
+		return errors.New("Доступные подкоманды миграции: plan, apply, rollback")
 	}
 	out := flagValue(args, "--output", "")
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")

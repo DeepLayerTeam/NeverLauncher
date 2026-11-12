@@ -192,7 +192,7 @@ func loadCachedVanillaMetadata(root, manifestURL, requested string) (vanillaReso
 	}
 	var metadata vanillaVersionMetadata
 	if err := json.Unmarshal(payload, &metadata); err != nil {
-		return vanillaResolvedMetadata{}, fmt.Errorf("Некорректное значение: кэшированный файл version.json: %w", err)
+		return vanillaResolvedMetadata{}, fmt.Errorf("Некорректный кешированный файл version.json: %w", err)
 	}
 	if metadata.ID != "" && metadata.ID != resolved {
 		return vanillaResolvedMetadata{}, fmt.Errorf("Несовпадение: идентификатор в кэшированном version.json: %s != %s", metadata.ID, resolved)

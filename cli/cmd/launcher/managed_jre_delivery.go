@@ -271,7 +271,7 @@ func scanManagedJREZip0155(path, platform, arch string) (string, error) {
 			data, err := io.ReadAll(io.LimitReader(rc, maxManagedJREEntry0155+1))
 			rc.Close()
 			if err != nil || int64(len(data)) > maxManagedJREEntry0155 {
-				return "", errors.New("исполняемый файл JRE java.exe: запрещено быть прочитано безопасно")
+				return "", errors.New("Не удалось безопасно прочитать исполняемый файл JRE java.exe")
 			}
 			if err := validateManagedJREBinary0155(platform, arch, data); err != nil {
 				return "", err
@@ -345,7 +345,7 @@ func scanManagedJRETarGz0155(path, platform, arch string) (string, error) {
 			}
 			data, err := io.ReadAll(io.LimitReader(tr, maxManagedJREEntry0155+1))
 			if err != nil || int64(len(data)) != hdr.Size {
-				return "", errors.New("исполняемый файл JRE bin/java: запрещено быть прочитано безопасно")
+				return "", errors.New("Не удалось безопасно прочитать исполняемый файл JRE bin/java")
 			}
 			if err := validateManagedJREBinary0155(platform, arch, data); err != nil {
 				return "", err

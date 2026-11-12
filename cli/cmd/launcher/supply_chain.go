@@ -383,5 +383,5 @@ func resolveRepositoryRoot(candidate string) (string, error) {
 		}
 		start = next
 	}
-	return "", fmt.Errorf("не найден корень Launcher repository от %s", candidate)
+	return "", fmt.Errorf("Не удалось найти корень репозитория Launcher, начиная с %s", candidate)
 }

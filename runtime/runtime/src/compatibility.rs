@@ -1248,7 +1248,7 @@ fn safe_component(value: &str) -> Result<String, String> {
         || trimmed.contains('\\')
         || trimmed.chars().any(|ch| ch.is_control() || matches!(ch, ':' | '*' | '?' | '"' | '<' | '>' | '|'))
     {
-        return Err(format!("небезопасный Minecraft version id: {value}"));
+        return Err(format!("Небезопасный идентификатор версии Minecraft: {value}"));
     }
     Ok(trimmed.to_string())
 }

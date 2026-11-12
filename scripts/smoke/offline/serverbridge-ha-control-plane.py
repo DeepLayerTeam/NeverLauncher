@@ -145,7 +145,7 @@ require(
     [
         "LAUNCHER_SERVERBRIDGE_HA_REQUIRED",
         "LAUNCHER_REPLICA_ID",
-        "LAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing",
+        "LAUNCHER_REDIS_URL обязателен для блокировки конкурирующих владельцев ServerBridge HA",
     ],
     "Конфигурация отказоустойчивости",
 )

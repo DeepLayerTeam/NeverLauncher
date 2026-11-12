@@ -1252,7 +1252,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     let message = if let Some(reason) = guarded_exit.violation.as_ref() {
         format!("Guard 0.50.6 остановил игру: {reason}")
     } else if timed_out {
-        format!("Runtime остановлен после заданного лимита {}s", max_runtime_seconds.unwrap_or_default())
+        format!("Runtime остановлен по истечении заданного времени ({} с)", max_runtime_seconds.unwrap_or_default())
     } else if success {
         "Runtime завершился успешно".to_string()
     } else {

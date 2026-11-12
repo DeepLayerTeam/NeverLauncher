@@ -49,7 +49,7 @@ test("Официальный сценарий использует только 
     assert.deepEqual((await c.poll()).profile, profile);
     assert.equal(c.linked, true);
     assert.equal((await c.profile()).name, "Owner");
-    await assert.rejects(c.credentials(), /native manager/);
+    await assert.rejects(c.credentials(), /нативный менеджер/);
     assert.equal(
       requests.some(
         (r) =>
@@ -414,7 +414,7 @@ test("0.26.7: отклонённое переключение не подмен�
   await client.restore();
   await assert.rejects(
     client.selectAccount("deadbeefdeadbeefdeadbeefdeadbeef"),
-    /UUID mismatch/,
+    /Несовпадение UUID Minecraft/,
   );
   assert.equal(client.linked, true);
 });

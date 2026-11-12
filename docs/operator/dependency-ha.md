@@ -83,7 +83,7 @@ sudo install -m 0600 deploy/production/dependency-ha-0513.example.env /etc/launc
 sudo install -m 0600 /dev/null /etc/launcher/secrets/redis-ha-health-password
 sudo install -m 0600 /dev/null /etc/launcher/secrets/s3-ha-probe-access-key
 sudo install -m 0600 /dev/null /etc/launcher/secrets/s3-ha-probe-secret-key
-# Безопасно заполнить секреты напрямую на хосте (НЕ в истории shell).
+# Безопасно заполнить секреты напрямую на хосте (НЕ в истории команд оболочки).
 # Заполнить фактические IP/DNS и CA, на LB-2 поменять LOCAL/PEER и PRIORITY.
 sudo install -d -m 0700 /var/lib/launcher/ha-0513-render
 sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py render \

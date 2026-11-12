@@ -6,7 +6,7 @@
 
 1. Завершите инвентаризацию/импорт источника, проверки идентичности и авторизации, совместимость модулей, регистрацию ServerBridge и живую Minecraft-репетицию MIG10. Сохраните копии и отдельно проверьте восстановление. Подготовьте `runId`, `stageId` репетиции, дайджест снимка источника и ID целевого релиза.
 2. Выполните `nl migrate gravit cutover-stage --backend https://HOST --token ... --run RUN --confirm RUN --profile-id PROFILE --channel stable --release-id RELEASE --stage-id STAGE --head-revision REV`. Это подготавливает настоящий маршрут выпуска Launcher и ограничивает обычные публикации канала. Команда **не** останавливает Gravit и не перенаправляет игроков.
-3. Запланируйте окно обслуживания. Остановите вход игроков и **всех** внешних писателей/прокси. На **исходном хосте Gravit** с правами оператора systemd выполните:
+3. Запланируйте окно обслуживания. Остановите вход игроков и **всех** внешних процессов записи/прокси. На **исходном хосте Gravit** с правами оператора systemd выполните:
 
    ```sh
    nl migrate gravit fence-source --run RUN --confirm RUN --profile-id PROFILE --channel stable --stage-id STAGE --unit gravit-launchserver.service --output /var/tmp/gravit-stop-state.json

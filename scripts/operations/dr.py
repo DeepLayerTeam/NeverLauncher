@@ -439,7 +439,7 @@ def s3_options(endpoint: str | None) -> list[str]:
         or endpoint.startswith("http://127.0.0.1:")
         or endpoint.startswith("http://localhost:")
     ):
-        raise DrillError("S3 endpoint: требуется HTTPS или локальный адрес обратной связи")
+        raise DrillError("Адрес S3: требуется HTTPS или адрес петлевого интерфейса")
     return ["--endpoint-url", endpoint] if endpoint else []
 
 

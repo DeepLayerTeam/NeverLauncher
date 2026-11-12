@@ -67,7 +67,7 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, validationErr.Error())
 		return
 	} else if enabled && strings.TrimSpace(minecraft.Version) == "" {
-		writeError(w, http.StatusBadRequest, "Механизму совместимости требуется minecraft.version")
+		writeError(w, http.StatusBadRequest, "Механизму совместимости требуется поле minecraft.version")
 		return
 	}
 	manifest := release.Manifest

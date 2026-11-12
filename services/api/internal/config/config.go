@@ -485,7 +485,7 @@ func ValidateProduction(cfg Config) error {
 				problems = append(problems, "production требует LAUNCHER_SERVERBRIDGE_HA_REQUIRED=true")
 			}
 			if strings.TrimSpace(cfg.RedisURL) == "" {
-				problems = append(problems, "LAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing")
+				problems = append(problems, "LAUNCHER_REDIS_URL обязателен для блокировки конкурирующих владельцев ServerBridge HA")
 			}
 		}
 	}
@@ -614,7 +614,7 @@ func ValidateProduction(cfg Config) error {
 		publicURLValid = true
 	}
 	if !publicURLValid {
-		problems = append(problems, "LAUNCHER_PUBLIC_URL в production должен быть абсолютным HTTPS URL (HTTP loopback разрешён только для e2e-production)")
+		problems = append(problems, "В промышленной среде LAUNCHER_PUBLIC_URL должен быть абсолютным HTTPS URL (HTTP через петлевой интерфейс разрешён только для e2e-production)")
 	}
 	rpID := strings.ToLower(strings.TrimSpace(cfg.WebAuthnRPID))
 	if rpID == "" {

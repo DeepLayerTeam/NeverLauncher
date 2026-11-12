@@ -444,7 +444,7 @@ func handlePlugin(args []string) error {
 			errs = append(errs, "отсутствует name")
 		}
 		if strings.TrimSpace(manifest.Version) == "" {
-			errs = append(errs, "отсутствует version")
+			errs = append(errs, "Отсутствует поле version")
 		}
 		if !containsString([]string{"backend", "admin", "desktop", "cli"}, manifest.Target) {
 			errs = append(errs, "target должен быть одним из: backend, admin, desktop, cli")

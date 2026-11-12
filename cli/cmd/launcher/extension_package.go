@@ -906,14 +906,14 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 			return nil, errors.New("signature.ed25519 содержит некорректный keyFingerprint")
 		}
 		if _, err := hex.DecodeString(strings.TrimPrefix(envelope.KeyFingerprint, "sha256:")); err != nil {
-			return nil, errors.New("signature.ed25519 keyFingerprint не является SHA-256 hex")
+			return nil, errors.New("Значение keyFingerprint в signature.ed25519 не является SHA-256 в шестнадцатеричном формате")
 		}
 		expectedSignatureBytes, err := marshalCanonicalPrettyJSON0202(envelope)
 		if err != nil {
 			return nil, err
 		}
 		if !bytes.Equal(signatureBytes, expectedSignatureBytes) {
-			return nil, errors.New("signature.ed25519 не canonical")
+			return nil, errors.New("Файл signature.ed25519 не имеет канонического формата")
 		}
 		analysis.Signature = &envelope
 		analysis.SignatureBytes = signatureBytes
@@ -1016,7 +1016,7 @@ func signExtensionPackage0202(packagePath, outputPath, privateKeyPath string, fo
 	}
 	defer analysis.Close()
 	if analysis.Signature != nil && !force {
-		return nil, errors.New(".nlext уже подписан; используйте --force для замены signature")
+		return nil, errors.New(".nlext уже подписан; используйте --force для замены подписи")
 	}
 	privateKey, err := loadEd25519PrivateKey(privateKeyPath)
 	if err != nil {

@@ -37,11 +37,11 @@ export class OfficialMinecraftClient0257 {
     private readonly native: NativeOfficialInvoke0262,
   ) {}
   rebind(backendUrl: string, Token: string, rSessionId: string) {
-    if (this.backendUrl !== backendUrl || this.SessionId !== SessionId)
+    if (this.backendUrl !== backendUrl || this.SessionId !== rSessionId)
       this.clear();
     this.backendUrl = backendUrl;
     this.Token = Token;
-    this.SessionId = SessionId;
+    this.SessionId = rSessionId;
   }
   private get context(): Record<string, string> {
     if (!this.Token || !this.SessionId)
@@ -101,7 +101,7 @@ export class OfficialMinecraftClient0257 {
     if (generation !== this.generation)
       throw new Error("Авторизация отменена.");
     if (!profile?.id || !profile.name)
-      throw new Error("Microsoft-вход не подтвердил профиль Minecraft Java.");
+      throw new Error("Вход через Microsoft не подтвердил профиль Minecraft Java.");
     this.active = true;
     return profile;
   }

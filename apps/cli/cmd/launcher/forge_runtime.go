@@ -373,7 +373,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		metadataURL = pinned.ResolutionSourceURL
 		resolutionSourceSHA256 = pinned.ResolutionSourceSHA256
 		if artifactVersion == "" {
-			return forgeMaterializeResult{}, errors.New("файл фиксации выбора загрузчика не содержит Forge/NeoForge artifactVersion")
+			return forgeMaterializeResult{}, errors.New("Файл фиксации выбора загрузчика не содержит поле artifactVersion для Forge/NeoForge")
 		}
 	} else {
 		loaderVersion, artifactVersion, metadataURL, resolutionSourceSHA256, err = resolveForgeLikeVersionWithEvidence(ctx, opts.HTTPClient, loader, vanilla.MinecraftVersion, opts.LoaderVersion, opts.MavenMetadataURL)
@@ -945,7 +945,7 @@ func normalizeForgeLegacyRuntimeProfile(raw []byte, profile loaderVersionProfile
 		object["inheritsFrom"] = encoded
 		normalized = true
 	} else if inherited != parent {
-		return nil, false, fmt.Errorf("данные versionInfo устаревшего Forge inheritsFrom=%s, ожидался %s", inherited, parent)
+		return nil, false, fmt.Errorf("Поле inheritsFrom в versionInfo устаревшего Forge имеет значение %s, ожидалось %s", inherited, parent)
 	} else {
 		// Профиль, уже наследующий правильную версию Vanilla, тоже
 		// нормализуется. Флаг описывает итоговый инвариант, а не
@@ -1105,7 +1105,7 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 			return artifact, artifact, sourceURL, sourceSHA, nil
 		}
 		if !neoForgeVersionMatchesMinecraft(requested, minecraftVersion) {
-			return "", "", "", "", fmt.Errorf("NeoForge version %s не совместима с Minecraft %s", requested, minecraftVersion)
+			return "", "", "", "", fmt.Errorf("Версия NeoForge %s несовместима с Minecraft %s", requested, minecraftVersion)
 		}
 		sourceURL, sourceSHA := explicitResolutionSource(loader, minecraftVersion, requested, requested, requested)
 		return requested, requested, sourceURL, sourceSHA, nil
@@ -2244,7 +2244,7 @@ func selectInstallerJava(explicit string, minimumMajor int) (string, error) {
 	}
 	info, err := os.Stat(candidate)
 	if err != nil || info.IsDir() {
-		return "", fmt.Errorf("Java executable недоступен: %s", candidate)
+		return "", fmt.Errorf("Исполняемый файл Java недоступен: %s", candidate)
 	}
 	major, err := javaMajorVersion(candidate)
 	if err != nil {

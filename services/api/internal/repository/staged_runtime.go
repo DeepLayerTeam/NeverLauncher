@@ -33,7 +33,7 @@ func sanitizePersistedStages03412(raw json.RawMessage) json.RawMessage {
 }
 func validStagedRun0342(v model.StagedRuntimeRun0342) error {
 	if v.RunID == "" || v.PackageID == "" || v.ProjectID == "" || len(v.ManifestSHA256) != 64 || len(v.ArtifactSHA256) != 64 || len(v.Stages) == 0 || !json.Valid(v.Stages) || v.StartedAt.IsZero() || v.FinishedAt.Before(v.StartedAt) {
-		return errors.New("Некорректное значение: «отчёт о промежуточной подготовке Runtime»")
+		return errors.New("Некорректный отчёт о промежуточной подготовке Runtime")
 	}
 	return nil
 }

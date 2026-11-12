@@ -4,7 +4,7 @@
 
 ## Действия оператора
 
-1. Используйте обычный конвейер подписанных профилей Minecraft/ClientFactory, чтобы установить точные игровые файлы Vanilla/Fabric/Quilt/Forge/NeoForge. Загрузчик, версия и classpath профиля остаются под контролем подписи выпуска.
+1. Используйте обычный конвейер подписанных профилей Minecraft/ClientFactory, чтобы установить точные игровые файлы Vanilla/Fabric/Quilt/Forge/NeoForge. Загрузчик, версия и путь классов профиля остаются под контролем подписи выпуска.
 2. Установите доверенный пакет расширения командой `launcher runtime client-factory trusted-install --client-dir <CLIENT> --package <SIGNED_NLEXT> --public-key <EXTERNAL_TRUSTED_KEY> --approve-full-jvm-access true`. Это код JVM с **полным доверием**, а не изолированный плагин.
 3. На отдельной защищённой рабочей станции оператора подготовьте политику совместимости Guard с точными `projectId`, версией Minecraft, загрузчиком, SHA-256 всех включённых `mods/*.jar`, обязательных нативных библиотек и неизменяемых `.launcher/trusted-jvm/releases/<PACKAGE_SHA256>/agent.jar` и `plugins/*.jar`. Разрешайте только проверенные `transformations: [{"id":"net.minecraft.client.Minecraft", "ownerSha256":"..."}]`. Используйте поставляемый подписыватель Guard и установите подписанную политику. Подробности: `docs/security/guard-compatibility.md`.
 4. Задайте **внешние** `LAUNCHER_GUARD_COMPAT_PUBLIC_KEY_FILE` и `LAUNCHER_GUARD_COMPAT_REQUIRED=1` в окружении лаунчера, управляемом оператором. Команды установки/обслуживания Trusted Java дополнительно используют `LAUNCHER_TRUSTED_JVM_PUBLIC_KEY_FILE`, но нативный Runtime опирается на отдельно подписанный список разрешений Guard **при каждом запуске**. Не размещайте открытые якоря доверия внутри изменяемого игрового каталога.

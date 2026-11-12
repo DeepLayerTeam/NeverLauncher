@@ -96,7 +96,7 @@ def fetch(row, dest):
             require(length <= MAX_BYTES, 'Размер загружаемой эталонной сборки превышает ограничение')
             out.write(block)
         out.flush(); os.fsync(out.fileno())
-    require(digest(dest) == row['sha256'], f"Контрольная сумма исходного состояния не совпадает для {row['version']}")
+    require(digest(dest) == row['sha256'], f"Не совпадает контрольная сумма исходного состояния для {row['version']}")
 
 def inventory(tree, data_dirs):
     return upgrade.enumerate_data(tree, data_dirs)
