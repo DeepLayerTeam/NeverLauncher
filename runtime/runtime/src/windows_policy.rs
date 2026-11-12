@@ -101,7 +101,7 @@ pub fn validate_windows_guard_policy_report(
         || !details.requirements_satisfied
         || !details.capabilities.requirements_satisfied()
     {
-        return Err("Ошибка: «проверка профиля и возможностей Windows Protection Core»".to_string());
+        return Err("Не удалось проверить профиль и возможности ядра защиты Windows".to_string());
     }
 
     let requirements = details.requirements;
@@ -639,7 +639,7 @@ mod windows_impl {
         }
         let required = 8usize
             .checked_add(listed.saturating_mul(size_of::<usize>()))
-            .ok_or_else(|| "Переполнение размера списка процессов Guard Job Object".to_string())?;
+            .ok_or_else(|| "Переполнение размера списка процессов объекта задания Guard".to_string())?;
         if required > buffer.len() {
             return Err("Список процессов Job Object в Guard превышает размер буфера проверки".to_string());
         }
@@ -818,7 +818,7 @@ mod windows_impl {
     ) -> Result<RuntimeProcessPolicyGuard, String> {
         let pid = child
             .id()
-            .ok_or_else(|| "PID Windows Runtime недоступен до применения политики".to_string())?;
+            .ok_or_else(|| "PID среды выполнения Windows недоступен до применения политики".to_string())?;
         let process_handle = child
             .raw_handle()
             .ok_or_else(|| "Дескриптор процесса Windows Runtime недоступен до применения политики".to_string())?

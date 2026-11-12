@@ -193,7 +193,7 @@ func Inspect(file string) (JarInfo, error) {
 		return JarInfo{}, errors.New("Для класса модуля Gravit требуется явная точка входа адаптера совместимости")
 	}
 	if !classes["ru/launcher/sdk/host/JavaExtensionHost.class"] {
-		return JarInfo{}, errors.New("Класс Java Extension Host отсутствует в JAR")
+		return JarInfo{}, errors.New("В JAR отсутствует класс хоста расширений Java")
 	}
 	libraries, extraClasses, libraryMaxMajor, err := inspectLibraries0482(zr, classes)
 	if err != nil {

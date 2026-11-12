@@ -10,7 +10,7 @@ core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 5):
     raise SystemExit(
-        f"Managed JRE Distribution: требуется версия не ниже 0.15.5, получено {VERSION}"
+        f"Распространение управляемой JRE: требуется версия не ниже 0.15.5, получено {VERSION}"
     )
 
 

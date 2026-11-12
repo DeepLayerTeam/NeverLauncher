@@ -291,7 +291,7 @@ def verify_http_snapshot(path: Path):
         except (UnicodeError, ValueError) as exc:
             raise CutoverError("Некорректный JSON HTTP-репозитория") from exc
         if not isinstance(data, dict) or not data:
-            raise CutoverError("Некорректное значение: «состояние JSON HTTP Repository»")
+            raise CutoverError("Некорректное состояние JSON репозитория HTTP")
 
 
 def sqlite_backup(source_name: str, dest: Path):

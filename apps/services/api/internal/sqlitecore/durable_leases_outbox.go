@@ -265,7 +265,7 @@ func (r *Repository) ClaimOutboxEvents(ctx context.Context, worker string, limit
 				return e
 			}
 			if v.AttemptCount >= v.MaxAttempts {
-				_, e = q.ExecContext(ctx, `UPDATE durable_outbox SET status='dead',lease_owner='',lease_token='',lease_expires_at=0,last_error='max attempts exhausted',updated_at=? WHERE id=?`, now, id)
+				_, e = q.ExecContext(ctx, `UPDATE durable_outbox SET status='dead',lease_owner='',lease_token='',lease_expires_at=0,last_error='Исчерпано максимальное число попыток',updated_at=? WHERE id=?`, now, id)
 				if e != nil {
 					return e
 				}

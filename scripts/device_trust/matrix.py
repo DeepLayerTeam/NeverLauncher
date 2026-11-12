@@ -425,7 +425,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Публичная CI-матрица Device Trust Launcher"
+        description="Публичная матрица CI для проверки доверия к устройствам Launcher"
     )
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("validate")

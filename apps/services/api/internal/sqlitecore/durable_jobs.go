@@ -164,7 +164,7 @@ func claimJob(ctx context.Context, q sqlitedurable.Executor, id, worker string, 
 		}
 	}
 	if j.AttemptCount >= j.MaxAttempts {
-		_, e = q.ExecContext(ctx, `UPDATE durable_jobs SET status='dead',lease_owner='',lease_token='',lease_expires_at=0,completed_at=?,updated_at=?,last_error='max attempts exhausted' WHERE id=?`, now, now, id)
+		_, e = q.ExecContext(ctx, `UPDATE durable_jobs SET status='dead',lease_owner='',lease_token='',lease_expires_at=0,completed_at=?,updated_at=?,last_error='Исчерпано максимальное число попыток' WHERE id=?`, now, now, id)
 		return j, false, e
 	}
 	if j.LeaseFence == math.MaxInt64 {

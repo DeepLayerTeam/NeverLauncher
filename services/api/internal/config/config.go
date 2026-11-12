@@ -654,7 +654,7 @@ func ValidateProduction(cfg Config) error {
 		}
 		u, parseErr := url.Parse(origin)
 		if parseErr != nil || u.Scheme != "https" || u.Host == "" || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
-			problems = append(problems, fmt.Sprintf("некорректный production CORS origin: %q", origin))
+			problems = append(problems, fmt.Sprintf("Некорректный источник CORS для промышленной среды: %q", origin))
 		}
 	}
 	backupRoot := filepath.Clean(strings.TrimSpace(cfg.BackupRoot))

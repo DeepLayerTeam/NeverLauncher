@@ -66,7 +66,7 @@ func TestSupervisorPreservesJvmHangCause03012(t *testing.T) {
 			t.Fatal(err)
 		}
 		if status.State == "crashed" || status.State == "crashloop" {
-			if !strings.Contains(status.LastError, "Java RPC unresponsive") {
+			if !strings.Contains(status.LastError, "Java RPC не отвечает после трёх проверок") {
 				t.Fatalf("Отсутствует исходная причина отказа: состояние=%s, ошибка=%q", status.State, status.LastError)
 			}
 			return

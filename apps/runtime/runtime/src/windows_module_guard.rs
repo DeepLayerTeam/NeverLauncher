@@ -238,7 +238,7 @@ mod imp {
                 .get_current_dir()
                 .map(PathBuf::from)
                 .or_else(|| std::env::current_dir().ok())
-                .ok_or_else(|| "Guard Module Guard не может определить рабочий каталог JVM".to_string())?;
+                .ok_or_else(|| "Модуль защиты Guard не может определить рабочий каталог JVM".to_string())?;
 
             let java_executable = resolve_program_path(command.as_std().get_program(), &current_dir);
 

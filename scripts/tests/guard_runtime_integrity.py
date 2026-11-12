@@ -115,7 +115,7 @@ public class Game {
              'ru.launcher.trusted.MinecraftMain']
         r=subprocess.run(cmd,capture_output=True,text=True,timeout=20)
         self.assertNotEqual(r.returncode,0)
-        self.assertIn('missing/replaced signed runtime file',r.stderr)
+        self.assertIn('Подписанный файл среды выполнения отсутствует или заменён',r.stderr)
 
     def test_live_jar_replacement(self):
         proc=self.invoke(args=['wait'])
@@ -123,7 +123,7 @@ public class Game {
         self.assertEqual(line,'GAME_STARTED')
         self.game.write_bytes(b'untrusted replacement')
         rc,_,err=self.finish(proc,timeout=16)
-        self.assertNotEqual(rc,0);self.assertIn('missing/replaced signed runtime file',err)
+        self.assertNotEqual(rc,0);self.assertIn('Подписанный файл среды выполнения отсутствует или заменён',err)
 
     def test_live_unapproved_mod(self):
         (self.root/'mods').mkdir()

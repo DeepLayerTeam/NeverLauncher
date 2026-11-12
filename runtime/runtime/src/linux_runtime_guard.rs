@@ -141,7 +141,7 @@ fn check_process(pid: u32, start: u64) -> Result<(), String> {
         return Err("Обнаружена трассировка JVM в Linux Guard".into());
     }
     if status_value(&status, "NoNewPrivs:")? != "1" {
-        return Err("Для JVM Linux Guard отключён режим no-new-privs".into());
+        return Err("Для JVM под защитой Linux Guard отключён режим no-new-privs".into());
     }
     let pgid = unsafe { libc::getpgid(pid as libc::pid_t) };
     if pgid < 0 || pgid as u32 != pid {

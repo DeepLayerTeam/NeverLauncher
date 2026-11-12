@@ -212,7 +212,7 @@ if "guard-guard-attestation-0134.py" not in ci:
     raise SystemExit("Guard 0.13.4: проверка аттестации не подключена к CI")
 if "guard-guard-attestation-0134.py" not in preflight:
     raise SystemExit(
-        "Guard 0.13.4 Guard Attestation gate: не подключено к предварительной проверке релиза"
+        "Guard 0.13.4: этап аттестации не подключён к предварительной проверке релиза"
     )
 require(
     ci,

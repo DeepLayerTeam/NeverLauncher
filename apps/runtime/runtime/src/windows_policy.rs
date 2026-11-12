@@ -101,7 +101,7 @@ pub fn validate_windows_guard_policy_report(
         || !details.requirements_satisfied
         || !details.capabilities.requirements_satisfied()
     {
-        return Err("Ошибка: «проверка профиля и возможностей Windows Protection Core»".to_string());
+        return Err("Не удалось проверить профиль и возможности ядра защиты Windows".to_string());
     }
 
     let requirements = details.requirements;

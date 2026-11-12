@@ -438,7 +438,7 @@ impl GuardSupervisor {
         status.package_manifest_verified = package_manifest_verified;
         let policy_value = send_command(&mut handle, "process-policy")
             .await
-            .map_err(|err| format!("Ошибка: «запрос к Windows Protection Core»: {err}"))?;
+            .map_err(|err| format!("Ошибка запроса к ядру защиты Windows: {err}"))?;
         let policy: GuardProcessPolicyReport = serde_json::from_value(policy_value)
             .map_err(|err| format!("Повреждены данные ядра защиты Guard для Windows: {err}"))?;
         validate_guard_process_policy(&handle, &policy)?;

@@ -157,7 +157,7 @@ def rendered(directory, project, env):
     try:
         data = json.loads(raw)
     except ValueError as exc:
-        raise RollingError("Некорректный сгенерированный JSON Docker Compose") from exc
+        raise RollingError("Docker Compose сформировал некорректный JSON") from exc
     require(isinstance(data, dict) and isinstance(data.get("services"), dict),
             "Недопустимый состав служб Compose")
     return data

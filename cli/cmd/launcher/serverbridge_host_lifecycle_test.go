@@ -21,7 +21,7 @@ func TestHostSupervisorProcessHelper0414(t *testing.T) {
 		return
 	}
 	if err := runServerBridgeHost01910(root, false); err != nil {
-		fmt.Fprintln(os.Stderr, "host supervisor failed:", err)
+		fmt.Fprintln(os.Stderr, "Ошибка супервизора хоста:", err)
 		os.Exit(77)
 	}
 	os.Exit(0)

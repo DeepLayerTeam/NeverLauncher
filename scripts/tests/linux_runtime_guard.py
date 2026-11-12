@@ -138,7 +138,7 @@ public class Game {
         self.game.write_bytes(b'replaced during game')
         out, err = process.communicate(timeout=15)
         self.assertNotEqual(process.returncode, 0)
-        self.assertIn('missing/replaced signed runtime file', err)
+        self.assertIn('Подписанный файл среды выполнения отсутствует или заменён', err)
 
 
 if __name__ == '__main__':

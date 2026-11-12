@@ -50,7 +50,7 @@ def verify(path: Path, signer: str):
         )
     elif system == "Darwin":
         if not re.fullmatch("[A-Z0-9]{10}", signer):
-            raise ValueError("Не указан идентификатор команды Apple Developer Team ID")
+            raise ValueError("Не указан идентификатор команды разработчиков Apple (Team ID)")
         checked = execute(["pkgutil", "--check-signature", str(path.resolve())])
         if f"({signer})" not in checked or "Developer ID Installer:" not in checked:
             raise ValueError(

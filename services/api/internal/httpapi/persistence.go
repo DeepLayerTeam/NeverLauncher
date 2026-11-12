@@ -205,9 +205,9 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 	}
 	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
 		payload["implemented"] = []string{
-			"SQLite HTTP Repository 0.37.2: состояние WAL с защищённой авторизацией и полями расширений",
+			"Репозиторий HTTP на SQLite 0.37.2: состояние WAL с защищённой авторизацией и полями расширений",
 			"SQLite Runtime 0.37.3: зашифрованные сохраняемые сеансы авторизации, MFA, ключи доступа и состояние ServerBridge",
-			"Устройства, сохраняемые задания, расширения и политика доверия хранятся в SQLite HTTP Repository",
+			"Устройства, сохраняемые задания, расширения и политика доверия хранятся в репозитории HTTP на SQLite",
 			"Промышленное развёртывание только на SQLite заблокировано до подтверждения соответствия критериям выпуска",
 		}
 	}

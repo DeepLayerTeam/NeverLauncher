@@ -227,7 +227,7 @@ func defaultMetaBaseForLoader(loader string) string {
 
 func validateMetaBaseURL(raw string) error {
 	if strings.TrimSpace(raw) == "" {
-		return errors.New("Meta API base URL пуст")
+		return errors.New("Не указан базовый URL API метаданных")
 	}
 	return validateRemoteURL(strings.TrimRight(raw, "/") + "/versions/loader/probe")
 }

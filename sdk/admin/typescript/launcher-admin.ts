@@ -86,7 +86,7 @@ export class LauncherAdminBridge {
     return new Promise((resolve, reject) => {
       const timer = window.setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error("Истекло время ожидания RPC Launcher Admin"));
+        reject(new Error("Истекло время ожидания RPC панели управления Launcher"));
       }, this.timeoutMs);
       this.pending.set(id, {
         resolve: resolve as (v: unknown) => void,

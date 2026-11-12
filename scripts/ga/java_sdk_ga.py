@@ -202,7 +202,7 @@ public final class Consumer {
     if (!new Version(1, 2, 3, Version.Type.RELEASE).getVersionString().equals("1.2.3.0"))
       throw new AssertionError("adapter API");
     if (!LauncherAPI.CONTRACT_VERSION.equals("1.0.0")) throw new AssertionError("HTTP API");
-    System.out.println("Проверка потребителя публичного Java SDK Launcher пройдена");
+    System.out.println("Проверка приложения-потребителя публичного Java SDK Launcher пройдена");
   }
 }
 """.replace("{version}", version))

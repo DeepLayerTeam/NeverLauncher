@@ -101,7 +101,7 @@ legacy_rows = {
 missing_legacy = sorted(legacy_0170v1 - set(legacy_rows))
 if missing_legacy:
     raise SystemExit(
-        f"GA 0.17.0v1 complete Legacy Vanilla grid: отсутствует {missing_legacy}"
+        f"GA 0.17.0v1: в полной матрице старых версий Vanilla отсутствует {missing_legacy}"
     )
 for minecraft, row in legacy_rows.items():
     if row["javaMajor"] != 8 or row["scope"] != "client":

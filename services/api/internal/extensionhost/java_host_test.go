@@ -189,7 +189,7 @@ func TestJavaHostHungCallbacksDoNotBlockGoSupervisor0304(t *testing.T) {
 	for {
 		state, _ := host.Get(key)
 		if state.State == "crashed" || state.State == "crashloop" {
-			if !strings.Contains(state.LastError, "Java RPC unresponsive") {
+			if !strings.Contains(state.LastError, "Java RPC не отвечает после трёх проверок") {
 				t.Fatalf("неожиданная ошибка: %v", state.LastError)
 			}
 			return

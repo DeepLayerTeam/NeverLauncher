@@ -267,7 +267,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Собрать детерминированный производственный пакет Launcher Linux tar.gz"
+        description="Собрать воспроизводимый промышленный пакет Launcher для Linux в формате tar.gz"
     )
     parser.add_argument("--out", required=True)
     parser.add_argument("--version", required=True)

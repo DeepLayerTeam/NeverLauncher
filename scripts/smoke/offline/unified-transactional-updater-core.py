@@ -10,7 +10,7 @@ core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 6):
     raise SystemExit(
-        f"Unified Transactional Updater Core: требуется версия не ниже 0.15.6, получено {VERSION}"
+        f"Единое ядро транзакционного обновления: требуется версия не ниже 0.15.6, получено {VERSION}"
     )
 
 

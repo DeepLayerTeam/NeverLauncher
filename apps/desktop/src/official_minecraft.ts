@@ -122,7 +122,7 @@ export class OfficialMinecraftClient0257 {
   }
   async poll(): Promise<{ pending: boolean; profile?: OfficialProfile0257 }> {
     if (Date.now() < this.nextPoll)
-      throw new Error("Соблюдайте интервал Microsoft Device Code.");
+      throw new Error("Соблюдайте интервал между запросами авторизации по коду устройства Microsoft.");
     const generation = this.generation;
     const result = await this.call<{
       pending: boolean;
