@@ -445,7 +445,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			return fmt.Errorf("%s: отсутствует URL", task.Path)
 		}
 		if opts.StrictUpstream && task.SHA1 == "" {
-			return fmt.Errorf("%s: upstream metadata не содержит SHA-1; отключение strict возможно только явно", task.Path)
+			return fmt.Errorf("%s: Метаданные поставщика не содержат SHA-1; отключить строгую проверку можно только явно", task.Path)
 		}
 		if prev, exists := tasks[task.Path]; exists {
 			if prev.URL != task.URL || prev.Kind != task.Kind || (!strings.EqualFold(prev.SHA1, task.SHA1) && prev.SHA1 != "" && task.SHA1 != "") || (prev.Size > 0 && task.Size > 0 && prev.Size != task.Size) || !equalStringSets0277(prev.NativeExclude, task.NativeExclude) {
@@ -1363,7 +1363,7 @@ func fetchJSONBytes(ctx context.Context, client *http.Client, source string, max
 
 func fetchBytesVerified(ctx context.Context, client *http.Client, source, expectedSHA1 string, expectedSize, max int64, requireHash bool) ([]byte, error) {
 	if requireHash && expectedSHA1 == "" {
-		return nil, errors.New("upstream checksum обязателен")
+		return nil, errors.New("Обязательна контрольная сумма исходного поставщика")
 	}
 	if err := validateRemoteURL(source); err != nil {
 		return nil, err

@@ -641,13 +641,13 @@ pub fn verify_manifest_signature(manifest: &Manifest, pinned_public_key: &str) -
     Ok(SignatureCheckResult {
         valid: true,
         public_key: public_key_hex,
-        message: "подпись манифеста корректна и соответствует pinned key".to_string(),
+        message: "Подпись манифеста корректна и соответствует закреплённому ключу".to_string(),
     })
 }
 
 pub fn sign_manifest(manifest: &mut Manifest, private_key_hex: &str, signed_at: &str) -> Result<String, String> {
-    let bytes = hex::decode(private_key_hex.trim()).map_err(|err| format!("private key не является hex: {err}"))?;
-    let seed: [u8; 32] = bytes.try_into().map_err(|_| "Ed25519 private key seed должен быть 32 байта".to_string())?;
+    let bytes = hex::decode(private_key_hex.trim()).map_err(|err| format!("Закрытый ключ не представлен в шестнадцатеричном формате: {err}"))?;
+    let seed: [u8; 32] = bytes.try_into().map_err(|_| "Исходное значение закрытого ключа Ed25519 должно содержать 32 байта".to_string())?;
     validate_manifest_schema(manifest)?;
     file_ownership::validate_download_targets(manifest)?;
     manifest.signature = None;
@@ -866,7 +866,7 @@ pub async fn certify_vanilla_compatibility(
     if max_runtime_seconds < 5 {
         return Err("Для сертификации Vanilla требуется max-runtime-seconds >= 5".to_string());
     }
-    fs::create_dir_all(root).await.map_err(|err| format!("не удалось открыть client root: {err}"))?;
+    fs::create_dir_all(root).await.map_err(|err| format!("Не удалось открыть корневой каталог клиента: {err}"))?;
     guard_compatibility_0502::refuse_unscoped_launch(root)?;
     let version = safe_component(version)?;
     let natives_base = root.join("natives");
@@ -956,7 +956,7 @@ pub async fn certify_vanilla_compatibility(
     let started_at = now_unix()?;
     let log_path = logs_dir.join(format!("runtime-vanilla-certification-{version}-{started_at}.log"));
     let mut log_file = std::fs::OpenOptions::new().create(true).append(true).open(&log_path)
-        .map_err(|err| format!("не удалось открыть certification log {}: {err}", log_path.display()))?;
+        .map_err(|err| format!("Не удалось открыть журнал сертификации {}: {err}", log_path.display()))?;
     use std::io::Write as _;
     writeln!(log_file, "Сертификация Runtime {} для Vanilla", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
     writeln!(log_file, "Minecraft: {version}; Java: {required_java_major}; главный класс: {}", plan.main_class).map_err(|e| e.to_string())?;
@@ -969,7 +969,7 @@ pub async fn certify_vanilla_compatibility(
     }
     writeln!(log_file, "--- вывод процесса ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
-    let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать certification log handle: {e}"))?;
+    let stdout_file = log_file.try_clone().map_err(|e| format!("Не удалось дублировать дескриптор журнала сертификации: {e}"))?;
     managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
@@ -1347,10 +1347,10 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         validate_compatibility_resolution_trust(manifest, &resolution)?;
         verified_metadata_paths = resolution.metadata_paths.clone();
         if !manifest.runtime.launch.main_class.trim().is_empty() && manifest.runtime.launch.main_class != resolution.main_class {
-            return Err(format!("manifest mainClass {} расходится с Compatibility Engine mainClass {}", manifest.runtime.launch.main_class, resolution.main_class));
+            return Err(format!("Главный класс манифеста (mainClass) {} не совпадает с главным классом механизма совместимости {}", manifest.runtime.launch.main_class, resolution.main_class));
         }
         if !manifest.minecraft.main_class.trim().is_empty() && manifest.minecraft.main_class != resolution.main_class {
-            return Err(format!("minecraft.mainClass {} расходится с Compatibility Engine mainClass {}", manifest.minecraft.main_class, resolution.main_class));
+            return Err(format!("Главный класс Minecraft (minecraft.mainClass) {} не совпадает с главным классом механизма совместимости {}", manifest.minecraft.main_class, resolution.main_class));
         }
         let classpath_entries = resolution.classpath.iter().map(|path| safe_join(root, path).map(|value| value.to_string_lossy().to_string())).collect::<Result<Vec<_>, _>>()?;
         let mut jvm_args = resolution.jvm_args;
@@ -1785,7 +1785,7 @@ fn validate_compatibility_resolution_trust(manifest: &Manifest, resolution: &Com
     let trusted = manifest.files.iter().filter(|file| manifest_file_applies(file)).map(|file| file.path.replace('\\', "/")).collect::<HashSet<_>>();
     for path in resolution.metadata_paths.iter().chain(resolution.classpath.iter()).chain(resolution.natives.iter().map(|native| &native.path)) {
         if !trusted.contains(path) {
-            return Err(format!("Compatibility Engine отклонил неподписанный release path: {path}"));
+            return Err(format!("Механизм совместимости отклонил неподписанный путь выпуска: {path}"));
         }
     }
     if let Some(path) = resolution.logging_file.as_ref() {

@@ -169,7 +169,7 @@ def invoke(cli, name, args, result_file, env, good=True):
     if good:
         require(
             proc.returncode == 0 and result_file.is_file(),
-            "Рабочий клиент " + name + " failed rc=" + str(proc.returncode),
+            "Рабочий клиент " + name + " завершился с ошибкой, код возврата=" + str(proc.returncode),
         )
         return json.loads(result_file.read_text())
     require(proc.returncode != 0, "Сценарий с искусственным отказом неожиданно завершился успешно: " + name)

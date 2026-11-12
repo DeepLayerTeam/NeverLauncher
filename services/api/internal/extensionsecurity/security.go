@@ -63,7 +63,7 @@ func ParseKey(raw string) ([]byte, error) {
 	if b, err := base64.StdEncoding.DecodeString(raw); err == nil && len(b) == 32 {
 		return b, nil
 	}
-	return nil, errors.New("extension secrets key: требуется 32-байтное значение в шестнадцатеричном формате или base64")
+	return nil, errors.New("Ключ шифрования секретов расширений: требуется 32-байтное значение в шестнадцатеричном формате или base64")
 }
 func New(repo repository.Repository, key []byte) (*Manager, error) {
 	if repo == nil {

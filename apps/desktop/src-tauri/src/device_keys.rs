@@ -1165,7 +1165,7 @@ pub fn measured_boot_quote_0315(
  let user=normalize_user_id(user_id)?;
  let record=load_record(backend_url,&user)?.ok_or("Отсутствует зарегистрированный аппаратный ключ устройства")?;
  if record.user_id!=user || record.device_id.as_deref()!=Some(device_id) || record.key_algorithm!="p256" || record.key_binding!="hardware" {
-  return Err("Для аттестационная цитата TPM Quote требуется привязанное аппаратное устройство P-256".into());
+  return Err("Для аттестации TPM Quote требуется аппаратно привязанный ключ P-256".into());
  }
  let _=validate_hardware_record(&record)?;
  #[cfg(target_os="windows")]

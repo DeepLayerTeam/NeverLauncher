@@ -765,7 +765,7 @@ func ValidateProduction(cfg Config) error {
 		}
 	case "s3", "s3-compatible":
 		if strings.TrimSpace(cfg.StorageS3Endpoint) == "" || strings.TrimSpace(cfg.StorageS3Bucket) == "" || strings.TrimSpace(cfg.StorageS3AccessKey) == "" || strings.TrimSpace(cfg.StorageS3SecretKey) == "" {
-			problems = append(problems, "для S3 обязательны endpoint, bucket, access key и secret key")
+			problems = append(problems, "Для S3 обязательны адрес сервиса, имя корзины, ключ доступа и секретный ключ")
 		}
 	default:
 		problems = append(problems, fmt.Sprintf("неподдерживаемый LAUNCHER_STORAGE_DRIVER=%q", cfg.StorageDriver))

@@ -323,7 +323,7 @@ def emit_openapi_ts(ops: list[dict[str, str]]) -> str:
         [
             "};",
             "",
-            "// Canonical API payloads use envelope/object schemas; these aliases remain generated and intentionally transport-only.",
+            "// Канонические данные API используют схемы объектов и оболочек; эти автоматически создаваемые псевдонимы предназначены только для транспортного уровня.",
             "export type ExtensionsAPIObject = Record<string, unknown>;",
             "export type ExtensionsAPIResponse<T = ExtensionsAPIObject> = { data?: T; error?: unknown } & ExtensionsAPIObject;",
             "",

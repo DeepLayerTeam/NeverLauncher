@@ -582,7 +582,7 @@ func verifiedCopyClientFile(src, dst string, file ClientPackageFile) error {
 	}
 	if file.Executable {
 		if err := os.Chmod(dst, 0o755); err != nil {
-			return fmt.Errorf("%s: не удалось выставить executable bit: %w", file.Path, err)
+			return fmt.Errorf("%s: не удалось установить разрешение на исполнение: %w", file.Path, err)
 		}
 	}
 	sum, size, err = hashFile(dst)

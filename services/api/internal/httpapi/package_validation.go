@@ -194,7 +194,7 @@ func decodeRuntimeValidationKey0212(value string) (ed25519.PublicKey, error) {
 			return ed25519.PublicKey(raw), nil
 		}
 	}
-	return nil, errors.New("runtime validation public key: требуется «необработанный ключ Ed25519 в формате hex/base64»")
+	return nil, errors.New("Открытый ключ проверки среды выполнения: требуется необработанный ключ Ed25519 в шестнадцатеричном формате или base64")
 }
 
 func (s Server) runtimeValidationKeys0212() (map[string]ed25519.PublicKey, error) {

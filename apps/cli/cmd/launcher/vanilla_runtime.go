@@ -294,7 +294,7 @@ func handleRuntimeVanillaServer(args []string) error {
 
 func installVanillaServer(ctx context.Context, requestedVersion, serverDir, versionManifest string, client *http.Client) (vanillaServerInstallResult, error) {
 	if strings.TrimSpace(serverDir) == "" {
-		return vanillaServerInstallResult{}, errors.New("Vanilla server install требует serverDir")
+		return vanillaServerInstallResult{}, errors.New("Для установки сервера Vanilla требуется каталог serverDir")
 	}
 	if strings.TrimSpace(versionManifest) == "" {
 		versionManifest = defaultMojangVersionManifest
@@ -363,7 +363,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		return vanillaInstallResult{}, cacheErr
 	}
 	if strings.TrimSpace(opts.ClientDir) == "" {
-		return vanillaInstallResult{}, errors.New("Vanilla install требует clientDir")
+		return vanillaInstallResult{}, errors.New("Для установки клиента Vanilla требуется каталог clientDir")
 	}
 	if opts.VersionManifest == "" {
 		opts.VersionManifest = defaultMojangVersionManifest
@@ -445,7 +445,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			return fmt.Errorf("%s: отсутствует URL", task.Path)
 		}
 		if opts.StrictUpstream && task.SHA1 == "" {
-			return fmt.Errorf("%s: upstream metadata не содержит SHA-1; отключение strict возможно только явно", task.Path)
+			return fmt.Errorf("%s: Метаданные поставщика не содержат SHA-1; отключить строгую проверку можно только явно", task.Path)
 		}
 		if prev, exists := tasks[task.Path]; exists {
 			if prev.URL != task.URL || prev.Kind != task.Kind || (!strings.EqualFold(prev.SHA1, task.SHA1) && prev.SHA1 != "" && task.SHA1 != "") || (prev.Size > 0 && task.Size > 0 && prev.Size != task.Size) || !equalStringSets0277(prev.NativeExclude, task.NativeExclude) {
@@ -1266,7 +1266,7 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 		tmp := dst + ".nlpart"
 		if info, err := os.Lstat(tmp); err == nil && (info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular()) {
 			src.Close()
-			return nil, fmt.Errorf("native temp path имеет небезопасный тип: %s", tmp)
+			return nil, fmt.Errorf("Временный путь нативной библиотеки имеет небезопасный тип: %s", tmp)
 		}
 		out, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 		if err != nil {
@@ -1363,7 +1363,7 @@ func fetchJSONBytes(ctx context.Context, client *http.Client, source string, max
 
 func fetchBytesVerified(ctx context.Context, client *http.Client, source, expectedSHA1 string, expectedSize, max int64, requireHash bool) ([]byte, error) {
 	if requireHash && expectedSHA1 == "" {
-		return nil, errors.New("upstream checksum обязателен")
+		return nil, errors.New("Обязательна контрольная сумма исходного поставщика")
 	}
 	if err := validateRemoteURL(source); err != nil {
 		return nil, err

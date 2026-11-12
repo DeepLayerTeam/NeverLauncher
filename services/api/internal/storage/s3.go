@@ -46,7 +46,7 @@ func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 		cfg.Region = "ru-central1"
 	}
 	if cfg.Endpoint == "" || cfg.Bucket == "" || cfg.AccessKey == "" || cfg.SecretKey == "" {
-		return nil, errors.New("для S3-хранилища обязательны endpoint, bucket, access key и secret key")
+		return nil, errors.New("Для хранилища S3 обязательны адрес сервиса, имя корзины, ключ доступа и секретный ключ")
 	}
 	return &S3Storage{cfg: cfg, client: &http.Client{}}, nil
 }
@@ -213,7 +213,7 @@ func (s *S3Storage) newSignedRequestWithHeaders0253(ctx context.Context, method,
 		return nil, err
 	}
 	if strings.TrimSpace(payloadHash) == "" {
-		return nil, errors.New("S3 payload hash обязателен")
+		return nil, errors.New("Обязательна контрольная сумма тела запроса S3")
 	}
 	req, err := http.NewRequestWithContext(ctx, method, objectURL.String(), body)
 	if err != nil {

@@ -134,7 +134,7 @@ pub struct IdentityManager {
 fn uuid_valid(uuid: &str) -> bool { uuid.len() == 32 && uuid.bytes().all(|c| c.is_ascii_hexdigit()) }
 fn scope(backend: &str, session_id: &str) -> Result<(Url, String), String> {
     if session_id.is_empty() || session_id.len() > 256 || !session_id.is_ascii() { return Err("Недопустимый идентификатор сеанса Never".into()); }
-    let url = Url::parse(backend).map_err(|_| "Некорректный Backend URL")?;
+    let url = Url::parse(backend).map_err(|_| "Некорректный URL серверной части")?;
     let is_loopback = match url.host_str() {
         Some("localhost") => true,
         Some(host) => host.parse::<IpAddr>().map(|ip| ip.is_loopback()).unwrap_or(false),
@@ -1164,7 +1164,7 @@ impl IdentityManager {
     pub async fn links_0268(&self, backend:&str, access:&str, session:&str) -> Result<Vec<NeverOfficialLink0268>,String> {
         let (base,_)=self.verified_scope(backend,access,session).await?;
         let response=self.request(&base,access,"/link",Method::GET,None,None,None).await?;
-        serde_json::from_value(response.data.get("links").cloned().ok_or("Некорректный список Never links")?)
+        serde_json::from_value(response.data.get("links").cloned().ok_or("Некорректный список привязок учётных записей Never")?)
             .map_err(|_|"Некорректные записи учётных данных Never".into())
     }
     pub async fn link_0268(&self, backend:&str, access:&str, session:&str, expected_uuid:&str, confirmed:bool) -> Result<NeverOfficialLink0268,String> {

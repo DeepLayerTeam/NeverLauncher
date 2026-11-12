@@ -289,7 +289,7 @@ func (s Server) authPasskeyStepUpComplete117(w http.ResponseWriter, r *http.Requ
 	user, _ := s.Repo.GetUser(claims.Sub)
 	access, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось выпустить access token")
+		writeError(w, http.StatusInternalServerError, "Не удалось выпустить токен доступа")
 		return
 	}
 	s.audit(r, claims.Email, "auth:step-up:passkey", claims.SessionID)

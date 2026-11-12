@@ -175,7 +175,7 @@ func handleExtensionRegistry0203(args []string) error {
 		}
 		return writeOrPrintJSON(out, payload)
 	default:
-		return fmt.Errorf("неизвестная extension registry-подкоманда: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда реестра расширений: %s", args[0])
 	}
 }
 

@@ -95,7 +95,7 @@ public final class LauncherNeoForgeBridge {
             runtime.start();
             runtime.startControlChannel(command -> executeControl(event.getServer(), command));
         } catch (Exception e) {
-            throw new IllegalStateException("Не удалось запустить Launcher NeoForge ServerBridge", e);
+            throw new IllegalStateException("Не удалось запустить мост Launcher NeoForge ServerBridge", e);
         }
     }
 

@@ -133,7 +133,7 @@ def validate_validation_pipeline() -> None:
         "runtime-submit",
         "integrity-check",
         "policy-set",
-        "legacy smoke-test performs integrity validation only",
+        "Проверка старого формата подтверждает только целостность",
     ]:
         if needle not in cli:
             fail(f"В сценарии достоверной проверки CLI отсутствует {needle}")

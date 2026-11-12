@@ -163,7 +163,7 @@ public final class BridgeConfig {
 
     private static String validateBackendUrl(String value) {
         java.net.URI uri;
-        try { uri = java.net.URI.create(value); } catch (Exception e) { throw new IllegalArgumentException("Некорректный адрес Backend ServerBridge: " + value, e); }
+        try { uri = java.net.URI.create(value); } catch (Exception e) { throw new IllegalArgumentException("Некорректный адрес серверной части ServerBridge: " + value, e); }
         String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(java.util.Locale.ROOT);
         if (!(scheme.equals("http") || scheme.equals("https")) || uri.getHost() == null || uri.getRawQuery() != null || uri.getRawFragment() != null)
             throw new IllegalArgumentException("URL серверной части для ServerBridge должен использовать HTTP(S): " + value);

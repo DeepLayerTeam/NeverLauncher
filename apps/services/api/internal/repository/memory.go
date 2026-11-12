@@ -618,7 +618,7 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 			continue
 		}
 		if _, err := r.GetProject(projectID); err != nil {
-			return model.User{}, fmt.Errorf("неизвестный проект %q для project role", projectID)
+			return model.User{}, fmt.Errorf("Неизвестный проект %q для роли проекта", projectID)
 		}
 		if !roleExists(roleID) {
 			return model.User{}, fmt.Errorf("неизвестная проектная роль %q", roleID)

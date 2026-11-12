@@ -179,7 +179,7 @@ func handleRuntimeLoaderPackage(loader string, args []string) error {
 func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterializeOptions, error) {
 	loader = strings.ToLower(strings.TrimSpace(loader))
 	if loader != "fabric" && loader != "quilt" {
-		return loaderMaterializeOptions{}, fmt.Errorf("meta loader %s не поддерживается", loader)
+		return loaderMaterializeOptions{}, fmt.Errorf("Загрузчик %s не поддерживается источником метаданных", loader)
 	}
 	minecraftVersion := strings.TrimSpace(flagValue(args, "--minecraft", "latest-release"))
 	if compatibilityLoaderGA0180Required(version) && minecraftVersion != "latest-release" {
@@ -462,7 +462,7 @@ func resolveMetaLoaderVersion(ctx context.Context, client *http.Client, loader, 
 func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Client, loader, metaBase, minecraftVersion, requested string) (loaderMetaEntry, string, string, error) {
 	loader = strings.ToLower(strings.TrimSpace(loader))
 	if loader != "fabric" && loader != "quilt" {
-		return loaderMetaEntry{}, "", "", fmt.Errorf("meta loader %s не поддерживается", loader)
+		return loaderMetaEntry{}, "", "", fmt.Errorf("Загрузчик %s не поддерживается источником метаданных", loader)
 	}
 	url := fmt.Sprintf("%s/versions/loader/%s", strings.TrimRight(metaBase, "/"), url.PathEscape(minecraftVersion))
 	data, err := fetchJSONBytes(ctx, client, url, 16<<20)

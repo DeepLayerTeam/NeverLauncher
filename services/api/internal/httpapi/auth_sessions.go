@@ -89,7 +89,7 @@ type authSessionStore struct {
 
 var (
 	errRefreshTokenInvalid       = errors.New("Токен обновления недействителен")
-	errRefreshTokenReuseDetected = errors.New("обнаружено повторное использование refresh token")
+	errRefreshTokenReuseDetected = errors.New("Обнаружено повторное использование токена обновления")
 )
 
 func newAuthSessionStore111() *authSessionStore {

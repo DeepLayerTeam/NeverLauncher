@@ -217,7 +217,7 @@ func loadEd25519PrivateKey(path string) (ed25519.PrivateKey, error) {
 		}
 		ed, ok := key.(ed25519.PrivateKey)
 		if !ok {
-			return nil, errors.New("PEM private key не Ed25519")
+			return nil, errors.New("Закрытый ключ PEM не является ключом Ed25519")
 		}
 		return ed, nil
 	}
@@ -252,7 +252,7 @@ func loadEd25519PublicKey(path string) (ed25519.PublicKey, error) {
 		}
 		ed, ok := key.(ed25519.PublicKey)
 		if !ok {
-			return nil, errors.New("PEM public key не Ed25519")
+			return nil, errors.New("Открытый ключ PEM не является ключом Ed25519")
 		}
 		return ed, nil
 	}
@@ -261,7 +261,7 @@ func loadEd25519PublicKey(path string) (ed25519.PublicKey, error) {
 		return nil, err
 	}
 	if len(decoded) != ed25519.PublicKeySize {
-		return nil, fmt.Errorf("Ed25519 public key должен иметь 32 bytes, получено %d", len(decoded))
+		return nil, fmt.Errorf("Открытый ключ Ed25519 должен содержать 32 байта, получено %d", len(decoded))
 	}
 	return ed25519.PublicKey(decoded), nil
 }

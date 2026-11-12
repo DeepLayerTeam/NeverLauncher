@@ -265,7 +265,7 @@ func buildWindowsProtectionReleaseDocument01812(dir, ver, expectedCommit string)
 		return windowsProtectionReleaseCertificate01812{}, err
 	}
 	if err := verifyWindowsSigningEvidence0152(dir, ver, true); err != nil {
-		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Проверка производственной подписи Windows Authenticode: %w", err)
+		return windowsProtectionReleaseCertificate01812{}, fmt.Errorf("Проверка подписи промышленного выпуска Windows Authenticode: %w", err)
 	}
 	adversarial, adversarialHash, err := readWindowsAdversarialCertificate01812(dir, ver, commit)
 	if err != nil {

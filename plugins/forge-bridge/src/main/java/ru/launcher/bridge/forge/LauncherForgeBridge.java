@@ -93,7 +93,7 @@ public final class LauncherForgeBridge {
             runtime.start();
             runtime.startControlChannel(command -> executeControl(event.getServer(), command));
         } catch (Exception e) {
-            throw new IllegalStateException("Не удалось запустить Launcher Forge ServerBridge", e);
+            throw new IllegalStateException("Не удалось запустить мост Launcher Forge ServerBridge", e);
         }
     }
 

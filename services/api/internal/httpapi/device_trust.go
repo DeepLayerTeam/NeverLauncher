@@ -325,7 +325,7 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 	device, err = s.Repo.SaveTrustedDevice(r.Context(), device)
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
-			writeError(w, http.StatusConflict, "device key уже зарегистрирован")
+			writeError(w, http.StatusConflict, "Ключ устройства уже зарегистрирован")
 			return
 		}
 		writeError(w, http.StatusInternalServerError, "не удалось зарегистрировать устройство")
@@ -423,7 +423,7 @@ func (s Server) authDeviceVerifyComplete0121(w http.ResponseWriter, r *http.Requ
 	}
 	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
 	if err != nil || pub.fingerprint != device.KeyFingerprint {
-		writeError(w, http.StatusInternalServerError, "device public key или fingerprint повреждён")
+		writeError(w, http.StatusInternalServerError, "Открытый ключ устройства или его отпечаток повреждён")
 		return
 	}
 	now := time.Now().UTC()

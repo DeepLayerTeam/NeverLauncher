@@ -179,7 +179,7 @@ func validateDeviceTrustEvidence(matrixRaw, targetsRaw []byte, ver, expectedComm
 			return releaseDeviceTrustCertification{}, fmt.Errorf("Тип цели Device Trust %s не поддерживается: %s", id, target.Kind)
 		}
 		if strings.TrimSpace(target.OS) == "" || strings.TrimSpace(target.Arch) == "" || strings.TrimSpace(target.Runner) == "" {
-			return releaseDeviceTrustCertification{}, fmt.Errorf("Неполные данные: цель Device Trust: %s", id)
+			return releaseDeviceTrustCertification{}, fmt.Errorf("Неполные данные цели доверия к устройствам: %s", id)
 		}
 		checks := map[string]bool{}
 		for _, check := range target.RequiredChecks {

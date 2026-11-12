@@ -206,7 +206,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 			_ = s.flushPersistenceState950("auth-refresh-reuse")
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-reuse-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: "unknown", Action: "auth:refresh:reuse-detected", Target: "refresh-token-family", IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		}
-		writeError(w, http.StatusUnauthorized, "refresh token недействителен или отозван")
+		writeError(w, http.StatusUnauthorized, "Токен обновления недействителен или отозван")
 		return
 	}
 	if !s.enforceProtection0298(w, r, protection.BeforeAuth, preview.UserID, preview.ID, preview.TrustedDeviceID, preview.RoleID) {
@@ -221,7 +221,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := s.verifyRefreshDeviceProof0126(r, req.RefreshToken, strings.TrimSpace(req.DeviceID), strings.TrimSpace(req.DeviceSignature), preview); err != nil {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-device-proof-failed-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: preview.Email, Action: "auth:refresh:device-proof-failed", Target: preview.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-			writeJSON(w, http.StatusPreconditionRequired, map[string]any{"error": map[string]any{"code": http.StatusPreconditionRequired, "message": "refresh привязанной сессии требует подпись текущим device key", "deviceProofRequired": true, "deviceId": preview.TrustedDeviceID, "bindingEpoch": preview.BindingEpoch}})
+			writeJSON(w, http.StatusPreconditionRequired, map[string]any{"error": map[string]any{"code": http.StatusPreconditionRequired, "message": "Обновление привязанного сеанса требует подписи текущим ключом устройства", "deviceProofRequired": true, "deviceId": preview.TrustedDeviceID, "bindingEpoch": preview.BindingEpoch}})
 			return
 		}
 	}
@@ -234,7 +234,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, errRefreshTokenReuseDetected) {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-reuse-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: "unknown", Action: "auth:refresh:reuse-detected", Target: "refresh-token-family", IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		}
-		writeError(w, http.StatusUnauthorized, "refresh token недействителен или отозван")
+		writeError(w, http.StatusUnauthorized, "Токен обновления недействителен или отозван")
 		return
 	}
 	session, err = s.reconcileSessionDeviceRisk0126(r, session)
@@ -274,7 +274,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
 		s.State.AuthSessions.revoke(session.ID, "access-token-refresh-signing-failed")
-		writeError(w, http.StatusInternalServerError, "не удалось выпустить access token")
+		writeError(w, http.StatusInternalServerError, "Не удалось выпустить токен доступа")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:refresh", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})

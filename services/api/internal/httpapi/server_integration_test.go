@@ -318,7 +318,7 @@ func TestCanonicalAuthSessionEnforcement(t *testing.T) {
 		t.Fatalf("v1 refresh не вернул новые токены: err=%v body=%s", err, res.Body.String())
 	}
 	if refreshPayload.Data.Tokens.RefreshToken == loginPayload.Data.Tokens.RefreshToken {
-		t.Fatalf("refresh token не был ротирован")
+		t.Fatalf("Токен обновления не был заменён")
 	}
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)

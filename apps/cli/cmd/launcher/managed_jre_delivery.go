@@ -407,7 +407,7 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 		return err
 	}
 	if manifest.SchemaVersion != "1.0" || manifest.Product != "Launcher" || manifest.ProductVersion != ver || manifest.Distribution != "temurin" || manifest.Vendor != "Eclipse Adoptium" || manifest.MajorVersion != managedJREMajor0155 || strings.TrimSpace(manifest.GeneratedAt) == "" {
-		return errors.New("Несоответствие: Managed JRE манифест identity/schema")
+		return errors.New("Не совпадает идентификатор или схема манифеста управляемой JRE")
 	}
 	expected := expectedManagedJRETargets0155(ver)
 	if len(manifest.Targets) != len(expected) {

@@ -201,7 +201,7 @@ func (r *Resolver) Resolve(ctx context.Context, scope Scope, roots []model.Exten
 		return model.ExtensionUpdatePlan{}, err
 	}
 	if !allowedChannel(normalizeChannel(r.Env.DefaultChannel)) {
-		return model.ExtensionUpdatePlan{}, errors.New("default channel: требуется «stable, beta или dev»")
+		return model.ExtensionUpdatePlan{}, errors.New("Канал по умолчанию должен иметь значение stable, beta или dev")
 	}
 	installs, err := r.Repo.ListExtensionInstallStates(ctx, scope.Scope, scope.ScopeID)
 	if err != nil {

@@ -76,7 +76,7 @@ func factoryReadJoinEvidence0280(path string) (factoryJoinEvidence0280, string, 
 func factorySignJoin0280(evidence, privatePath, ver, commit, out string) (factoryJoinAttestation0280, error) {
 	var a factoryJoinAttestation0280
 	if ver != "0.28.0" || !factoryCommit0280.MatchString(commit) || out == "" || out == "-" {
-		return a, errors.New("GA join signing: требуется выпуск 0.28.0, точный 40-символьный идентификатор коммита и выходной файл")
+		return a, errors.New("Подписание подтверждения GA: требуется выпуск 0.28.0, точный 40-символьный идентификатор коммита и выходной файл")
 	}
 	_, sha, err := factoryReadJoinEvidence0280(evidence)
 	if err != nil {

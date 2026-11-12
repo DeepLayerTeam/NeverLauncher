@@ -2266,7 +2266,7 @@ func javaMajorVersion(javaPath string) (int, error) {
 	text := string(output)
 	start := strings.Index(text, `"`)
 	if start < 0 {
-		return 0, fmt.Errorf("java -version не содержит version string: %s", strings.TrimSpace(text))
+		return 0, fmt.Errorf("вывод java -version не содержит строку версии: %s", strings.TrimSpace(text))
 	}
 	end := strings.Index(text[start+1:], `"`)
 	if end < 0 {

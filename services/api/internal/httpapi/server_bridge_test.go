@@ -34,7 +34,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &loginPayload); err != nil || loginPayload.Data.Tokens.AccessToken == "" {
-		t.Fatalf("access token отсутствует: err=%v body=%s", err, res.Body.String())
+		t.Fatalf("Токен доступа отсутствует: err=%v body=%s", err, res.Body.String())
 	}
 	loginPayload.Data.Tokens.AccessToken = bindAccessToken0127(t, handler, loginPayload.Data.Tokens.AccessToken, "ServerBridge test device").Access
 

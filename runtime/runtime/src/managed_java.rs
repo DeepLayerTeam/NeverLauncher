@@ -423,12 +423,12 @@ fn distribution_platform() -> Result<(String, String), String> {
         "windows" => "windows",
         "linux" => "linux",
         "macos" => "macos",
-        other => return Err(format!("Managed JRE Distribution не поддерживает OS {other}")),
+        other => return Err(format!("Дистрибутив управляемой JRE не поддерживает операционную систему {other}")),
     };
     let arch = match std::env::consts::ARCH {
         "x86_64" => "x64",
         "aarch64" => "arm64",
-        other => return Err(format!("Managed JRE Distribution не поддерживает architecture {other}")),
+        other => return Err(format!("Дистрибутив управляемой JRE не поддерживает архитектуру {other}")),
     };
     Ok((platform.to_string(), arch.to_string()))
 }
@@ -1247,7 +1247,7 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
         archive_sha256: record.archive_sha256,
         archive_size: record.archive_size,
         cached,
-        message: if cached { "Managed Java найдена в проверенном runtime cache" } else { "Managed Java установлена и проверена" }.to_string(),
+        message: if cached { "Управляемая Java найдена в проверенном кеше среды выполнения" } else { "Managed Java установлена и проверена" }.to_string(),
     }))
 }
 
@@ -1561,14 +1561,14 @@ fn adoptium_platform() -> Result<(String, String), String> {
         "windows" => "windows",
         "linux" => "linux",
         "macos" => "osx",
-        other => return Err(format!("Managed Java не поддерживает OS {other}")),
+        other => return Err(format!("Управляемая Java не поддерживает операционную систему {other}")),
     };
     let arch = match std::env::consts::ARCH {
         "x86_64" => "x86_64",
         "aarch64" => "aarch64",
         "x86" => "x86",
         "arm" => "arm",
-        other => return Err(format!("Managed Java не поддерживает arch {other}")),
+        other => return Err(format!("Управляемая Java не поддерживает архитектуру {other}")),
     };
     Ok((os.to_string(), arch.to_string()))
 }
@@ -1593,7 +1593,7 @@ fn normalize_distribution(value: &str) -> Result<String, String> {
     match value.trim().to_ascii_lowercase().as_str() {
         "" | "any" | "managed" | "adoptium" | "temurin" => Ok("temurin".to_string()),
         "system" => Err("Значение distribution=system не обозначает управляемую среду выполнения Java".to_string()),
-        other => Err(format!("Managed Java distribution {other} не поддерживается в {}", env!("CARGO_PKG_VERSION"))),
+        other => Err(format!("Дистрибутив управляемой Java {other} не поддерживается в {}", env!("CARGO_PKG_VERSION"))),
     }
 }
 

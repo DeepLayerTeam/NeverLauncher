@@ -127,7 +127,7 @@ public final class LauncherApiClient {
                 this.controlChannelId = "";
             }
         } catch (GeneralSecurityException | IOException e) {
-            throw new IllegalStateException("Не удалось создать идентификатор Runtime ServerBridge или журнал событий", e);
+            throw new IllegalStateException("Не удалось создать идентификатор среды выполнения ServerBridge или журнал событий", e);
         }
     }
 
@@ -316,7 +316,7 @@ public final class LauncherApiClient {
         boolean identityFeature = protocol.features().contains(BridgeDefaults.FEATURE_RUNTIME_IDENTITY);
         if (!discovery && !identityFeature) return "";
         if (!(discovery && identityFeature)) {
-            throw new IllegalStateException("Для обнаружения Runtime ServerBridge требуется пара функций идентификации среды выполнения");
+            throw new IllegalStateException("Для обнаружения экземпляра ServerBridge требуются обе функции идентификации среды выполнения");
         }
         return ",\"runtime\":" + runtimeIdentity.toJson();
     }
@@ -690,7 +690,7 @@ public final class LauncherApiClient {
                 last = e;
             }
         }
-        throw last == null ? new IOException("Нет доступного адреса Backend ServerBridge") : last;
+        throw last == null ? new IOException("Нет доступного адреса серверной части ServerBridge") : last;
     }
 
     private HttpResponse<String> sendUnsignedGetWithFailover(String relative) throws IOException, InterruptedException {
@@ -712,7 +712,7 @@ public final class LauncherApiClient {
                 last = e;
             }
         }
-        throw last == null ? new IOException("Нет доступного адреса Backend ServerBridge") : last;
+        throw last == null ? new IOException("Нет доступного адреса серверной части ServerBridge") : last;
     }
 
     private static boolean isRetryableBackendStatus(int status) {
@@ -720,7 +720,7 @@ public final class LauncherApiClient {
     }
 
     private HttpRequest signedRequest(String method, URI uri, String body) throws GeneralSecurityException {
-        if (runtimeIdentity == null) throw new GeneralSecurityException("Идентификатор Runtime ServerBridge недоступен");
+        if (runtimeIdentity == null) throw new GeneralSecurityException("Идентификатор среды выполнения ServerBridge недоступен");
         String timestamp = Long.toString(Instant.now().getEpochSecond());
         String nonce = identity.newNonce();
         String target = uri.getRawPath();

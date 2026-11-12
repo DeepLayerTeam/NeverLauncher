@@ -650,7 +650,7 @@ func installStorageCheck(args []string) error {
 	}
 	probe, err := os.CreateTemp(rootDir, ".launcher-storage-check-*")
 	if err != nil {
-		return fmt.Errorf("storage root не writable: %w", err)
+		return fmt.Errorf("Корневой каталог хранилища недоступен для записи: %w", err)
 	}
 	name := probe.Name()
 	if _, err := probe.WriteString("launcher-storage-check"); err != nil {

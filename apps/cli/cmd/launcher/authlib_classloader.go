@@ -166,7 +166,7 @@ func compatValidateLock0279(lock *compatLock0279) error {
 	for _, op := range lock.AddOpens {
 		// Разрешайте только module/package=ALL-UNNAMED; произвольные параметры JVM запрещены.
 		if !validAddOpens0279(op) || opened[op] {
-			return fmt.Errorf("Не поддерживается: или повторяющийся параметр --add-opens %q", op)
+			return fmt.Errorf("Неподдерживаемый или повторяющийся параметр --add-opens %q", op)
 		}
 		opened[op] = true
 	}

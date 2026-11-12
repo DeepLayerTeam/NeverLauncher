@@ -893,7 +893,7 @@ for required in [
 ]:
     if required not in backup_go:
         fail(
-            f"резервное копирование и восстановление не содержат атомарной операции, безопасную при обслуживании: {required}"
+            f"резервное копирование и восстановление не содержат атомарной операции, безопасной в режиме обслуживания: {required}"
         )
 
 
@@ -981,7 +981,7 @@ for required in [
     "hashFile",
 ]:
     if required not in desktop_package:
-        fail(f"проверка пакета Desktop не проверяет реальный артефакт: {required}")
+        fail(f"проверка пакета Desktop не проверяет фактический артефакт: {required}")
 if "checksums are populated by the native release build" in read(
     "cli/cmd/launcher/admin_desktop_commands.go"
 ):
@@ -1054,7 +1054,7 @@ for required in [
     "--max-runtime-seconds",
 ]:
     if required not in e2e_script:
-        fail(f"реальная сквозная проверка Minecraft отсутствует обязательную операцию: {required}")
+        fail(f"В реальной сквозной проверке Minecraft отсутствует обязательная операция: {required}")
 for forbidden in ["LaunchFixture", "LAUNCHER_E2E_FIXTURE_OK", "launch-fixture"]:
     if forbidden in e2e_script:
         fail(
@@ -1189,7 +1189,7 @@ for required in [
     '--java "$JAVA_BIN"',
 ]:
     if required not in e2e_script:
-        fail(f"реальная сквозная проверка Minecraft не закрепляет setup-java runtime: {required}")
+        fail(f"реальная сквозная проверка Minecraft не закрепляет версию среды Java в setup-java: {required}")
 for required in [
     "webauthn-test-authenticator.py",
     "/api/v1/auth/passkeys/register/begin",
@@ -1198,7 +1198,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(
-            f"реальная сквозная проверка Minecraft не выполняет реальный свежее усиленное подтверждение WebAuthn перед публикацией: {required}"
+            f"Реальная сквозная проверка Minecraft не выполняет повторное усиленное подтверждение WebAuthn перед публикацией: {required}"
         )
 for required in [
     '"--transaction-token=$(jq -er',

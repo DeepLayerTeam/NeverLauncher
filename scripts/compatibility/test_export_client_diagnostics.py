@@ -54,7 +54,7 @@ class ClientDiagnosticsTest(unittest.TestCase):
             output = runtime / "client-diagnostics.txt"
             MODULE.export(runtime, output)
             data = output.read_text(encoding="utf-8")
-            self.assertIn("native crash report", data)
+            self.assertIn("отчёт о сбое нативного кода", data)
             self.assertIn("[REDACTED]", data)
             self.assertNotIn("DO_NOT_DISCLOSE", data)
             self.assertNotIn(
@@ -66,7 +66,7 @@ class ClientDiagnosticsTest(unittest.TestCase):
             runtime = Path(tmp) / "runtime"
             out = runtime / "client-diagnostics.txt"
             MODULE.export(runtime, out)
-            self.assertIn("No certification log", out.read_text(encoding="utf-8"))
+            self.assertIn("Журнал сертификации ещё не создан", out.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

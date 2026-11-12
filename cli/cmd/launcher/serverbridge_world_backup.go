@@ -339,7 +339,7 @@ func worldBackupQuiesce02810(root, policy string) error {
 				return errors.New("Блокировка супервизора Host существует без Runtime: резервное копирование небезопасно")
 			}
 		} else if !errors.Is(lockErr, os.ErrNotExist) {
-			return fmt.Errorf("Не удалось проверить «блокировка Host Supervisor:» %w", lockErr)
+			return fmt.Errorf("Не удалось проверить блокировку диспетчера хоста: %w", lockErr)
 		}
 		return nil
 	}
