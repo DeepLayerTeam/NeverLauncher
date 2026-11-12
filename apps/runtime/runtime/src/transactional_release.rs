@@ -910,7 +910,7 @@ mod tests {
     use serde_json::json;
     fn fixture(root: &Path, v: &str, files: &[(&str, &[u8])]) -> (Manifest, String) {
         let arr: Vec<_> = files.iter().map(|(path, bytes)| json!({"path":path,"size":bytes.len(),"sha256":hex::encode(Sha256::digest(bytes)),
-            "url":"http://127.0.0.1:9/never","required":true,"ownership":"managed"})).collect();
+            "url":"http://127.0.0.1:9/launcher","required":true,"ownership":"managed"})).collect();
         let spec = json!({"projectId":"test","id":"default","name":"Default","description":"","loader":"vanilla","preset":"","isDefault":true});
         let profile_digest = hex::encode(Sha256::digest(b"test\0default\0Default\0\0vanilla\0\0true"));
         let mut m: Manifest = serde_json::from_value(json!({"schemaVersion":"2.0","projectId":"test","profileId":"default","channel":"stable",

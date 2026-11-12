@@ -1,4 +1,4 @@
-/** Публичный клиент NeverLauncher REST v1, отдельный от SDK расширений iframe. */
+/** Публичный клиент Launcher REST v1, отдельный от SDK расширений iframe. */
 import { OPERATIONS, type OperationId } from './operations.generated.js';
 export { OPERATIONS, type OperationId } from './operations.generated.js';
 export const CONTRACT_VERSION = '1.0.0';
@@ -29,7 +29,7 @@ export type RequestOptions = {
   rawBody?: BodyInit; contentType?: string;
   responseType?: ResponseType; maxResponseBytes?: number;
 };
-export class NeverLauncherAPI {
+export class LauncherAPI {
   readonly baseURL: string;
   constructor(baseURL: string, private readonly token: string = '', private readonly transport: typeof fetch = fetch) {
     const u = new URL(baseURL);

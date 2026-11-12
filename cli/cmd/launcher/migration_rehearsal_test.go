@@ -29,7 +29,7 @@ func TestRehearsalExecAndSubmission03310(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	marker, _ := json.Marshal(map[string]any{"format": "never/migration-stage/v1", "runId": run, "stageId": stage, "isolated": true})
+	marker, _ := json.Marshal(map[string]any{"format": "launcher/migration-stage/v1", "runId": run, "stageId": stage, "isolated": true})
 	must(".migration-stage.json", marker, 0600)
 	player := rehearsalPlayer03310{SourceID: "fileauth:42", UUID: "12345678-1234-1234-1234-123456789abc", InventorySHA256: h, PermissionsSHA256: h, Economy: "100.00", SkinSHA256: h, Admin: true}
 	snapshot := rehearsalSnapshot03310{WorldSHA256: h, Loader: "forge", OptionalPresetSHA256: h, Players: []rehearsalPlayer03310{player}}

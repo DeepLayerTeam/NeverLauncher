@@ -159,7 +159,7 @@ def main() -> int:
             with tempfile.TemporaryDirectory(prefix='nl-corrupt-0527-',dir=args.scratch_parent) as bad_dir:
                 copy = Path(bad_dir) / 'untrusted'
                 shutil.copytree(args.new_bundle,copy,symlinks=True)
-                binary = copy / ('neverprestarter.exe' if os.name == 'nt' else 'neverprestarter')
+                binary = copy / ('prestarter.exe' if os.name == 'nt' else 'prestarter')
                 require(binary.is_file() and not binary.is_symlink(), 'Отсутствует новый нативный Prestarter')
                 with binary.open('ab') as out:
                     out.write(b'corrupt-package-0527')

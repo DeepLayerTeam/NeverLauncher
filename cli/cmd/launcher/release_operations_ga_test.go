@@ -48,7 +48,7 @@ func TestOperationsGA0460ExactBytesAndIndependentKey(t *testing.T) {
 	for _, stage := range []string{"install-standard", "upgrade-standard", "restore-standard", "failover-network-ha"} {
 		hashes[stage] = hash([]byte(stage))
 	}
-	approval := operationsGAApproval0460{Schema: "neverlauncher.operations-ga.0460.v1", Version: ver,
+	approval := operationsGAApproval0460{Schema: "launcher.operations-ga.0460.v1", Version: ver,
 		SourceCommit: commit, IssuedAt: time.Now().UTC().Format(time.RFC3339Nano), Operator: "operator2",
 		SourceMachine: strings.Repeat("b", 64), RestoreMachine: strings.Repeat("c", 64), StageReceipts: hashes,
 		OpenApiV1Sha256: hash([]byte("api")), Targets: targets,

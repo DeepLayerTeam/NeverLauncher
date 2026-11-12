@@ -38,7 +38,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
         self.persist_pins()
 
     def persist_pins(self):
-        put(self.pins, {'schema': 'neverlauncher.compatibility-server/0.52.4',
+        put(self.pins, {'schema': 'launcher.compatibility-server/0.52.4',
                         'targets': {self.args.target: self.entry}})
 
     def test_exact_server_bundle_pin_is_enforced(self):
@@ -76,12 +76,12 @@ class LiveJoinNegativeTests(unittest.TestCase):
         # вмешательства. Оно не поставляется как успешный результат совместимости.
         runtime = self.root / 'runtime'
         runtime.mkdir()
-        ready = {'schema': 'neverlauncher.compatibility-server-ready/0.52.4',
+        ready = {'schema': 'launcher.compatibility-server-ready/0.52.4',
                  'targetId': self.args.target, 'minecraftVersion': '1.20.1',
                  'loader': 'fabric', 'loaderVersion': '0.16.10',
                  'port': 3333, 'serverPid': 1457,
                  'serverArtifactSha256': self.sha}
-        witness = {'schema': 'neverlauncher.compatibility-join-witness/0.52.4',
+        witness = {'schema': 'launcher.compatibility-join-witness/0.52.4',
                    'targetId': self.args.target, 'minecraftVersion': '1.20.1',
                    'loader': 'fabric', 'loaderVersion': '0.16.10',
                    'port': 3333, 'serverPid': 1457,
@@ -94,7 +94,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
                 'success': True, 'classpathEntries': 8}
         put(runtime / 'live-server-ready.json', ready)
         put(runtime / 'live-server-witness.json', witness)
-        stopped = {'schema': 'neverlauncher.compatibility-server-stopped/0.52.4',
+        stopped = {'schema': 'launcher.compatibility-server-stopped/0.52.4',
                    'stoppedAfterLiveWitness': True, 'targetId': self.args.target,
                    'minecraftVersion': '1.20.1', 'loader': 'fabric',
                    'loaderVersion': '0.16.10', 'serverPid': 1457,

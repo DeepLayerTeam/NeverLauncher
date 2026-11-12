@@ -28,7 +28,7 @@ import dr_03512 as dr
 import multi_host_0512 as multi
 import nn1_compat_0516 as nn
 
-SCHEMA = "neverlauncher.cross-host-recovery/0.51.9"
+SCHEMA = "launcher.cross-host-recovery/0.51.9"
 STATE = "recovery-state-0519.json"
 RECORD = "recovery-result-0519.json"
 MAX_TRANSFER = 1 << 42
@@ -172,7 +172,7 @@ def restore_volume_local(args):
     tarpath = stdin_archive(args.sha256)
     try:
         expected = dr.tar_digests(tarpath)
-        cb.execute(["docker", "volume", "create", "--label", "neverlauncher.recovery=0.51.9", vol], timeout=40)
+        cb.execute(["docker", "volume", "create", "--label", "launcher.recovery=0.51.9", vol], timeout=40)
         with tarpath.open("rb") as data:
             cp = subprocess.run(["docker", "run", "--rm", "--network", "none", "--read-only", "-i",
                                  "--mount", f"type=volume,src={vol},dst=/target",
@@ -372,7 +372,7 @@ def audit_recovery(ledger_file, pg_env, incident):
     отсутствие потерь аудита доказательством сохранности неаудированных данных S3/миров.
     """
     ledger = cb.read_private_json(Path(ledger_file))
-    require(ledger.get("schema") == "neverlauncher.dr-ack-ledger/v1", "Неподдерживаемый журнал подтверждений")
+    require(ledger.get("schema") == "launcher.dr-ack-ledger/v1", "Неподдерживаемый журнал подтверждений")
     rows = ledger.get("entries")
     require(isinstance(rows, list) and rows and len(rows) <= 100000, "Журнал аудита пуст или превышает допустимый размер")
     last = None

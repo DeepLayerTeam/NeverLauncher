@@ -140,7 +140,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	if _, e = r.db.ExecContext(ctx, `UPDATE channel_heads SET revision=9 WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {
 		t.Fatal("параллельный издатель обошёл триггер базы данных для подготовленного состояния")
 	}
-	proof := &co.SourceFenceReceipt0448{Format: "never/gravit-source-stop/v1", RunID: runID, ProfileID: profile, Channel: channel, StageID: rep.StageID, Unit: "gravit.service", StoppedAt: time.Now().UTC().Add(-time.Minute), CheckedAt: time.Now().UTC(), UnitState: "inactive", UnitFileState: "masked-runtime", SnapshotSHA256: snapHash, SnapshotFileSHA256: hash}
+	proof := &co.SourceFenceReceipt0448{Format: "launcher/gravit-source-stop/v1", RunID: runID, ProfileID: profile, Channel: channel, StageID: rep.StageID, Unit: "gravit.service", StoppedAt: time.Now().UTC().Add(-time.Minute), CheckedAt: time.Now().UTC(), UnitState: "inactive", UnitFileState: "masked-runtime", SnapshotSHA256: snapHash, SnapshotFileSHA256: hash}
 	proofBytes, _ := json.Marshal(proof)
 	proofHash := sha256.Sum256(proofBytes)
 	activation := co.Activate{ProfileID: profile, Channel: channel, ExpectedRevision: route.Revision, SourceFenceReference: "ops/fence-ticket-42", SourceFenceEvidenceSHA256: hex.EncodeToString(proofHash[:]), CurrentSourceSnapshotSHA256: hash, SourceFenceReceipt: proof}
@@ -192,7 +192,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 		t.Fatal("Принят коммит без проверки блокировки")
 	}
 	commit.SourceWriterFenced = true
-	commit.NeverWriterFenced = true
+	commit.LauncherWriterFenced = true
 	wrongEvidence := commit
 	wrongEvidence.CurrentEvidenceSHA256 = strings.Repeat("f", 64)
 	if _, e = r.CommitMigrationRollback03312(ctx, runID, wrongEvidence, pub); !errors.Is(e, mw.ErrConflict) {

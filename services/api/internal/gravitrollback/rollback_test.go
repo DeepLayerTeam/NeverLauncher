@@ -60,7 +60,7 @@ func TestCommitRequiresBothFences(t *testing.T) {
 		t.Fatal("Принят коммит без проверки блокировки")
 	}
 	c.SourceWriterFenced = true
-	c.NeverWriterFenced = true
+	c.LauncherWriterFenced = true
 	if e := ValidateCommit(c); e != nil {
 		t.Fatal(e)
 	}

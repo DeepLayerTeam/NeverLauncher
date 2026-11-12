@@ -13,7 +13,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-// Текущий профиль определяется по аутентифицированной учётной записи Never, никогда
+// Текущий профиль определяется по аутентифицированной учётной записи Launcher, никогда
 // по предоставленному UUID. Официальные идентичности здесь намеренно недоступны для
 // записи.
 func (s Server) ownedTextureProfile0251(r *http.Request) (model.MinecraftProfile, model.User, error) {

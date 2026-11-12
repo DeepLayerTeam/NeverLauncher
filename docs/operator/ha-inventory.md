@@ -1,4 +1,4 @@
-# NeverLauncher 0.51.1 — инвентаризация HA и базовая оценка доменов отказа
+# Launcher 0.51.1 — инвентаризация HA и базовая оценка доменов отказа
 
 ## Реальный инструмент и назначение
 
@@ -11,7 +11,7 @@
 ## На одном Docker-хосте
 
 ```bash
-cd /opt/launcher  # дерево NeverLauncher 0.51.1, где находится scripts/operations/
+cd /opt/launcher  # дерево Launcher 0.51.1, где находится scripts/operations/
 python3 scripts/operations/ha_inventory_0511.py node \
   --project launcher --samples 5 \
   --source-root /opt/launcher \

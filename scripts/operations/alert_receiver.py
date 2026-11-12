@@ -19,9 +19,9 @@ import re
 import stat
 import tempfile
 
-SCHEMA = 'neverlauncher.physical-alert-delivery/0.52.10'
+SCHEMA = 'launcher.physical-alert-delivery/0.52.10'
 FINGERPRINT = re.compile(r'[a-f0-9]{16,64}\Z')
-ALERT = re.compile(r'NeverLauncher[A-Za-z0-9]{2,80}\Z')
+ALERT = re.compile(r'Launcher[A-Za-z0-9]{2,80}\Z')
 
 class Error(ValueError):
     pass
@@ -128,7 +128,7 @@ def latest(folder):
 
 def make_handler(folder, alert, webhook_token, reader_token):
     class Handler(BaseHTTPRequestHandler):
-        server_version = 'NeverLauncher-Alert-Receiver/0.52.10'
+        server_version = 'Launcher-Alert-Receiver/0.52.10'
         sys_version = ''
         def log_message(self, format, *args):
             # Не журналируйте заголовки Authorization, исходные адреса и метки событий.

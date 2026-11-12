@@ -447,7 +447,7 @@ def main(argv=None):
     p.add_argument('--isolated-destructive-acceptance', action='store_true',
                    help="Подтвердить запуск, остановку и перезапуск настоящего выделенного Minecraft-хоста и проекта Docker")
     args = p.parse_args(argv)
-    report = {'schemaVersion': 'neverlauncher.owner-admin-real-e2e.0.52.3',
+    report = {'schemaVersion': 'launcher.owner-admin-real-e2e.0.52.3',
               'productVersion': VERSION, 'status': 'blocked', 'startedAt': datetime.now(timezone.utc).isoformat(),
               'checks': [], 'gaCertified': False, 'nativeMinecraftMatrixCertified': False}
     code = 1

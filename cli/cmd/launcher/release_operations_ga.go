@@ -15,7 +15,7 @@ import (
 
 const operationsGAFile0460 = "OPERATIONS_GA_0460.json"
 const operationsGASig0460 = "OPERATIONS_GA_0460.sig"
-const operationsGADomain0460 = "neverlauncher.operations-ga.0460.v1\x00"
+const operationsGADomain0460 = "launcher.operations-ga.0460.v1\x00"
 
 func operationsGARequired0460(version string) bool {
 	v, ok := parseVersionTriple0158(version)
@@ -107,7 +107,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	if err := json.Unmarshal(manifestRaw, &m); err != nil {
 		return err
 	}
-	if a.Schema != "neverlauncher.operations-ga.0460.v1" || a.Version != version || m.Version != version || a.SourceCommit != m.SourceCommit || !regexp.MustCompile(`^[a-f0-9]{40}([a-f0-9]{24})?$`).MatchString(a.SourceCommit) {
+	if a.Schema != "launcher.operations-ga.0460.v1" || a.Version != version || m.Version != version || a.SourceCommit != m.SourceCommit || !regexp.MustCompile(`^[a-f0-9]{40}([a-f0-9]{24})?$`).MatchString(a.SourceCommit) {
 		return errors.New("Данные проверки эксплуатации GA не соответствуют точному коммиту исходников и версии")
 	}
 	issued, err := time.Parse(time.RFC3339Nano, a.IssuedAt)

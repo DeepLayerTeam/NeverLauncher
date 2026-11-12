@@ -1315,7 +1315,7 @@ function App() {
 
   const [managedDevices, setManagedDevices] = useState<ManagedDevice[]>([]);
   const [recoveryLogin0435, setRecoveryLogin0435] = useState(false);
-  // Смена идентичности Never аннулирует ранее привязанные учётные записи Microsoft
+  // Смена идентичности Launcher аннулирует ранее привязанные учётные записи Microsoft
   // в работающем процессе Desktop: билеты сессии привязаны к SID.
   useEffect(() => {
     let cancelled = false;
@@ -2554,7 +2554,7 @@ function App() {
   async function revokeManagedDevice(device: ManagedDevice) {
     if (!authSession?.accessToken || device.status !== "active") return;
     const warning = device.current
-      ? "Отозвать текущее устройство? Сеансы Never и Minecraft, токен обновления и ключ устройства станут недействительными. Для повторной регистрации будет создан новый ключ."
+      ? "Отозвать текущее устройство? Сеансы Launcher и Minecraft, токен обновления и ключ устройства станут недействительными. Для повторной регистрации будет создан новый ключ."
       : `Отозвать устройство «${device.name}»? Все связанные с ним сессии будут немедленно завершены, а старый ключ нельзя будет зарегистрировать повторно.`;
     if (!window.confirm(warning)) return;
     const response = await postDeviceJson(
@@ -3790,7 +3790,7 @@ function App() {
 
   async function createGuardLaunchTicket(): Promise<string> {
     if (!authSession?.accessToken)
-      throw new Error("Для аттестации защиты требуется активный сеанс Never.");
+      throw new Error("Для аттестации защиты требуется активный сеанс Launcher.");
     const userId =
       authSession.userId || accessTokenSubject(authSession.accessToken);
     const deviceId = accessTokenDeviceId(authSession.accessToken);
@@ -3901,7 +3901,7 @@ function App() {
     minecraftAccessToken?: string,
   ): Promise<{ ticket: string; attestationSha256: string }> {
     if (!authSession?.accessToken)
-      throw new Error("Для аттестации защиты версии 2 требуется активный сеанс Never.");
+      throw new Error("Для аттестации защиты версии 2 требуется активный сеанс Launcher.");
     const userId =
       authSession.userId || accessTokenSubject(authSession.accessToken);
     const deviceId = accessTokenDeviceId(authSession.accessToken);
@@ -4022,7 +4022,7 @@ function App() {
   ): Promise<MinecraftLaunchCredentials> {
     if (!authSession?.accessToken)
       throw new Error(
-        "Для запуска Minecraft требуется активный сеанс Never.",
+        "Для запуска Minecraft требуется активный сеанс Launcher.",
       );
     const response = await fetch(endpoint("/api/v1/minecraft/session"), {
       method: "POST",
@@ -5457,7 +5457,7 @@ function App() {
                         }}
                       >
                         <option value="local">
-                          Yggdrasil проекта (идентификация Never / ServerBridge)
+                          Yggdrasil проекта (идентификация Launcher / ServerBridge)
                         </option>
                         <option value="official" disabled={!officialProfile}>
                           Официальный Minecraft (Microsoft){" "}
@@ -6070,7 +6070,7 @@ function AuthPanel({
         и сессией; строгий профиль требует верифицированного аппаратного
         происхождения и Guard evidence и не выдаётся без независимо проверенного
         Guard evidence. В этой версии revoke необратим для старого ключа:
-        Backend отзывает связанные Never/refresh/Minecraft-сессии, инвалидирует
+        Backend отзывает связанные Launcher/refresh/Minecraft-сессии, инвалидирует
         незавершённые device challenges и ServerBridge joins. Повторное
         подключение отозванной установки требует нового ключа устройства.
       </p>

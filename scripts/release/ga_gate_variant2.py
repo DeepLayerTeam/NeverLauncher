@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Продвижение NeverLauncher 0.50.0 Gravit GA по проверенным финальным байтам выпуска.
+"""Продвижение Launcher 0.50.0 Gravit GA по проверенным финальным байтам выпуска.
 
 Самоаттестация запрещена. Финальным подписантом должен быть *другой* независимый оператор; все
 прежние живые проверки Migration GA и 19 настоящих тестов модулей должны быть повторены до принятия
@@ -25,9 +25,9 @@ sys.path.insert(0, str(ROOT / 'scripts/release'))
 import ga_acceptance_0500 as ga
 from delivery_verify_0462 import verify_bundle
 
-DOMAIN = b'neverlauncher.gravit.ga0500.independent.v1\x00'
+DOMAIN = b'launcher.gravit.ga0500.independent.v1\x00'
 VERSION = '0.50.0'
-APPROVAL_SCHEMA = 'neverlauncher.gravit.ga0500.independent.v1'
+APPROVAL_SCHEMA = 'launcher.gravit.ga0500.independent.v1'
 
 
 class Blocked(ValueError):

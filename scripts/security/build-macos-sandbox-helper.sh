@@ -11,14 +11,14 @@ DEST="${1:?укажите выходной путь для подписанно�
 mkdir -p "$(dirname "$DEST")"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 xcrun swiftc -O -whole-module-optimization \
-    "$ROOT/macos/sandbox-helper/ExtensionSandbox.swift" -o "$TMP/NeverExtensionSandbox" -lsandbox -lproc
+    "$ROOT/macos/sandbox-helper/ExtensionSandbox.swift" -o "$TMP/LauncherExtensionSandbox" -lsandbox -lproc
 codesign --force --sign "$LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY" \
     --options runtime --timestamp --identifier ru.skif4er.launcher.extension-sandbox \
     --entitlements "$ROOT/macos/sandbox-helper/ExtensionSandbox.entitlements" \
-    "$TMP/NeverExtensionSandbox"
+    "$TMP/LauncherExtensionSandbox"
 REQ="identifier \"ru.skif4er.launcher.extension-sandbox\" and anchor apple generic and certificate leaf[subject.OU] = \"$LAUNCHER_MACOS_SANDBOX_TEAM_ID\""
-codesign --verify --strict --verbose=2 --test-requirement "$REQ" "$TMP/NeverExtensionSandbox"
+codesign --verify --strict --verbose=2 --test-requirement "$REQ" "$TMP/LauncherExtensionSandbox"
 plutil -lint "$ROOT/macos/sandbox-helper/ExtensionSandbox.entitlements"
-install -m 0500 "$TMP/NeverExtensionSandbox" "$DEST"
+install -m 0500 "$TMP/LauncherExtensionSandbox" "$DEST"
 codesign --verify --strict --test-requirement "$REQ" "$DEST"
 echo "Подписанная вспомогательная программа установлена: $DEST"

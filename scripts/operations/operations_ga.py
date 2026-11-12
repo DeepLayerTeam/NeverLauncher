@@ -24,7 +24,7 @@ import independent_accept_04514 as operational
 ROOT = Path(__file__).resolve().parents[2]
 # Стабильный домен подписи серии 0.46 и имена файлов доказательств. Версия подписана внутри
 # документа; сохранение домена позволяет проверять исторический выпуск 0.46.0.
-DOMAIN = b'neverlauncher.operations-ga.0460.v1\x00'
+DOMAIN = b'launcher.operations-ga.0460.v1\x00'
 NAMES = ('install-standard', 'upgrade-standard', 'restore-standard', 'failover-network-ha')
 SHA = re.compile(r'^[0-9a-f]{64}$')
 COMMIT = re.compile(r'^[a-f0-9]{40}([a-f0-9]{24})?$')
@@ -87,7 +87,7 @@ def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
     require(proc.returncode == 0, 'Проверка обратной совместимости OpenAPI v1 не пройдена')
     return {
-        'schema': 'neverlauncher.operations-ga.0460.v1',
+        'schema': 'launcher.operations-ga.0460.v1',
         'version': version, 'sourceCommit': commit, 'issuedAt': now.isoformat(),
         'operator': records[NAMES[0]]['secondOperator'],
         'sourceMachine': records['upgrade-standard']['machineFingerprint'],
@@ -141,7 +141,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
     document = json.loads(raw)
     manifest = json.loads(load('RELEASE_MANIFEST.json', 16*1024*1024))
     bom = json.loads(load('RELEASE_BOM.json', 16*1024*1024))
-    require(document.get('schema') == 'neverlauncher.operations-ga.0460.v1' and
+    require(document.get('schema') == 'launcher.operations-ga.0460.v1' and
             document.get('version') == manifest.get('version') and
             document.get('sourceCommit') == manifest.get('sourceCommit') and
             COMMIT.fullmatch(document.get('sourceCommit','')),

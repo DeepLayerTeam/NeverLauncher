@@ -194,7 +194,7 @@ class RealLinuxSignature(unittest.TestCase):
             pkg.write_bytes(b'actual archive bytes to authenticate' * 16)
             gpg = ['gpg', '--homedir', str(home), '--batch']
             subprocess.run(gpg + ['--pinentry-mode', 'loopback', '--passphrase', '',
-                            '--quick-gen-key', 'NeverLauncher Fixture <test@example.invalid>',
+                            '--quick-gen-key', 'Launcher Fixture <test@example.invalid>',
                             'ed25519', 'sign', '1d'], check=True, capture_output=True, timeout=20)
             subprocess.run(gpg + ['--armor', '--output', str(sig), '--detach-sign', str(pkg)],
                            check=True, capture_output=True, timeout=20)

@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	guardCompatDomain0502      = "NeverLauncher-Guard-Compatibility-v1\n"
+	guardCompatDomain0502      = "Launcher-Guard-Compatibility-v1\n"
 	guardCompatSchema0502      = "launcher.guard-compatibility.v1"
 	guardCompatPolicyFile0502  = ".launcher/guard/compatibility.json"
 	guardCompatFloorFile0502   = ".launcher/guard/accepted.json"

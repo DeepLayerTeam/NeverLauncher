@@ -8,7 +8,7 @@ import javax.crypto.spec.PBEKeySpec;
 import ru.launcher.sdk.core.*;
 
 /** Явный адаптер исходной системы PBKDF2-SHA256. Неподдерживаемые хеши Gravit вызывают отказ. Секреты
- * не копируются в новый сеанс NeverLauncher: сеансами управляет федерация Go. */
+ * не копируются в новый сеанс Launcher: сеансами управляет федерация Go. */
 public final class LegacyAccounts implements IdentityProvider {
     private RuntimeDocuments config;
     @Override public void start(ProviderContext ctx) { config = ctx.runtime().config(); }
@@ -59,7 +59,7 @@ public final class LegacyAccounts implements IdentityProvider {
         if (Boolean.TRUE.equals(a.get("disabled"))) throw new IdentityFailure(IdentityFailure.Code.IDENTITY_DISABLED);
         try {
             UUID uuid = UUID.fromString(Json.string(a,"uuid",true));
-            return new VerifiedIdentity("neverlauncher-gravit-port", uuid.toString(), null, username,
+            return new VerifiedIdentity("launcher-gravit-port", uuid.toString(), null, username,
                     Json.string(a,"name",true));
         } catch(Exception e) { throw new IdentityFailure(IdentityFailure.Code.MISCONFIGURED); }
     }

@@ -21,7 +21,7 @@ func migratedUserID0335(a gi.Account) string {
 		return "gravit-fileauth-" + strings.ReplaceAll(a.UUID, "-", "")
 	}
 	// SQL ID источника локальны для внешней БД и часто начинаются с 1. Разные
-	// проекты не должны претендовать на одного пользователя Never по исходному
+	// проекты не должны претендовать на одного пользователя Launcher по исходному
 	// ID. Межсерверная идентичность, которую мы сохраняем, — Minecraft UUID.
 	return "gravit-sql-" + strings.ReplaceAll(a.UUID, "-", "")
 }
@@ -36,7 +36,7 @@ func legacyMigratedSQLUserID0335(a gi.Account) string {
 
 // ImportMigrationCredentials0335 атомарно создаёт только новых локальных
 // пользователей и сохраняет неизменяемый Minecraft UUID. Существующих
-// пользователей Never НИКОГДА не перезаписывают, объединяют, наделяют правами или
+// пользователей Launcher НИКОГДА не перезаписывают, объединяют, наделяют правами или
 // незаметно снабжают хешами источника. Пробный запуск применяет те же проверки
 // коллизий без изменений БД.
 func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, source, format string, credentials []gc.Credential, dryRun bool) (gc.Result, error) {
@@ -193,10 +193,10 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 		}
 		row := gc.Row{Provider: a.Provider, SourceID: a.SourceID, Username: a.Username, UUID: a.UUID}
 		if m.Status == "matched" {
-			// Текущие локальные учётные данные аккаунта принадлежат Never. Никогда не
+			// Текущие локальные учётные данные аккаунта принадлежат Launcher. Никогда не
 			// заменяйте их.
 			row.State = "existing_unchanged"
-			row.Reason = "Учётная запись Never уже существует; пароль источника не перенесён — оператор должен проверить вход"
+			row.Reason = "Учётная запись Launcher уже существует; пароль источника не перенесён — оператор должен проверить вход"
 			result.ExistingUnchanged++
 		} else if c.State != "importable" {
 			row.State = "manual_reset"

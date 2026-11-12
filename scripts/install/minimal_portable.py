@@ -24,7 +24,7 @@ from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
 import minimal_backup as core
 
-MAGIC = b"NEVER-MINIMAL-PORTABLE-1\n"
+MAGIC = b"LAUNCHER-MINIMAL-PORTABLE-1\n"
 SALT_SIZE = 16
 NONCE_SIZE = 12
 TAG_SIZE = 16

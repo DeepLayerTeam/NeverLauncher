@@ -148,7 +148,7 @@ class SecurityGATests(unittest.TestCase):
             verify_all(self.evidence, self.approval, now=NOW)
 
     def test_signed_preflight_refuses_incomplete_security(self):
-        self.approval["targets"][0]["checks"].pop("securityNeverGuard")
+        self.approval["targets"][0]["checks"].pop("securityLauncherGuard")
         self.sign()
         with self.assertRaisesRegex(ValueError, "missing mandatory security"):
             verify_all(self.evidence, self.approval, now=NOW)
@@ -233,7 +233,7 @@ class SecurityGATests(unittest.TestCase):
             self.check()
 
     def test_missing_security_evidence_from_other_platform_denied(self):
-        (self.evidence / "targets/windows-arm64/securityNeverGuard.json").unlink()
+        (self.evidence / "targets/windows-arm64/securityLauncherGuard.json").unlink()
         with self.assertRaises((OSError, ValueError)):
             self.check()
 
@@ -258,7 +258,7 @@ class SecurityGATests(unittest.TestCase):
         destination = self.bundle / "SECURITY_CAPABILITY_EVIDENCE_0431.zip"
         with self.assertRaisesRegex(ValueError, "missing/unsafe"):
             verify_security_archive(self.bundle, self.approval, 401234, 2, now=NOW)
-        path = self.evidence / "targets/linux-arm64/security-0431/securityNeverGuard.jsonl"
+        path = self.evidence / "targets/linux-arm64/security-0431/securityLauncherGuard.jsonl"
         path.write_bytes(b"tamper")
         with self.assertRaisesRegex(ValueError, "altered security observation"):
             package(self.evidence, self.approval, destination, now=NOW)
@@ -274,7 +274,7 @@ class SecurityGATests(unittest.TestCase):
             self.check()
 
 
-# Регрессия NeverGuard с проверкой жизненного цикла по версии: исторические доказательства
+# Регрессия LauncherGuard с проверкой жизненного цикла по версии: исторические доказательства
 # 0.43.1 читаемы, но не сертифицируют поведение работающей игры в 0.43.8.
 class SecurityGameLifetime0438Tests(unittest.TestCase):
     def test_0438_requires_new_live_game_capability(self):

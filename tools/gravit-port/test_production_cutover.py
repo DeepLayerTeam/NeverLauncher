@@ -159,7 +159,7 @@ class CutoverTests(unittest.TestCase):
         if stale:
             from datetime import timedelta
             at -= timedelta(minutes=30)
-        receipt = {"format": "never/gravit-source-stop/v1", "runId": "run_12345678", "profileId": "main",
+        receipt = {"format": "launcher/gravit-source-stop/v1", "runId": "run_12345678", "profileId": "main",
                    "channel":"stable", "stageId":"stage_12345678", "unitState":"inactive", "unitFileState":"masked-runtime",
                    "snapshotSha256":"c"*64, "checkedAt":at.isoformat(), "stoppedAt":at.isoformat()}
         path = self.root / "fence.json"

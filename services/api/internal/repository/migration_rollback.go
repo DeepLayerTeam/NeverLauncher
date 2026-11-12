@@ -146,7 +146,7 @@ func (r *SQLRepository) PlanMigrationRollback03312(ctx context.Context, run stri
 	return result, nil
 }
 
-// CommitMigrationRollback03312 меняет только фактический указатель доставки Never.
+// CommitMigrationRollback03312 меняет только фактический указатель доставки Launcher.
 // Исходная система остаётся ограждённой извне и не возобновляется этим вызовом.
 func (r *SQLRepository) CommitMigrationRollback03312(ctx context.Context, run string, input rb.CommitInput, trusted ed25519.PublicKey) (rb.Result, error) {
 	if e := rb.ValidateCommit(input); e != nil {
@@ -228,11 +228,11 @@ func (r *SQLRepository) CommitMigrationRollback03312(ctx context.Context, run st
 		if len(token) != 64 {
 			return rb.Result{}, ErrStableRuntimeGate0341
 		}
-		if _, e = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); e != nil {
+		if _, e = tx.ExecContext(ctx, `SELECT set_config('launcher.stable_gate_token',$1,true)`, token); e != nil {
 			return rb.Result{}, e
 		}
 	}
-	if _, e = tx.ExecContext(ctx, `SELECT set_config('never.migration_cutover_run',$1,true)`, run); e != nil {
+	if _, e = tx.ExecContext(ctx, `SELECT set_config('launcher.migration_cutover_run',$1,true)`, run); e != nil {
 		return rb.Result{}, e
 	}
 	if v.BaselineRevision == 0 {

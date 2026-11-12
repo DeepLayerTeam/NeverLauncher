@@ -1,4 +1,4 @@
-name: NeverLauncher 0.43.11 — нативное подписанное применение изоляции macOS
+name: Launcher 0.43.11 — нативное подписанное применение изоляции macOS
 on:
   workflow_dispatch:
   push:
@@ -71,7 +71,7 @@ jobs:
           set -euo pipefail
           test "$(uname -m)" = "$(test '${{ matrix.arch }}' = 'amd64' && echo x86_64 || echo arm64)"
           # Помощник должен находиться в доверенном дереве без прав записи для группы и остальных пользователей.
-          DEST="$HOME/Library/Application Support/NeverLauncher/SandboxHelpers/NeverExtensionSandbox"
+          DEST="$HOME/Library/Application Support/Launcher/SandboxHelpers/LauncherExtensionSandbox"
           LAUNCHER_MACOS_SANDBOX_TEAM_ID="$TEAM_ID" LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY="$SIGN_IDENTITY" \
             bash scripts/security/build-macos-sandbox-helper-03112.sh "$DEST"
           echo "LAUNCHER_MACOS_SANDBOX_HELPER=$DEST" >> "$GITHUB_ENV"

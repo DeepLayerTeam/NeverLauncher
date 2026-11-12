@@ -387,7 +387,7 @@ def execute(args, report):
             root = folder / ('selected' if select else 'excluded')
             root.mkdir(mode=0o700)
             marker = root / 'options.txt'
-            marker.write_bytes(b'neverlauncher user-owned configuration 0.52.6\n')
+            marker.write_bytes(b'launcher user-owned configuration 0.52.6\n')
             manifest_url = api.origin + uri
             synced = native(args.runtime, ['sync', '--manifest-url', manifest_url, '--pinned-public-key',
                                            args.pinned_manifest_public_key, '--root', root, '--preset', preset])
@@ -395,7 +395,7 @@ def execute(args, report):
             result = native(args.runtime, ['verify', '--manifest', mf, '--pinned-public-key',
                                            args.pinned_manifest_public_key, '--root', root, '--preset', preset])
             assert_native_ready(result)
-            need(marker.read_bytes() == b'neverlauncher user-owned configuration 0.52.6\n',
+            need(marker.read_bytes() == b'launcher user-owned configuration 0.52.6\n',
                  'Загрузка удалила или изменила пользовательскую конфигурацию игры')
             confirm_local_files(manifest, root, paths, select)
             report['checks'].append(('selected' if select else 'unselected') + '_mods_native_sync_and_verify')
@@ -453,7 +453,7 @@ def main(argv=None):
     p.add_argument('--server-entry', default='')
     p.add_argument('--destructive-isolated-run', action='store_true')
     args = p.parse_args(argv)
-    report = {'schemaVersion': 'neverlauncher.modpacks-textures-game-publication/0.52.6',
+    report = {'schemaVersion': 'launcher.modpacks-textures-game-publication/0.52.6',
               'version': VERSION, 'status': 'blocked', 'gaCertified': False,
               'startedAt': datetime.now(timezone.utc).isoformat(), 'checks': [], 'textures': []}
     try:

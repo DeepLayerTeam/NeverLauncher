@@ -83,7 +83,7 @@ func (s Server) migrationRollbackPlan03312(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if r.Header.Get("X-Migration-Rollback-Confirm") != id || r.Header.Get("X-Writer-Fenced") != "true" {
-		writeError(w, 400, "Требуется точный идентификатор запуска и подтверждение независимой блокировки записи Never")
+		writeError(w, 400, "Требуется точный идентификатор запуска и подтверждение независимой блокировки записи Launcher")
 		return
 	}
 	input, ok := migrationReadRollback03312[rb.PlanInput](w, r)

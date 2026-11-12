@@ -46,7 +46,7 @@ class JavaArtifactHardeningTest(unittest.TestCase):
 
     def test_corrupt_dependency_pom_rejected(self):
         repo = self.isolated()
-        pom = mod.artifact_dir(repo, 'neverlauncher-api-sdk') / f'neverlauncher-api-sdk-{mod.VERSION}.pom'
+        pom = mod.artifact_dir(repo, 'launcher-api-sdk') / f'launcher-api-sdk-{mod.VERSION}.pom'
         data = pom.read_bytes().replace(b'launcher-java-sdk-core', b'not-the-core-artifact')
         pom.write_bytes(data)
         import hashlib

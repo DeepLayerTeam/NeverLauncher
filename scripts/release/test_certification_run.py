@@ -46,7 +46,7 @@ class IdentityTests(unittest.TestCase):
             ("runAttempt", 1),
             ("commit", "b" * 40),
             ("version", "0.36.1"),
-            ("repository", "other/never"),
+            ("repository", "other/launcher"),
         ]:
             with self.subTest(field=field):
                 sample = self.sample()

@@ -327,7 +327,7 @@ type Target struct {
 }
 
 // Reconcile обнаруживает дубли идентичностей источника и конфликты во всём
-// пространстве идентичностей Never. Одно имя НИКОГДА не является доказательством
+// пространстве идентичностей Launcher. Одно имя НИКОГДА не является доказательством
 // привязки.
 func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int) {
 	byUUID := map[string][]Target{}
@@ -361,7 +361,7 @@ func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int)
 	rows := make([]Mapping, 0, len(accounts))
 	sum := map[string]int{"matched": 0, "pending_import": 0, "blocked": 0}
 	for _, a := range accounts {
-		m := Mapping{Account: a, Status: "pending_import", Reason: "Нет соответствующей учётной записи Never; зарезервировано для последующего импорта с подтверждением подлинности"}
+		m := Mapping{Account: a, Status: "pending_import", Reason: "Нет соответствующей учётной записи Launcher; зарезервировано для последующего импорта с подтверждением подлинности"}
 		switch {
 		case seenID[a.Provider+"\x00"+a.SourceID] > 1:
 			m.Status = "blocked"
@@ -377,20 +377,20 @@ func Reconcile(accounts []Account, targets []Target) ([]Mapping, map[string]int)
 			nameOwners := byName[strings.ToLower(a.Username)]
 			if len(uuidOwners) > 1 || len(nameOwners) > 1 {
 				m.Status = "blocked"
-				m.Reason = "Несколько учётных записей Never претендуют на один UUID или имя пользователя"
+				m.Reason = "Несколько учётных записей Launcher претендуют на один UUID или имя пользователя"
 			} else if len(uuidOwners) == 1 {
 				owner := uuidOwners[0]
 				if !strings.EqualFold(owner.Username, a.Username) || (len(nameOwners) == 1 && nameOwners[0].UserID != owner.UserID) {
 					m.Status = "blocked"
-					m.Reason = "Конфликт владельца или имени UUID Never"
+					m.Reason = "Конфликт владельца или имени UUID Launcher"
 				} else {
 					m.TargetUserID = owner.UserID
 					m.Status = "matched"
-					m.Reason = "UUID и имя пользователя Never совпадают; перед переключением необходимо повторно проверить владение целевой учётной записью"
+					m.Reason = "UUID и имя пользователя Launcher совпадают; перед переключением необходимо повторно проверить владение целевой учётной записью"
 				}
 			} else if len(nameOwners) != 0 {
 				m.Status = "blocked"
-				m.Reason = "Имя пользователя уже связано с другим UUID Never"
+				m.Reason = "Имя пользователя уже связано с другим UUID Launcher"
 			}
 		}
 		sum[m.Status]++

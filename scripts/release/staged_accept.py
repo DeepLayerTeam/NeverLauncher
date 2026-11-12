@@ -103,7 +103,7 @@ def accept(local: Path,base_url: str,cli: Path,public: Path,policy: Path,operato
         verify_bundle(remote,True)
         # Независимо проверьте скачанную подпись и промышленный дистрибутив.
         run_verify(cli,remote,public,policy,operator)
-    result={'schema':'neverlauncher.remote-acceptance.v1','version':version,
+    result={'schema':'launcher.remote-acceptance.v1','version':version,
             'status':'verified-staged-final-bytes','origin':base_url,
             'downloadedFiles':len(files),'downloadedBytes':sum(x['size'] for x in files),
             'assets':files}

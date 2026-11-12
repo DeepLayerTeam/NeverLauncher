@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { NeverLauncherAPI, ApiError, resolvePath, OPERATIONS } from '../dist/client.js';
+import { LauncherAPI, ApiError, resolvePath, OPERATIONS } from '../dist/client.js';
 
 test('Настоящий HTTP, авторизация, статусы и ошибки, совместимость со старой версией и экранирование путей', async () => {
  const server = createServer((req,res) => {
@@ -12,12 +12,12 @@ test('Настоящий HTTP, авторизация, статусы и оши�
  });
  await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
  try {
-  const c=new NeverLauncherAPI(`http://127.0.0.1:${server.address().port}`, 'token');
+  const c=new LauncherAPI(`http://127.0.0.1:${server.address().port}`, 'token');
   await c.checkCompatibility();
   assert.deepEqual(await c.call('get_projects_by_projectId',{params:{projectId:'a b'}}),{id:'a b'});
   await assert.rejects(c.call('get_projects'), e=>e instanceof ApiError && e.status === 403 && e.code === 'denied' && e.requestId === 'test-123');
   assert.throws(()=>resolvePath('/a/{id}',{id:'../../evil'}));
-  assert.throws(()=>new NeverLauncherAPI('http://example.org','token'));
+  assert.throws(()=>new LauncherAPI('http://example.org','token'));
   assert.ok(Object.keys(OPERATIONS).length >= 450);
  } finally { await new Promise(resolve=>server.close(resolve)); }
 });

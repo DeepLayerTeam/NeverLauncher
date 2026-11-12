@@ -2,7 +2,7 @@
   "schemaVersion":"2.0",
   "id":"org.example.content-spi",
   "name":"Пример Content SPI",
-  "publisher":"NeverLauncher Examples",
+  "publisher":"Launcher Examples",
   "version":"0.48.6",
   "api":"1.0",
   "permissions":["release:read","storage:read","cli:contribute"],

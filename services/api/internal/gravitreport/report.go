@@ -157,7 +157,7 @@ func Finalize(v Report) (Report, error) {
 			v.Blockers = append(v.Blockers, "Не удалось определить учётную запись: "+a.Provider+"/"+a.SourceID)
 		}
 		if a.TargetUserID == "" {
-			v.Blockers = append(v.Blockers, "Учётная запись не связана с пользователем Never: "+a.Provider+"/"+a.SourceID)
+			v.Blockers = append(v.Blockers, "Учётная запись не связана с пользователем Launcher: "+a.Provider+"/"+a.SourceID)
 		}
 	}
 	sort.Slice(v.Identities, func(i, j int) bool {

@@ -11,7 +11,7 @@ export type GuardContent05011 = {
   externalNativeModules?: { path: string; sha256: string }[];
 };
 export type SignedGuard05011 = {schemaVersion: string; payload: string; signature: string};
-const DOMAIN = new TextEncoder().encode('NeverLauncher-Guard-Compatibility-v1\n');
+const DOMAIN = new TextEncoder().encode('Launcher-Guard-Compatibility-v1\n');
 function hexBytes(value: string): Uint8Array {
   if (!/^(?:[a-f0-9]{2})+$/.test(value)) throw Error('Неверное шестнадцатеричное значение');
   return Uint8Array.from(value.match(/../g)!, s => parseInt(s, 16));

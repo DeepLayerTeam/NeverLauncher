@@ -8,7 +8,7 @@ test('Проверка Ed25519 в браузере для Guard выявляет
  const keyHex=publicKey.export({type:'spki',format:'der'}).subarray(-32).toString('hex');
  const now=Math.floor(Date.now()/1000);
  const policy={schemaVersion:'launcher.guard-compatibility.v1',projectId:'project',minecraft:'1.21.1',loader:'fabric',epoch:9,issuedAt:now-10,expiresAt:now+3600,artifacts:[],transformations:[],revokedDigests:['c'.repeat(64)],revokedTransformations:['old-hook']};
- const envelope=(p)=>{const payload=Buffer.from(JSON.stringify(p));return JSON.stringify({schemaVersion:p.schemaVersion,payload:payload.toString('base64'),signature:sign(null,Buffer.concat([Buffer.from('NeverLauncher-Guard-Compatibility-v1\n'),payload]),privateKey).toString('hex')})};
+ const envelope=(p)=>{const payload=Buffer.from(JSON.stringify(p));return JSON.stringify({schemaVersion:p.schemaVersion,payload:payload.toString('base64'),signature:sign(null,Buffer.concat([Buffer.from('Launcher-Guard-Compatibility-v1\n'),payload]),privateKey).toString('hex')})};
  const verified=await verifyGuardEnvelope05011(envelope(policy),keyHex);
  assert.equal(verified.epoch,9);
  await assert.rejects(()=>verifyGuardEnvelope05011(envelope({...policy,epoch:10}).replace(/signature[^,]*/, 'signature":"'+'0'.repeat(128)+'"'),keyHex));

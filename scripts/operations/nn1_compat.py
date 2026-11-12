@@ -27,7 +27,7 @@ PAIR = frozenset(("0.51.5", "0.51.6"))
 # Изменение даже добавочной миграции требует отдельно проверенного пути N-1:
 # проверка миграций 0.51.5 отклонит неизвестную строку при каждом /ready.
 CATALOG_SHA256_0515 = "12247e5cb196efb8a77d52c64dd55e4b4956703100a928c65d8be0c978c723ce"
-SCHEMA = "neverlauncher.nn1-live-compat.0.51.6"
+SCHEMA = "launcher.nn1-live-compat.0.51.6"
 ROOT = Path(__file__).resolve().parents[2]
 
 class CompatibilityError(Exception):

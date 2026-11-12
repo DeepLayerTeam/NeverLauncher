@@ -6,7 +6,7 @@ import java.util.*;
  * Авторизация Backend, MFA, каноническая привязка аккаунтов и выдача токенов НЕ делегируются. */
 public final class IdentityServices {
     public static final ProviderService<IdentityProvider> CONTRACT =
-        new ProviderService<>("never.identity",IdentityProvider.class,SemVer.parse("1.0.0"));
+        new ProviderService<>("launcher.identity",IdentityProvider.class,SemVer.parse("1.0.0"));
     private volatile ProviderRegistry registry;
     void bind(ProviderRegistry value) {registry=Objects.requireNonNull(value);}
     private ProviderRegistry registry() {

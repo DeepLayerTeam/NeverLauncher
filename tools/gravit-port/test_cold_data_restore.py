@@ -51,7 +51,7 @@ class ColdRestoreTests(unittest.TestCase):
     def test_recover_after_kill_between_directory_renames(self):
         # Имитируйте состояние на диске после target -> old, но до staged -> target.
         old = self.root/('game.before-'+self.run)
-        stage = self.root/'.never-restoring-crash'
+        stage = self.root/'.launcher-restoring-crash'
         stage.mkdir()
         self.dst.rename(old)
         record={'format':cold.FORMAT,'runId':self.run,'phase':'old_moved',
@@ -80,7 +80,7 @@ class ColdRestoreTests(unittest.TestCase):
     def test_failure_in_rename_window_restores_original(self):
         original=cold.os.replace
         def failing(src,dst):
-            if str(src).startswith(str(self.root/'.never-restoring-')) and dst==self.dst:
+            if str(src).startswith(str(self.root/'.launcher-restoring-')) and dst==self.dst:
                 raise OSError('injected power-failure-style rename error')
             return original(src,dst)
         with patch.object(cold.os,'replace',side_effect=failing):

@@ -13,7 +13,7 @@ import (
 )
 
 // authProviderLinkBegin0120 запускает явное браузерное доказательство провайдера, привязанное
-// к уже аутентифицированному каноническому пользователю Never. Адреса электронной почты намеренно
+// к уже аутентифицированному каноническому пользователю Launcher. Адреса электронной почты намеренно
 // не проверяются и не сравниваются: доказательство — владение идентичностью провайдера.
 func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
@@ -21,8 +21,8 @@ func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
-	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Never")
+	if !freshLauncherIdentity0268(claims, time.Now()) {
+		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Launcher")
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
@@ -77,8 +77,8 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
-	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Never")
+	if !freshLauncherIdentity0268(claims, time.Now()) {
+		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Launcher")
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))

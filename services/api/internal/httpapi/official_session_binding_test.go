@@ -14,7 +14,7 @@ import (
 
 // Настоящий авторизованный HTTP-обработчик должен возвращать проверенный SID JWT,
 // а не заданный злоумышленником идентификатор сеанса из renderer Desktop.
-func TestOfficialBrowserConfigBindsNeverVaultSession0396(t *testing.T) {
+func TestOfficialBrowserConfigBindsLauncherVaultSession0396(t *testing.T) {
 	cfg := config.Config{
 		PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local",
 		StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), Environment: "test",
@@ -55,14 +55,14 @@ func TestOfficialBrowserConfigBindsNeverVaultSession0396(t *testing.T) {
 	}
 	var result struct {
 		Data struct {
-			NeverSessionID string `json:"neverSessionId"`
-			NeverUserID    string `json:"neverUserId"`
+			LauncherSessionID string `json:"launcherSessionId"`
+			LauncherUserID    string `json:"launcherUserId"`
 		} `json:"data"`
 	}
 	if err = json.Unmarshal(response.Body.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}
-	if result.Data.NeverSessionID != claims.SID || result.Data.NeverUserID != claims.Sub {
+	if result.Data.LauncherSessionID != claims.SID || result.Data.LauncherUserID != claims.Sub {
 		t.Fatalf("Подтверждение личности сервером отличается от подтверждённых утверждений")
 	}
 }

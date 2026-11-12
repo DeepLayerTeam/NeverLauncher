@@ -92,7 +92,7 @@ export function OfficialMinecraftPanel0257({
         <div>
           <h3>Официальный Minecraft</h3>
           <p>
-            Вход в игру через Microsoft, отдельно от учётной записи Never.
+            Вход в игру через Microsoft, отдельно от учётной записи Launcher.
             Токены сохраняются только в системном хранилище.
           </p>
         </div>
@@ -169,7 +169,7 @@ export function OfficialMinecraftPanel0257({
                   onClick={() => {
                     if (
                       window.confirm(
-                        `Удалить локальную игровую сессию ${account.name} (${account.id})? Привязка к Never не будет удалена.`,
+                        `Удалить локальную игровую сессию ${account.name} (${account.id})? Привязка к Launcher не будет удалена.`,
                       )
                     )
                       call((m) => m.logout(account.id));
@@ -285,8 +285,8 @@ export function OfficialMinecraftPanel0257({
                   refresh: "Обновляем Microsoft и Minecraft токены",
                   logout: "Удаляем игровую сессию",
                   profile: "Проверяем профиль Minecraft",
-                  link: "Проверяем привязку Never",
-                  unlink: "Отвязываем от Never",
+                  link: "Проверяем привязку Launcher",
+                  unlink: "Отвязываем от Launcher",
                   skin: "Обновляем скин Minecraft",
                   cape: "Обновляем плащ Minecraft",
                 } as Record<string, string>
@@ -362,7 +362,7 @@ export function OfficialMinecraftPanel0257({
         <>
           <div className="officialAuthSection02610">
             <div className="officialAuthSectionHeader02610">
-              <h4>Связь с учётной записью Never</h4>
+              <h4>Связь с учётной записью Launcher</h4>
               <span>
                 {linked
                   ? "Привязан"
@@ -372,12 +372,12 @@ export function OfficialMinecraftPanel0257({
               </span>
             </div>
             {state.links === null ? (
-              <p>{state.linksIssue || "Проверяем связь с учётной записью Never."}</p>
+              <p>{state.linksIssue || "Проверяем связь с учётной записью Launcher."}</p>
             ) : (
               <p>
                 {linked
-                  ? "UUID Minecraft подтверждён сервером Never."
-                  : "Локальная игровая учётная запись не привязана к учётной записи Never."}
+                  ? "UUID Minecraft подтверждён сервером Launcher."
+                  : "Локальная игровая учётная запись не привязана к учётной записи Launcher."}
               </p>
             )}
             <div className="toolbar inline">
@@ -388,13 +388,13 @@ export function OfficialMinecraftPanel0257({
                     onClick={() => {
                       if (
                         window.confirm(
-                          `Отвязать ${profile.name} (${profile.id}) от Never? Локальная игровая сессия останется.`,
+                          `Отвязать ${profile.name} (${profile.id}) от Launcher? Локальная игровая сессия останется.`,
                         )
                       )
                         call((m) => m.unlink(profile.id));
                     }}
                   >
-                    Отвязать от Never
+                    Отвязать от Launcher
                   </button>
                 ) : (
                   <button
@@ -402,13 +402,13 @@ export function OfficialMinecraftPanel0257({
                     onClick={() => {
                       if (
                         window.confirm(
-                          `Привязать учётную запись Never к ${profile.name} (${profile.id})? Сервер проверит владение Minecraft.`,
+                          `Привязать учётную запись Launcher к ${profile.name} (${profile.id})? Сервер проверит владение Minecraft.`,
                         )
                       )
                         call((m) => m.link(profile.id));
                     }}
                   >
-                    Привязать к Never
+                    Привязать к Launcher
                   </button>
                 ))}
             </div>

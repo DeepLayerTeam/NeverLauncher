@@ -69,7 +69,7 @@ jobs:
           go vet ./internal/authrequest ./internal/httpapi ./internal/federation ./internal/repository
       - name: Проверить изоляцию источника HTTP, вредоносный JSON, MFA и повтор запросов обновления
         run: |
-          go test -race -count=1 -timeout=8m ./internal/authrequest ./internal/httpapi -run '02912|0296|TestProtectionBanUnbanLiveHTTP0298|TestRoleUpdateRevokesLiveNeverToken0297' -v
+          go test -race -count=1 -timeout=8m ./internal/authrequest ./internal/httpapi -run '02912|0296|TestProtectionBanUnbanLiveHTTP0298|TestRoleUpdateRevokesLiveLauncherToken0297' -v
       - name: "Проверить две независимые реплики API, реальные транзакции PostgreSQL и отзыв прав между репликами"
         run: |
           go test -count=1 -timeout=10m ./internal/httpapi -run '^TestSecurityRealAuthPostgresTwoReplicas02912$' -v

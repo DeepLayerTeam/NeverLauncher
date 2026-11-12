@@ -1,4 +1,4 @@
-package neverapi
+package launcherapi
 
 import (
 	"bytes"

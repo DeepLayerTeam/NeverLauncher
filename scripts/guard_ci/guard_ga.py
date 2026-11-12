@@ -27,8 +27,8 @@ from verify_six_native_game_0440 import verify as verify_native_game
 from adversarial_pilot_05012 import analyze_shadow, compare_performance, verify_game, file_hash
 
 VERSION = '0.51.0'
-SCHEMA = 'neverlauncher.guard.ga0510.independent.v1'
-DOMAIN = b'neverlauncher.guard.ga0510.independent.v1\x00'
+SCHEMA = 'launcher.guard.ga0510.independent.v1'
+DOMAIN = b'launcher.guard.ga0510.independent.v1\x00'
 TARGETS = ('windows-x64', 'windows-arm64', 'linux-x64', 'linux-arm64', 'darwin-x64', 'darwin-arm64')
 LOADERS = ('vanilla', 'fabric', 'quilt', 'forge', 'neoforge')
 HEX = re.compile(r'[0-9a-f]{64}\Z')
@@ -140,7 +140,7 @@ def verified_native(root: Path, commit: str, delivered: dict) -> dict:
         expected_verifier = {'windows': 'authenticode-chain-timestamp',
                              'linux': 'production-cli-release-trust',
                              'darwin': 'codesign-gatekeeper-notarized'}[osname]
-        require(r['schema'] == 'neverlauncher.guard.native-signed/0510' and r['version'] == VERSION
+        require(r['schema'] == 'launcher.guard.native-signed/0510' and r['version'] == VERSION
                 and r['commit'] == commit and r['target'] == target and r['status'] == 'native-verified'
                 and r['nativeOS'] == expected_os and r['nativeArch'] == arch
                 and r['verifier'] == expected_verifier,
@@ -167,7 +167,7 @@ def verified_jvm(root: Path) -> dict:
         minimum = {'loader-transformations', 'continuous-watchdog'}
         if target.startswith('linux-'):
             minimum |= {'runtime-integrity', 'linux-process-protection'}
-        require(report.get('schema') == 'neverlauncher.guard-adversarial-jvm/v1'
+        require(report.get('schema') == 'launcher.guard-adversarial-jvm/v1'
                 and report.get('version') == VERSION and report.get('status') == 'PASS_JVM_REGRESSIONS_ONLY'
                 and type(suites) is list and {s.get('name') for s in suites if isinstance(s, dict)} == minimum,
                 target + ': Отсутствуют успешно пройденные реальные проверки JVM')
@@ -261,7 +261,7 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
     # человеку. Другой независимый проверяющий подтверждает подлинность по источникам
     # ВНЕ этого низкопривилегированного журнала.
     certified = doc(root / 'shadow-certification.json')
-    require(certified.get('schema') == 'neverlauncher.guard.shadow-certified/0510'
+    require(certified.get('schema') == 'launcher.guard.shadow-certified/0510'
             and certified.get('status') == 'independently-reviewed'
             and certified.get('version') == VERSION
             and certified.get('reviewer') == independent['reviewer']
@@ -272,7 +272,7 @@ def gate(root: Path, approve_file: Path, approve_sig: Path, trusted_key: Path,
             'Независимо подтверждённые часы игры легитимных пользователей должны совпадать с журналом наблюдений')
     require(all(value['operator'] != independent['reviewer'] for value in native.values()),
             'Итоговый проверяющий не может быть оператором нативного тестирования')
-    return {'schema': 'neverlauncher.guard.ga0510.verification.v1',
+    return {'schema': 'launcher.guard.ga0510.verification.v1',
             'version': VERSION, 'commit': commit, 'status': 'independent-guard-acceptance-verified',
             'approvedBy': independent['reviewer'], 'approvalSha256': independent['approvalSha256'],
             'releaseManifestSha256': file_hash(root / 'signed' / 'RELEASE_MANIFEST.json'),

@@ -191,7 +191,7 @@ def collect_bundle(args, stage):
     if args.trust_policy:
         shutil.copy2(args.trust_policy, stage / "trust-policy.signed.json")
     suffix = ".exe" if args.platform == "windows" else ""
-    shutil.copy2(args.prestarter, stage / ("neverprestarter" + suffix))
+    shutil.copy2(args.prestarter, stage / ("prestarter" + suffix))
     if args.offline_source:
         # Сохраняйте лишь обычные исходные файлы: символические ссылки, устройства, вложенные junction и другие
         # попытки выхода за пределы каталога отклоняются без перехода по ним.
@@ -293,7 +293,7 @@ def package_windows(args, stage, key, out, version):
             module,
             ignore=shutil.ignore_patterns("*.exe", "*.test"),
         )
-        embedded = module / "cmd" / "neverinstaller" / "embedded.bundle.zip"
+        embedded = module / "cmd" / "installer" / "embedded.bundle.zip"
         with zipfile.ZipFile(
             embedded, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
         ) as z:
@@ -354,7 +354,7 @@ def package_linux(args, stage, key, out, version):
         bundled = pkg / "usr" / "lib" / "launcher" / "bundle"
         bundled.parent.mkdir(parents=True)
         shutil.copytree(stage, bundled)
-        exe = bundled / "neverinstaller"
+        exe = bundled / "installer"
         env = dict(os.environ, GOOS="linux", GOARCH=args.arch, CGO_ENABLED="0")
         checked(
             "go",
@@ -372,7 +372,7 @@ def package_linux(args, stage, key, out, version):
         launcher = pkg / "usr" / "bin" / "launcher"
         launcher.parent.mkdir(parents=True)
         launcher.write_text(
-            '#!/bin/sh\nset -eu\nif [ "$#" -eq 0 ]; then set -- install; fi\nexec /usr/lib/launcher/bundle/neverinstaller "$@" --bundle /usr/lib/launcher/bundle\n'
+            '#!/bin/sh\nset -eu\nif [ "$#" -eq 0 ]; then set -- install; fi\nexec /usr/lib/launcher/bundle/installer "$@" --bundle /usr/lib/launcher/bundle\n'
         )
         launcher.chmod(0o755)
         desktop = pkg / "usr" / "share" / "applications" / "launcher.desktop"
@@ -407,8 +407,8 @@ def package_linux(args, stage, key, out, version):
         with tempfile.TemporaryDirectory() as checkdir:
             checked("dpkg-deb", "--extract", result, checkdir)
             unpacked = pathlib.Path(checkdir) / "usr" / "lib" / "launcher" / "bundle"
-            checked(unpacked / "neverinstaller", "verify", "--bundle", unpacked)
-            file_matches(unpacked / "neverprestarter", next(
+            checked(unpacked / "installer", "verify", "--bundle", unpacked)
+            file_matches(unpacked / "prestarter", next(
                 t["prestarter"] for t in verify_config(unpacked / "bootstrap.signed.json", key)["installerTargets"]
                 if t["os"] == args.platform and t["arch"] == args.arch
             ))
@@ -501,7 +501,7 @@ def package_macos(args, stage, key, out, version):
                 "--verify",
                 "--strict",
                 "--verbose=2",
-                resources / "neverprestarter",
+                resources / "prestarter",
             )
             checked(
                 "codesign",

@@ -58,14 +58,14 @@ class InventoryTests(unittest.TestCase):
         if target['scope'] == 'integration':
             actual['mode'] = 'compatibility'
         # Синтетический серверный артефакт ТОЛЬКО ДЛЯ ОТРИЦАТЕЛЬНОГО ТЕСТА, никогда для приёмочного прогона.
-        witness = {'schema': 'neverlauncher.compatibility-join-witness/0.52.4',
+        witness = {'schema': 'launcher.compatibility-join-witness/0.52.4',
                    'targetId': target['id'], 'serverPid': 54321,
                    'serverArtifactSha256': 'f' * 64,
                    'username': 'NL_Cert_Client', 'joinedFromServerLog': True,
                    'playerOnlineViaRcon': True, 'tickBefore': 5, 'tickAfter': 10}
         ready = {'targetId': target['id'], 'port': 25565, 'serverPid': 54321,
                  'serverArtifactSha256': 'f' * 64}
-        stopped = {'schema': 'neverlauncher.compatibility-server-stopped/0.52.4',
+        stopped = {'schema': 'launcher.compatibility-server-stopped/0.52.4',
                    'stoppedAfterLiveWitness': True, 'serverPid': 54321,
                    'serverLogSha256': hashlib.sha256(b'[Server thread/INFO]: NL_Cert_Client joined the game\n').hexdigest()}
         stopped_file = runtime / 'live-server-stopped.json'
@@ -81,7 +81,7 @@ class InventoryTests(unittest.TestCase):
         write_json(cert_file, cert)
         witness_file = runtime / 'live-server-witness.json'
         write_json(witness_file, witness)
-        live = {'schema': 'neverlauncher.compatibility-live-join/0.52.4',
+        live = {'schema': 'launcher.compatibility-live-join/0.52.4',
                 'targetId': target['id'], 'status': 'passed',
                 'minecraftVersion': target['minecraft'], 'loader': loader,
                 'profileId': cert['minecraftVersion'], 'javaMajor': target['javaMajor'],

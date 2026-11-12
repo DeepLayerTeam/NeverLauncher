@@ -127,7 +127,7 @@ def inspect_jvm(root):
         names = set(expected)
         if native.startswith('linux-'):
             names |= {'runtime-integrity', 'linux-process-protection'}
-        require(run.get('schema') == 'neverlauncher.guard-adversarial-jvm/v1' and
+        require(run.get('schema') == 'launcher.guard-adversarial-jvm/v1' and
                 run.get('version') == VERSION and run.get('status') == 'PASS_JVM_REGRESSIONS_ONLY' and
                 type(suites) is list and {x['name'] for x in suites} == names,
                 native + ': отсутствуют реальные сценарии JVM Guard')
@@ -208,7 +208,7 @@ def run_live(cfg):
     vanilla_result = vanilla.verify(cfg['vanilla'])
     # Три сборочные цели совместимости должны реально присутствовать в наборе производственных
     # JAR выпуска, а не получать статус Runtime лишь по сборочному тесту.
-    return {'schema': 'neverlauncher.guard-device-bridge-live/0.52.9', 'version': VERSION,
+    return {'schema': 'launcher.guard-device-bridge-live/0.52.9', 'version': VERSION,
             'sourceCommit': commit, 'runId':run_id, 'repository':repo,
             'status':'LIVE_CHECKS_PASSED_REVIEW_REQUIRED', 'independentGA':False,
             'guard':{'nativeCi':native,'sixJvm':jvm,'shadow':shadow,'performance':frames,'game':game},
@@ -229,7 +229,7 @@ def run_local(output, only=None):
     require(result['status'] == 'PASS_JVM_REGRESSIONS_ONLY',
             'Реальные нативные регрессионные тесты JVM Guard не пройдены')
     complete = len(result['suites']) == 4 and all(x['status'] == 'PASS' for x in result['suites'])
-    return {'schema':'neverlauncher.guard-device-bridge-local/0.52.9', 'version':VERSION,
+    return {'schema':'launcher.guard-device-bridge-local/0.52.9', 'version':VERSION,
             'status':'LOCAL_REAL_JVM_REGRESSIONS_ONLY' if complete else 'LOCAL_PARTIAL_JVM_REGRESSIONS_NOT_GA', 'javaAdapterStdoutSha256':bridge,
             'guardJvm':result, 'independentGA':False}
 

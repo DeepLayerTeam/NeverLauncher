@@ -73,7 +73,7 @@ class RequiredJobsTests(unittest.TestCase):
     def test_gate_cli_enforces_real_git_source_and_fails_closed(self):
         repo = Path(self.tmp.name)
         subprocess.run(["git", "init", "-q", str(repo)], check=True, stdout=subprocess.DEVNULL)
-        subprocess.run(["git", "-C", str(repo), "-c", "user.name=Never CI", "-c", "user.email=ci@invalid.example", "commit", "--allow-empty", "-m", "CI fixture", "-q"], check=True)
+        subprocess.run(["git", "-C", str(repo), "-c", "user.name=Launcher CI", "-c", "user.email=ci@invalid.example", "commit", "--allow-empty", "-m", "CI fixture", "-q"], check=True)
         commit = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
         (repo / "VERSION").write_text("0.36.3\n", encoding="utf-8")
         needs_file = repo / "needs.json"

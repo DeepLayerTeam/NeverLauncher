@@ -24,13 +24,13 @@ func decodeMap119(t *testing.T, body *bytes.Buffer) map[string]any {
 	return v
 }
 
-func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
+func TestMinecraftAuth119LauncherSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	handler := testServer(t)
-	neverToken, _ := deviceTrustLogin0121(t, handler, "mc-e2e")
-	neverToken = bindAccessToken0127(t, handler, neverToken, "Minecraft e2e device").Access
+	launcherToken, _ := deviceTrustLogin0121(t, handler, "mc-e2e")
+	launcherToken = bindAccessToken0127(t, handler, launcherToken, "Minecraft e2e device").Access
 
 	ex := httptest.NewRequest(http.MethodPost, "/api/v1/minecraft/session", strings.NewReader(`{"clientToken":"desktop-client"}`))
-	ex.Header.Set("Authorization", "Bearer "+neverToken)
+	ex.Header.Set("Authorization", "Bearer "+launcherToken)
 	ex.Header.Set("Content-Type", "application/json")
 	setDeviceTrustClientMeta0127(ex)
 	er := httptest.NewRecorder()
@@ -113,7 +113,7 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	}
 
 	logout := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
-	logout.Header.Set("Authorization", "Bearer "+neverToken)
+	logout.Header.Set("Authorization", "Bearer "+launcherToken)
 	lo := httptest.NewRecorder()
 	handler.ServeHTTP(lo, logout)
 	if lo.Code != http.StatusOK {
@@ -123,7 +123,7 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 	vv = httptest.NewRecorder()
 	handler.ServeHTTP(vv, vr)
 	if vv.Code != http.StatusForbidden {
-		t.Fatalf("Токен Minecraft должен прекращать действие вместе с основной сессией Never: %d %s", vv.Code, vv.Body.String())
+		t.Fatalf("Токен Minecraft должен прекращать действие вместе с основной сессией Launcher: %d %s", vv.Code, vv.Body.String())
 	}
 }
 

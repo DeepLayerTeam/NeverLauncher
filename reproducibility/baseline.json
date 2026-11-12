@@ -1882,5 +1882,5 @@
     }
   },
   "release": "0.53.0",
-  "schema": "neverlauncher.input-baseline.v1"
+  "schema": "launcher.input-baseline.v1"
 }

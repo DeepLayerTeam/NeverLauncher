@@ -41,7 +41,7 @@ func TestPendingProviderCredential0296SealedUntilPasskeyProof(t *testing.T) {
 		t.Fatal("Учётные данные провайдера не были защищены в краткосрочном запросе")
 	}
 	if _, err := repo.GetProviderCredentialByIdentity(user.ID, identity.ID); err == nil {
-		t.Fatal("Учётные данные провайдера сохранены до подтверждения Never WebAuthn")
+		t.Fatal("Учётные данные провайдера сохранены до подтверждения Launcher WebAuthn")
 	}
 	if err := api.commitPendingProviderCredential0296(user, identity.Provider, identity.ID, sealed+"tampered"); err == nil {
 		t.Fatal("Подменённый AEAD-токен ошибочно принят")

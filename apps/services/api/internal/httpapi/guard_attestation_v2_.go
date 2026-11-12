@@ -324,8 +324,8 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 	minecraftSessionID := ""
 	if req.MinecraftAccessToken != "" {
 		ms, _, _, err := s.validateMinecraftToken119(strings.TrimSpace(req.MinecraftAccessToken))
-		if err != nil || ms.ID == "" || ms.UserID != claims.Sub || ms.NeverSessionID != claims.SessionID || ms.TrustedDeviceID != deviceID || ms.BindingEpoch != claims.BindingEpoch || ms.LauncherVersion != req.LauncherVersion || !ms.IntegrityVerified {
-			writeError(w, http.StatusPreconditionFailed, "Сеанс Minecraft Runtime не совпадает с текущим сеансом Never, устройством, эпохой или релизом")
+		if err != nil || ms.ID == "" || ms.UserID != claims.Sub || ms.LauncherSessionID != claims.SessionID || ms.TrustedDeviceID != deviceID || ms.BindingEpoch != claims.BindingEpoch || ms.LauncherVersion != req.LauncherVersion || !ms.IntegrityVerified {
+			writeError(w, http.StatusPreconditionFailed, "Сеанс Minecraft Runtime не совпадает с текущим сеансом Launcher, устройством, эпохой или релизом")
 			return
 		}
 		minecraftSessionID = ms.ID

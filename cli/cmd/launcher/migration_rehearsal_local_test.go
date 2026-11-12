@@ -23,7 +23,7 @@ func TestRehearseLocal04910LiveJoinAndFailClosed(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	stage := map[string]any{"format": "never/migration-stage/v1", "runId": run, "stageId": "isolated_run_04910_abcdefgh", "isolated": true}
+	stage := map[string]any{"format": "launcher/migration-stage/v1", "runId": run, "stageId": "isolated_run_04910_abcdefgh", "isolated": true}
 	raw, _ := json.Marshal(stage)
 	put(".migration-stage.json", raw, 0600)
 	player := rehearsalPlayer03310{SourceID: "fileauth:42", UUID: uuid, InventorySHA256: inventory, PermissionsSHA256: inventory, Economy: "100.00", SkinSHA256: inventory}

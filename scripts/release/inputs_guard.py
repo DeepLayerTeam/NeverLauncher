@@ -108,12 +108,12 @@ def record() -> dict:
         if not path.is_file() or path.is_symlink(): raise ValueError('Отсутствует обязательный входной файл: '+rel)
         raw = path.read_bytes()
         files[rel] = {'sha256':hashlib.sha256(raw).hexdigest(), 'size':len(raw)}
-    return {'schema':'neverlauncher.input-baseline.v1', 'release':(ROOT/'VERSION').read_text().strip(),
+    return {'schema':'launcher.input-baseline.v1', 'release':(ROOT/'VERSION').read_text().strip(),
             'files': files}
 
 
 def verify(snapshot: dict, current: dict) -> None:
-    if snapshot.get('schema') != 'neverlauncher.input-baseline.v1' or snapshot.get('release') != current.get('release'):
+    if snapshot.get('schema') != 'launcher.input-baseline.v1' or snapshot.get('release') != current.get('release'):
         raise ValueError('Неизвестная исходная база или версия выпуска')
     if current != snapshot:
         old = snapshot.get('files', {})

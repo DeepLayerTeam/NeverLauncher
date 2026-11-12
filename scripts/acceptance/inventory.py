@@ -28,8 +28,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/compatibility'))
 import matrix as compatibility
 
-DOMAIN = b'neverlauncher.acceptance-inventory.0.52.1\x00'
-SCHEMA = 'neverlauncher.acceptance-evidence/0.52.1'
+DOMAIN = b'launcher.acceptance-inventory.0.52.1\x00'
+SCHEMA = 'launcher.acceptance-evidence/0.52.1'
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 COMMIT = re.compile(r'[0-9a-f]{40}\Z')
@@ -195,7 +195,7 @@ def verify_runtime_bytes(target, result_path: Path):
             stopped = read_json(runtime / 'live-server-stopped.json')
             server_log = safe_file(runtime / 'matching-server.log', MAX_LOG).read_bytes()
             cert_file = runtime / (loader + '-certification.json')
-            require(live.get('schema') == 'neverlauncher.compatibility-live-join/0.52.4' and
+            require(live.get('schema') == 'launcher.compatibility-live-join/0.52.4' and
                     live.get('status') == 'passed' and live.get('targetId') == target['id'] and
                     live.get('minecraftVersion') == target['minecraft'] and
                     live.get('loader') == loader and live.get('javaMajor') == target['javaMajor'] and
@@ -204,7 +204,7 @@ def verify_runtime_bytes(target, result_path: Path):
                     live.get('clientCertificationSha256') == digest(cert_file) and
                     live.get('witnessSha256') == digest(runtime / 'live-server-witness.json') and
                     live.get('serverStoppedSha256') == digest(runtime / 'live-server-stopped.json') and
-                    stopped.get('schema') == 'neverlauncher.compatibility-server-stopped/0.52.4' and
+                    stopped.get('schema') == 'launcher.compatibility-server-stopped/0.52.4' and
                     stopped.get('stoppedAfterLiveWitness') is True and
                     stopped.get('serverLogSha256') == hashlib.sha256(server_log).hexdigest() and
                     stopped.get('serverPid') == ready.get('serverPid') and

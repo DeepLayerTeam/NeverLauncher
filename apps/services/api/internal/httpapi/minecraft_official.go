@@ -23,7 +23,7 @@ import (
 )
 
 // Билеты шифруются AES-256-GCM и ограничены действующими учётной записью и сеансом
-// Never. Ни Microsoft refresh-учётные данные, ни Minecraft-токены не сохраняются в
+// Launcher. Ни Microsoft refresh-учётные данные, ни Minecraft-токены не сохраняются в
 // локальных таблицах профилей Yggdrasil, ServerBridge или браузерном хранилище
 // пользователя.
 type officialState0257 struct {

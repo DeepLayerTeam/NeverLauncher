@@ -62,7 +62,7 @@ class LinuxPackageIntegrationTests(GuardManifestSignatureTests):
         from pathlib import Path
 
         module_path = Path(__file__).with_name("linux-package.py")
-        spec = importlib.util.spec_from_file_location("never_linux_package_0437", module_path)
+        spec = importlib.util.spec_from_file_location("launcher_linux_package_0437", module_path)
         module = importlib.util.module_from_spec(spec)
         assert spec and spec.loader
         spec.loader.exec_module(module)

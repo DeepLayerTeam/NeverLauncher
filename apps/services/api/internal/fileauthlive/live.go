@@ -1,7 +1,7 @@
 package fileauthlive
 
 // Живой провайдер аутентификации Gravit FileAuthSystem только на чтение. Источник
-// аккаунтов остаётся авторитетным; Never сохраняет только собственную привязку
+// аккаунтов остаётся авторитетным; Launcher сохраняет только собственную привязку
 // идентичности и сессии. Sessions.json, внешние полномочия и внешние refresh-токены
 // намеренно никогда не читаются и не импортируются.
 
@@ -251,7 +251,7 @@ func (c *LiveConnector) AuthenticatePassword(ctx context.Context, req authconnec
 	}
 	a, exists := current.byName[strings.ToLower(req.Identifier)]
 	// Используйте явно настроенный и проверенный верификатор; никогда не
-	// переходите на другой алгоритм или существующий аккаунт Never.
+	// переходите на другой алгоритм или существующий аккаунт Launcher.
 	if !exists || !c.verify(req.Secret, a.PasswordHash) {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Неверные учётные данные")
 	}

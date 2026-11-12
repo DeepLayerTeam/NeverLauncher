@@ -30,7 +30,7 @@ from sqlite_pg_cutover_0475 import (
 )
 
 VERSION = '0.48.0'
-SCHEMA = 'neverlauncher.live-independent-upgrade-0480-v1'
+SCHEMA = 'launcher.live-independent-upgrade-0480-v1'
 MAX_RESPONSE = 4 * 1024 * 1024
 
 class RejectRedirect(HTTPRedirectHandler):
@@ -220,7 +220,7 @@ def verify(a):
                 logical.update(line.encode('utf-8')); logical.update(b'\n')
         require(logical.hexdigest() == baseline['sqlite'][kind]['logicalSha256'], f'Исходные данные SQLite ({kind}) неожиданно изменились')
     require(not a.output.exists(), 'Отказ от перезаписи квитанции реальной приёмки')
-    output = {'schema':'neverlauncher.live-upgrade-acceptance-0480-v1', 'version':VERSION,
+    output = {'schema':'launcher.live-upgrade-acceptance-0480-v1', 'version':VERSION,
               'sourceBaselineSHA256': hashlib.sha256(a.baseline.read_bytes()).hexdigest(),
               'project': a.project, 'ownerId': owner['id'], 'ownerLogin': 'actual-session',
               'apiEquivalent': True, 'sourceSQLiteVerified': True,

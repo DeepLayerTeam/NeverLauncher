@@ -134,7 +134,7 @@ export default function PlayerMigration0339({
         Установите Launcher только по официальной ссылке владельца проекта и
         проверьте издателя установщика. Ассистент не принимает неподписанные
         сборки: повторно используются только файлы, совпадающие с подписанным
-        Ed25519 manifest Never для текущего проекта, профиля и выбранного набора
+        Ed25519 manifest Launcher для текущего проекта, профиля и выбранного набора
         компонентов.
       </p>
       {!manifest?.signature && (
@@ -177,7 +177,7 @@ export default function PlayerMigration0339({
             <strong>Совпадает:</strong> {preview.matchedFiles} файлов (
             {(preview.matchedBytes / 1048576).toFixed(1)} МиБ).{" "}
             <strong>Не найдено:</strong> {preview.missingFiles}. Остальное
-            загрузится обычным установщиком Never.
+            загрузится обычным установщиком Launcher.
           </p>
           <p>
             Проект: {preview.projectId}; профиль: {preview.profileId}; канал:{" "}
@@ -207,7 +207,7 @@ export default function PlayerMigration0339({
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
             />{" "}
-            Подтверждаю перенос только проверенного содержимого в Never cache;
+            Подтверждаю перенос только проверенного содержимого в Launcher cache;
             повторный вход и регистрация устройства обязательны
           </label>
           <div className="toolbar inline">

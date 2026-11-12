@@ -83,7 +83,7 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	}
 	sid := "trust-session-" + suffix
 	did := "trust-device-" + suffix
-	// Создайте реальное ранее доверенное устройство Never и сеанс Never; сброс
+	// Создайте реальное ранее доверенное устройство Launcher и сеанс Launcher; сброс
 	// должен отозвать их и зависимые семейства/refresh-токены.
 	_, err = repo.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,public_key,key_fingerprint) VALUES($1,$2,'pre-migration','active','verified','proof-of-possession','ed25519','test-public-key',$3)`, did, userID, fmt.Sprintf("%064x", time.Now().UnixNano()))
 	if err != nil {

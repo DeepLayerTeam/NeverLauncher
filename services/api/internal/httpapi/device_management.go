@@ -69,7 +69,7 @@ func applyDeviceRevocationCascade0125(s Server, userID, deviceID, reason string,
 		result.RevokedRefreshFamilies += len(ids)
 		if minecraftRepo, ok := s.Repo.(repository.MinecraftRepository); ok {
 			for _, sessionID := range ids {
-				result.RevokedMinecraftSessions += minecraftRepo.RevokeMinecraftSessionsByNeverSession(sessionID, reason)
+				result.RevokedMinecraftSessions += minecraftRepo.RevokeMinecraftSessionsByLauncherSession(sessionID, reason)
 			}
 		}
 	}
@@ -100,7 +100,7 @@ func applyDeviceRevocationBatchCascade0125(s Server, userID, reason string, batc
 			batch.RevokedRefreshFamilies += len(ids)
 			if minecraftRepo, ok := s.Repo.(repository.MinecraftRepository); ok {
 				for _, sessionID := range ids {
-					batch.RevokedMinecraftSessions += minecraftRepo.RevokeMinecraftSessionsByNeverSession(sessionID, reason)
+					batch.RevokedMinecraftSessions += minecraftRepo.RevokeMinecraftSessionsByLauncherSession(sessionID, reason)
 				}
 			}
 		}

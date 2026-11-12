@@ -9,7 +9,7 @@ export type OfficialProfile0257 = {
   skins: Array<{ id: string; state: string; url: string; variant: string }>;
   capes: Array<{ id: string; state: string; url: string; alias?: string }>;
 };
-export type NeverOfficialLink0268 = {
+export type LauncherOfficialLink0268 = {
   minecraftUuid: string;
   minecraftName: string;
   verifiedAt: string;
@@ -326,20 +326,20 @@ export class OfficialMinecraftClient0257 {
     return this.texture("resetCape");
   }
   /** Постоянные связи с Minecraft независимо проверяются бэкендом. */
-  async Links(): Promise<NeverOfficialLink0268[]> {
-    return this.call<NeverOfficialLink0268[]>("official_identity_links_0268");
+  async Links(): Promise<LauncherOfficialLink0268[]> {
+    return this.call<LauncherOfficialLink0268[]>("official_identity_links_0268");
   }
-  async linkToNever(
+  async linkToLauncher(
     accountId: string,
     confirmed: boolean,
-  ): Promise<NeverOfficialLink0268> {
+  ): Promise<LauncherOfficialLink0268> {
     if (!confirmed) throw new Error("Требуется подтверждение привязки.");
-    return this.call<NeverOfficialLink0268>("official_identity_link_0268", {
+    return this.call<LauncherOfficialLink0268>("official_identity_link_0268", {
       accountId,
       confirmed: true,
     });
   }
-  async unlinkFromNever(accountId: string, confirmed: boolean): Promise<void> {
+  async unlinkFromLauncher(accountId: string, confirmed: boolean): Promise<void> {
     if (!confirmed) throw new Error("Требуется подтверждение отвязывания.");
     await this.call<void>("official_identity_unlink_0268", {
       accountId,

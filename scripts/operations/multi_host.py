@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.51.2: выполнить и проверить настоящее развёртывание на нескольких Docker-хостах.
+"""Launcher 0.51.2: выполнить и проверить настоящее развёртывание на нескольких Docker-хостах.
 
 На каждом хосте собственные API, worker, Admin и HTTPS ingress с общими внешними PostgreSQL, Redis и
 S3. Программа не развёртывает эти внешние службы и не путает два контейнера одного хоста с двумя
@@ -26,7 +26,7 @@ from urllib.parse import parse_qs, urlsplit
 import ha_inventory_0511 as inventory
 
 VERSION = "0.51.2"
-SCHEMA = "neverlauncher.multi-host.0.51.2"
+SCHEMA = "launcher.multi-host.0.51.2"
 HOST_REGEX = re.compile(r"^(?:[A-Za-z0-9_][A-Za-z0-9_.-]*@)?[A-Za-z0-9][A-Za-z0-9.-]*$")
 LABEL_REGEX = re.compile(r"^[a-z][a-z0-9-]{0,40}$")
 PROJECT_REGEX = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$")

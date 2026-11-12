@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT / 'scripts/acceptance'))
 sys.path.insert(0, str(ROOT / 'scripts/compatibility'))
 import inventory_0521 as inventory
 
-SCHEMA = 'neverlauncher.real-soak/' + inventory.VERSION
+SCHEMA = 'launcher.real-soak/' + inventory.VERSION
 MAX_LOG = 32 * 1024 * 1024
 COMMIT = re.compile(r'[a-f0-9]{40}\Z')
 RUN = re.compile(r'[1-9][0-9]*\Z')

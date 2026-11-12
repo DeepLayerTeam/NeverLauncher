@@ -50,7 +50,7 @@ class CohortTests(unittest.TestCase):
                      "inventorySha256": inv, "status": "manual", "blockers": []}}).encode())
             stage = base / "stage"
             stage.mkdir()
-            write(stage / ".migration-stage.json", json.dumps({"format": "never/migration-stage/v1",
+            write(stage / ".migration-stage.json", json.dumps({"format": "launcher/migration-stage/v1",
                                 "runId": run, "isolated": True}).encode())
             write(stage / "live-session.json", b'{"rconAddress":"127.0.0.1:25575","clientPath":"installed/runtime.bin"}')
             for name in ("source-snapshot.json", "target-snapshot.json", "rcon-password"):

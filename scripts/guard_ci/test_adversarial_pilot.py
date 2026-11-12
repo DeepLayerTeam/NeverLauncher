@@ -35,7 +35,7 @@ class PilotEvidenceTests05012(unittest.TestCase):
     def append(self, seq, outcome='allowed', reason='none', timestamp=None, prev=''):
         if timestamp is None:
             timestamp = int(time.time() * 1000)
-        event = dict(schema='neverlauncher.guard-shadow/v1', version=mod.VERSION,
+        event = dict(schema='launcher.guard-shadow/v1', version=mod.VERSION,
                      bootId=self.boot, sequence=seq, prevMac=prev, timestampMs=timestamp,
                      sessionKey=mod.mac(self.key, b'guard-session:test-correlation'),
                      nodeKey=mod.mac(self.key, b'bridge-node:test-server'),

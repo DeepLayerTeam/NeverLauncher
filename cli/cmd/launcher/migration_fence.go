@@ -1,7 +1,7 @@
 package main
 
 // Служба записи исходной системы systemd управляется только на ЕЁ СОБСТВЕННОМ хосте, не через
-// Never Backend. Две явные операции допускают экспорт нового снимка только ПОСЛЕ остановки
+// Launcher Backend. Две явные операции допускают экспорт нового снимка только ПОСЛЕ остановки
 // записи. Это проверяемое свидетельство оператора, а не удалённая аппаратная аттестация и не
 // утверждение обо всех неучтённых службах записи или прокси.
 import (
@@ -124,7 +124,7 @@ func readFenceFile0448(path string, max int64, dest any) error {
 	return nil
 }
 func validateFenceState0448(s sourceFenceState0448) error {
-	if s.Format != "never/gravit-source-stop/v1" || !fenceScope0448.MatchString(s.RunID) || !fenceScope0448.MatchString(s.ProfileID) || !fenceScope0448.MatchString(s.Channel) || len(s.StageID) < 16 || len(s.StageID) > 128 || !fenceUnit0448.MatchString(s.Unit) || s.StoppedAt.IsZero() {
+	if s.Format != "launcher/gravit-source-stop/v1" || !fenceScope0448.MatchString(s.RunID) || !fenceScope0448.MatchString(s.ProfileID) || !fenceScope0448.MatchString(s.Channel) || len(s.StageID) < 16 || len(s.StageID) > 128 || !fenceUnit0448.MatchString(s.Unit) || s.StoppedAt.IsZero() {
 		return errors.New("Некорректная область блокировки источника")
 	}
 	return nil
@@ -242,7 +242,7 @@ func handleMigrationFence0448(args []string) error {
 	defer cancel()
 	switch args[0] {
 	case "fence-source":
-		state := sourceFenceState0448{Format: "never/gravit-source-stop/v1", RunID: flagValue(args, "--run", ""), ProfileID: flagValue(args, "--profile-id", ""), Channel: flagValue(args, "--channel", ""), StageID: flagValue(args, "--stage-id", ""), Unit: flagValue(args, "--unit", "")}
+		state := sourceFenceState0448{Format: "launcher/gravit-source-stop/v1", RunID: flagValue(args, "--run", ""), ProfileID: flagValue(args, "--profile-id", ""), Channel: flagValue(args, "--channel", ""), StageID: flagValue(args, "--stage-id", ""), Unit: flagValue(args, "--unit", "")}
 		if flagValue(args, "--confirm", "") != state.RunID {
 			return errors.New("Требуется точное подтверждение идентификатора задачи миграции")
 		}

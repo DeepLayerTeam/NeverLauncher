@@ -1,6 +1,6 @@
 -- 0.29.1 Canonical Identity & Issuer: preserve every legacy identity and Minecraft UUID.
 -- Existing external identities are bound to their stable provider namespace until
--- the account owner explicitly links a verified, protocol-level issuer. Never
+-- the account owner explicitly links a verified, protocol-level issuer. Launcher
 -- infer the issuer from an unverified email or the current provider configuration.
 ALTER TABLE auth_identities ADD COLUMN IF NOT EXISTS issuer TEXT;
 UPDATE auth_identities
@@ -18,7 +18,7 @@ DO $$ BEGIN
         RAISE EXCEPTION '0.29.1 refused: duplicate issuer-scoped external subjects';
     END IF;
     IF EXISTS (SELECT 1 FROM auth_identities GROUP BY user_id,provider,issuer HAVING count(*)>1) THEN
-        RAISE EXCEPTION '0.29.1 refused: multiple subjects of one issuer for one Never user';
+        RAISE EXCEPTION '0.29.1 refused: multiple subjects of one issuer for one Launcher user';
     END IF;
 END $$;
 

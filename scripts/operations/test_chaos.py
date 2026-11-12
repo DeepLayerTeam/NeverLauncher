@@ -81,9 +81,9 @@ class Chaos0456(unittest.TestCase):
                 Path(args[-1]).write_bytes(data)
             return b""
         with patch.object(ch, "s3_call", side_effect=fake_s3):
-            self.assertEqual(ch.s3_verify("http://127.0.0.1:19000", "nl-dr-testbucket", "neverlauncher-chaos-0456/x", digest), digest)
+            self.assertEqual(ch.s3_verify("http://127.0.0.1:19000", "nl-dr-testbucket", "launcher-chaos-0456/x", digest), digest)
             with self.assertRaisesRegex(dr.DrillError, "объект S3"):
-                ch.s3_verify("http://127.0.0.1:19000", "nl-dr-testbucket", "neverlauncher-chaos-0456/x", "1"*64)
+                ch.s3_verify("http://127.0.0.1:19000", "nl-dr-testbucket", "launcher-chaos-0456/x", "1"*64)
 
     def test_dependency_stop_recovers_even_if_detection_fails(self):
         with patch.object(dr, "compose") as compose, patch.object(ch, "poll", side_effect=dr.DrillError("readiness unexpectedly healthy")):

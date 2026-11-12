@@ -1,4 +1,4 @@
-# NeverLauncher 0.48.12 — пример Java-разработчика
+# Launcher 0.48.12 — пример Java-разработчика
 
 Этот проект — настоящий **внешний** потребитель Java SDK. Собирайте его после публикации трёх артефактов SDK в `dist/java-sdk/maven` (см. `scripts/java/developer_e2e_04812.py`).
 

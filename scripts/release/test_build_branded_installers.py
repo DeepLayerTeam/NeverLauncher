@@ -136,7 +136,7 @@ class NativePackageTests(unittest.TestCase):
             self.assertIn("Name=Project Launcher", desktop)
             self.assertIn("Icon=launcher-project", desktop)
             bundle = extracted / "usr/lib/launcher/bundle"
-            subprocess.run([str(bundle / "neverinstaller"), "verify", "--bundle", str(bundle)], check=True, stdout=subprocess.PIPE)
+            subprocess.run([str(bundle / "installer"), "verify", "--bundle", str(bundle)], check=True, stdout=subprocess.PIPE)
             # Подписанный, но недопустимый образ должен отклоняться также настоящим
             # Go-валидатором оформления, а не только проверкой подписи.
             invalid = json.loads(json.dumps(config))

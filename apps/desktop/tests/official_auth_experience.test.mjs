@@ -132,7 +132,7 @@ test("Восстанавливает проверенный нативный п�
   assert.equal(f.experience.snapshot.activity, null);
 });
 
-test("Переключение, обновление, привязка и отвязка Never и выборочный выход обновляют интерфейс и родителя", async () => {
+test("Переключение, обновление, привязка и отвязка Launcher и выборочный выход обновляют интерфейс и родителя", async () => {
   const f = fixture();
   await f.experience.initialize();
   await f.experience.select(bravo.id);

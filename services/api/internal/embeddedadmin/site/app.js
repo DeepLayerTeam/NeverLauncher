@@ -736,7 +736,7 @@ for (const op of ["list", "stage", "activate", "cancel"]) {
       return;
     }
     if (op === "activate" && !byId("migration-cutover-source-fenced").checked) {
-      message("Сначала остановите исходный процесс записи Gravit вне Never", true);
+      message("Сначала остановите исходный процесс записи Gravit вне Launcher", true);
       return;
     }
     const route = `/api/v1/admin/migration-runs/${encodeURIComponent(id)}/cutovers`;
@@ -795,7 +795,7 @@ for (const op of ["list", "stage", "activate", "cancel"]) {
         throw new Error(result?.error?.message || `HTTP ${response.status}`);
       message(
         op === "activate"
-          ? "Канал Never переключён. Контролируйте состояние и сохраните журнал отката MIG12."
+          ? "Канал Launcher переключён. Контролируйте состояние и сохраните журнал отката MIG12."
           : `Переключение ${op}: сохранено`,
       );
     } catch (err) {
@@ -807,7 +807,7 @@ for (const op of ["list", "stage", "activate", "cancel"]) {
 }
 
 // MIG12: предоставленный оператором экспорт снимка сверяется на Backend с
-// MIG10. Never/UI не может аттестовать состояние записывающих процессов
+// MIG10. Launcher/UI не может аттестовать состояние записывающих процессов
 // внешнего источника и игры.
 for (const operation of ["plan", "commit", "status"]) {
   byId("migration-rollback-" + operation).addEventListener(
@@ -825,7 +825,7 @@ for (const operation of ["plan", "commit", "status"]) {
           (run !== confirmed || !byId("migration-rollback-fenced").checked))
       ) {
         message(
-          "Укажите задачу миграции, профиль и канал, подтвердите задачу миграции и остановку процессов записи Never",
+          "Укажите задачу миграции, профиль и канал, подтвердите задачу миграции и остановку процессов записи Launcher",
           true,
         );
         return;
@@ -873,7 +873,7 @@ for (const operation of ["plan", "commit", "status"]) {
           Object.assign(data, {
             planSha256: byId("migration-rollback-plan-sha").value.trim(),
             sourceWriterFenced: true,
-            neverWriterFenced: true,
+            launcherWriterFenced: true,
             currentEvidenceSha256: byId(
               "migration-rollback-evidence-sha",
             ).value.trim(),

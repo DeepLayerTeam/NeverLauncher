@@ -32,7 +32,7 @@ class GATests(unittest.TestCase):
     def seal(self):
         hashes={p.relative_to(self.evidence).as_posix():hashlib.sha256(p.read_bytes()).hexdigest()
                 for p in self.evidence.rglob('*') if p.is_file()}
-        doc={'schema':'neverlauncher.ga0480.independent-operator.v1', 'version':'0.48.0','commit':self.commit, 'files':hashes}
+        doc={'schema':'launcher.ga0480.independent-operator.v1', 'version':'0.48.0','commit':self.commit, 'files':hashes}
         raw=json.dumps(doc,sort_keys=True).encode()
         self.approval.write_bytes(raw)
         self.sig.write_bytes(self.key.sign(gate.DOMAIN+raw))

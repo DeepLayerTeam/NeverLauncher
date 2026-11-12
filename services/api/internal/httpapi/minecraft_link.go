@@ -16,7 +16,7 @@ import (
 
 // Нативный менеджер Tauri — единственный вызывающий, передающий краткоживущий
 // Minecraft bearer. Backend самостоятельно проверяет его через Minecraft
-// Services. Токены никогда не попадают в БД Never, renderer, ответы или события
+// Services. Токены никогда не попадают в БД Launcher, renderer, ответы или события
 // аудита.
 type officialLinkRequest0268 struct {
 	MinecraftAccessToken string `json:"minecraftAccessToken"`
@@ -31,9 +31,9 @@ type minecraftProfileVerifier0268 interface {
 	Profile(context.Context, string) (officialminecraft.Profile, error)
 }
 
-func freshNeverIdentity0268(claims authClaims, clock time.Time) bool {
-	// Аутентифицированный сеанс Never доказывает свою сторону привязки. Требуйте
-	// недавнюю аутентификацию Never, чтобы нельзя было привязать учётную запись по
+func freshLauncherIdentity0268(claims authClaims, clock time.Time) bool {
+	// Аутентифицированный сеанс Launcher доказывает свою сторону привязки. Требуйте
+	// недавнюю аутентификацию Launcher, чтобы нельзя было привязать учётную запись по
 	// украденному старому JWT.
 	return claims.AuthTime > 0 && claims.AuthTime <= clock.Unix() && clock.Unix()-claims.AuthTime <= 15*60
 }
@@ -79,7 +79,7 @@ func (s Server) officialLinksGet0268(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	claims, err := s.officialActor0257(r)
 	if err != nil {
-		writeError(w, 401, "Требуется авторизация Never")
+		writeError(w, 401, "Требуется авторизация Launcher")
 		return
 	}
 	store, ok := s.officialLinkStore0268()
@@ -102,11 +102,11 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	claims, err := s.officialActor0257(r)
 	if err != nil {
-		writeError(w, 401, "Требуется авторизация Never")
+		writeError(w, 401, "Требуется авторизация Launcher")
 		return
 	}
-	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, 403, "Для привязки учётной записи необходим недавний вход в Never")
+	if !freshLauncherIdentity0268(claims, time.Now()) {
+		writeError(w, 403, "Для привязки учётной записи необходим недавний вход в Launcher")
 		return
 	}
 	store, ok := s.officialLinkStore0268()
@@ -154,7 +154,7 @@ func (s Server) officialLinkCreate0268(w http.ResponseWriter, r *http.Request) {
 	}
 	link, err := store.UpsertOfficialLink0268(ctx, claims.Sub, strings.ToLower(profile.ID), profile.Name)
 	if errors.Is(err, repository.ErrOfficialLinkOwned0268) {
-		writeError(w, 409, "UUID Minecraft уже привязан к другой учётной записи Never")
+		writeError(w, 409, "UUID Minecraft уже привязан к другой учётной записи Launcher")
 		return
 	}
 	if err != nil {
@@ -170,11 +170,11 @@ func (s Server) officialLinkRemove0268(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	claims, err := s.officialActor0257(r)
 	if err != nil {
-		writeError(w, 401, "Требуется авторизация Never")
+		writeError(w, 401, "Требуется авторизация Launcher")
 		return
 	}
-	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, 403, "Для отвязки учётной записи требуется недавний вход в Never")
+	if !freshLauncherIdentity0268(claims, time.Now()) {
+		writeError(w, 403, "Для отвязки учётной записи требуется недавний вход в Launcher")
 		return
 	}
 	uuid, valid := canonicalMinecraftUUID0268(r.PathValue("minecraftUuid"))
@@ -191,7 +191,7 @@ func (s Server) officialLinkRemove0268(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	err = store.RemoveOfficialLink0268(ctx, claims.Sub, uuid)
 	if errors.Is(err, repository.ErrOfficialLinkAbsent0268) {
-		writeError(w, 404, "UUID Minecraft не привязан к этой учётной записи Never")
+		writeError(w, 404, "UUID Minecraft не привязан к этой учётной записи Launcher")
 		return
 	}
 	if err != nil {

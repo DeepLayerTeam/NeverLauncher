@@ -11,7 +11,7 @@ async fn missing_selected_legacy_optional_is_not_ready() {
     source.as_object_mut().expect("получить объект манифеста").remove("componentCatalog");
     let manifest: runtime::Manifest = serde_json::from_value(source).expect("получить устаревший манифест");
     let root: PathBuf = std::env::temp_dir().join(format!(
-        "neverlauncher-selected-optional-0526-{}-{}",
+        "launcher-selected-optional-0526-{}-{}",
         std::process::id(),
         SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()
     ));

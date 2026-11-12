@@ -1,4 +1,4 @@
-name: NeverGuard 0.43.8 — защита на всём протяжении игры
+name: LauncherGuard 0.43.8 — защита на всём протяжении игры
 on:
   push:
     paths:

@@ -176,7 +176,7 @@ func (c *Connector) ResolveIdentity(ctx context.Context, req authconnector.Resol
 	return parsed, nil
 }
 
-// VerifyProviderSession проверяет токен провайдера, а НЕ JWT NeverLauncher, наличие
+// VerifyProviderSession проверяет токен провайдера, а НЕ JWT Launcher, наличие
 // прав или выдачу нового сеанса входа.
 func (c *Connector) VerifyProviderSession(ctx context.Context, token string) (authconnector.Authentication, error) {
 	if token == "" || len(token) > 16384 {

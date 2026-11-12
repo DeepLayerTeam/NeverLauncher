@@ -465,7 +465,7 @@ func (r *Report) inspectWrapper(p string, obj map[string]json.RawMessage) {
 	if len(obj) == 0 {
 		r.finding("WRAPPER_EMPTY", "manual", "server_wrapper", p, "Конфигурация оболочки пуста")
 	}
-	r.finding("WRAPPER_REENROLL", "manual", "server_wrapper", p, "Учётные данные и корневые ключи доверия ServerWrapper необходимо заменить средствами Never ServerBridge")
+	r.finding("WRAPPER_REENROLL", "manual", "server_wrapper", p, "Учётные данные и корневые ключи доверия ServerWrapper необходимо заменить средствами Launcher ServerBridge")
 }
 
 // jarManifestVersionFile сбрасывает ограниченный вложенный JAR в закрытый файл на
@@ -563,7 +563,7 @@ func parseJarManifest(data []byte) (string, bool, error) {
 }
 
 // inspectOptional распознаёт известные действия, но не предполагает существование
-// указанных ресурсов в Never. Неизвестные действия — жёсткие блокирующие условия, не
+// указанных ресурсов в Launcher. Неизвестные действия — жёсткие блокирующие условия, не
 // предупреждения.
 func (r *Report) inspectOptional(p, key string, raw json.RawMessage) {
 	var options []json.RawMessage

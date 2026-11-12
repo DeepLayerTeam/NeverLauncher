@@ -6,7 +6,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Создать (базовая реализация Never, миграция Gravit ещё не завершена)",
+        "summary": "Создать (базовая реализация Launcher, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -81,7 +81,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Получить список (базовая реализация Never, миграция Gravit ещё не завершена)",
+        "summary": "Получить список (базовая реализация Launcher, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -140,7 +140,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Прочитать (базовая реализация Never, миграция Gravit ещё не завершена)",
+        "summary": "Прочитать (базовая реализация Launcher, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -407,7 +407,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Применить проверенный необязательный каталог к неподписанному черновику Never после сборки рабочей области",
+        "summary": "Применить проверенный необязательный каталог к неподписанному черновику Launcher после сборки рабочей области",
         "security": [
           {
             "BearerAuth": []
@@ -477,7 +477,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Атомарно зарезервировать профиль и рабочую область Never и подготовить проверенное зашифрованное содержимое источника",
+        "summary": "Атомарно зарезервировать профиль и рабочую область Launcher и подготовить проверенное зашифрованное содержимое источника",
         "security": [
           {
             "BearerAuth": []
@@ -949,7 +949,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Атомарно переключить указатель канала Never через CAS после независимой блокировки записи в источник (подтверждение оператора, а не автоматическая проверка; требуется MFA)",
+        "summary": "Атомарно переключить указатель канала Launcher через CAS после независимой блокировки записи в источник (подтверждение оператора, а не автоматическая проверка; требуется MFA)",
         "security": [
           {
             "BearerAuth": []
@@ -1138,7 +1138,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Заблокировать конкурентную публикацию канала Never и закрепить подписанный выпуск, одобренный MIG10 (требуются MFA и X-Migration-Cutover-Confirm)",
+        "summary": "Заблокировать конкурентную публикацию канала Launcher и закрепить подписанный выпуск, одобренный MIG10 (требуются MFA и X-Migration-Cutover-Confirm)",
         "security": [
           {
             "BearerAuth": []
@@ -1235,7 +1235,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "События (базовая реализация Never, миграция Gravit ещё не завершена)",
+        "summary": "События (базовая реализация Launcher, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -1323,7 +1323,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Выполнить (базовая реализация Never, миграция Gravit ещё не завершена)",
+        "summary": "Выполнить (базовая реализация Launcher, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -1608,7 +1608,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Сопоставить сохранённую карту UUID источника с текущими идентификаторами Never",
+        "summary": "Сопоставить сохранённую карту UUID источника с текущими идентификаторами Launcher",
         "security": [
           {
             "BearerAuth": []
@@ -2087,7 +2087,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Приостановить (базовая реализация Never, миграция Gravit ещё не завершена)",
+        "summary": "Приостановить (базовая реализация Launcher, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -2505,7 +2505,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Возобновить (базовая реализация Never, миграция Gravit ещё не завершена)",
+        "summary": "Возобновить (базовая реализация Launcher, миграция Gravit ещё не завершена)",
         "security": [
           {
             "BearerAuth": []
@@ -2572,7 +2572,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Атомарно восстановить указатель выпуска Never через CAS; не перезаписывает миры и не перезапускает Gravit",
+        "summary": "Атомарно восстановить указатель выпуска Launcher через CAS; не перезаписывает миры и не перезапускает Gravit",
         "security": [
           {
             "BearerAuth": []
@@ -2603,7 +2603,7 @@
                   "current",
                   "planSha256",
                   "sourceWriterFenced",
-                  "neverWriterFenced",
+                  "launcherWriterFenced",
                   "currentEvidenceSha256"
                 ],
                 "properties": {
@@ -2630,7 +2630,7 @@
                     "type": "boolean",
                     "const": true
                   },
-                  "neverWriterFenced": {
+                  "launcherWriterFenced": {
                     "type": "boolean",
                     "const": true
                   },
@@ -3534,7 +3534,7 @@
         "importedAccounts": {
           "type": "integer"
         },
-        "existingNeverUntouched": {
+        "existingLauncherUntouched": {
           "type": "integer"
         },
         "manualResets": {
@@ -3679,7 +3679,7 @@
         "format": {
           "type": "string",
           "enum": [
-            "never/gravit-rollback/v1"
+            "launcher/gravit-rollback/v1"
           ]
         },
         "runId": {

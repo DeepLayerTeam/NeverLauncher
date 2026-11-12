@@ -559,7 +559,7 @@ export function AdminApp() {
     preserveRefresh = false,
   ) {
     const nextToken = data.tokens?.accessToken ?? data.accessToken;
-    if (!nextToken) throw new Error("Сервер не вернул токен доступа Never.");
+    if (!nextToken) throw new Error("Сервер не вернул токен доступа Launcher.");
     setToken(nextToken);
     setPassword("");
     setTotp("");

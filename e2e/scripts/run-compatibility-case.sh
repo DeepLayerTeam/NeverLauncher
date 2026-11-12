@@ -305,7 +305,7 @@ if scope == "client":
         stopped = read("live-server-stopped.json") or {}
         witness = read("live-server-witness.json") or {}
         live_ok = (
-            live.get("schema") == "neverlauncher.compatibility-live-join/0.52.4"
+            live.get("schema") == "launcher.compatibility-live-join/0.52.4"
             and live.get("status") == "passed"
             and live.get("targetId") == target_id
             and live.get("sourceCommit") == commit
@@ -325,7 +325,7 @@ if scope == "client":
             and cert_path.is_file()
             and witness_path.is_file()
             and stopped_path.is_file()
-            and stopped.get("schema") == "neverlauncher.compatibility-server-stopped/0.52.4"
+            and stopped.get("schema") == "launcher.compatibility-server-stopped/0.52.4"
             and stopped.get("stoppedAfterLiveWitness") is True
             and stopped.get("serverLogSha256") == file_sha256(server_log_path)
             and stopped.get("serverPid") == live.get("serverProcessId")

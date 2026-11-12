@@ -1,5 +1,5 @@
 //! Проверки допуска Java Edition в нативном процессе Microsoft/Xbox/Minecraft. Это
-//! шлюз игровой авторизации, а не вход через OIDC/Never.
+//! шлюз игровой авторизации, а не вход через OIDC/Launcher.
 use crate::{official_exchange_0265::ProviderError, official_identity_0262::OfficialProfile};
 
 /// Только внутреннее доказательство; не отправляется в рендерер и не сохраняется как постоянное

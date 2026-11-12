@@ -23,7 +23,7 @@ func (s Server) pendingProviderIdentity0296(userID, provider, identityID string)
 }
 
 // commitPendingProviderCredential0296 вызывается только после успешного
-// WebAuthn-подтверждения и выдачи сеанса Never. AAD привязывает запечатанный токен
+// WebAuthn-подтверждения и выдачи сеанса Launcher. AAD привязывает запечатанный токен
 // к конкретному владельцу, провайдеру и субъекту, исключая подмену между challenge.
 func (s Server) commitPendingProviderCredential0296(user model.User, provider, identityID, sealed string) error {
 	identity, err := s.pendingProviderIdentity0296(user.ID, provider, identityID)

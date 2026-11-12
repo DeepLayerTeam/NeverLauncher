@@ -27,7 +27,7 @@ func fakeFencer0448(ctx context.Context, args ...string) (string, error) {
 func TestFenceSourceAndFreshSnapshot0448(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "source-state.json")
-	state := sourceFenceState0448{Format: "never/gravit-source-stop/v1", RunID: "run-11112222", ProfileID: "client", Channel: "stable", StageID: "stage-12345678901234", Unit: "gravit.service"}
+	state := sourceFenceState0448{Format: "launcher/gravit-source-stop/v1", RunID: "run-11112222", ProfileID: "client", Channel: "stable", StageID: "stage-12345678901234", Unit: "gravit.service"}
 	if err := stopSourceWriter0448(context.Background(), state, path, fakeFencer0448); err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestFenceSourceAndFreshSnapshot0448(t *testing.T) {
 func TestFenceRejectsDriftAndWriterRestart0448(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "state.json")
-	state := sourceFenceState0448{Format: "never/gravit-source-stop/v1", RunID: "run-11112222", ProfileID: "client", Channel: "stable", StageID: "stage-12345678901234", Unit: "gravit.service"}
+	state := sourceFenceState0448{Format: "launcher/gravit-source-stop/v1", RunID: "run-11112222", ProfileID: "client", Channel: "stable", StageID: "stage-12345678901234", Unit: "gravit.service"}
 	if err := stopSourceWriter0448(context.Background(), state, path, fakeFencer0448); err != nil {
 		t.Fatal(err)
 	}

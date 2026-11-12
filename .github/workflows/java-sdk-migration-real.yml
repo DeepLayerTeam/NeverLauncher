@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.8 — настоящие E2E-тесты миграции Java SDK
+name: Launcher 0.52.8 — настоящие E2E-тесты миграции Java SDK
 on:
   push:
     paths:
@@ -61,8 +61,8 @@ jobs:
   independent-live:
     needs: production-regression
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, linux, x64, migration-ga-isolated, neverlauncher-0528]
-    environment: neverlauncher-0528-independent-acceptance
+    runs-on: [self-hosted, linux, x64, migration-ga-isolated, launcher-0528]
+    environment: launcher-0528-independent-acceptance
     timeout-minutes: 180
     env:
       NL0528_CONFIG: ${{ vars.NL0528_CONFIG }}

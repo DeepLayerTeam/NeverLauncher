@@ -152,7 +152,7 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 			row.Status = "excluded"
 			row.Reason = "Старые закрытые ключи и доверенные учётные данные нельзя импортировать; замените их в целевой системе"
 		case "launchserver", "runtime":
-			row.Reason = "Настройки необходимо задать и проверить в Never; секреты автоматически не переносятся"
+			row.Reason = "Настройки необходимо задать и проверить в Launcher; секреты автоматически не переносятся"
 		default:
 			row.Reason = "Источник не классифицирован; оператор должен принять решение до переключения"
 		}

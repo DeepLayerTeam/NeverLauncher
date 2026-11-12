@@ -41,7 +41,7 @@ import nn1_compat_0516 as nn
 SOURCE = "0.51.10"
 TARGET = "0.52.0"
 PAIR = frozenset((SOURCE, TARGET))
-SCHEMA = "neverlauncher.rolling-update.0.52.0"
+SCHEMA = "launcher.rolling-update.0.52.0"
 STAGE = ".env.rolling-target-0520"
 BACKUP = ".env.rolling-previous-0520"
 STATE = ".rolling-state-0520.json"

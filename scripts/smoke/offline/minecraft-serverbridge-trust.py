@@ -44,9 +44,9 @@ require(
         "TrustedDeviceID: trustedDeviceID",
         "BindingEpoch: bindingEpoch",
         "parentSession.BindingEpoch != bindingEpoch",
-        "evaluateGameplayTrust0127(nil, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, false)",
+        "evaluateGameplayTrust0127(nil, session.UserID, session.LauncherSessionID, session.TrustedDeviceID, session.BindingEpoch, false)",
         "evaluateGameplayTrust0127(r, claims.Sub, claims.SessionID, claims.TrustedDeviceID, claims.BindingEpoch, true)",
-        "evaluateGameplayTrust0127(r, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, true)",
+        "evaluateGameplayTrust0127(r, session.UserID, session.LauncherSessionID, session.TrustedDeviceID, session.BindingEpoch, true)",
         '"trust-policy:"+trust.Reason',
     ],
 )

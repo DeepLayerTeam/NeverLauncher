@@ -2,7 +2,7 @@
 -- аутентификация по паролю — полноценный провайдер и должна соблюдать ту же
 -- каноническую границу идентичности, что SQL/HTTP/OIDC/Microsoft.
 
--- Заполните канонические локальные идентичности для каждого пользователя Never с возможностью входа по паролю.
+-- Заполните канонические локальные идентичности для каждого пользователя Launcher с возможностью входа по паролю.
 INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at)
 SELECT 'identity-local-' || u.id, u.id, 'local', u.id, u.email, u.email, u.display_name, '{}'::jsonb, now(), now()
 FROM users u

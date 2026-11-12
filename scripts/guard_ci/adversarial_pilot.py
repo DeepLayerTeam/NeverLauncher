@@ -105,7 +105,7 @@ def verify_shadow_file(path: Path, key: bytes) -> list[dict]:
             require(isinstance(signature, str) and bool(HEX.fullmatch(signature)), 'Некорректное кодирование MAC теневого режима')
             expected = mac(key, canonical(record))
             require(hmac.compare_digest(expected, signature), f'{path.name}:{line_number}: проверка MAC не пройдена')
-            require(record['schema'] == 'neverlauncher.guard-shadow/v1' and record['version'] == VERSION, 'Несовместимая схема или версия теневого режима')
+            require(record['schema'] == 'launcher.guard-shadow/v1' and record['version'] == VERSION, 'Несовместимая схема или версия теневого режима')
             require(isinstance(record['bootId'], str) and BOOT.fullmatch(record['bootId']), 'Неверный идентификатор загрузки')
             require(boot is None or boot == record['bootId'], 'Смешанные идентификаторы загрузки')
             boot = record['bootId']
@@ -206,7 +206,7 @@ def analyze_shadow(folder: Path, key_path: Path, reviews_path: Path | None = Non
     # Барьер пилотной эксплуатации требует независимого подтверждения человеко-часов игроков и фактической
     # проверки внешним оператором, а не времени в журнале по собственным утверждениям.
     return {
-        'schema': 'neverlauncher.guard-shadow-analysis/v1', 'version': VERSION,
+        'schema': 'launcher.guard-shadow-analysis/v1', 'version': VERSION,
         'status': 'BLOCKED' if hours < 10_000 or missing or counts['inconclusive'] or counts['false_positive'] else 'EVIDENCE_REVIEW_REQUIRED',
         'observedGuardActiveHoursLowerBound': hours,
         'playerHoursCertified': False,
@@ -249,7 +249,7 @@ def compare_performance(base: Path, protected: Path) -> dict:
     p0, p1 = percentile(av, .95), percentile(bv, .95)
     change = (p1 / p0 - 1) * 100
     return {
-        'schema': 'neverlauncher.guard-frame-performance/v1', 'version': VERSION,
+        'schema': 'launcher.guard-frame-performance/v1', 'version': VERSION,
         'status': 'PASS_MEASURED' if change <= 3.0 else 'FAIL_BUDGET',
         'baselineP95FrameMs': round(p0, 4), 'guardP95FrameMs': round(p1, 4),
         'guardP95RegressionPercent': round(change, 3), 'initialBudgetPercent': 3.0,
@@ -292,7 +292,7 @@ def verify_game(work: Path, server_log: Path, username: str) -> dict:
             seen_join |= re.search(r'(?<![A-Za-z0-9_])' + re.escape(username) + r' joined the game(?![A-Za-z0-9_])', line) is not None
     require(seen_allow and seen_join, 'Сервер не зарегистрировал одновременно авторизованный допуск и фактическое подключение игрока')
     return {
-        'schema': 'neverlauncher.guard-real-game-evidence/v1', 'version': VERSION,
+        'schema': 'launcher.guard-real-game-evidence/v1', 'version': VERSION,
         'status': 'EVIDENCE_VERIFIED_NOT_INDEPENDENT',
         'loader': game['loader'], 'minecraftVersion': game.get('version'),
         'gameResultSha256': file_hash(work / 'result.json'),
@@ -337,7 +337,7 @@ def run_jvm_suites(output: Path, only: set[str] | None = None) -> dict:
                        'durationSeconds': round(time.monotonic() - started, 2),
                        'logSha256': digest(output_bytes), 'logFile': log.name})
     status = 'PASS_JVM_REGRESSIONS_ONLY' if suites and all(v['status'] == 'PASS' for v in suites) else 'BLOCKED'
-    return {'schema': 'neverlauncher.guard-adversarial-jvm/v1', 'version': VERSION,
+    return {'schema': 'launcher.guard-adversarial-jvm/v1', 'version': VERSION,
             'status': status, 'suites': suites,
             'notes': 'Реальные тестовые Java-подпроцессы; это не сертификация официального Minecraft или пользовательского теневого пилота.'}
 

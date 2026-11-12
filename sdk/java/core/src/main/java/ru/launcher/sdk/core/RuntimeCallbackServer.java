@@ -26,8 +26,8 @@ public final class RuntimeCallbackServer implements AutoCloseable {
     // Отзыв доступа и завершение JVM должны прекращать приём работы ДО закрытия ресурсов.
     private final AtomicBoolean accepting=new AtomicBoolean(true);
     private final Set<Future<?>> pending=ConcurrentHashMap.newKeySet();
-    private final ThreadPoolExecutor workers=pool("neverext-rpc-http",8,16);
-    private final ThreadPoolExecutor handlers=pool("neverext-rpc-handler",4,8);
+    private final ThreadPoolExecutor workers=pool("launcherext-rpc-http",8,16);
+    private final ThreadPoolExecutor handlers=pool("launcherext-rpc-handler",4,8);
     private static ThreadPoolExecutor pool(String name,int threads,int queued){
         ThreadPoolExecutor pool=new ThreadPoolExecutor(threads,threads,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(queued),r->{Thread t=new Thread(r,name);t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
         pool.prestartAllCoreThreads();return pool;

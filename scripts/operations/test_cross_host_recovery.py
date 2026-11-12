@@ -197,7 +197,7 @@ class Recovery0519Tests(unittest.TestCase):
     def test_audit_readback_count_and_sampled_rpo(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "ledger"
-            path.write_text(json.dumps({"schema": "neverlauncher.dr-ack-ledger/v1", "entries": [
+            path.write_text(json.dumps({"schema": "launcher.dr-ack-ledger/v1", "entries": [
                 {"id": "audit-1", "ackUtc": "2026-11-03T12:00:00Z"},
                 {"id": "audit-2", "ackUtc": "2026-11-03T12:04:00Z"}]}))
             os.chmod(path, 0o600)

@@ -70,7 +70,7 @@ def load_pinned_bundle(args):
         return '', '', '', ''
     require(bool(args.pins), 'для загрузчиков и устаревших серверов нужны закреплённые пакеты; без пакета статус BLOCKED')
     manifest = read_json(Path(args.pins).resolve())
-    require(manifest.get('schema') == 'neverlauncher.compatibility-server/0.52.4', 'Схема закреплённых параметров сервера не совпадает')
+    require(manifest.get('schema') == 'launcher.compatibility-server/0.52.4', 'Схема закреплённых параметров сервера не совпадает')
     targets = manifest.get('targets')
     require(type(targets) is dict, 'Отсутствуют целевые параметры закрепления сервера')
     entry = targets.get(args.target)
@@ -123,7 +123,7 @@ def serve(args):
         server.prepare().start(timeout=200)
         print('[live-join] выделенный сервер запущен, RCON и игровые такты проверены', flush=True)
         atomically_write(runtime / 'live-server-ready.json', {
-            'schema': 'neverlauncher.compatibility-server-ready/0.52.4',
+            'schema': 'launcher.compatibility-server-ready/0.52.4',
             **run_binding(),
             'targetId': args.target, 'minecraftVersion': args.minecraft,
             'loader': args.loader, 'loaderVersion': args.loader_version,
@@ -149,7 +149,7 @@ def serve(args):
                         if after > before and player_online(server.rcon.query('list'), PLAYER):
                             print('[live-join] реальный игрок обнаружен в сети, игровые такты продолжаются', flush=True)
                             atomically_write(runtime / 'live-server-witness.json', {
-                                'schema': 'neverlauncher.compatibility-join-witness/0.52.4',
+                                'schema': 'launcher.compatibility-join-witness/0.52.4',
                                 **run_binding(),
                                 'targetId': args.target, 'minecraftVersion': args.minecraft,
                                 'loader': args.loader, 'loaderVersion': args.loader_version,
@@ -193,7 +193,7 @@ def serve(args):
         server.close()
         if healthy_at_stop:
             atomically_write(runtime / 'live-server-stopped.json', {
-                'schema': 'neverlauncher.compatibility-server-stopped/0.52.4',
+                'schema': 'launcher.compatibility-server-stopped/0.52.4',
                 **run_binding(),
                 'targetId': args.target, 'minecraftVersion': args.minecraft,
                 'loader': args.loader, 'loaderVersion': args.loader_version,
@@ -215,8 +215,8 @@ def verify(args):
     cert = read_json(cert_path)
     log_path = runtime / 'matching-server.log'
     log = log_path.read_text(encoding='utf-8', errors='replace')
-    require(ready.get('schema') == 'neverlauncher.compatibility-server-ready/0.52.4', 'Несовпадение схемы готовности')
-    require(witness.get('schema') == 'neverlauncher.compatibility-join-witness/0.52.4', 'Несовпадение схемы свидетельства')
+    require(ready.get('schema') == 'launcher.compatibility-server-ready/0.52.4', 'Несовпадение схемы готовности')
+    require(witness.get('schema') == 'launcher.compatibility-join-witness/0.52.4', 'Несовпадение схемы свидетельства')
     for label, doc in (('ready', ready), ('witness', witness), ('stopped', stopped)):
         require(all(doc.get(k) == v for k, v in run_binding().items()),
                 label + ': повторно использовано исходное свидетельство коммита, запуска или попытки CI')
@@ -226,7 +226,7 @@ def verify(args):
                 label + ': идентификаторы клиента и сервера не совпадают')
     for field in ('serverPid', 'port', 'serverArtifactSha256'):
         require(ready.get(field) == witness.get(field), 'Изменился идентификатор сервера-свидетеля: ' + field)
-    require(stopped.get('schema') == 'neverlauncher.compatibility-server-stopped/0.52.4'
+    require(stopped.get('schema') == 'launcher.compatibility-server-stopped/0.52.4'
             and stopped.get('stoppedAfterLiveWitness') is True
             and stopped.get('targetId') == args.target
             and stopped.get('minecraftVersion') == args.minecraft
@@ -253,7 +253,7 @@ def verify(args):
             type(cert.get('classpathEntries')) is int and cert['classpathEntries'] > 0,
             'Запуск JVM или загрузчика не прошёл проверку')
     atomically_write(runtime / 'live-join.json', {
-        'schema': 'neverlauncher.compatibility-live-join/0.52.4',
+        'schema': 'launcher.compatibility-live-join/0.52.4',
         **run_binding(),
         'status': 'passed', 'targetId': args.target,
         'minecraftVersion': args.minecraft, 'loader': args.loader,

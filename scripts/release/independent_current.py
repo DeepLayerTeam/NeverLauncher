@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SHA = re.compile(r'[a-f0-9]{40}\Z')
 ID = re.compile(r'[a-zA-Z0-9_.:-]{3,128}\Z')
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
-SCHEMA = 'neverlauncher.unsigned-build-current/' + VERSION
+SCHEMA = 'launcher.unsigned-build-current/' + VERSION
 LOCKS = ('services/api/go.mod', 'services/api/go.sum', 'apps/desktop/package-lock.json',
          'apps/desktop/src-tauri/Cargo.toml', 'runtime/runtime/Cargo.toml',
          'scripts/release/unsigned_package_0470.py')
@@ -105,7 +105,7 @@ def compare(a: dict, b: dict, dir_a: Path, dir_b: Path, commit: str, run_id: str
             'подписанные отчёты не соответствуют фактическому содержимому архива')
     require(a['targets'] == b['targets'] and set(a['targets']) == TARGETS,
             'Две независимые сборки различаются неподписанными байтовыми данными')
-    return {'schema': 'neverlauncher.reproducibility-current-comparison/' + VERSION,
+    return {'schema': 'launcher.reproducibility-current-comparison/' + VERSION,
             'version': VERSION, 'commit': commit, 'runId': run_id, 'attempt': attempt,
             'status': 'SIX_UNSIGNED_TARGETS_BYTE_IDENTICAL_NOT_GA',
             'inputs': a['inputs'], 'builders': [

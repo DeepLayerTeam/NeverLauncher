@@ -32,7 +32,7 @@ type Activate struct {
 	ExpectedRevision int64  `json:"expectedRevision"`
 	// Ссылка и SHA-256 на отдельно сохраняемые эксплуатационные доказательства того,
 	// что старый записывающий процесс Gravit действительно остановлен или
-	// заблокирован. Это не утверждение Never.
+	// заблокирован. Это не утверждение Launcher.
 	SourceFenceReference        string                  `json:"sourceFenceReference"`
 	SourceFenceEvidenceSHA256   string                  `json:"sourceFenceEvidenceSha256"`
 	CurrentSourceSnapshotSHA256 string                  `json:"currentSourceSnapshotSha256"`
@@ -61,7 +61,7 @@ var systemdUnit0448 = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.@-]{0,126}\.se
 
 func VerifySourceFence0448(a Activate, r Route, now time.Time) error {
 	proof := a.SourceFenceReceipt
-	if proof == nil || proof.Format != "never/gravit-source-stop/v1" ||
+	if proof == nil || proof.Format != "launcher/gravit-source-stop/v1" ||
 		proof.RunID != r.RunID || proof.ProfileID != r.ProfileID || proof.Channel != r.Channel || proof.StageID != r.StageID ||
 		!systemdUnit0448.MatchString(proof.Unit) || proof.UnitState != "inactive" ||
 		(proof.UnitFileState != "masked" && proof.UnitFileState != "masked-runtime") ||
@@ -114,18 +114,18 @@ func ValidateActivation(a Activate) error {
 	return nil
 }
 
-// VerifyRelease проверяет настоящие байты Ed25519 и ТЕКУЩИЙ корень подписи Never;
+// VerifyRelease проверяет настоящие байты Ed25519 и ТЕКУЩИЙ корень подписи Launcher;
 // самоподписанный старый манифест Gravit нельзя выбирать целью.
 func VerifyRelease(m model.Manifest, trusted ed25519.PublicKey) (string, error) {
 	if err := model.ValidateManifestSchema(m); err != nil {
 		return "", err
 	}
 	if m.Signature == nil || !strings.EqualFold(m.Signature.Algorithm, "Ed25519") {
-		return "", errors.New("Требуется: «подписанный выпуск Never»")
+		return "", errors.New("Требуется: «подписанный выпуск Launcher»")
 	}
 	pub, err := hex.DecodeString(m.Signature.PublicKey)
 	if err != nil || len(pub) != ed25519.PublicKeySize || !ed25519.PublicKey(pub).Equal(trusted) {
-		return "", errors.New("Подписант релиза не соответствует текущему доверенному ключу Never")
+		return "", errors.New("Подписант релиза не соответствует текущему доверенному ключу Launcher")
 	}
 	sig, err := hex.DecodeString(m.Signature.Signature)
 	if err != nil || len(sig) != ed25519.SignatureSize {

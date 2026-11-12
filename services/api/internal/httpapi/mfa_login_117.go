@@ -37,7 +37,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 	// OIDC amr, описывают действия ВНЕШНЕГО провайдера. Они не доказывают, что
 	// Launcher локально проверил TOTP, код восстановления или passkey. В частности,
 	// удалённая строка passkey/mfa никогда не удовлетворяет локальной политике MFA и
-	// не создаёт привилегированную authStrength Never.
+	// не создаёт привилегированную authStrength Launcher.
 	methods := mergeAuthMethods117(authconnector.SafeUpstreamAuthMethods(baseMethods))
 	strength := authMethodStrength117(methods)
 	policy := s.State.Passkeys.policy(user.ID)

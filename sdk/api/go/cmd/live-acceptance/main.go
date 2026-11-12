@@ -15,14 +15,14 @@ import (
  "time"
  "unicode/utf8"
 
- neverapi "gitflic.ru/skif4er/launcher/sdk/api/go"
+ launcherapi "gitflic.ru/skif4er/launcher/sdk/api/go"
 )
 func required(key string) string { v:=os.Getenv(key); if v=="" { panic("Отсутствует конфигурация SDK для реального подключения: "+key) }; return v }
 func run() error {
  origin,token:=required("NL_GA_ORIGIN"),required("NL_GA_BEARER")
  jsonPath,textPath,binaryPath:=required("NL_GA_JSON_PATH"),required("NL_GA_TEXT_PATH"),required("NL_GA_BINARY_PATH")
  expected:=required("NL_GA_BINARY_SHA256")
- client,err:=neverapi.New(origin,token);if err!=nil{return err}
+ client,err:=launcherapi.New(origin,token);if err!=nil{return err}
  ctx,cancel:=context.WithTimeout(context.Background(),4*time.Minute);defer cancel()
  if err=client.CheckCompatibility(ctx);err!=nil{return fmt.Errorf("Совместимость опубликованного рабочего API: %w",err)}
  var jsonBody map[string]any

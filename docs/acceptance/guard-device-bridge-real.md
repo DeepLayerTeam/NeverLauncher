@@ -1,4 +1,4 @@
-# NeverLauncher 0.52.9 — Guard / доверие к устройству / ServerBridge
+# Launcher 0.52.9 — Guard / доверие к устройству / ServerBridge
 
 ## Фактически выполняемые проверки
 
@@ -31,13 +31,13 @@ python3 scripts/acceptance/guard_device_bridge_real_0529.py local \
 
 Запустите существующие физические процессы CI и кандидатов с нативными подписями. Сохраните **исходные** семь результатов Device Trust с журналами, три результата Guard CI **вместе с исполняемыми файлами и пакетами**, шесть нативных отчётов испытаний JVM с журналами, данные игровых сеансов и исходное дерево runtime ServerBridge с десятью реальными процессами Docker. Соберите 14 настоящих промышленных JAR ServerBridge через релизный конвейер проекта и проверьте каждый SHA-256. Подготовьте реально запущенный Vanilla-сервер и подписанный sidecar, как описано выше. Настройте закрытый серверный теневой журнал **до** игровых сеансов, храните его ключ HMAC с правами `0600` вне результатов, получите независимые заключения по инцидентам, сопоставленные измерения длительности кадров и данные о реальных разрешённых подключениях игроков.
 
-На выделенной машине создайте JSON с режимом `0600` по пути `/etc/neverlauncher/acceptance/guard-device-bridge-0529.json`. Он должен содержать ровно поля `sourceCommit`, `runId`, `repository`, `deviceResults`, `guardResults`, `guardJvmResults`, `guardShadowDir`, `guardShadowKeyFile`, `guardIncidentReviews`, `frameBaseline`, `frameGuard`, `gameRuntime`, `gameServerLog`, `player`, `serverbridgeRuntime` и `vanilla`. Все пути должны быть абсолютными. Объект `vanilla` содержит ровно `sidecarPid`, `sidecarJar`, `sidecarSha256`, `sidecarLog`, `serverLog`, `serverDir`, `minecraftPort`, `rconPort`, `minecraftVersion`. Пароли и токены доступа в JSON не включаются.
+На выделенной машине создайте JSON с режимом `0600` по пути `/etc/launcher/acceptance/guard-device-bridge-0529.json`. Он должен содержать ровно поля `sourceCommit`, `runId`, `repository`, `deviceResults`, `guardResults`, `guardJvmResults`, `guardShadowDir`, `guardShadowKeyFile`, `guardIncidentReviews`, `frameBaseline`, `frameGuard`, `gameRuntime`, `gameServerLog`, `player`, `serverbridgeRuntime` и `vanilla`. Все пути должны быть абсолютными. Объект `vanilla` содержит ровно `sidecarPid`, `sidecarJar`, `sidecarSha256`, `sidecarLog`, `serverLog`, `serverDir`, `minecraftPort`, `rconPort`, `minecraftVersion`. Пароли и токены доступа в JSON не включаются.
 
 ```bash
 export LAUNCHER_VANILLA_RCON_PASSWORD="$(cat /secure/rcon-password)"
 umask 077
 python3 scripts/acceptance/guard_device_bridge_real_0529.py live \
-  --config /etc/neverlauncher/acceptance/guard-device-bridge-0529.json \
+  --config /etc/launcher/acceptance/guard-device-bridge-0529.json \
   --output /absolute/new-private/guard-device-bridge-result.json
 ```
 

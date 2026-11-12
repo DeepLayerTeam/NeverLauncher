@@ -69,7 +69,7 @@ public final class ExtensionRunner {
                 Thread shutdown=new Thread(()->{
                     try{shuttingDown.set(true);lifecycle.stop(Duration.ofSeconds(3));}catch(Exception ignored){/* контроллер хоста может завершить процесс */}
                     finally{host.close();stopping.countDown();}
-                },"neverext-shutdown-hook");
+                },"launcherext-shutdown-hook");
                 Runtime.getRuntime().addShutdownHook(shutdown);
                 try {
                     lifecycle.start(Duration.ofSeconds(8));

@@ -359,7 +359,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		applyDeviceRevocationCascade0125(s, claims.Sub, oldDeviceID, reason, &rev)
 		result = model.DeviceKeyReplacementResult{OldDevice: rev.Device, NewDevice: replacement, RevokedSessions: rev.RevokedSessions, RevokedRefreshFamilies: rev.RevokedRefreshFamilies, RevokedMinecraftSessions: rev.RevokedMinecraftSessions, InvalidatedChallenges: rev.InvalidatedChallenges, RevokedSessionIDs: rev.RevokedSessionIDs}
 		if minecraftRepo, ok := s.Repo.(repository.MinecraftRepository); ok {
-			result.RevokedMinecraftSessions += minecraftRepo.RevokeMinecraftSessionsByNeverSession(claims.SessionID, reason)
+			result.RevokedMinecraftSessions += minecraftRepo.RevokeMinecraftSessionsByLauncherSession(claims.SessionID, reason)
 		}
 	}
 

@@ -9,12 +9,12 @@
    ```sh
    export LAUNCHER_MACOS_SANDBOX_TEAM_ID='YOURTEAMID'
    export LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY='Developer ID Application: Example (YOURTEAMID)'
-   ./scripts/security/build-macos-sandbox-helper-03112.sh /opt/launcher/libexec/NeverExtensionSandbox
+   ./scripts/security/build-macos-sandbox-helper-03112.sh /opt/launcher/libexec/LauncherExtensionSandbox
    ```
 
 2. Укажите для сервиса API параметры `LAUNCHER_MACOS_SANDBOX_HELPER` и `LAUNCHER_MACOS_SANDBOX_TEAM_ID`. Вспомогательная программа должна находиться в доверенном каталоге без группового доступа на запись. Никогда не распространяйте неподписанный резервный вариант.
 3. Сервер проверяет цепочку Developer ID, Team ID, строгую подпись кода и минимальный набор разрешений. Отсутствие помощника, избыточные привилегии или отсутствие подписи приводят к немедленному отказу. Перед принятием образа помощник проверяет фактическую песочницу **в собственном процессе**.
-4. Действующая подписанная политика NeverExtension остаётся авторитетным источником правил. Доступ к файловой системе `shared:<name>`, HTTPS и секретам осуществляется через существующие операции Host Protocol с ограниченной областью действия, а не через новые разрешения macOS.
+4. Действующая подписанная политика LauncherExtension остаётся авторитетным источником правил. Доступ к файловой системе `shared:<name>`, HTTPS и секретам осуществляется через существующие операции Host Protocol с ограниченной областью действия, а не через новые разрешения macOS.
 
 ## Механизм изоляции
 

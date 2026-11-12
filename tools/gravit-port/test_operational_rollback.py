@@ -35,7 +35,7 @@ if cmd == 'cutover-list':
 elif cmd == 'rollback-plan':
     snap = args[args.index('--snapshot')+1]
     data = open(snap,'rb').read()
-    report = {'format':'never/gravit-rollback/v1','runId':'run_12345678','profileId':'main',
+    report = {'format':'launcher/gravit-rollback/v1','runId':'run_12345678','profileId':'main',
       'channel':'stable','state':'planned','ready':True,'blockers':[], 'routeRevision':4,
       'evidenceSha256':sha(data),'planSha256':'a'*64,
       'mode':'reconciled' if '--reconciled-source-snapshot' in args else 'unchanged'}
@@ -95,7 +95,7 @@ class RollbackTests(unittest.TestCase):
         cut_hash = hashlib.sha256(self.cutfile.read_bytes()).hexdigest()
         cut.journal_write(self.journal, dict(cut.new_phase(cut_hash,'complete'), phase='complete',backendRouteActive=True,trafficOpen=True),new=True)
         self.cfg = {'format':rb.FORMAT,'runId':self.cut['runId'],'profileId':'main','channel':'stable',
-            'cutoverConfigSha256':cut_hash,'units':{'source':['gravit.service'],'target':['never.service']},
+            'cutoverConfigSha256':cut_hash,'units':{'source':['gravit.service'],'target':['launcher.service']},
             'currentSnapshot':str(self.current),'sourceSnapshot':str(self.source)}
         self.cfgfile = self.root/'rollback.json'
         prev.write_private(self.cfgfile,self.cfg)

@@ -4,7 +4,7 @@
 Локальный режим запускает настоящие Java-подпроцессы, HTTP-клиенты Go/TS/Java и отрицательные тесты
 миграций. Реальный режим вызывает существующий валидатор GA Gravit для трёх проектов (36 живых
 проверок и 19 проверок модулей), установленный JVM Host и оба исторических свидетельства обновления
-NeverLauncher; всё должно выполняться на настоящих внешних системах. Недоступная инфраструктура даёт
+Launcher; всё должно выполняться на настоящих внешних системах. Недоступная инфраструктура даёт
 FAIL, а не выдуманный PASS или пропуск. Отчёты закрытые и не являются независимыми промышленными
 подписями GA.
 """
@@ -27,7 +27,7 @@ from legacy_upgrade_real_0528 import private_json, sha_file, require, Blocked
 from java_host_real_0528 import run as java_host_run
 import legacy_upgrade_real_0528 as legacy
 
-SCHEMA='neverlauncher.java-sdk-migration-0528/v1'
+SCHEMA='launcher.java-sdk-migration-0528/v1'
 SOURCE_RE=re.compile('[0-9a-f]{40}\\Z')
 
 
@@ -88,7 +88,7 @@ def parse_live(cfg):
             type(cfg.get('legacy')) is list and len(cfg['legacy'])==2,
             'требуются реальная Java, три миграции Gravit и две миграции устаревших данных')
     versions=[entry.get('sourceVersion') for entry in cfg['legacy'] if type(entry) is dict]
-    require(sorted(versions)==['0.36.0','0.46.0'], 'Требуются оба исторических маршрута NeverLauncher')
+    require(sorted(versions)==['0.36.0','0.46.0'], 'Требуются оба исторических маршрута Launcher')
     require(len({str(entry.get('capture')) for entry in cfg['legacy']}) == 2,
             'Квитанции исходных данных старой системы должны различаться')
     return cfg

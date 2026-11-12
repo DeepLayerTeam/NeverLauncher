@@ -71,14 +71,14 @@ def signed_soak(root: Path, pubkey: Path, pin: str, commit: str, run_id: str, at
     require(len(sig) == 64 and SHA.fullmatch(pin or '') is not None, 'Требуется подписанная квитанция нагрузочного прогона и закреплённый ключ')
     key = inventory.public_key(pubkey, pin)
     try:
-        key.verify(sig, ('neverlauncher.soak.real.' + inventory.VERSION + '\x00').encode() + inventory.canonical(summary))
+        key.verify(sig, ('launcher.soak.real.' + inventory.VERSION + '\x00').encode() + inventory.canonical(summary))
     except InvalidSignature as exc:
         raise Blocked('Некорректная независимая подпись свидетельства длительного тестирования') from exc
     return raw_soak(root, commit, run_id, attempt, kind)
 
 def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
     summary = read_json(root / 'soak.json', 8*1024*1024)
-    require(summary.get('schema') == 'neverlauncher.real-soak/' + inventory.VERSION and
+    require(summary.get('schema') == 'launcher.real-soak/' + inventory.VERSION and
             summary.get('status') == 'OBSERVED_NOT_GA' and
             summary.get('version') == inventory.VERSION == '0.53.0' and
             summary.get('commit') == commit and summary.get('runId') == run_id and
@@ -157,7 +157,7 @@ def verify_repro(a):
 def verify_full(a):
     require(COMMIT.fullmatch(a.commit or '') is not None and inventory.VERSION == '0.53.0',
             'Требуются точный актуальный коммит исходников и версия 0.53.0')
-    report = {'schema':'neverlauncher.full-compatibility-sweep/' + inventory.VERSION,
+    report = {'schema':'launcher.full-compatibility-sweep/' + inventory.VERSION,
               'version':inventory.VERSION,'commit':a.commit,'status':'BLOCKED'}
     report['minecraft'] = verify_minecraft(a.compat_results,a.commit,a.compat_run_id,a.compat_attempt)
     native_args = SimpleNamespace(results=a.native_results,source_index=a.source_index,
@@ -216,7 +216,7 @@ def main():
         if a.mode == 'full':
             doc = verify_full(a)
         else:
-            doc = {'schema':'neverlauncher.full-compatibility-sweep/' + inventory.VERSION,
+            doc = {'schema':'launcher.full-compatibility-sweep/' + inventory.VERSION,
                    'version':inventory.VERSION,'commit':a.commit,
                    'status':'280_REAL_CI_OBSERVATIONS_NOT_GA',
                    'minecraft':verify_minecraft(a.compat_results,a.commit,a.compat_run_id,a.compat_attempt)}

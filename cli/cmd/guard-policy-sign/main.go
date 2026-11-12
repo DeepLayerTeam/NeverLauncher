@@ -19,7 +19,7 @@ import (
 )
 
 const schema = "launcher.guard-compatibility.v1"
-const domain = "NeverLauncher-Guard-Compatibility-v1\n"
+const domain = "Launcher-Guard-Compatibility-v1\n"
 
 func main() {
 	mode := flag.String("mode", "sign", "sign, keygen, revoke или rollback")

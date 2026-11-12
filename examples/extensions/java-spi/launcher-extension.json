@@ -3,7 +3,7 @@
   "id": "org.example.java-spi",
   "name": "Интеграция Java SPI с Runtime",
   "version": "0.1.0",
-  "publisher": "NeverLauncher Examples",
+  "publisher": "Launcher Examples",
   "api": "1.0",
   "targets": [
     {"kind":"backend","entrypoint":"backend/java-spi.jar"},

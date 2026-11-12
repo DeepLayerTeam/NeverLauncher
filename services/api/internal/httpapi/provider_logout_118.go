@@ -38,7 +38,7 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 	}
 	credential, err := store.GetProviderCredentialByIdentity(claims.Sub, identity.ID)
 	if errors.Is(err, repository.ErrNotFound) {
-		writeError(w, http.StatusConflict, "Учётные данные поставщика отсутствуют; сеанс Never не изменён")
+		writeError(w, http.StatusConflict, "Учётные данные поставщика отсутствуют; сеанс Launcher не изменён")
 		return
 	}
 	if err != nil {
@@ -52,10 +52,10 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.Federation.RevokeProviderCredential(r.Context(), providerID, identity.Subject, plain); err != nil {
 		if errors.Is(err, federation.ErrCapabilityUnsupported) {
-			writeError(w, http.StatusNotImplemented, "Провайдер не поддерживает отзыв учётных данных на сервере; сеанс Never сохранён")
+			writeError(w, http.StatusNotImplemented, "Провайдер не поддерживает отзыв учётных данных на сервере; сеанс Launcher сохранён")
 			return
 		}
-		writeError(w, http.StatusBadGateway, "Не удалось выполнить выход или отзыв учётных данных провайдера; сеанс Never сохранён")
+		writeError(w, http.StatusBadGateway, "Не удалось выполнить выход или отзыв учётных данных провайдера; сеанс Launcher сохранён")
 		return
 	}
 	if err := store.DeleteProviderCredentialByIdentity(claims.Sub, identity.ID); err != nil && !errors.Is(err, repository.ErrNotFound) {
@@ -64,5 +64,5 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now().UTC()
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-provider-logout-" + now.Format("20060102150405.000000000"), Actor: claims.Email, Action: "auth:provider:logout", Target: providerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "provider-logged-out", "provider": providerID, "neverSessionRevoked": false, "note": "Выход из учётной записи провайдера не завершает сеанс Never"}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "provider-logged-out", "provider": providerID, "launcherSessionRevoked": false, "note": "Выход из учётной записи провайдера не завершает сеанс Launcher"}})
 }

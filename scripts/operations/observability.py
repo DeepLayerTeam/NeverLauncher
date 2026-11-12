@@ -154,7 +154,7 @@ def sanitize_metrics(raw):
 
 def build_bundle(status, logs, metrics, version):
     now=dt.datetime.now(dt.timezone.utc).isoformat()
-    data={"schema":"neverlauncher-incident-0459", "incident_id":uuid.uuid4().hex,"created_at":now,
+    data={"schema":"launcher-incident-0459", "incident_id":uuid.uuid4().hex,"created_at":now,
           "system":{"version":version, "status":status},"logs":logs,"metrics":metrics,
           "omissions":["secrets","environment","URL и параметры HTTP-запроса","тело запроса или ответа","IP","authentication","устаревшие неструктурированные журналы"]}
     return json.dumps(data,ensure_ascii=False,indent=2).encode('utf-8')+b'\n'

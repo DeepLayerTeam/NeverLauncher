@@ -21,7 +21,7 @@ public final class ProviderRegistry implements AutoCloseable {
     private final Object gate = new Object();
     private final Map<String, ServiceSlot> services = new LinkedHashMap<>();
     private final ExecutorService callbacks = Executors.newCachedThreadPool(r -> {
-        Thread thread = new Thread(r, "neverext-spi-" + THREAD_IDS.incrementAndGet());
+        Thread thread = new Thread(r, "launcherext-spi-" + THREAD_IDS.incrementAndGet());
         thread.setDaemon(true);
         return thread;
     });

@@ -371,7 +371,7 @@
       "RevokeExtensionPermission",
       "RevokeExtensionRegistryPublisherKey",
       "RevokeMinecraftSession",
-      "RevokeMinecraftSessionsByNeverSession",
+      "RevokeMinecraftSessionsByLauncherSession",
       "RevokeMinecraftSessionsByUser",
       "RevokeOtherTrustedDevices",
       "RevokeProtectionBan",
@@ -754,7 +754,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 30,
-          "evidence": "LAUNCHER_DATABASE_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable"
+          "evidence": "LAUNCHER_DATABASE_DSN: postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -884,12 +884,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 45,
-          "evidence": "LAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable"
+          "evidence": "LAUNCHER_DATABASE_URL: postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 49,
-          "evidence": "psql 'postgres://never:integration-only@localhost:5432/never?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql"
+          "evidence": "psql 'postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -899,7 +899,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 53,
-          "evidence": "LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable"
+          "evidence": "LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable"
         }
       ]
     },
@@ -2114,7 +2114,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 621,
-          "evidence": "return map[string]any{\"schemaVersion\": \"1.0.0\", \"toolVersion\": version, \"profile\": profile, \"required\": []string{\"LAUNCHER_HTTP_ADDR\", \"LAUNCHER_PUBLIC_URL\", \"NEVERLAUNCH"
+          "evidence": "return map[string]any{\"schemaVersion\": \"1.0.0\", \"toolVersion\": version, \"profile\": profile, \"required\": []string{\"LAUNCHER_HTTP_ADDR\", \"LAUNCHER_PUBLIC_URL\", \"LAUNCHER"
         }
       ]
     },
@@ -6514,7 +6514,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- 0.26.8: a verified Minecraft UUID may belong to only one Never identity."
+          "evidence": "-- 0.26.8: a verified Minecraft UUID may belong to only one Launcher identity."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -15159,7 +15159,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- 0.26.8: a verified Minecraft UUID may belong to only one Never identity."
+          "evidence": "-- 0.26.8: a verified Minecraft UUID may belong to only one Launcher identity."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -15969,7 +15969,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- MIG11: per-profile/channel Never release routing. One durable row owns the"
+          "evidence": "-- MIG11: per-profile/channel Launcher release routing. One durable row owns the"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -18859,7 +18859,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 550,
-          "evidence": "if _, e := tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, commit.StableGateToken03411); e != nil {"
+          "evidence": "if _, e := tx.ExecContext(ctx, `SELECT set_config('launcher.stable_gate_token',$1,true)`, commit.StableGateToken03411); e != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -20879,12 +20879,12 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 286,
-          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); e != nil {"
+          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('launcher.stable_gate_token',$1,true)`, token); e != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 292,
-          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('never.migration_cutover_run',$1,true)`, runID); e != nil {"
+          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('launcher.migration_cutover_run',$1,true)`, runID); e != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -22009,12 +22009,12 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 221,
-          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); e != nil {"
+          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('launcher.stable_gate_token',$1,true)`, token); e != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 225,
-          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('never.migration_cutover_run',$1,true)`, run); e != nil {"
+          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('launcher.migration_cutover_run',$1,true)`, run); e != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -22959,7 +22959,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 1857,
-          "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE session_id=$1 AND status='active'`, strings.TrimSpace(neverSess"
+          "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE session_id=$1 AND status='active'`, strings.TrimSpace(launcherSess"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -24274,7 +24274,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 56,
-          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); e != nil {"
+          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('launcher.stable_gate_token',$1,true)`, token); e != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -24284,7 +24284,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 70,
-          "evidence": "if _, err = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); err != nil {"
+          "evidence": "if _, err = tx.ExecContext(ctx, `SELECT set_config('launcher.stable_gate_token',$1,true)`, token); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",

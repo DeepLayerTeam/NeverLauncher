@@ -20,7 +20,7 @@ import (
 var (
 	ErrProviderNotFound      = errors.New("Провайдер авторизации не найден")
 	ErrCapabilityUnsupported = errors.New("Не поддерживается: «возможность провайдера авторизации»")
-	ErrIdentityNotLinked     = errors.New("Внешняя учётная запись не привязана к пользователю Never")
+	ErrIdentityNotLinked     = errors.New("Внешняя учётная запись не привязана к пользователю Launcher")
 )
 
 type Result struct {
@@ -39,8 +39,8 @@ type ProviderHealth struct {
 }
 
 // Core управляет провайдерами и обязательной границей ExternalIdentity -> канонический
-// пользователь Never. Коннекторы аутентифицируют внешние данные, но никогда не
-// выдают токены доступа или обновления Never и не обходят политику сеансов.
+// пользователь Launcher. Коннекторы аутентифицируют внешние данные, но никогда не
+// выдают токены доступа или обновления Launcher и не обходят политику сеансов.
 type ProviderPolicy struct {
 	AutoProvision bool
 	DefaultRole   string
@@ -170,8 +170,8 @@ func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, requ
 }
 
 // LinkPasswordIdentity использует новые учётные данные провайдера только для
-// подтверждения явно аутентифицированного аккаунта Never. В отличие от
-// AuthenticatePassword он не создаёт пользователя и сессию Never. Запасной провайдер
+// подтверждения явно аутентифицированного аккаунта Launcher. В отличие от
+// AuthenticatePassword он не создаёт пользователя и сессию Launcher. Запасной провайдер
 // запрещён.
 func (c *Core) LinkPasswordIdentity(ctx context.Context, userID, providerID string, request authconnector.PasswordRequest) (model.AuthIdentity, authconnector.Authentication, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
@@ -227,9 +227,9 @@ func (c *Core) CompleteBrowserAuth(ctx context.Context, providerID string, callb
 }
 
 // CompleteBrowserAuthProof проверяет внешний браузерный поток без определения
-// либо автоматического создания канонического пользователя Never. Это необходимо
+// либо автоматического создания канонического пользователя Launcher. Это необходимо
 // для явной привязки учётной записи: доказательство можно привязать только к
-// уже аутентифицированному пользователю Never, выбранному вызывающим кодом.
+// уже аутентифицированному пользователю Launcher, выбранному вызывающим кодом.
 func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, callback authconnector.BrowserAuthCallback) (authconnector.Metadata, authconnector.Authentication, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	connector, ok := c.Connector(providerID)
@@ -257,7 +257,7 @@ func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, 
 }
 
 // RefreshProviderCredential обновляет или перепроверяет внешние учётные данные провайдера.
-// Полученный токен провайдера остаётся внутренним и никогда не становится токеном доступа Never.
+// Полученный токен провайдера остаётся внутренним и никогда не становится токеном доступа Launcher.
 func (c *Core) RefreshProviderCredential(ctx context.Context, providerID, providerToken, expectedSubject string) (authconnector.Authentication, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	connector, ok := c.Connector(providerID)
@@ -303,7 +303,7 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 		}
 		// Неквалифицированная идентичность до 0.29.1 не должна незаметно
 		// присваиваться новому издателю, даже при совпадении email/субъекта. Для
-		// явной браузерной привязки требуется аутентифицированный пользователь Never.
+		// явной браузерной привязки требуется аутентифицированный пользователь Launcher.
 		legacyIssuer, _ := model.CanonicalAuthIssuer(meta.ID, "")
 		if issuer != legacyIssuer {
 			if _, legacyErr := c.repo.GetAuthIdentityByIssuer(meta.ID, legacyIssuer, auth.Identity.Subject); legacyErr == nil {
@@ -380,7 +380,7 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 		}
 	}
 	if len(mappedRoles) > 1 {
-		return model.User{}, model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "внешняя учётная запись соответствует нескольким назначениям ролей Never")
+		return model.User{}, model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "внешняя учётная запись соответствует нескольким назначениям ролей Launcher")
 	}
 	for mapped := range mappedRoles {
 		roleID = mapped
@@ -395,7 +395,7 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 
 // LinkAuthenticatedIdentity сохраняет идентичность провайдера только после
 // подтверждения его аутентификации вызывающей стороной. Скрытое переназначение
-// запрещено: одну пару провайдер/subject нельзя переносить между пользователями Never.
+// запрещено: одну пару провайдер/subject нельзя переносить между пользователями Launcher.
 func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authentication authconnector.Authentication) (model.AuthIdentity, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	if err := c.EnsureLinkAllowed(providerID); err != nil {
@@ -441,7 +441,7 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 }
 
 // ResolveProviderIdentity читает субъект настроенного издателя без привязки и
-// создания аккаунта Never. Субъект ответа должен совпадать с запросом; данные
+// создания аккаунта Launcher. Субъект ответа должен совпадать с запросом; данные
 // идентичности не могут перенаправить канонический аккаунт.
 func (c *Core) ResolveProviderIdentity(ctx context.Context, providerID, subject string) (authconnector.Identity, error) {
 	connector, ok := c.Connector(providerID)
@@ -537,7 +537,7 @@ func cloneClaims(input map[string]any) map[string]any {
 	return out
 }
 
-// RevokeProviderCredential выполняет только выход или отзыв у провайдера. Сеанс Never
+// RevokeProviderCredential выполняет только выход или отзыв у провайдера. Сеанс Launcher
 // не отзывается; вызывающий код должен инициировать это отдельным явным действием.
 func (c *Core) RevokeProviderCredential(ctx context.Context, providerID, subject, providerToken string) error {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))

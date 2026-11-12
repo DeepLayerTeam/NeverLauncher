@@ -47,7 +47,7 @@ func (s Server) cutoverAccess03311(w http.ResponseWriter, r *http.Request) (migr
 func (s Server) cutoverKey03311(w http.ResponseWriter) (ed25519.PublicKey, bool) {
 	private, e := s.manifestSigningPrivateKey()
 	if e != nil {
-		writeError(w, 503, "Ключ подписи релиза Never не настроен")
+		writeError(w, 503, "Ключ подписи релиза Launcher не настроен")
 		return nil, false
 	}
 	return private.Public().(ed25519.PublicKey), true

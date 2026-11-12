@@ -23,7 +23,7 @@ import tempfile
 import operational_rollback_04912 as rb
 import production_cutover_04911 as co
 
-FORMAT = "never/gravit-file-backup/v1"
+FORMAT = "launcher/gravit-file-backup/v1"
 MAX_ENTRIES = 150000
 MAX_TOTAL_BYTES = 1 << 40
 
@@ -140,7 +140,7 @@ def restore(source: Path, target: Path, manifest: dict, directory: Path, run_id:
     co.require(not old.exists() and not old.is_symlink(), "Каталог для сохранения предыдущей версии уже существует")
     journal = directory / "file-restore-state.json"
     co.require(not journal.exists(), "Попытка восстановления файлов уже предпринималась; проверьте журнал")
-    staged = Path(tempfile.mkdtemp(prefix=".never-restoring-", dir=target.parent))
+    staged = Path(tempfile.mkdtemp(prefix=".launcher-restoring-", dir=target.parent))
     state = {"format":FORMAT,"runId":run_id,"phase":"staging","target":str(target),
              "retained":str(old),"stage":str(staged),"manifestSha256":co.digest(json.dumps(manifest,sort_keys=True).encode())}
     # Надёжный журнал записывается до изменения каталога назначения.
@@ -237,7 +237,7 @@ def recover(target: Path, manifest: dict, directory: Path, run_id: str):
     safe_path(old)
     stage = Path(state.get("stage", ""))
     co.require(stage.is_absolute() and stage.parent == target.parent and
-               stage.name.startswith(".never-restoring-"), "Небезопасный путь к подготовленным файлам восстановления")
+               stage.name.startswith(".launcher-restoring-"), "Небезопасный путь к подготовленным файлам восстановления")
     phase = state.get("phase")
     # Оставшийся после завершения процесса файл .next не является достоверным; старый
     # атомарно заменённый журнал отражает последнее устойчивое состояние. Ссылки запрещены.

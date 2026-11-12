@@ -26,15 +26,15 @@ func (s Server) microsoftConnector116(providerID string) (authconnector.Connecto
 }
 
 // authMicrosoftLinkBegin116 запускает доказательство Microsoft, привязанное к уже
-// аутентифицированному пользователю Never. Совпадение email никогда не доказывает владение.
+// аутентифицированному пользователю Launcher. Совпадение email никогда не доказывает владение.
 func (s Server) authMicrosoftLinkBegin116(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
-	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Never")
+	if !freshLauncherIdentity0268(claims, time.Now()) {
+		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Launcher")
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
@@ -82,8 +82,8 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
-	if !freshNeverIdentity0268(claims, time.Now()) {
-		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Never")
+	if !freshLauncherIdentity0268(claims, time.Now()) {
+		writeError(w, http.StatusForbidden, "Требуется недавняя повторная аутентификация Launcher")
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
@@ -277,6 +277,6 @@ func (s Server) authMicrosoftLogoutURL116(w http.ResponseWriter, r *http.Request
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion, "toolVersion": s.Version, "provider": providerID, "logoutUrl": logoutURL,
-		"note": "Выход из учётной записи провайдера и завершение сеанса Never — разные действия",
+		"note": "Выход из учётной записи провайдера и завершение сеанса Launcher — разные действия",
 	}})
 }

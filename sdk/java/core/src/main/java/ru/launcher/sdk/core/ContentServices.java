@@ -8,10 +8,10 @@ import java.util.*;
 /** Рабочий Java SPI для контента. Любое чтение источника проходит через аутентифицированный
  * Go Host Broker; провайдерам не предоставляется прямой доступ к внешней сети или хранилищу.
  * Преобразованный пакет — данные ТОЛЬКО ДО ПОДПИСИ, которые должны быть подписаны и опубликованы
- * через существующий конвейер выпуска NeverLauncher. */
+ * через существующий конвейер выпуска Launcher. */
 public final class ContentServices {
     public static final ProviderService<ContentProvider> CONTRACT =
-        new ProviderService<>("never.content", ContentProvider.class, SemVer.parse("1.0.0"));
+        new ProviderService<>("launcher.content", ContentProvider.class, SemVer.parse("1.0.0"));
     private static final int MAX_ASSET = 512 * 1024; // Данные Base64 должны помещаться в ответ Host объёмом 1 МиБ.
     private static final int MAX_RPC_BYTES = 24 * 1024;
     private volatile ProviderRegistry registry;

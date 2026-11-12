@@ -43,7 +43,7 @@ CASES = [
         "tests": [
             "TestLocalConnector112Conformance",
             "TestAuthSession111RefreshReplayRevokesFamily",
-            "TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke",
+            "TestMinecraftAuth119LauncherSessionExchangeJoinAndParentRevoke",
         ],
         "coverage": ["login", "refresh", "revoke", "minecraft-join"],
     },

@@ -78,14 +78,14 @@ func (r *SQLRepository) ImportFileAuth0295(ctx context.Context, accounts []filea
 			return 0, fmt.Errorf("Некорректное значение: FileAuth учётная запись %q: %w", a.Username, err)
 		}
 		id := "gravit-fileauth-" + strings.ReplaceAll(a.UUID, "-", "")
-		// Никогда не обновляйте и не объединяйте существующую учётную запись Never на
+		// Никогда не обновляйте и не объединяйте существующую учётную запись Launcher на
 		// основе ника, UUID или email. Любая коллизия откатывает ВСЮ партию.
 		var exists bool
 		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 OR lower(email)=lower($2))`, id, a.Email).Scan(&exists); err != nil {
 			return 0, err
 		}
 		if exists {
-			return 0, fmt.Errorf("Конфликт импорта FileAuth для учётной записи %q (учётная запись Never уже существует)", a.Username)
+			return 0, fmt.Errorf("Конфликт импорта FileAuth для учётной записи %q (учётная запись Launcher уже существует)", a.Username)
 		}
 		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM minecraft_profiles WHERE lower(name)=lower($1) OR uuid=$2)`, a.Username, a.UUID).Scan(&exists); err != nil {
 			return 0, err

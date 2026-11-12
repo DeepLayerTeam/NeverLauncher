@@ -43,7 +43,7 @@ jobs:
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationSecurityTargetDerivation0336|TestMigrationSecurityTrustResetPostgres0336'
-          go test -race -count=1 -timeout 5m ./internal/httpapi -run 'TestMigrationIndependentNeverSigners0336|TestMigrationTargetSteps0331'
+          go test -race -count=1 -timeout 5m ./internal/httpapi -run 'TestMigrationIndependentLauncherSigners0336|TestMigrationTargetSteps0331'
       - name: Запустить тесты CLI
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestMigrationSecurityCLI0336|TestMigrationWorkflow0331'

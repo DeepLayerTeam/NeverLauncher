@@ -32,7 +32,7 @@ private enum SandboxError: Error {
     case invalid(String)
     var message: String { if case let .invalid(s) = self { return s }; return "helper-error" }
 }
-private func fail(_ why: String) -> Never {
+private func fail(_ why: String) -> Launcher {
     let bytes = Array(("error " + why + "\n").utf8)
     _ = bytes.withUnsafeBytes { write(5, $0.baseAddress, $0.count) }
     fputs("Launcher macOS sandbox: \(why)\n", stderr)

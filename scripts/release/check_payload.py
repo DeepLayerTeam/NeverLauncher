@@ -71,7 +71,7 @@ def inventory(bundle: Path) -> dict:
         if not isinstance(name,str) or '/' in name or '\\' in name:raise ValueError('Некорректное имя пакета')
         digest,size=inspect(bundle/name)
         result[target]={'file':name,'sha256':digest,'bytes':size}
-    return {'schema':'neverlauncher.payload-observed.v1','version':contract['version'],
+    return {'schema':'launcher.payload-observed.v1','version':contract['version'],
             'status':'inspected-not-signed','targets':result}
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Независимая приёмка HA на реальных системах NeverLauncher 0.52.0.
+"""Независимая приёмка HA на реальных системах Launcher 0.52.0.
 
 Симулированный результат, автономный манифест или вывод модульных тестов не разрешают GA. Оператор
 запускает живые многохостовые хаос-тесты, поэтапные обновления и проверки восстановленного узла
@@ -31,10 +31,10 @@ import multi_host_0512 as multi
 import nn1_compat_0516 as compat
 
 VERSION = '0.52.0'
-SCHEMA = 'neverlauncher.ha-independent-acceptance/0.52.0'
-CHAOS_SCHEMA = 'neverlauncher.multi-host-chaos/0.51.10'
-ROLL_SCHEMA = 'neverlauncher.rolling-update.0.52.0'
-DR_SCHEMA = 'neverlauncher.cross-host-recovery/0.51.9'
+SCHEMA = 'launcher.ha-independent-acceptance/0.52.0'
+CHAOS_SCHEMA = 'launcher.multi-host-chaos/0.51.10'
+ROLL_SCHEMA = 'launcher.rolling-update.0.52.0'
+DR_SCHEMA = 'launcher.cross-host-recovery/0.51.9'
 COMMANDS = {
     'chaos': ROOT / 'scripts/operations/multi_host_chaos_05110.py',
     'rolling': ROOT / 'scripts/operations/rolling_update_0520.py',

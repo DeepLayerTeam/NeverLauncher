@@ -645,7 +645,7 @@ def run_acceptance(
             def offhost_export_and_restore():
                 command(sys.executable, INSTALLER, "export-portable", "--bundle", bundle,
                         "--output", portable_path, "--passphrase-file", portable_secret)
-                require(portable_path.read_bytes().startswith(b"NEVER-MINIMAL-PORTABLE-1\n"),
+                require(portable_path.read_bytes().startswith(b"LAUNCHER-MINIMAL-PORTABLE-1\n"),
                         "Отсутствует аутентифицированная оболочка передачи данных")
                 command(sys.executable, INSTALLER, "verify-portable", "--input", portable_path,
                         "--passphrase-file", portable_secret)

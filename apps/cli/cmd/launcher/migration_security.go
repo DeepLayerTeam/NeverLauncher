@@ -26,7 +26,7 @@ func postMigrationSecurity0336(endpoint, token, runID, out string, activate bool
 		}
 	}
 	if activate && confirmation != runID {
-		return errors.New("activate-security: требуется --confirm с точным идентификатором --run; предварительно создайте новые независимые ключи Never")
+		return errors.New("activate-security: требуется --confirm с точным идентификатором --run; предварительно создайте новые независимые ключи Launcher")
 	}
 	req, err := http.NewRequest(http.MethodPost, endpoint, nil)
 	if err != nil {

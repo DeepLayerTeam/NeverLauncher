@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.3 — реальная приёмка владельца и администратора
+name: Launcher 0.52.3 — реальная приёмка владельца и администратора
 on:
   push:
     paths:
@@ -59,7 +59,7 @@ jobs:
     # Разрушающий сценарий: включайте только на изолированном защищённом собственном
     # хосте с выделенной настоящей JVM Minecraft и доверенным публичным TLS.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, linux, x64, neverlauncher-0523-dedicated]
+    runs-on: [self-hosted, linux, x64, launcher-0523-dedicated]
     environment: owner-admin-physical-acceptance
     timeout-minutes: 110
     steps:

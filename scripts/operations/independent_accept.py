@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Провести независимую приёмку NeverLauncher на реальных Linux-службах.
+"""Провести независимую приёмку Launcher на реальных Linux-службах.
 
 Четыре взаимоисключающих эксплуатационных этапа. Каждый вызывает производственные команды
 установки/обновления/восстановления/хаос-тестов (не имитацию готовности и не декларативный план),
@@ -76,7 +76,7 @@ def host_id() -> str:
     ensure(path.is_file() and not path.is_symlink(), 'Идентификатор machine-id Linux недоступен')
     raw = path.read_text(encoding='ascii').strip()
     ensure(re.fullmatch(r'[0-9a-f]{32}', raw) is not None, 'Недопустимый machine-id Linux')
-    return hashlib.sha256(('neverlauncher-operator-host:' + raw).encode()).hexdigest()
+    return hashlib.sha256(('launcher-operator-host:' + raw).encode()).hexdigest()
 
 
 def require_version(value):

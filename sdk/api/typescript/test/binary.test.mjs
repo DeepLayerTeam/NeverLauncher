@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { NeverLauncherAPI, ApiError } from '../dist/client.js';
+import { LauncherAPI, ApiError } from '../dist/client.js';
 
 async function withServer(callback) {
  const server = createServer((req, res) => {
@@ -28,7 +28,7 @@ async function withServer(callback) {
   res.writeHead(200, {'Content-Type':'application/json'});res.end('{"ok":true}');
  });
  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
- try { await callback(new NeverLauncherAPI(`http://127.0.0.1:${server.address().port}`,'secret')); }
+ try { await callback(new LauncherAPI(`http://127.0.0.1:${server.address().port}`,'secret')); }
  finally { server.closeAllConnections();await new Promise(resolve => server.close(resolve)); }
 }
 

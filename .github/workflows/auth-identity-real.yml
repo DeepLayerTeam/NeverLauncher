@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.5 — реальная приёмка аутентификации и идентичности
+name: Launcher 0.52.5 — реальная приёмка аутентификации и идентичности
 on:
   push:
     paths:
@@ -71,7 +71,7 @@ jobs:
           test -z "$(gofmt -l internal/httpapi/*0525*.go internal/httpapi/oidc_flow_115.go internal/httpapi/microsoft_flow_116.go internal/httpapi/federation_release_0120.go)"
           go build ./cmd/...
           go test -race -count=1 -timeout=12m ./internal/httpapi \
-            -run 'TestBrowserReplayAcrossAPIReplicas0525|TestBrowserLinkReplayAndLoginSeparation0525|TestBrowserReplayAtomicMemory0525|TestBrowserNonceAcrossPostgresReplicas0525|TestOIDCBeginCompleteCreatesCanonicalNeverSession|TestGenericBrowserProviderExplicitLink0120|TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116'
+            -run 'TestBrowserReplayAcrossAPIReplicas0525|TestBrowserLinkReplayAndLoginSeparation0525|TestBrowserReplayAtomicMemory0525|TestBrowserNonceAcrossPostgresReplicas0525|TestOIDCBeginCompleteCreatesCanonicalLauncherSession|TestGenericBrowserProviderExplicitLink0120|TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116'
   live-external-providers:
     # Внешние учётные данные Microsoft и секреты SQL/OIDC должны предоставляться
     # независимым оператором и никогда не храниться в журналах Actions или фикстурах.

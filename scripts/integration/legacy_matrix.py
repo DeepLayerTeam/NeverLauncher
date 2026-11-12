@@ -87,7 +87,7 @@ def extract(source, target):
                 dest.chmod(0o700)
 
 def fetch(row, dest):
-    request = urllib.request.Request(row['url'], headers={'User-Agent':'NeverLauncher-0480-integration'})
+    request = urllib.request.Request(row['url'], headers={'User-Agent':'Launcher-0480-integration'})
     with urllib.request.urlopen(request, timeout=120) as source, dest.open('xb') as out:
         require(source.geturl().startswith('https://'), 'Адрес эталонной сборки перенаправлен на соединение без TLS')
         length = 0

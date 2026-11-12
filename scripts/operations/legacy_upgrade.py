@@ -280,7 +280,7 @@ def client_update(root: Path, args, source):
 
 def prestarter_update(root: Path, args, source):
     require(args.installer and args.installer_sha256 and args.bundle,
-            'Требуются подписанный neverinstaller, независимая закреплённая сумма SHA-256 и пакет')
+            'Требуются подписанный installer, независимая закреплённая сумма SHA-256 и пакет')
     old = prestarter_source(root)
     installer = Path(args.installer)
     bundle = Path(args.bundle)

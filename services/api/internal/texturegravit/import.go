@@ -237,7 +237,7 @@ func (r *Runner) PlanSHA256(rows []SourceRow) (string, error) {
 		Replace        bool              `json:"replace"`
 		Mapping        map[string]string `json:"mapping"`
 		Rows           []safeRow         `json:"rows"`
-	}{"never.gravit.texture-plan.0445", r.SourceID, r.ObjectTemplate, r.Replace, r.Mapping, safe})
+	}{"launcher.gravit.texture-plan.0445", r.SourceID, r.ObjectTemplate, r.Replace, r.Mapping, safe})
 	if err != nil {
 		return "", err
 	}
@@ -259,7 +259,7 @@ func (r *Runner) Run(ctx context.Context, rows []SourceRow) (Report, error) {
 	}
 	out.PlanSHA256 = fingerprint
 	// Проверка должна предшествовать любым записям в БД или хранилище. Разные старые идентичности не должны
-	// незаметно присваивать один профиль Never через явное или неявное сопоставление. Две исходные записи
+	// незаметно присваивать один профиль Launcher через явное или неявное сопоставление. Две исходные записи
 	// также не должны одновременно стать одним выбором.
 	if err := validateIdentityTargets(rows, r.Mapping); err != nil {
 		out.FatalError = err.Error()
@@ -318,11 +318,11 @@ func validateIdentityTargets(rows []SourceRow, mapping map[string]string) error 
 			to = mapped
 		}
 		if prev, ok := reverse[to]; ok && prev != from {
-			return fmt.Errorf("Исходные UUID %s и %s указывают на один UUID Never %s", prev, from, to)
+			return fmt.Errorf("Исходные UUID %s и %s указывают на один UUID Launcher %s", prev, from, to)
 		}
 		reverse[to] = from
 		if prev, ok := seenSource[to]; ok && prev != from {
-			return fmt.Errorf("Исходные UUID %s и %s указывают на один UUID Never %s", prev, from, to)
+			return fmt.Errorf("Исходные UUID %s и %s указывают на один UUID Launcher %s", prev, from, to)
 		}
 		seenSource[to] = from
 		kind := strings.ToLower(row.TextureType)

@@ -142,7 +142,7 @@ func TestMinecraftIntegritySnapshot0135IsReevaluatedAgainstCurrentReleasePolicy(
 	s := Server{Version: "0.13.5", Config: cfg, Repo: repo}
 	now := time.Now().UTC()
 	session := model.MinecraftSession{
-		ID: "mc-0135", UserID: "user-0135", NeverSessionID: "session-0135", ProfileUUID: "00000000-0000-0000-0000-000000000135",
+		ID: "mc-0135", UserID: "user-0135", LauncherSessionID: "session-0135", ProfileUUID: "00000000-0000-0000-0000-000000000135",
 		TrustedDeviceID: "win-device-0135", BindingEpoch: 7, AccessTokenHash: strings.Repeat("2", 64), Status: "active",
 		IntegrityVerified: true, GuardAttestationSHA256: strings.Repeat("3", 64), GuardEvidenceSHA256: strings.Repeat("4", 64),
 		GuardSHA256: guardHash0135, LauncherSHA256: launcherHash0135, LauncherVersion: "0.13.5", IntegrityVerifiedAt: now.Add(-time.Second),
@@ -154,7 +154,7 @@ func TestMinecraftIntegritySnapshot0135IsReevaluatedAgainstCurrentReleasePolicy(
 	if decision := s.evaluateMinecraftIntegrity0135(session); !decision.Allowed || !decision.Required {
 		t.Fatalf("Корректный снимок целостности ошибочно отклонён: %+v", decision)
 	}
-	join := bridgeJoinRecord{UserID: session.UserID, SessionID: session.NeverSessionID, TrustedDeviceID: session.TrustedDeviceID, BindingEpoch: session.BindingEpoch, MinecraftSessionID: session.ID}
+	join := bridgeJoinRecord{UserID: session.UserID, SessionID: session.LauncherSessionID, TrustedDeviceID: session.TrustedDeviceID, BindingEpoch: session.BindingEpoch, MinecraftSessionID: session.ID}
 	if _, decision := s.evaluateServerBridgeJoinIntegrity0135(join); !decision.Allowed {
 		t.Fatalf("ServerBridge отклонил сессию Minecraft с привязкой к проверке целостности: %+v", decision)
 	}
@@ -215,7 +215,7 @@ func TestMinecraftIntegrityV2RejectsCrossProductArtifactPair0140(t *testing.T) {
 	s := Server{Version: "0.14.0", Config: cfg, Repo: repo}
 	now := time.Now().UTC()
 	session := model.MinecraftSession{
-		ID: "mc-0140", UserID: "user-0140", NeverSessionID: "session-0140", ProfileUUID: "00000000-0000-0000-0000-000000000140",
+		ID: "mc-0140", UserID: "user-0140", LauncherSessionID: "session-0140", ProfileUUID: "00000000-0000-0000-0000-000000000140",
 		TrustedDeviceID: "win-device-0140", BindingEpoch: 1, AccessTokenHash: strings.Repeat("2", 64), Status: "active",
 		IntegrityVerified: true, GuardAttestationSHA256: strings.Repeat("3", 64), GuardEvidenceSHA256: strings.Repeat("4", 64),
 		GuardSHA256: guardA, LauncherSHA256: launcherA, LauncherVersion: "0.14.0", IntegrityVerifiedAt: now.Add(-time.Second),

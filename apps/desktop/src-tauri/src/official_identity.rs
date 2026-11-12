@@ -133,7 +133,7 @@ pub struct IdentityManager {
 
 fn uuid_valid(uuid: &str) -> bool { uuid.len() == 32 && uuid.bytes().all(|c| c.is_ascii_hexdigit()) }
 fn scope(backend: &str, session_id: &str) -> Result<(Url, String), String> {
-    if session_id.is_empty() || session_id.len() > 256 || !session_id.is_ascii() { return Err("Недопустимый идентификатор сеанса Never".into()); }
+    if session_id.is_empty() || session_id.len() > 256 || !session_id.is_ascii() { return Err("Недопустимый идентификатор сеанса Launcher".into()); }
     let url = Url::parse(backend).map_err(|_| "Некорректный URL серверной части")?;
     let is_loopback = match url.host_str() {
         Some("localhost") => true,
@@ -153,13 +153,13 @@ fn scope(backend: &str, session_id: &str) -> Result<(Url, String), String> {
     Ok((url, hex::encode(digest.finalize())))
 }
 
-// ID сеанса Never должен поступать из проверенных Backend данных аутентификации,
+// ID сеанса Launcher должен поступать из проверенных Backend данных аутентификации,
 // а не из поля интерфейса, позволяющего выбрать произвольное пространство учётных данных.
 fn verify_session_binding_0396(config: &Value, expected_session: &str) -> Result<(), String> {
     let actual = config.get("SessionId").and_then(Value::as_str).unwrap_or("");
     let user = config.get("UserId").and_then(Value::as_str).unwrap_or("");
     if actual.is_empty() || actual != expected_session || user.is_empty() || user.len() > 256 {
-        return Err("Идентификатор сеанса Never не совпадает: доступ к защищённому хранилищу ОС запрещён".into());
+        return Err("Идентификатор сеанса Launcher не совпадает: доступ к защищённому хранилищу ОС запрещён".into());
     }
     Ok(())
 }
@@ -471,9 +471,9 @@ impl IdentityManager {
                 return Ok(Response { status, data: Value::Null, rotation: None, retry_after });
             }
             return Err(match status {
-            401 => "Сессия Never/Minecraft недействительна; войдите повторно".into(),
+            401 => "Сессия Launcher/Minecraft недействительна; войдите повторно".into(),
             403 => "Доступ Minecraft запрещён провайдером или настройками аккаунта".into(),
-            409 if route == "/link" => "UUID Minecraft уже связан с другой учётной записью Never".into(),
+            409 if route == "/link" => "UUID Minecraft уже связан с другой учётной записью Launcher".into(),
             429 => "Слишком много запросов; повторите позднее".into(),
             502..=599 => "Сервис Microsoft/Minecraft временно недоступен".into(),
             _ => format!("Официальная авторизация: HTTP {status}"),
@@ -578,7 +578,7 @@ impl IdentityManager {
             Ok(result) => result,
             Err(err) => {
                 // Сетевые сбои и некорректные ответы провайдера допускают восстановление;
-                // отозванный сеанс Never, отказ и истёкшее разрешение OAuth — нет.
+                // отозванный сеанс Launcher, отказ и истёкшее разрешение OAuth — нет.
                 let transient = err.contains("недоступен") || err.contains("Ошибка чтения") || err.contains("невалидный JSON");
                 if !transient { flows.remove(&id); return Err(err); }
                 flow.failures = flow.failures.saturating_add(1);
@@ -806,7 +806,7 @@ impl IdentityManager {
             pending_microsoft_access:String::new(),pending_microsoft_expires_at:0}))
     }
     async fn native_validate(&self, base: &Url, id: &str, access: &str, record: &mut StoredAccount, force_refresh: bool) -> Result<(), String> {
-        // Даже с нативными учётными данными сеанс Never должен оставаться действительным.
+        // Даже с нативными учётными данными сеанс Launcher должен оставаться действительным.
         let config = self.request(base,access,"/browser/config",Method::GET,None,None,None).await?;
         let native = record.native.as_ref().ok_or("Отсутствуют данные нативной учётной записи Minecraft")?;
         if config.data.get("enabled").and_then(Value::as_bool) == Some(false) { return Err("Официальная авторизация отключена администратором".into()); }
@@ -953,7 +953,7 @@ impl IdentityManager {
             if Instant::now()>=flow.expires {flows.remove(&id);return Err("Срок действия кода устройства Microsoft истёк".into());}
         }
         if completed.as_ref().is_some_and(|v|v.is_ok()) {
-            // Проверьте сеанс Never перед сохранением нативных учётных данных.
+            // Проверьте сеанс Launcher перед сохранением нативных учётных данных.
             // Не удерживайте синхронный мьютекс во время HTTP await.
             drop(flows);
             let current = match self.request(&base,access,"/browser/config",Method::GET,None,None,None).await {
@@ -1158,17 +1158,17 @@ impl IdentityManager {
             Ok(record.profile.clone())
         }
     }
-    // Привязка — устойчивое серверное отношение Never, а не просто локальная ассоциация
+    // Привязка — устойчивое серверное отношение Launcher, а не просто локальная ассоциация
     // хранилища. Удерживайте блокировку выбора во время проверки провайдера
     // и транзакции Backend, чтобы не связать только что переключённый аккаунт.
-    pub async fn links_0268(&self, backend:&str, access:&str, session:&str) -> Result<Vec<NeverOfficialLink0268>,String> {
+    pub async fn links_0268(&self, backend:&str, access:&str, session:&str) -> Result<Vec<LauncherOfficialLink0268>,String> {
         let (base,_)=self.verified_scope(backend,access,session).await?;
         let response=self.request(&base,access,"/link",Method::GET,None,None,None).await?;
-        serde_json::from_value(response.data.get("links").cloned().ok_or("Некорректный список привязок учётных записей Never")?)
-            .map_err(|_|"Некорректные записи учётных данных Never".into())
+        serde_json::from_value(response.data.get("links").cloned().ok_or("Некорректный список привязок учётных записей Launcher")?)
+            .map_err(|_|"Некорректные записи учётных данных Launcher".into())
     }
-    pub async fn link_0268(&self, backend:&str, access:&str, session:&str, expected_uuid:&str, confirmed:bool) -> Result<NeverOfficialLink0268,String> {
-        if !confirmed {return Err("Необходимо явное подтверждение привязки Never и Minecraft".into());}
+    pub async fn link_0268(&self, backend:&str, access:&str, session:&str, expected_uuid:&str, confirmed:bool) -> Result<LauncherOfficialLink0268,String> {
+        if !confirmed {return Err("Необходимо явное подтверждение привязки Launcher и Minecraft".into());}
         let (base,id)=self.verified_scope(backend,access,session).await?;
         let requested=normalized_uuid(expected_uuid)?;
         let _guard=self.vault_lock.lock().await;
@@ -1183,7 +1183,7 @@ impl IdentityManager {
         let response=self.request(&base,access,"/link",Method::POST,None,Some(json!({
             "expectedUuid":requested,"minecraftAccessToken":bearer.as_str(),"confirm":true
         })),None).await?;
-        let link:NeverOfficialLink0268=serde_json::from_value(response.data.clone()).map_err(|_|"Некорректный ответ привязки".to_string())?;
+        let link:LauncherOfficialLink0268=serde_json::from_value(response.data.clone()).map_err(|_|"Некорректный ответ привязки".to_string())?;
         if normalized_uuid(&link.minecraft_uuid)?!=requested{return Err("Сервер изменил идентификатор учётной записи Minecraft".into());}
         Ok(link)
     }
@@ -1213,7 +1213,7 @@ impl IdentityManager {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all="camelCase")]
-pub struct NeverOfficialLink0268 {
+pub struct LauncherOfficialLink0268 {
     pub minecraft_uuid: String,
     pub minecraft_name: String,
     pub verified_at: String,
@@ -1292,11 +1292,11 @@ pub async fn official_identity_logout_0267(manager: tauri::State<'_, IdentityMan
 }
 
 #[tauri::command]
-pub async fn official_identity_links_0268(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<Vec<NeverOfficialLink0268>,String> {
+pub async fn official_identity_links_0268(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<Vec<LauncherOfficialLink0268>,String> {
     manager.links_0268(&context.backend_url,&context.token,&context.session_id).await
 }
 #[tauri::command]
-pub async fn official_identity_link_0268(manager: tauri::State<'_, IdentityManager>, context: Context, account_id: String, confirmed: bool) -> Result<NeverOfficialLink0268,String> {
+pub async fn official_identity_link_0268(manager: tauri::State<'_, IdentityManager>, context: Context, account_id: String, confirmed: bool) -> Result<LauncherOfficialLink0268,String> {
     manager.link_0268(&context.backend_url,&context.token,&context.session_id,&account_id,confirmed).await
 }
 #[tauri::command]
@@ -1318,7 +1318,7 @@ mod tests {
     }
     #[test]
     fn link_response_only_contains_nonsecret_identity_fields() {
-        let link=NeverOfficialLink0268{minecraft_uuid:"a".repeat(32),minecraft_name:"ValidUser".into(),verified_at:"2026-10-23T12:00:00Z".into()};
+        let link=LauncherOfficialLink0268{minecraft_uuid:"a".repeat(32),minecraft_name:"ValidUser".into(),verified_at:"2026-10-23T12:00:00Z".into()};
         let serialized=serde_json::to_string(&link).unwrap();
         assert!(serialized.contains("minecraftUuid"));
         assert!(!serialized.contains("Token") && !serialized.contains("ticket"));
@@ -1421,7 +1421,7 @@ mod tests {
                 let request=String::from_utf8_lossy(&request);
                 assert!(request.contains("/api/v1/minecraft/official/browser/config"));
                 assert!(request.to_ascii_lowercase().contains("authorization: bearer access-token-0396"));
-                let body=r#"{"data":{"neverSessionId":"sid-real","neverUserId":"user-real","enabled":true}}"#;
+                let body=r#"{"data":{"launcherSessionId":"sid-real","launcherUserId":"user-real","enabled":true}}"#;
                 let reply=format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
                 stream.write_all(reply.as_bytes()).await.unwrap();
             }
@@ -1429,25 +1429,25 @@ mod tests {
         let manager=IdentityManager::new().unwrap();
         assert!(manager.verified_scope(&backend,"access-token-0396","sid-real").await.is_ok());
         assert!(manager.verified_scope(&backend,"access-token-0396","sid-forged").await
-            .unwrap_err().contains("Идентификатор сеанса Never не совпадает"));
+            .unwrap_err().contains("Идентификатор сеанса Launcher не совпадает"));
         server.await.unwrap();
     }
     #[test]
     fn session_identity_is_required_before_vault_access() {
         let sid = "session-0396";
         assert!(verify_session_binding_0396(&serde_json::json!({
-            "neverSessionId": sid, "neverUserId": "user-123", "enabled":true
+            "launcherSessionId": sid, "launcherUserId": "user-123", "enabled":true
         }),sid).is_ok());
         for invalid in [
-            serde_json::json!({"neverSessionId":"different-sid","neverUserId":"user-123"}),
-            serde_json::json!({"neverSessionId":sid,"neverUserId":""}),
-            serde_json::json!({"neverSessionId":sid}),
-            serde_json::json!({"neverUserId":"user-123"}),
+            serde_json::json!({"launcherSessionId":"different-sid","launcherUserId":"user-123"}),
+            serde_json::json!({"launcherSessionId":sid,"launcherUserId":""}),
+            serde_json::json!({"launcherSessionId":sid}),
+            serde_json::json!({"launcherUserId":"user-123"}),
         ] {
             assert!(verify_session_binding_0396(&invalid,sid).is_err());
         }
         assert!(retryable_backend_0396("Сервис официальной авторизации недоступен"));
-        assert!(!retryable_backend_0396("Сессия Never/Minecraft недействительна; войдите повторно"));
+        assert!(!retryable_backend_0396("Сессия Launcher/Minecraft недействительна; войдите повторно"));
     }
     #[test]
     fn pending_microsoft_refresh_can_be_restored_without_redeeming_refresh() {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Зафиксировать и независимо перечитать *настоящую* миграцию NeverLauncher 0.36.0/0.46.0.
+"""Зафиксировать и независимо перечитать *настоящую* миграцию Launcher 0.36.0/0.46.0.
 
 Фиксация выполняется на изолированной ИСХОДНОЙ установке до остановки записывающих служб; проверка —
 на перенесённом работающем Backend 0.52.8. Без имитаций, ``status: passed`` из недоверенного ввода и
@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT / 'scripts/operations'))
 import live_upgrade_0480 as live
 from sqlite_pg_cutover_0475 import storage_fingerprint, write_secure
 
-SCHEMA = 'neverlauncher.legacy-live-upgrade-0528/v1'
+SCHEMA = 'launcher.legacy-live-upgrade-0528/v1'
 ORIGINAL = ('0.36.0', '0.46.0')
 SHA = re.compile(r'[a-f0-9]{64}\Z')
 

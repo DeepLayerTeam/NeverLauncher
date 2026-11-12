@@ -112,7 +112,7 @@ SUITES = (
         "./internal/httpapi",
         (
             "TestSecurityRealAuthHTTP02912",
-            "TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke",
+            "TestMinecraftAuth119LauncherSessionExchangeJoinAndParentRevoke",
             "TestServerBridgeNodeIdentity0142RejectsSignatureReplayAndStaleTimestamp",
             "TestCanonicalStatusReadyAndMetrics",
         ),

@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class HostSession implements AutoCloseable {
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).proxy(new ProxySelector(){public List<Proxy> select(URI u){return List.of(Proxy.NO_PROXY);}public void connectFailed(URI u,SocketAddress a,IOException e){}}).build();
     private final URI origin;private final String token,extensionId,instanceId;
-    private final ScheduledExecutorService timer=Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"neverext-heartbeat");t.setDaemon(true);return t;});
+    private final ScheduledExecutorService timer=Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"launcherext-heartbeat");t.setDaemon(true);return t;});
     private final AtomicBoolean closed=new AtomicBoolean();
     private volatile boolean healthy=true;
     private volatile Set<String> capabilities=Set.of();

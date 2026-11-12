@@ -280,13 +280,13 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: слишком много записей roleMappings", cfg.ID)
 	}
 	normalizedRoleMappings := make(map[string]string, len(cfg.RoleMappings))
-	for externalValue, neverRole := range cfg.RoleMappings {
+	for externalValue, launcherRole := range cfg.RoleMappings {
 		externalValue = strings.TrimSpace(externalValue)
-		neverRole = strings.TrimSpace(neverRole)
-		if externalValue == "" || neverRole == "" || len(externalValue) > 256 || len(neverRole) > 128 {
+		launcherRole = strings.TrimSpace(launcherRole)
+		if externalValue == "" || launcherRole == "" || len(externalValue) > 256 || len(launcherRole) > 128 {
 			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: недопустимая запись roleMappings", cfg.ID)
 		}
-		normalizedRoleMappings[externalValue] = neverRole
+		normalizedRoleMappings[externalValue] = launcherRole
 	}
 	cfg.RoleMappings = normalizedRoleMappings
 

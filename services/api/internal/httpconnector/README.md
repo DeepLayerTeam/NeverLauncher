@@ -63,7 +63,7 @@ Launcher распознаёт `invalid_credentials`, `identity_disabled`, `ident
 }
 ```
 
-Для `/resolve` используется `subject`, для `/refresh` — `providerToken`, для `/logout` — `subject` + `providerToken`. Токен провайдера никогда не является токеном доступа или обновления Never.
+Для `/resolve` используется `subject`, для `/refresh` — `providerToken`, для `/logout` — `subject` + `providerToken`. Токен провайдера никогда не является токеном доступа или обновления Launcher.
 
 ## Подпись HMAC
 

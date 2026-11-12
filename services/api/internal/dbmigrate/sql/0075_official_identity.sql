@@ -1,4 +1,4 @@
--- 0.26.8: a verified Minecraft UUID may belong to only one Never identity.
+-- 0.26.8: a verified Minecraft UUID may belong to only one Launcher identity.
 -- No OAuth, Xbox, XSTS or Minecraft bearer tokens are persisted here.
 CREATE TABLE official_identity_links_0268 (
   minecraft_uuid CHAR(32) PRIMARY KEY CHECK (minecraft_uuid ~ '^[0-9a-f]{32}$'),

@@ -31,9 +31,9 @@ type installation struct{ root, base, key string }
 
 func binaryName() string {
 	if runtime.GOOS == "windows" {
-		return "neverprestarter.exe"
+		return "prestarter.exe"
 	}
-	return "neverprestarter"
+	return "prestarter"
 }
 func digest(data []byte) string { h := sha256.Sum256(data); return hex.EncodeToString(h[:]) }
 func regular(path string, limit int64) ([]byte, error) {

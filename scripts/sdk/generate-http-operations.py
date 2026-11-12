@@ -10,12 +10,12 @@ OPS = sorted((op['operationId'], method.upper(), path)
              for method, op in item.items() if method in {'get','post','put','patch','delete'})
 
 def outputs():
-    go = ['// Код сформирован скриптом scripts/sdk/generate-http-operations.py; не редактировать вручную.', 'package neverapi', '',
+    go = ['// Код сформирован скриптом scripts/sdk/generate-http-operations.py; не редактировать вручную.', 'package launcherapi', '',
           'var Operations = map[string]Operation{']
     ts = ['// Код сформирован скриптом scripts/sdk/generate-http-operations.py; не редактировать вручную.',
           'export const OPERATIONS = {']
     java = ['// Код сформирован скриптом scripts/sdk/generate-http-operations.py; не редактировать вручную.',
-            'package ru.neverlauncher.api;', 'import java.util.Map;', 'import java.util.HashMap;', 'public final class Operations {',
+            'package ru.launcher.api;', 'import java.util.Map;', 'import java.util.HashMap;', 'public final class Operations {',
             '  private Operations() {}', '  public record Operation(String method, String path) {}',
             '  public static final Map<String, Operation> ALL = build();',
             '  private static Map<String, Operation> build() {',
@@ -34,7 +34,7 @@ def outputs():
              '    return Map.copyOf(result);', '  }', '}', '']
     return {'sdk/api/go/operations_generated.go': subprocess.run(['gofmt'], input='\n'.join(go).encode(),capture_output=True,check=True).stdout.decode(),
             'sdk/api/typescript/operations.generated.ts': '\n'.join(ts),
-            'sdk/java/http-client/src/main/java/ru/neverlauncher/api/Operations.java': '\n'.join(java)}
+            'sdk/java/http-client/src/main/java/ru/launcher/api/Operations.java': '\n'.join(java)}
 
 if __name__ == '__main__':
     p=argparse.ArgumentParser();p.add_argument('--check',action='store_true');a=p.parse_args()

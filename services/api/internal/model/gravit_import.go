@@ -16,7 +16,7 @@ import (
 
 // Преобразование Gravit никогда не скачивает файлы, не выполняет действия и не
 // доверяет чужому classloader. Выходные настройки предназначены для НОВОГО рабочего
-// пространства Never; обычный цикл подготовки, проверки, подписи и публикации
+// пространства Launcher; обычный цикл подготовки, проверки, подписи и публикации
 // остаётся обязательным.
 var gravitJavaClass02210 = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)+$`)
 
@@ -169,7 +169,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		if len(v) < 8 || len(v) > 64 {
 			report("uuid", "blocked", "", "Некорректный UUID исходного профиля")
 		} else {
-			report("uuid", "transformed", "sourceSha256", "UUID источника не используется в качестве идентификатора профиля Never")
+			report("uuid", "transformed", "sourceSha256", "UUID источника не используется в качестве идентификатора профиля Launcher")
 		}
 	}
 	if v, ok := stringField("dir"); ok {
@@ -198,7 +198,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		if v == 0 {
 			report("sortIndex", "mapped", "", "Позиция сортировки по умолчанию")
 		} else {
-			report("sortIndex", "manual", "", "Never Profile v2 не поддерживает постоянный индекс сортировки")
+			report("sortIndex", "manual", "", "Launcher Profile v2 не поддерживает постоянный индекс сортировки")
 		}
 	}
 	for _, key := range []string{"minJavaVersion", "recommendJavaVersion", "maxJavaVersion"} {
@@ -222,7 +222,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 				target += "maximumMajorVersion"
 				if v == 999 {
 					status = "transformed"
-					reason = "Неограниченное значение 999 в Gravit сопоставлено с максимальным значением 0 в Never"
+					reason = "Неограниченное значение 999 в Gravit сопоставлено с максимальным значением 0 в Launcher"
 				} else {
 					out.Settings.Runtime.Java.MaximumMajorVersion = v
 				}
@@ -242,9 +242,9 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		if json.Unmarshal(v, &b) != nil || bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
 			report("warnMissJavaVersion", "blocked", "", "Ожидается логическое значение")
 		} else if b {
-			report("warnMissJavaVersion", "manual", "", "Never принудительно проверяет ограничения Java, а не продолжает работу с предупреждением")
+			report("warnMissJavaVersion", "manual", "", "Launcher принудительно проверяет ограничения Java, а не продолжает работу с предупреждением")
 		} else {
-			report("warnMissJavaVersion", "transformed", "settings.runtime.java", "Never принудительно проверяет ограничения Java")
+			report("warnMissJavaVersion", "transformed", "settings.runtime.java", "Launcher принудительно проверяет ограничения Java")
 		}
 	}
 	for _, key := range []string{"jvmArgs", "clientArgs"} {
@@ -279,7 +279,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 	for _, key := range []string{"classPath", "altClassPath"} {
 		if v, ok := listField(key); ok {
 			if key == "altClassPath" && len(v) > 0 {
-				report(key, "blocked", "", "Альтернативный системный список классов Gravit не эквивалентен подписанному списку Never")
+				report(key, "blocked", "", "Альтернативный системный список классов Gravit не эквивалентен подписанному списку Launcher")
 				continue
 			}
 			if key == "altClassPath" {
@@ -314,7 +314,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		}
 	}
 	if _, ok := root["classLoaderConfig"]; !ok {
-		report("classLoaderConfig", "blocked", "", "Загрузчик классов должен быть задан явно; нельзя считать поведение Gravit по умолчанию эквивалентным Never")
+		report("classLoaderConfig", "blocked", "", "Загрузчик классов должен быть задан явно; нельзя считать поведение Gravit по умолчанию эквивалентным Launcher")
 	}
 	if raw, ok := root["classLoaderConfig"]; ok {
 		var v string
@@ -323,7 +323,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		} else if v == "SYSTEM_ARGS" {
 			report("classLoaderConfig", "transformed", "settings.runtime.launch", "Нативный запуск процесса JVM: необходимо подтвердить эквивалентность главного класса и загрузки")
 		} else {
-			report("classLoaderConfig", "blocked", "", "Неподдерживаемый загрузчик классов Gravit: "+v+"; Never не будет выполнять начальную загрузку стороннего лаунчера")
+			report("classLoaderConfig", "blocked", "", "Неподдерживаемый загрузчик классов Gravit: "+v+"; Launcher не будет выполнять начальную загрузку стороннего лаунчера")
 		}
 	}
 	for _, key := range []string{"compatClasses", "updateOptional"} {
@@ -394,7 +394,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		if valid {
 			status := "transformed"
 			target := "settings.fileRules"
-			reason := "Управляемое обновление Gravit преобразовано в безопасные правила проверки Never; требуются фактические хеши"
+			reason := "Управляемое обновление Gravit преобразовано в безопасные правила проверки Launcher; требуются фактические хеши"
 			if key == "updateExclusions" {
 				reason = "Исключения преобразованы в защиту файлов, принадлежащих пользователю"
 			}
@@ -484,7 +484,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 						}
 					}
 					out.Servers = append(out.Servers, GravitServer02210{Name: name, Address: address, Port: port, Default: d})
-					report(label, "manual", "serverBrowser", "Создайте сервер Never ServerBridge в рамках проекта и профиля; записи серверов Gravit напрямую в реестр не импортируются")
+					report(label, "manual", "serverBrowser", "Создайте сервер Launcher ServerBridge в рамках проекта и профиля; записи серверов Gravit напрямую в реестр не импортируются")
 				}
 				if defaults > 1 {
 					report("servers", "blocked", "", "Указано несколько серверов по умолчанию")
@@ -497,7 +497,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		if json.Unmarshal(raw, &limited) != nil || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 			report("limited", "blocked", "", "Ожидается логическое значение")
 		} else if limited {
-			report("limited", "blocked", "", "Ограничение разрешений Gravit требует явных ACL Never; импорт сам по себе не выдаёт доступ")
+			report("limited", "blocked", "", "Ограничение разрешений Gravit требует явных ACL Launcher; импорт сам по себе не выдаёт доступ")
 		} else {
 			report("limited", "mapped", "", "Исходный профиль не имеет ограничений")
 		}

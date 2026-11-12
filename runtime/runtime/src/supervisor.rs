@@ -379,7 +379,7 @@ impl ProcessSupervisor {
                         // всё равно считается отказом безопасности, а не успехом.
                         if let Some(reason) = process.guard_violation.as_ref() {
                             success = false;
-                            message = format!("Доверие к NeverGuard отозвано во время игры: {reason}");
+                            message = format!("Доверие к LauncherGuard отозвано во время игры: {reason}");
                         }
                         process.status.state = "exited".to_string();
                         process.status.finished_at = Some(finished_at.clone());
@@ -439,7 +439,7 @@ impl ProcessSupervisor {
             managed.guard_violation = Some(reason.clone());
             managed.status.state = "trust-blocked".to_string();
             managed.status.success = Some(false);
-            managed.status.message = format!("Доверие к NeverGuard отозвано во время игры: {reason}");
+            managed.status.message = format!("Доверие к LauncherGuard отозвано во время игры: {reason}");
             managed.child.clone()
         };
         let mut process = child.lock().await;

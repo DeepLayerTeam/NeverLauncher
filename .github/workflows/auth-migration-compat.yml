@@ -20,14 +20,14 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: never
-          POSTGRES_USER: never
+          POSTGRES_DB: launcher
+          POSTGRES_USER: launcher
           POSTGRES_PASSWORD: integration-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U never -d never' --health-interval 5s --health-timeout 5s --health-retries 25
+          --health-cmd 'pg_isready -U launcher -d launcher' --health-interval 5s --health-timeout 5s --health-retries 25
     env:
-      LAUNCHER_DATABASE_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
+      LAUNCHER_DATABASE_DSN: postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

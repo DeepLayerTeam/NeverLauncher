@@ -7,13 +7,13 @@ import (
 	"testing"
 )
 
-func TestGenerateNeverMigrationKeys0336(t *testing.T) {
+func TestGenerateLauncherMigrationKeys0336(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Chmod(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, "new-never.json")
-	if err := generateNeverMigrationKeys0336(path); err != nil {
+	path := filepath.Join(dir, "new-launcher.json")
+	if err := generateLauncherMigrationKeys0336(path); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(path)
@@ -39,7 +39,7 @@ func TestGenerateNeverMigrationKeys0336(t *testing.T) {
 	if len(keys.JWTKeys[keys.JWTKeyID]) != 64 || len(keys.ManifestEd25519Seed) != 64 || len(keys.ManifestPublicSHA256) != 64 || keys.JWTKeys[keys.JWTKeyID] == keys.ManifestEd25519Seed {
 		t.Fatal("Секретный материал недопустим или совпадает с исходным")
 	}
-	if err = generateNeverMigrationKeys0336(path); err == nil {
+	if err = generateLauncherMigrationKeys0336(path); err == nil {
 		t.Fatal("файл с секретом был перезаписан")
 	}
 }

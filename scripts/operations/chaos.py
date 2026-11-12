@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Реальная инъекция сбоев на Docker для изолированных лабораторий NeverLauncher Network-HA.
+"""Реальная инъекция сбоев на Docker для изолированных лабораторий Launcher Network-HA.
 
 Используются работающие PostgreSQL и S3, фиксируются подтверждённые устойчивые canary, прерываются
 настоящие зависимости и сеть одного worker, затем проверяется восстановление. Производственный SLA
@@ -27,7 +27,7 @@ import dr_03512 as dr
 
 SERVICES = ("postgres", "redis", "s3", "api", "api-b", "worker-a", "worker-b", "nginx")
 REPLICA = ("api", "api-b", "worker-a", "worker-b")
-KEY_PREFIX = "neverlauncher-chaos-0456/"
+KEY_PREFIX = "launcher-chaos-0456/"
 
 
 def monotonic() -> float:

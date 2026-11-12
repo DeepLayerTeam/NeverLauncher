@@ -177,7 +177,7 @@ def verify_bundle(bundle: Path, release_manifest: bool=False) -> dict:
     initial=inventory(bundle)
     version=initial['version']
     targets={target:verify_target(bundle,target,row['file'],version) for target,row in initial['targets'].items()}
-    report={'schema':'neverlauncher.delivery-verified.v1','version':version,
+    report={'schema':'launcher.delivery-verified.v1','version':version,
             'status':'binary-integrity-verified-signatures-and-E2E-separate','targets':targets}
     if release_manifest:
         raw=json.loads((bundle/'RELEASE_MANIFEST.json').read_text())
@@ -196,7 +196,7 @@ def verify_bundle(bundle: Path, release_manifest: bool=False) -> dict:
         if not ledger_path.is_file() or ledger_path.is_symlink():
             raise ValueError('Отсутствует инвентаризация целостности поставки')
         ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
-        if (ledger.get('schema')!='neverlauncher.delivery-verified.v1'
+        if (ledger.get('schema')!='launcher.delivery-verified.v1'
                 or ledger.get('version')!=version
                 or ledger.get('targets')!=targets):
             raise ValueError('Инвентаризация целостности поставки устарела или подделана')

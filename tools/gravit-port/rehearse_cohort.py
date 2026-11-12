@@ -2,7 +2,7 @@
 """Выполняет импорт трёх проектов Gravit, *реальную* репетицию Minecraft и
 обновление подписанного клиента.
 
-Используются только существующие пути выполнения NeverLauncher CLI.
+Используются только существующие пути выполнения Launcher CLI.
 Репетиция после обновления намеренно является ЛОКАЛЬНЫМ свидетельством:
 квитанция MIG10 Backend неизменяема. Утилита не может подписать результат GA,
 подделать квитанции или переключить рабочую среду.
@@ -26,7 +26,7 @@ CLASSES = ("fileauth-single", "sql-modded", "proxy-network")
 PROBES = ("launch", "login", "join", "skins", "loader", "optional", "admin")
 HEX = re.compile(r"^[a-f0-9]{64}$")
 RUN = re.compile(r"^[a-zA-Z0-9_-]{8,128}$")
-FORMAT = "never/gravit-three-project-rehearsal/v1"
+FORMAT = "launcher/gravit-three-project-rehearsal/v1"
 
 
 class Blocked(Exception):
@@ -168,7 +168,7 @@ def preflight(config: dict, output: Path) -> list[dict]:
                 "Одобренный план нескольких профилей отсутствует, устарел или заблокирован")
         stage, root = real_dir(p.get("stage")), real_dir(p.get("installRoot"))
         marker = json_file(stage / ".migration-stage.json", 8192)
-        require(marker.get("format") == "never/migration-stage/v1" and marker.get("runId") == run
+        require(marker.get("format") == "launcher/migration-stage/v1" and marker.get("runId") == run
                 and marker.get("isolated") is True, "Каталог не обозначен как изолированный тестовый стенд")
         live = json_file(stage / "live-session.json", 16384)
         require(isinstance(live.get("rconAddress"), str) and
@@ -218,7 +218,7 @@ def cli(launcher: str, args: list[str], timeout: int = 1800) -> None:
             subprocess.run([launcher, *args], env=env, stdin=sink, stdout=sink,
                            stderr=sink, check=True, timeout=timeout)
         except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-            raise Blocked("Ошибка команды NeverLauncher на этапе " + " ".join(args[:3])) from exc
+            raise Blocked("Ошибка команды Launcher на этапе " + " ".join(args[:3])) from exc
 
 
 def verify_rehearsal(path: Path, p: dict, *, authoritative: bool) -> dict:

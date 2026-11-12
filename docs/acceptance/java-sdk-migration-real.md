@@ -1,4 +1,4 @@
-# NeverLauncher 0.52.8 — приёмка Java, SDK и миграции
+# Launcher 0.52.8 — приёмка Java, SDK и миграции
 
 ## Рабочий код и локальная проверка
 
@@ -18,7 +18,7 @@ python3 scripts/acceptance/java_sdk_migration_0528.py local \
 
 ## Установленный Java Host и настоящие подтверждения Minecraft
 
-Используйте выделенный изолированный проект с настоящим HTTPS Backend 0.52.8, развёрнутыми Java Extension Host и Go Broker, краткоживущим токеном администратора проекта, тестовым игроком и ранее загруженными миграционными идентичностями/библиотеками. Подготовьте закрытую конфигурацию `0600` (`neverlauncher.java-host-live-0528/v1`) с ключами:
+Используйте выделенный изолированный проект с настоящим HTTPS Backend 0.52.8, развёрнутыми Java Extension Host и Go Broker, краткоживущим токеном администратора проекта, тестовым игроком и ранее загруженными миграционными идентичностями/библиотеками. Подготовьте закрытую конфигурацию `0600` (`launcher.java-host-live-0528/v1`) с ключами:
 
 - `format`, `isolatedProject: true`, `sourceCommit` (40 строчных шестнадцатеричных символов), `backendUrl`, `hostUrl`, `projectId`, `profileId`, `loaderVersion`, `testIdentifier`, `testUuid`.
 - `libraryFile`, `librarySha256`, `libraryPath` (реальный файл в `libraries/`, `mods/` или `optional/`, сохранённый и доступный Broker, в пределах лимита актива Java Host SPI 512 КиБ), `extensionJar`, `extensionJarSha256`.
@@ -30,15 +30,15 @@ python3 scripts/acceptance/java_sdk_migration_0528.py local \
 
 ## Три разных реально работающих проекта Gravit
 
-Используйте существующий `tools/gravit-port/ga_acceptance_0500.py`, который обязан повторно запрашивать работающий Backend с PostgreSQL и подтверждать 36 отдельно подписанных реальных проверок трёх разных проектов: `fileauth-single`, `sql-modded`, `proxy-network`. Он также выполняет 19 поведенческих проверок модулей с закреплёнными хешами и повторно проверяет настоящее доверие после этих испытаний; каждое подтверждение, исходный ZIP, подписанное обновление и наблюдение Minecraft должны соответствовать точному запуску и проекту. Настройте исходную закрытую конфигурацию `never/gravit-acceptance-0500/v1` и **пустой независимый каталог `0700`** для доказательств. Новый исполнитель 0.52.8 вызывает инструмент напрямую; подтверждения всё равно требуют независимого рассмотрения, а `productionGA` остаётся false.
+Используйте существующий `tools/gravit-port/ga_acceptance_0500.py`, который обязан повторно запрашивать работающий Backend с PostgreSQL и подтверждать 36 отдельно подписанных реальных проверок трёх разных проектов: `fileauth-single`, `sql-modded`, `proxy-network`. Он также выполняет 19 поведенческих проверок модулей с закреплёнными хешами и повторно проверяет настоящее доверие после этих испытаний; каждое подтверждение, исходный ZIP, подписанное обновление и наблюдение Minecraft должны соответствовать точному запуску и проекту. Настройте исходную закрытую конфигурацию `launcher/gravit-acceptance-0500/v1` и **пустой независимый каталог `0700`** для доказательств. Новый исполнитель 0.52.8 вызывает инструмент напрямую; подтверждения всё равно требуют независимого рассмотрения, а `productionGA` остаётся false.
 
-## Миграции исторических версий NeverLauncher
+## Миграции исторических версий Launcher
 
 Запускайте `legacy_upgrade_real_0528.py capture` для каждого **действительно работающего исходного** развёртывания 0.36.0 и 0.46.0 до остановки записывающих процессов. Закрытый JSON `0600` имеет вид:
 
 ```json
 {
-  "format": "neverlauncher.legacy-live-upgrade-0528/v1",
+  "format": "launcher.legacy-live-upgrade-0528/v1",
   "sourceVersion": "0.36.0",
   "baseUrl": "https://original-isolated-host.example",
   "ownerCredentials": "/absolute/private/owner.json",
@@ -65,11 +65,11 @@ python3 scripts/acceptance/legacy_upgrade_real_0528.py verify \
 
 ## Сводная внешняя приёмка
 
-Защищённый процесс `.github/workflows/java-sdk-migration-real-0528.yml` содержит обычную локальную задачу регрессий CI и ручную задачу реальных испытаний в изолированном окружении. Для последней нужен **закрытый файл конфигурации `0600`** `neverlauncher.java-sdk-migration-0528/v1`:
+Защищённый процесс `.github/workflows/java-sdk-migration-real-0528.yml` содержит обычную локальную задачу регрессий CI и ручную задачу реальных испытаний в изолированном окружении. Для последней нужен **закрытый файл конфигурации `0600`** `launcher.java-sdk-migration-0528/v1`:
 
 ```json
 {
-  "format": "neverlauncher.java-sdk-migration-0528/v1",
+  "format": "launcher.java-sdk-migration-0528/v1",
   "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
   "java": {"config": "/absolute/private/java.json", "output": "/absolute/private/java-result.json"},
   "gravit": {"config": "/absolute/private/gravit.json", "evidenceDir": "/absolute/private/empty-0700"},

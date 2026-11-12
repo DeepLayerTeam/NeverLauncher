@@ -133,7 +133,7 @@ def native_report(target: str, unsigned: Path, signed_root: Path, *, release_cli
         # codesign изменяет команды загрузки и linkedit исполняемого Mach-O;
         # независимый оператор подписи должен проверить и это преобразование.
         actual_check='codesign-gatekeeper-and-notarization-verified'
-    return {'schema':'neverlauncher.native-verification.v1','version':RELEASE_VERSION,
+    return {'schema':'launcher.native-verification.v1','version':RELEASE_VERSION,
             'target':target,'unsignedSha256':sha256_file(unsigned_file),
             'signedSha256':actual['sha256'], 'nativeCheck':actual_check,
             'releaseManifestSha256':sha256_file(signed_root/'RELEASE_MANIFEST.json'),

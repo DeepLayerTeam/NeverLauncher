@@ -24,7 +24,7 @@ func (f *minecraftVerifierFixture0268) Profile(_ context.Context, token string) 
 	}
 	return f.profile, f.err
 }
-func TestOfficialLinkRequiresFreshNeverSession0268(t *testing.T) {
+func TestOfficialLinkRequiresFreshLauncherSession0268(t *testing.T) {
 	now := time.Unix(1800000000, 0)
 	for _, v := range []struct {
 		auth int64
@@ -32,8 +32,8 @@ func TestOfficialLinkRequiresFreshNeverSession0268(t *testing.T) {
 	}{
 		{now.Unix(), true}, {now.Unix() - 899, true}, {now.Unix() - 901, false}, {0, false}, {now.Unix() + 1, false},
 	} {
-		if actual := freshNeverIdentity0268(authClaims{AuthTime: v.auth}, now); actual != v.ok {
-			t.Errorf("freshNeverIdentity(%d)=%v", v.auth, actual)
+		if actual := freshLauncherIdentity0268(authClaims{AuthTime: v.auth}, now); actual != v.ok {
+			t.Errorf("freshLauncherIdentity(%d)=%v", v.auth, actual)
 		}
 	}
 }

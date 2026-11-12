@@ -1,4 +1,4 @@
-name: NeverLauncher 0.43.9 — нативная изоляция расширений Linux ARM64
+name: Launcher 0.43.9 — нативная изоляция расширений Linux ARM64
 
 on:
   push:

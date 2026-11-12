@@ -1,36 +1,36 @@
-# NeverLauncher 0.49.12 — эксплуатационный откат переключения с Gravit
+# Launcher 0.49.12 — эксплуатационный откат переключения с Gravit
 
-**Область действия:** одна миграция `runId/profileId/channel`, отдельный локальный процесс HAProxy и две группы писателей Gravit/Never под управлением systemd. Это исполняемый операторский код, но **не замена независимо подтверждённому промышленному восстановлению**. Используются существующие транзакционные API PostgreSQL `rollback-plan` и `rollback-commit`. Нельзя считать, что перезапись старого мира Minecraft восстанавливает новые данные. Автоматический перезапуск источника или открытие трафика отсутствуют.
+**Область действия:** одна миграция `runId/profileId/channel`, отдельный локальный процесс HAProxy и две группы писателей Gravit/Launcher под управлением systemd. Это исполняемый операторский код, но **не замена независимо подтверждённому промышленному восстановлению**. Используются существующие транзакционные API PostgreSQL `rollback-plan` и `rollback-commit`. Нельзя считать, что перезапись старого мира Minecraft восстанавливает новые данные. Автоматический перезапуск источника или открытие трафика отсутствуют.
 
 ## Обязательные предварительные условия
 
 - Используйте **неизменённый** JSON переключения версии 0.49.11 с правами 0600 и журнал переключения 0700 с настоящим состоянием после активации. Проверяйте действующий маршрут, не только локальный журнал. *Новый* JSON отката 0600 привязывается к точному SHA-256 байтов этого JSON переключения.
 - Оператор должен запускать средство на хосте с настоящим доступом к `systemctl show` для **всех** указанных исходных/целевых служб и к локальному административному Unix-сокету HAProxy. Средство **не** останавливает и не маскирует процессы, не перекрывает чужой ingress, не отгораживает другие хосты, не останавливает писателей БД и не проверяет Kubernetes/Docker. Если такие писатели существуют, их отдельно подтверждённое ограждение — дополнительное строгое условие. Перечень одного systemd-юнита не доказывает глобальную остановку записи.
-- Экспортируйте свежие согласованные снимки Gravit и Never из действительно остановленных миров и данных пользователей/плагинов в JSON-формате `gravitrehearsal.Snapshot`. Все экспорты — закрытые файлы **0600**. Источник должен совпадать с базовым снимком MIG10, если только отдельно выполненная и независимо проверенная сверка не создала новый экспорт источника, соответствующий изменённым данным Never. **Отчёт снимка не является резервной копией и не копирует миры или SQL-БД плагинов.**
+- Экспортируйте свежие согласованные снимки Gravit и Launcher из действительно остановленных миров и данных пользователей/плагинов в JSON-формате `gravitrehearsal.Snapshot`. Все экспорты — закрытые файлы **0600**. Источник должен совпадать с базовым снимком MIG10, если только отдельно выполненная и независимо проверенная сверка не создала новый экспорт источника, соответствующий изменённым данным Launcher. **Отчёт снимка не является резервной копией и не копирует миры или SQL-БД плагинов.**
 - Проверьте независимые резервные копии и восстановление на другой машине. Изменившиеся инвентарь, UUID, права, экономика, хеш мира или другие существенные данные нельзя незаметно отбросить. Backend сравнивает поля доменов и окончательно решает, готов ли план отката. Для сверки оператор обязан передать существующее `reconciliationEvidenceSha256` от Backend, а не придуманное значение. Локальное средство дополнительно требует точного совпадения текущего и исходного экспорта после сверки.
-- Старый базовый **выпуск NeverLauncher** должен существовать, быть подписанным и проходить шлюзы Runtime. PostgreSQL-откат изменяет головной выпуск канала Never, но **не** переключает прокси Gravit, не восстанавливает миры и не перевыпускает старые сеансы. Для отката стабильного канала по-прежнему нужен существующий одноразовый токен шлюза стабильного выпуска.
+- Старый базовый **выпуск Launcher** должен существовать, быть подписанным и проходить шлюзы Runtime. PostgreSQL-откат изменяет головной выпуск канала Launcher, но **не** переключает прокси Gravit, не восстанавливает миры и не перевыпускает старые сеансы. Для отката стабильного канала по-прежнему нужен существующий одноразовый токен шлюза стабильного выпуска.
 
 ## Конфигурация восстановления
 
-`/srv/never-cutover/rollback.json` (права 0600), созданный и запечатанный **после** выбора неизменённого JSON переключения:
+`/srv/launcher-cutover/rollback.json` (права 0600), созданный и запечатанный **после** выбора неизменённого JSON переключения:
 
 ```json
 {
-  "format": "never/gravit-operational-rollback/v1",
+  "format": "launcher/gravit-operational-rollback/v1",
   "runId": "run_12345678",
   "profileId": "main",
   "channel": "stable",
   "cutoverConfigSha256": "<64 шестнадцатеричных символа в нижнем регистре для точных исходных байтов конфигурации>",
   "units": {
     "source": ["gravit-launchserver.service", "gravit-minecraft.service"],
-    "target": ["never-launcher.service", "never-minecraft.service"]
+    "target": ["launcher.service", "launcher-minecraft.service"]
   },
-  "currentSnapshot": "/srv/never-cutover/snapshots/never-after-fence.json",
-  "sourceSnapshot": "/srv/never-cutover/snapshots/gravit-after-restore.json"
+  "currentSnapshot": "/srv/launcher-cutover/snapshots/launcher-after-fence.json",
+  "sourceSnapshot": "/srv/launcher-cutover/snapshots/gravit-after-restore.json"
 }
 ```
 
-Если источник согласован с новыми данными Never, добавляйте `"reconciliationEvidenceSha256": "..."` только после завершения и независимой проверки настоящей сверки данных. Не используйте поле для обхода несоответствий. Должны совпадать и миры, и все записи игроков; Backend должен подтвердить согласованный план. Этот JSON не содержит Bearer-токенов или паролей; `LAUNCHER_TOKEN` задаётся в защищённом окружении процесса. `cutoverConfigSha256` должен быть настоящим SHA-256 неизменённого JSON, а не шаблонным значением.
+Если источник согласован с новыми данными Launcher, добавляйте `"reconciliationEvidenceSha256": "..."` только после завершения и независимой проверки настоящей сверки данных. Не используйте поле для обхода несоответствий. Должны совпадать и миры, и все записи игроков; Backend должен подтвердить согласованный план. Этот JSON не содержит Bearer-токенов или паролей; `LAUNCHER_TOKEN` задаётся в защищённом окружении процесса. `cutoverConfigSha256` должен быть настоящим SHA-256 неизменённого JSON, а не шаблонным значением.
 
 ## Порядок действий
 
@@ -38,40 +38,40 @@
 
 ```sh
 python3 tools/gravit-port/operational_rollback_04912.py fence \
-  --cutover-config /srv/never-cutover/config.json \
-  --rollback-config /srv/never-cutover/rollback.json \
-  --journal-dir /srv/never-cutover/journal --confirm run_12345678
+  --cutover-config /srv/launcher-cutover/config.json \
+  --rollback-config /srv/launcher-cutover/rollback.json \
+  --journal-dir /srv/launcher-cutover/journal --confirm run_12345678
 ```
 
-**2. Остановите и замаскируйте всех независимых писателей источника/цели.** Только после подтверждения настоящей остановки экспортируйте НОВЫЕ согласованные JSON-снимки источника и Never. Команда `plan` повторно проверяет каждый указанный systemd-юнит, работающий HAProxy, дайджест базового источника и текущий маршрут PostgreSQL. Если данные Never изменились, без законченной сверки она отказывает. `plan` вызывает настоящий планировщик отката Backend и требует `ready=true`, отсутствия блокировок, правильного режима и точного SHA-256 исходных байтов снимка.
+**2. Остановите и замаскируйте всех независимых писателей источника/цели.** Только после подтверждения настоящей остановки экспортируйте НОВЫЕ согласованные JSON-снимки источника и Launcher. Команда `plan` повторно проверяет каждый указанный systemd-юнит, работающий HAProxy, дайджест базового источника и текущий маршрут PostgreSQL. Если данные Launcher изменились, без законченной сверки она отказывает. `plan` вызывает настоящий планировщик отката Backend и требует `ready=true`, отсутствия блокировок, правильного режима и точного SHA-256 исходных байтов снимка.
 
 ```sh
 python3 tools/gravit-port/operational_rollback_04912.py plan \
-  --cutover-config /srv/never-cutover/config.json \
-  --rollback-config /srv/never-cutover/rollback.json \
-  --journal-dir /srv/never-cutover/journal --confirm run_12345678
+  --cutover-config /srv/launcher-cutover/config.json \
+  --rollback-config /srv/launcher-cutover/rollback.json \
+  --journal-dir /srv/launcher-cutover/journal --confirm run_12345678
 ```
 
-**3. Экспортируйте ещё один независимый НОВЫЙ снимок Never после плана** (другой абсолютный путь; байты должны по-прежнему точно совпадать). Завершите фиксацию в десятиминутном окне одобрения Backend. Средство консервативно отвергает планы старше девяти минут. `commit` заново проверяет обе группы писателей и закрытый HAProxy, сравнивает свежие байты и экспорт источника с планом, вызывает существующий `rollback-commit` с обеими блокировками записи. Затем независимо считывает сохранённый статус отката и новый маршрут PostgreSQL.
+**3. Экспортируйте ещё один независимый НОВЫЙ снимок Launcher после плана** (другой абсолютный путь; байты должны по-прежнему точно совпадать). Завершите фиксацию в десятиминутном окне одобрения Backend. Средство консервативно отвергает планы старше девяти минут. `commit` заново проверяет обе группы писателей и закрытый HAProxy, сравнивает свежие байты и экспорт источника с планом, вызывает существующий `rollback-commit` с обеими блокировками записи. Затем независимо считывает сохранённый статус отката и новый маршрут PostgreSQL.
 
 ```sh
 python3 tools/gravit-port/operational_rollback_04912.py commit \
-  --cutover-config /srv/never-cutover/config.json \
-  --rollback-config /srv/never-cutover/rollback.json \
-  --journal-dir /srv/never-cutover/journal --confirm run_12345678 \
-  --fresh-snapshot /srv/never-cutover/snapshots/never-second-export.json
+  --cutover-config /srv/launcher-cutover/config.json \
+  --rollback-config /srv/launcher-cutover/rollback.json \
+  --journal-dir /srv/launcher-cutover/journal --confirm run_12345678 \
+  --fresh-snapshot /srv/launcher-cutover/snapshots/launcher-second-export.json
 ```
 
 Если фиксация неоднозначна из-за тайм-аута, средство сохраняет статус `uncertain` и пытается закрыть ingress. **Не повторяйте `commit`.** Исследуйте PostgreSQL и используйте `reconcile` только для чтения авторитетного состояния/маршрута Backend. Код завершения локального процесса сам по себе не превращает результат в успех.
 
 ```sh
 python3 tools/gravit-port/operational_rollback_04912.py reconcile \
-  --cutover-config /srv/never-cutover/config.json \
-  --rollback-config /srv/never-cutover/rollback.json \
-  --journal-dir /srv/never-cutover/journal --confirm run_12345678
+  --cutover-config /srv/launcher-cutover/config.json \
+  --rollback-config /srv/launcher-cutover/rollback.json \
+  --journal-dir /srv/launcher-cutover/journal --confirm run_12345678
 ```
 
-`status` читает лишь локальный этап. Успех называется `committed_fenced`: **оба ingress Backend остаются в `MAINT`**. Это намеренно: восстановленный головной выпуск Never не даёт разрешения запускать старых писателей Gravit или воспроизводить устаревшие миры. Независимый оператор должен проверить данные и авторизацию, осознанно включить нужное обслуживающее развёртывание, сохранить конфигурацию HAProxy, проверить настоящий вход/подключение Minecraft и испытать перезагрузку конфигурации и failover HAProxy. Другие frontend и балансировщики здесь не меняются.
+`status` читает лишь локальный этап. Успех называется `committed_fenced`: **оба ingress Backend остаются в `MAINT`**. Это намеренно: восстановленный головной выпуск Launcher не даёт разрешения запускать старых писателей Gravit или воспроизводить устаревшие миры. Независимый оператор должен проверить данные и авторизацию, осознанно включить нужное обслуживающее развёртывание, сохранить конфигурацию HAProxy, проверить настоящий вход/подключение Minecraft и испытать перезагрузку конфигурации и failover HAProxy. Другие frontend и балансировщики здесь не меняются.
 
 ## Восстановление файлов остановленного Minecraft (не работающей базы данных)
 
@@ -80,29 +80,29 @@ python3 tools/gravit-port/operational_rollback_04912.py reconcile \
 ```sh
 python3 tools/gravit-port/cold_data_restore_04912.py seal \
   --source /srv/verified-backups/gravit-world \
-  --manifest /srv/never-cutover/gravit-world-backup.json --run run_12345678
+  --manifest /srv/launcher-cutover/gravit-world-backup.json --run run_12345678
 
 # Только ПОСЛЕ блокировки входящего трафика для отката и остановки всех процессов записи
 # источника и назначения. Файлы восстанавливаются в указанный неактивный каталог.
 python3 tools/gravit-port/cold_data_restore_04912.py restore \
   --source /srv/verified-backups/gravit-world \
   --target /srv/gravit/minecraft \
-  --manifest /srv/never-cutover/gravit-world-backup.json \
-  --cutover-config /srv/never-cutover/config.json \
-  --rollback-config /srv/never-cutover/rollback.json \
-  --journal-dir /srv/never-cutover/journal --run run_12345678
+  --manifest /srv/launcher-cutover/gravit-world-backup.json \
+  --cutover-config /srv/launcher-cutover/config.json \
+  --rollback-config /srv/launcher-cutover/rollback.json \
+  --journal-dir /srv/launcher-cutover/journal --run run_12345678
 
 # При завершении посреди переименования, пока запись и входящий трафик заблокированы:
 python3 tools/gravit-port/cold_data_restore_04912.py recover \
   --source /srv/verified-backups/gravit-world \
   --target /srv/gravit/minecraft \
-  --manifest /srv/never-cutover/gravit-world-backup.json \
-  --cutover-config /srv/never-cutover/config.json \
-  --rollback-config /srv/never-cutover/rollback.json \
-  --journal-dir /srv/never-cutover/journal --run run_12345678
+  --manifest /srv/launcher-cutover/gravit-world-backup.json \
+  --cutover-config /srv/launcher-cutover/config.json \
+  --rollback-config /srv/launcher-cutover/rollback.json \
+  --journal-dir /srv/launcher-cutover/journal --run run_12345678
 ```
 
-Запечатанная копия **не обязательно новее мира Never**. Если Never уже принял новые записи, сначала перенесите изменения миров, игроков, экономики, прав и плагинов в автономный источник и независимо проверьте итоговый снимок; иначе `rollback-plan` должен блокировать процесс. Восстановление файлов намеренно не восстанавливает PostgreSQL или MySQL/MariaDB, платёжные/экономические плагины, внешние объектные хранилища и сеансы Minecraft. Для них нужны собственные независимо испытанные транзакционные или согласованные на уровне приложения процедуры восстановления и сверки. Не запускайте писателей, пока всё это состояние не согласовано.
+Запечатанная копия **не обязательно новее мира Launcher**. Если Launcher уже принял новые записи, сначала перенесите изменения миров, игроков, экономики, прав и плагинов в автономный источник и независимо проверьте итоговый снимок; иначе `rollback-plan` должен блокировать процесс. Восстановление файлов намеренно не восстанавливает PostgreSQL или MySQL/MariaDB, платёжные/экономические плагины, внешние объектные хранилища и сеансы Minecraft. Для них нужны собственные независимо испытанные транзакционные или согласованные на уровне приложения процедуры восстановления и сверки. Не запускайте писателей, пока всё это состояние не согласовано.
 
 ## Тесты и ограничения GA
 

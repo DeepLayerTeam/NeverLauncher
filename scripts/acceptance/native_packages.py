@@ -28,10 +28,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-SCHEMA = 'neverlauncher.native-final-packages/0.52.2'
-REVIEW_DOMAIN = b'neverlauncher.native-final-package.review.0.52.2\x00'
-RESULT_SCHEMA = 'neverlauncher.native-final-package-result/0.52.2'
-SUMMARY_SCHEMA = 'neverlauncher.native-final-package-matrix/0.52.2'
+SCHEMA = 'launcher.native-final-packages/0.52.2'
+REVIEW_DOMAIN = b'launcher.native-final-package.review.0.52.2\x00'
+RESULT_SCHEMA = 'launcher.native-final-package-result/0.52.2'
+SUMMARY_SCHEMA = 'launcher.native-final-package-matrix/0.52.2'
 TARGETS = {(osname, arch) for osname in ('windows', 'linux', 'macos') for arch in ('x64', 'arm64')}
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 COMMIT = re.compile(r'[0-9a-f]{40}\Z')
@@ -170,7 +170,7 @@ def fetch(url, destination, expected_sha, expected_size, *, opener=None):
     fd = os.open(destination, flags, 0o600)
     try:
         with os.fdopen(fd, 'wb') as out, client.open(urllib.request.Request(
-                url, headers={'User-Agent': 'NeverLauncher-Native-Acceptance/0.52.2'}), timeout=45) as response:
+                url, headers={'User-Agent': 'Launcher-Native-Acceptance/0.52.2'}), timeout=45) as response:
             valid_https(response.geturl())
             while chunk := response.read(1024 * 1024):
                 total += len(chunk)
@@ -286,9 +286,9 @@ Write-Output 'Цепочка сертификатов Authenticode и незав
         require(a.disposable_runner and os.environ.get('GITHUB_ACTIONS') == 'true',
                 'Установка системного пакета разрешена только на временном нативном runner GitHub')
         cmd('system-install', ['sudo', 'dpkg', '-i', str(package)], 180)
-        installer = Path('/usr/lib/launcher/bundle/neverinstaller')
+        installer = Path('/usr/lib/launcher/bundle/installer')
         require(installer.is_file() and installer.stat().st_mode & stat.S_IXUSR,
-                'Не найден установленный в системе Linux neverinstaller')
+                'Не найден установленный в системе Linux installer')
         cmd('bootstrap-verification', [str(installer), 'verify', '--bundle', '/usr/lib/launcher/bundle'])
     else:
         team = a.apple_team_id or ''
@@ -524,7 +524,7 @@ def sign_review(a):
             private.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
             == public.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw),
             'Несовпадение ключевой пары проверяющего')
-    payload = {'schema': 'neverlauncher.native-final-package-review/0.52.2',
+    payload = {'schema': 'launcher.native-final-package-review/0.52.2',
                'reviewer': reviewer, 'reviewedAt': datetime.now(timezone.utc).isoformat(),
                'summary': summary, 'independentGA': False}
     sealed = {'payload': payload, 'signatureEd25519': private.sign(
@@ -553,7 +553,7 @@ def verify_review(a):
         raise Blocked('Недопустимая подпись независимого проверяющего') from exc
     payload = sealed['payload']
     require(type(payload) is dict and set(payload) == {'schema','reviewer','reviewedAt','summary','independentGA'}
-            and payload['schema'] == 'neverlauncher.native-final-package-review/0.52.2'
+            and payload['schema'] == 'launcher.native-final-package-review/0.52.2'
             and payload['reviewer'] == a.reviewer and payload['independentGA'] is False,
             'Утверждение выполнено не ожидаемым независимым проверяющим')
     try:

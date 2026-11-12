@@ -33,7 +33,7 @@ from urllib.parse import urlsplit
 
 import multi_host_0512 as multi
 
-SCHEMA = 'neverlauncher.multi-host-chaos/0.51.10'
+SCHEMA = 'launcher.multi-host-chaos/0.51.10'
 MAX_OUTPUT = 128_000
 ROLES = ('api', 'worker')
 
@@ -333,7 +333,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 def alertmanager_observe(url, alert, deadline=45):
     endpoint_url(url)
     require(urlsplit(url).path in ('', '/'), 'Адрес Alertmanager должен быть HTTPS-источником')
-    require(re.fullmatch(r'NeverLauncher[A-Za-z0-9]{2,80}', alert), 'Некорректное имя оповещения')
+    require(re.fullmatch(r'Launcher[A-Za-z0-9]{2,80}', alert), 'Некорректное имя оповещения')
     op = urllib.request.build_opener(NoRedirect())
     until = time.monotonic() + deadline
     while time.monotonic() < until:
@@ -493,17 +493,17 @@ def render_monitor(args):
     edge = endpoint if endpoint.endswith('/ready') else endpoint + '/ready'
     # JSON является допустимым YAML и предотвращает случайную интерпретацию недоверенных
     # URL.
-    rules = {'groups': [{'name': 'neverlauncher-multi-host-05110', 'rules': [
-        {'alert': 'NeverLauncherHostIngressDown',
-         'expr': 'probe_success{job="neverlauncher-host-ready-05110"} == 0 or up{job="neverlauncher-host-ready-05110"} == 0',
+    rules = {'groups': [{'name': 'launcher-multi-host-05110', 'rules': [
+        {'alert': 'LauncherHostIngressDown',
+         'expr': 'probe_success{job="launcher-host-ready-05110"} == 0 or up{job="launcher-host-ready-05110"} == 0',
          'for': '30s', 'labels': {'severity': 'critical'},
          'annotations': {'summary': 'Проверка готовности входного узла многоузловой системы не пройдена'}},
-        {'alert': 'NeverLauncherInsufficientHealthyHosts',
-         'expr': 'sum(probe_success{job="neverlauncher-host-ready-05110"}) < 2 or absent(probe_success{job="neverlauncher-host-ready-05110"})',
+        {'alert': 'LauncherInsufficientHealthyHosts',
+         'expr': 'sum(probe_success{job="launcher-host-ready-05110"}) < 2 or absent(probe_success{job="launcher-host-ready-05110"})',
          'for': '30s', 'labels': {'severity': 'critical'},
          'annotations': {'summary': 'Менее двух входных узлов исправны'}},
-        {'alert': 'NeverLauncherPublicIngressDown',
-         'expr': 'probe_success{job="neverlauncher-public-ready-05110"} == 0 or up{job="neverlauncher-public-ready-05110"} == 0',
+        {'alert': 'LauncherPublicIngressDown',
+         'expr': 'probe_success{job="launcher-public-ready-05110"} == 0 or up{job="launcher-public-ready-05110"} == 0',
          'for': '30s', 'labels': {'severity': 'critical'},
          'annotations': {'summary': 'Проверка готовности через публичный HTTPS не пройдена'}},
     ]}]}
@@ -518,8 +518,8 @@ def render_monitor(args):
     monitor = {'global': {'scrape_interval': '10s', 'evaluation_interval': '10s'},
                'rule_files': ['/etc/prometheus/alerts.yml'],
                'alerting': {'alertmanagers': [{'static_configs': [{'targets': ['alertmanager:9093']}]}]},
-               'scrape_configs': [probe_job('neverlauncher-host-ready-05110', targets),
-                                  probe_job('neverlauncher-public-ready-05110', {'public': edge})]}
+               'scrape_configs': [probe_job('launcher-host-ready-05110', targets),
+                                  probe_job('launcher-public-ready-05110', {'public': edge})]}
     output = Path(args.output_directory).absolute()
     require(output.is_dir() and not output.is_symlink(), 'Каталог вывода мониторинга должен существовать')
     require(all(not (output / name).exists() and not (output / name).is_symlink()
@@ -605,7 +605,7 @@ def main(argv=None):
             p.add_argument('--allow-disruption', required=True)
             p.add_argument('--timeout', type=int, default=90)
             p.add_argument('--alertmanager-url')
-            p.add_argument('--alert-name', default='NeverLauncherHostIngressDown')
+            p.add_argument('--alert-name', default='LauncherHostIngressDown')
             p.add_argument('--alert-timeout', type=int, default=100)
     m = sub.add_parser('monitor-config')
     m.add_argument('--node-url', action='append', required=True)

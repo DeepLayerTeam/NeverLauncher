@@ -1,4 +1,4 @@
-name: Привязка официальной идентичности Never 0.26.8
+name: Привязка официальной идентичности Launcher 0.26.8
 on:
   push:
     paths:
@@ -50,7 +50,7 @@ jobs:
         run: |
           go vet ./internal/httpapi ./internal/repository
           go test -race ./internal/httpapi -run 'TestOfficialLink' -count=1
-          go test -race ./internal/repository -run 'TestOfficialNeverLink' -count=1
+          go test -race ./internal/repository -run 'TestOfficialLauncherLink' -count=1
   desktop:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60

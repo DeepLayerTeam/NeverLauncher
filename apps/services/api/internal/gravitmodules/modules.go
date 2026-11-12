@@ -174,7 +174,7 @@ func jarEvidence(ctx context.Context, b []byte) (name string, auth, launch bool,
 	return name, auth, launch, nil
 }
 func parseWrapper(raw []byte, p, sha string) Wrapper {
-	w := Wrapper{Path: p, SHA256: sha, Replacement: "Never ServerBridge (новая регистрация с ключом Ed25519)", Status: "manual"}
+	w := Wrapper{Path: p, SHA256: sha, Replacement: "Launcher ServerBridge (новая регистрация с ключом Ed25519)", Status: "manual"}
 	if strings.HasSuffix(strings.ToLower(p), ".env") || strings.EqualFold(path.Base(p), ".env") {
 		w.Mode = "environment"
 		for _, line := range strings.Split(string(raw), "\n") {
@@ -192,7 +192,7 @@ func parseWrapper(raw []byte, p, sha string) Wrapper {
 				w.Mode = "inline"
 			}
 		}
-		w.Reason = "Удалите устаревшие переменные окружения и параметры authlib; зарегистрируйте узел Never ServerBridge с новым ключом"
+		w.Reason = "Удалите устаревшие переменные окружения и параметры authlib; зарегистрируйте узел Launcher ServerBridge с новым ключом"
 		return w
 	}
 	w.Mode = "config"
@@ -383,7 +383,7 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 				// замены, а НЕ подлинность поставщика или доверие.
 				m.Implementation = "built_in_equivalent"
 				m.Status = "manual"
-				m.Reason = "Устаревший бинарный файл wrapper/authlib необходимо удалить, а не запускать; замените его на Never ServerBridge и независимо проверьте вход и подключение"
+				m.Reason = "Устаревший бинарный файл wrapper/authlib необходимо удалить, а не запускать; замените его на Launcher ServerBridge и независимо проверьте вход и подключение"
 			} else if auth || launch {
 				m.Reason = "Модуль использует API аутентификации/лаунчера; требуется перенос исходного кода и поведенческие тесты"
 			} else if m.SourcesPresent {

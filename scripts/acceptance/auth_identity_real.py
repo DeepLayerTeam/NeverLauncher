@@ -137,7 +137,7 @@ class LiveAPI:
 
 
 def user_digest(user_id):
-    return hashlib.sha256(('never-auth-0525-user\0' + user_id).encode()).hexdigest()
+    return hashlib.sha256(('launcher-auth-0525-user\0' + user_id).encode()).hexdigest()
 
 
 def safe_provider(raw):
@@ -173,10 +173,10 @@ def auth_login(api, entry, provider):
     user = data.get('user') or {}
     tokens = data.get('tokens') or {}
     require(isinstance(user.get('id'), str) and user['id'] and user.get('status') == 'active',
-            'После входа отсутствует активная основная учётная запись Never')
+            'После входа отсутствует активная основная учётная запись Launcher')
     require(isinstance(tokens.get('accessToken'), str) and len(tokens['accessToken']) >= 32 and
             isinstance(tokens.get('refreshToken'), str) and len(tokens['refreshToken']) >= 32,
-            'При входе не выдана действительная пара токенов доступа и обновления Never')
+            'При входе не выдана действительная пара токенов доступа и обновления Launcher')
     require(data.get('provider') == provider, 'Маршрутизация провайдера нарушила границу издателя и провайдера')
     return user, tokens
 
@@ -255,16 +255,16 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
                 'В подтверждении браузерной авторизации OIDC отсутствует проверенный код авторизации для ' + key)
     caps = api.request('GET', '/api/v1/auth/capabilities').get('data', {})
     require(caps.get('toolVersion') == VERSION, 'Версия действующего Backend не совпадает с проверяемым кандидатом выпуска')
-    report = {'schema': 'neverlauncher.auth-identity-live.0525', 'productVersion': VERSION,
+    report = {'schema': 'launcher.auth-identity-live.0525', 'productVersion': VERSION,
               'sourceCommit':source_commit, 'apiPackageSha256':api_package_sha256,
               'originSha256': hashlib.sha256(api.origin.encode()).hexdigest(), 'checks': [],
               'status': 'blocked', 'startedAt': int(time.time())}
     user, local_tokens = auth_login(api, local, local['providerId'])
     owner = user['id']
-    require(proof.get('ownerSha256') == user_digest(owner), 'подтверждение OIDC принадлежит другому владельцу Never')
+    require(proof.get('ownerSha256') == user_digest(owner), 'подтверждение OIDC принадлежит другому владельцу Launcher')
     record(report, 'AUTH-LOCAL', {'canonicalUserSha256': user_digest(owner), 'role': user['roleId']})
     secondary_user, secondary_tokens = auth_login(api, secondary, secondary['providerId'])
-    require(secondary_user['id'] != owner, 'вторая учётная запись сопоставлена тому же UUID Never')
+    require(secondary_user['id'] != owner, 'вторая учётная запись сопоставлена тому же UUID Launcher')
     record(report, 'AUTH-SEPARATE-ACCOUNT', {'canonicalUserSha256': user_digest(secondary_user['id'])})
     expect_denied(api, 'POST', '/api/v1/auth/login', data={
         'providerId': local['providerId'], 'identifier': local['identifier'],
@@ -290,7 +290,7 @@ def live_run(api, raw, proof, source_commit='', api_package_sha256=''):
     oidc_result = api.request('POST','/api/v1/auth/oidc/' + quote(oidc['providerId']) + '/complete',
                 data={'state':login['state'],'transaction':login['transaction'],'code':login['code']})
     require(oidc_result.get('data',{}).get('user',{}).get('id') == owner,
-            'Вход через OIDC изменил основной UUID Never')
+            'Вход через OIDC изменил основной UUID Launcher')
     expect_denied(api,'POST','/api/v1/auth/oidc/' + quote(oidc['providerId']) + '/complete',
                   data={'state':login['state'],'transaction':login['transaction'],'code':login['code']})
     record(report,'AUTH-OIDC-CANONICAL-ID-AND-REPLAY')

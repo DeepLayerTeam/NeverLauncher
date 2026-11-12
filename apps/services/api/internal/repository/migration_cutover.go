@@ -216,8 +216,8 @@ func eventCutover03311(ctx context.Context, tx *sql.Tx, runID, kind string, v co
 	return e
 }
 
-// ActivateMigrationCutover03311 атомарно меняет реальный указатель доставки Never.
-// SourceFenceReference — аттестация ОПЕРАТОРА, независимо не доказанная Never,
+// ActivateMigrationCutover03311 атомарно меняет реальный указатель доставки Launcher.
+// SourceFenceReference — аттестация ОПЕРАТОРА, независимо не доказанная Launcher,
 // сохраняемая для сверки MIG12 и аудита.
 func (r *SQLRepository) ActivateMigrationCutover03311(ctx context.Context, runID string, a co.Activate, trusted ed25519.PublicKey) (co.Route, error) {
 	if e := r.check(); e != nil {
@@ -287,14 +287,14 @@ func (r *SQLRepository) ActivateMigrationCutover03311(ctx context.Context, runID
 		if len(token) != 64 {
 			return co.Route{}, ErrStableRuntimeGate0341
 		}
-		if _, e = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); e != nil {
+		if _, e = tx.ExecContext(ctx, `SELECT set_config('launcher.stable_gate_token',$1,true)`, token); e != nil {
 			return co.Route{}, e
 		}
 	}
 	// Маркер SET LOCAL разрешает триггеру БД только точное обновление канала
 	// текущего запуска. Устаревшие воркеры и обычная публикация остаются
 	// ограждёнными.
-	if _, e = tx.ExecContext(ctx, `SELECT set_config('never.migration_cutover_run',$1,true)`, runID); e != nil {
+	if _, e = tx.ExecContext(ctx, `SELECT set_config('launcher.migration_cutover_run',$1,true)`, runID); e != nil {
 		return co.Route{}, e
 	}
 	if current == 0 {

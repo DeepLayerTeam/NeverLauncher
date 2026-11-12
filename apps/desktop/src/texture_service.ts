@@ -261,7 +261,7 @@ export class TextureServiceClient0258 {
   /** Проверяйте фактическую публичную выдачу Yggdrasil, а не приватный предпросмотр
    * галереи. Подпись, канонический UUID, опубликованный дайджест и загруженные байты
    * должны совпадать. Отображение Minecraft требует отдельной проверки с живым клиентом.
-   * Токены Never/Minecraft НЕ отправляются на публичные адреса Yggdrasil.
+   * Токены Launcher/Minecraft НЕ отправляются на публичные адреса Yggdrasil.
    */
   async verifyYggdrasilDelivery(
     kind: TextureKind0258,

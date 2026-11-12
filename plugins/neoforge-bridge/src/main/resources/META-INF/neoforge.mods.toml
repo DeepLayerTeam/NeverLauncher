@@ -9,7 +9,6 @@ displayName="Серверный мост Launcher для NeoForge"
 authors="Launcher"
 displayTest="IGNORE_SERVER_VERSION"
 description="Серверный мост Launcher ServerBridge для NeoForge 1.21.1."
-displayURL="https://launcher.nevermine.ru/"
 
 [[dependencies.launcher_serverbridge]]
 modId="neoforge"

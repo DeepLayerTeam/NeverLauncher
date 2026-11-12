@@ -1,5 +1,5 @@
-// Package neverapi предоставляет промышленный HTTP-клиент канонического NeverLauncher OpenAPI v1.
-package neverapi
+// Package launcherapi предоставляет промышленный HTTP-клиент канонического Launcher OpenAPI v1.
+package launcherapi
 
 import (
 	"bytes"
@@ -31,7 +31,7 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string {
-	return fmt.Sprintf("API NeverLauncher: статус=%d, код=%q, идентификатор запроса=%q: %s", e.Status, e.Code, e.RequestID, e.Message)
+	return fmt.Sprintf("API Launcher: статус=%d, код=%q, идентификатор запроса=%q: %s", e.Status, e.Code, e.RequestID, e.Message)
 }
 
 var segment = regexp.MustCompile(`\{([^{}]+)\}`)

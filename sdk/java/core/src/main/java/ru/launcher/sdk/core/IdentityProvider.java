@@ -1,6 +1,6 @@
 package ru.launcher.sdk.core;
 
-/** Аутентифицированный внешний провайдер идентификации. Сеансы Never и учётные данные Minecraft
+/** Аутентифицированный внешний провайдер идентификации. Сеансы Launcher и учётные данные Minecraft
  * находятся исключительно в ведении Go-федерации и официального механизма Minecraft. */
 public interface IdentityProvider extends JavaProvider {
     IdentityProof authenticatePassword(String identifier, String secret) throws IdentityFailure;

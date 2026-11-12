@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS server_bridge_player_sessions_v3 (
     CHECK ((backend_node_id IS NULL AND backend_runtime_id='' AND backend_runtime_epoch=0) OR (backend_node_id IS NOT NULL AND backend_runtime_id ~ '^[0-9a-f]{64}$' AND backend_runtime_epoch>0))
 );
 
--- Одни учётные данные Never/Minecraft могут иметь только одну активную привязку игрового сеанса.
+-- Одни учётные данные Launcher/Minecraft могут иметь только одну активную привязку игрового сеанса.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_server_bridge_player_session_active_0197
     ON server_bridge_player_sessions_v3(session_id, player_uuid)
     WHERE status='active';

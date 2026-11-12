@@ -10,7 +10,7 @@ import argparse
 import os
 from pathlib import Path
 
-DOMAIN = b"NeverLauncher Linux Guard package manifest v1\0"
+DOMAIN = b"Launcher Linux Guard package manifest v1\0"
 
 
 def sign_manifest(raw: bytes) -> bytes:

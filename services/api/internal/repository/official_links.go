@@ -7,25 +7,25 @@ import (
 	"time"
 )
 
-// OfficialNeverLink0268 — постоянная проверенная связь, а не учётные данные. Одна
-// идентичность Never может связывать несколько Minecraft UUID; у каждого UUID глобально
+// OfficialLauncherLink0268 — постоянная проверенная связь, а не учётные данные. Одна
+// идентичность Launcher может связывать несколько Minecraft UUID; у каждого UUID глобально
 // один владелец.
-type OfficialNeverLink0268 struct {
+type OfficialLauncherLink0268 struct {
 	MinecraftUUID string    `json:"minecraftUuid"`
 	MinecraftName string    `json:"minecraftName"`
 	VerifiedAt    time.Time `json:"verifiedAt"`
 }
 
-var ErrOfficialLinkOwned0268 = errors.New("Учётная запись Minecraft уже привязана к другой учётной записи Never")
-var ErrOfficialLinkAbsent0268 = errors.New("Учётная запись Minecraft не привязана к этой учётной записи Never")
+var ErrOfficialLinkOwned0268 = errors.New("Учётная запись Minecraft уже привязана к другой учётной записи Launcher")
+var ErrOfficialLinkAbsent0268 = errors.New("Учётная запись Minecraft не привязана к этой учётной записи Launcher")
 
 type OfficialLinkStore0268 interface {
-	ListOfficialLinks0268(context.Context, string) ([]OfficialNeverLink0268, error)
-	UpsertOfficialLink0268(context.Context, string, string, string) (OfficialNeverLink0268, error)
+	ListOfficialLinks0268(context.Context, string) ([]OfficialLauncherLink0268, error)
+	UpsertOfficialLink0268(context.Context, string, string, string) (OfficialLauncherLink0268, error)
 	RemoveOfficialLink0268(context.Context, string, string) error
 }
 
-func (r *SQLRepository) ListOfficialLinks0268(ctx context.Context, owner string) ([]OfficialNeverLink0268, error) {
+func (r *SQLRepository) ListOfficialLinks0268(ctx context.Context, owner string) ([]OfficialLauncherLink0268, error) {
 	if err := r.check(); err != nil {
 		return nil, err
 	}
@@ -34,9 +34,9 @@ func (r *SQLRepository) ListOfficialLinks0268(ctx context.Context, owner string)
 		return nil, err
 	}
 	defer rows.Close()
-	result := make([]OfficialNeverLink0268, 0)
+	result := make([]OfficialLauncherLink0268, 0)
 	for rows.Next() {
-		var x OfficialNeverLink0268
+		var x OfficialLauncherLink0268
 		if err := rows.Scan(&x.MinecraftUUID, &x.MinecraftName, &x.VerifiedAt); err != nil {
 			return nil, err
 		}
@@ -45,13 +45,13 @@ func (r *SQLRepository) ListOfficialLinks0268(ctx context.Context, owner string)
 	return result, rows.Err()
 }
 
-func (r *SQLRepository) UpsertOfficialLink0268(ctx context.Context, owner, uuid, name string) (OfficialNeverLink0268, error) {
+func (r *SQLRepository) UpsertOfficialLink0268(ctx context.Context, owner, uuid, name string) (OfficialLauncherLink0268, error) {
 	if err := r.check(); err != nil {
-		return OfficialNeverLink0268{}, err
+		return OfficialLauncherLink0268{}, err
 	}
 	// Условный upsert атомарен между всеми экземплярами Backend. Владелец не может
 	// захватить чужую Minecraft-идентичность через конкурирующий POST.
-	var result OfficialNeverLink0268
+	var result OfficialLauncherLink0268
 	err := r.db.QueryRowContext(ctx, `INSERT INTO official_identity_links_0268(minecraft_uuid,user_id,minecraft_name)
  VALUES($1,$2,$3) ON CONFLICT(minecraft_uuid) DO UPDATE SET
  minecraft_name=EXCLUDED.minecraft_name, verified_at=now(),updated_at=now()
@@ -59,7 +59,7 @@ func (r *SQLRepository) UpsertOfficialLink0268(ctx context.Context, owner, uuid,
  RETURNING minecraft_uuid,minecraft_name,verified_at`, uuid, owner, name).
 		Scan(&result.MinecraftUUID, &result.MinecraftName, &result.VerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return OfficialNeverLink0268{}, ErrOfficialLinkOwned0268
+		return OfficialLauncherLink0268{}, ErrOfficialLinkOwned0268
 	}
 	return result, err
 }

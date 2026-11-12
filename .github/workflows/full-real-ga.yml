@@ -8,7 +8,7 @@ on:
       - 'scripts/acceptance/sdk_live_0530.py'
       - 'sdk/api/go/cmd/live-acceptance/**'
       - 'sdk/api/typescript/test/live_acceptance.mjs'
-      - 'sdk/java/http-client/src/test/java/ru/neverlauncher/api/LiveAcceptance.java'
+      - 'sdk/java/http-client/src/test/java/ru/launcher/api/LiveAcceptance.java'
       - '.github/workflows/full-real-ga-0530.yml'
   pull_request:
   workflow_dispatch:

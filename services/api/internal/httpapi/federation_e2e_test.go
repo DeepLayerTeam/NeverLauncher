@@ -108,7 +108,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 				t.Fatal(err)
 			}
 			if result.ProviderToken != "" && result.ProviderToken == server.Config.AuthTokenSecret {
-				t.Fatal("Токен провайдера пересёк границу токенов Never")
+				t.Fatal("Токен провайдера пересёк границу токенов Launcher")
 			}
 			req := httptest.NewRequest("POST", "/api/v1/auth/login", nil)
 			session, refresh, err := state.AuthSessions.createWithAuth(result.User, req, "matrix-"+tc.id, tc.methods, tc.strength, time.Now().UTC(), result.Identity.ID, tc.id)
@@ -117,7 +117,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 			}
 			access, err := server.issueAccessTokenForSession(result.User, session)
 			if err != nil || access == "" || access == result.ProviderToken {
-				t.Fatalf("Нарушена изоляция токенов доступа Never: доступ=%q, провайдер=%q, ошибка=%v", access, result.ProviderToken, err)
+				t.Fatalf("Нарушена изоляция токенов доступа Launcher: доступ=%q, провайдер=%q, ошибка=%v", access, result.ProviderToken, err)
 			}
 			rotated, nextRefresh, err := state.AuthSessions.rotate(refresh)
 			if err != nil || nextRefresh == "" || nextRefresh == refresh || rotated.ID != session.ID {
@@ -131,15 +131,15 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 				t.Fatalf("Ошибка проверки сессии Minecraft: пользователь=%+v, ошибка=%v", gotUser, err)
 			}
 			if ok := state.AuthSessions.revoke(session.ID, "matrix-revoke"); !ok {
-				t.Fatal("Родительская сессия Never не была отозвана")
+				t.Fatal("Родительская сессия Launcher не была отозвана")
 			}
 			if _, _, _, err := server.validateMinecraftToken119(mcToken); err == nil {
-				t.Fatalf("Токен Minecraft %s остался действительным после отзыва родительской сессии Never", mc.ID)
+				t.Fatalf("Токен Minecraft %s остался действительным после отзыва родительской сессии Launcher", mc.ID)
 			}
 		})
 	}
 
-	// Passkey — метод аутентификации Never, а не внешний коннектор, но
+	// Passkey — метод аутентификации Launcher, а не внешний коннектор, но
 	// должен проходить ту же цепочку session -> refresh -> Minecraft.
 	t.Run("passkey", func(t *testing.T) {
 		user := model.User{ID: "user-passkey-matrix", Email: "passkey@matrix.invalid", DisplayName: "Passkey Matrix", RoleID: "player", Status: "active", ProjectRoles: map[string]string{}}
@@ -162,7 +162,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 			t.Fatal(err)
 		}
 		if ok := state.AuthSessions.revoke(session.ID, "matrix-revoke"); !ok {
-			t.Fatal("Родительская сессия Never не была отозвана")
+			t.Fatal("Родительская сессия Launcher не была отозвана")
 		}
 		if _, _, _, err := server.validateMinecraftToken119(token); err == nil {
 			t.Fatal("Токен Minecraft, полученный через ключ доступа, пережил отзыв родительской сессии")

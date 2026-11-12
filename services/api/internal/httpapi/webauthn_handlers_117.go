@@ -435,7 +435,7 @@ func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, use
 		return
 	}
 	// Провайдер входа через браузер или пароль мог вернуть внешний refresh-токен
-	// до challenge Never WebAuthn. Транзакция MFA содержит только его шифртекст
+	// до challenge Launcher WebAuthn. Транзакция MFA содержит только его шифртекст
 	// AEAD. Фиксируйте его после успешного подтверждения passkey и создания
 	// сеанса, никогда до локальной MFA. Неудачная фиксация отзывает только что
 	// созданный сеанс и не возвращает клиенту токены.

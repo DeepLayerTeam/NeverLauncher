@@ -115,7 +115,7 @@ class GuardGATests(unittest.TestCase):
         d.mkdir()
         (self.root / 'signed').mkdir()
         (self.root / 'signed' / 'RELEASE_MANIFEST.json').write_text('manifest')
-        report = {'schema': 'neverlauncher.guard.native-signed/0510', 'version': gate.VERSION,
+        report = {'schema': 'launcher.guard.native-signed/0510', 'version': gate.VERSION,
                   'commit': COMMIT, 'target': 'windows-x64', 'status': 'native-verified',
                   'packageSha256': 'c'*64, 'releaseManifestSha256': gate.file_hash(self.root / 'signed' / 'RELEASE_MANIFEST.json'),
                   'nativeOS': 'Windows', 'nativeArch': 'x64', 'verifier': 'authenticode-chain-timestamp',

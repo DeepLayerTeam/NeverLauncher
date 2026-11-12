@@ -815,7 +815,7 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 	existingUserIndex := -1
 	for i, existing := range r.users {
 		if strings.EqualFold(existing.Email, user.Email) && existing.ID != user.ID {
-			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: нормализованный адрес почты уже используется другим пользователем Never", ErrConflict)
+			return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: нормализованный адрес почты уже используется другим пользователем Launcher", ErrConflict)
 		}
 		if existing.ID == user.ID {
 			if !strings.EqualFold(existing.Email, user.Email) {
@@ -1388,14 +1388,14 @@ func (r *MemoryRepository) SaveMinecraftProfile(item model.MinecraftProfile) (mo
 func (r *MemoryRepository) SaveMinecraftSession(item model.MinecraftSession) (model.MinecraftSession, error) {
 	item.ID = strings.TrimSpace(item.ID)
 	item.UserID = strings.TrimSpace(item.UserID)
-	item.NeverSessionID = strings.TrimSpace(item.NeverSessionID)
+	item.LauncherSessionID = strings.TrimSpace(item.LauncherSessionID)
 	item.ProfileUUID = strings.ToLower(strings.TrimSpace(item.ProfileUUID))
 	item.TrustedDeviceID = strings.TrimSpace(item.TrustedDeviceID)
 	if item.BindingEpoch < 1 {
 		item.BindingEpoch = 1
 	}
 	item.AccessTokenHash = strings.TrimSpace(item.AccessTokenHash)
-	if item.ID == "" || item.UserID == "" || item.NeverSessionID == "" || item.ProfileUUID == "" || item.AccessTokenHash == "" {
+	if item.ID == "" || item.UserID == "" || item.LauncherSessionID == "" || item.ProfileUUID == "" || item.AccessTokenHash == "" {
 		return model.MinecraftSession{}, fmt.Errorf("Требуется: поля сессии Minecraft")
 	}
 	now := time.Now().UTC()
@@ -1411,7 +1411,7 @@ func (r *MemoryRepository) SaveMinecraftSession(item model.MinecraftSession) (mo
 	for i, existing := range r.minecraftSessions {
 		if existing.ID == item.ID {
 			if existing.Status != "active" || item.Status != "active" ||
-				existing.UserID != item.UserID || existing.NeverSessionID != item.NeverSessionID ||
+				existing.UserID != item.UserID || existing.LauncherSessionID != item.LauncherSessionID ||
 				existing.ProfileUUID != item.ProfileUUID || existing.AccessTokenHash != item.AccessTokenHash ||
 				existing.TrustedDeviceID != item.TrustedDeviceID || existing.BindingEpoch != item.BindingEpoch {
 				return model.MinecraftSession{}, ErrConflict
@@ -1464,11 +1464,11 @@ func (r *MemoryRepository) RevokeMinecraftSession(id, reason string) error {
 	return ErrNotFound
 }
 
-func (r *MemoryRepository) RevokeMinecraftSessionsByNeverSession(neverSessionID, reason string) int {
+func (r *MemoryRepository) RevokeMinecraftSessionsByLauncherSession(launcherSessionID, reason string) int {
 	count := 0
 	now := time.Now().UTC()
 	for i, item := range r.minecraftSessions {
-		if item.NeverSessionID == neverSessionID && item.Status == "active" {
+		if item.LauncherSessionID == launcherSessionID && item.Status == "active" {
 			item.Status = "revoked"
 			item.RevokedAt = now
 			item.RevokedReason = reason

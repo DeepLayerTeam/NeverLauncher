@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.51.8: настоящее холодное копирование многохостовой группы и PostgreSQL WAL/PITR.
+"""Launcher 0.51.8: настоящее холодное копирование многохостовой группы и PostgreSQL WAL/PITR.
 
 Требуются готовый репозиторий pgBackRest с непрерывной архивацией WAL, версионируемый бакет S3,
 отдельные хосты с агентом 0.51.8 и остановленные миры Minecraft. Горячая копия не выдаётся за
@@ -31,7 +31,7 @@ import dr_03512 as dr
 import multi_host_0512 as multi
 import nn1_compat_0516 as nn
 
-SCHEMA = "neverlauncher.consistent-backup/0.51.8"
+SCHEMA = "launcher.consistent-backup/0.51.8"
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 NAME = re.compile(r"[a-z][a-z0-9-]{0,47}\Z")
 PG_STANZA = re.compile(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}\Z")

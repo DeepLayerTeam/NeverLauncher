@@ -38,13 +38,13 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: neverlauncher_test
+          POSTGRES_USER: launcher_test
           POSTGRES_PASSWORD: isolated-test-only
-          POSTGRES_DB: neverlauncher_live_0477
+          POSTGRES_DB: launcher_live_0477
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_live_0477"
+          --health-cmd "pg_isready -U launcher_test -d launcher_live_0477"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
@@ -52,7 +52,7 @@ jobs:
       run:
         working-directory: services/api
     env:
-      LAUNCHER_PG_LIVE_TEST_DSN: postgres://neverlauncher_test:isolated-test-only@127.0.0.1:5432/neverlauncher_live_0477?sslmode=disable
+      LAUNCHER_PG_LIVE_TEST_DSN: postgres://launcher_test:isolated-test-only@127.0.0.1:5432/launcher_live_0477?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v6

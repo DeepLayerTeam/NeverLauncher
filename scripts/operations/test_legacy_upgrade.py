@@ -27,7 +27,7 @@ class UpgradeTests(unittest.TestCase):
     def args(self, mode='client', **overrides):
         kwargs = dict(mode=mode, root=str(self.root), backup=str(self.backups / 'run'),
                       data=['profiles', 'settings'], from_version=None, cli='launcher', cli_sha256='a'*64,
-                      package='pkg', sha256='a'*64, delivery_manifest='delivery', installer='neverinstaller', installer_sha256='a'*64,
+                      package='pkg', sha256='a'*64, delivery_manifest='delivery', installer='installer', installer_sha256='a'*64,
                       bundle=str(self.root), component='cli', executable='new', install=str(self.root / 'launcher'),
                       service=None, ready_url='http://127.0.0.1:8080/ready', project=None, confirm=None,
                       source_env=None, target_env=None, production_source=False, maintenance_approved=False)
@@ -99,8 +99,8 @@ class UpgradeTests(unittest.TestCase):
             sequence.append(command[1])
             if command[1] == 'update':
                 self.prestarter_state(3)
-        (self.root / 'neverinstaller').write_bytes(b'installed signer-pinned executable fixture')
-        args = self.args(mode='prestarter', from_version='0.47.5', installer=str(self.root / 'neverinstaller'), installer_sha256=u.sha_file(self.root / 'neverinstaller'))
+        (self.root / 'installer').write_bytes(b'installed signer-pinned executable fixture')
+        args = self.args(mode='prestarter', from_version='0.47.5', installer=str(self.root / 'installer'), installer_sha256=u.sha_file(self.root / 'installer'))
         with patch.object(u, 'run_updater', side_effect=run):
             result = u.execute(args)
         self.assertEqual(sequence, ['verify','verify-installed','update','verify-installed'])

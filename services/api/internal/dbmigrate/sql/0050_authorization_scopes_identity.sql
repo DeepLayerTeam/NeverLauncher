@@ -128,7 +128,7 @@ FOR EACH ROW EXECUTE FUNCTION nl_sync_user_project_roles_0211();
 
 -- Метаданные идентичности GameProfile. Существующие UUID не меняются и
 -- помечаются как полученные старым способом. Новые профили используют
--- сохранённые случайные UUIDv4, не зависящие от ID пользователей Never.
+-- сохранённые случайные UUIDv4, не зависящие от ID пользователей Launcher.
 ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS issuer TEXT NOT NULL DEFAULT 'launcher';
 ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS realm TEXT NOT NULL DEFAULT 'local';
 ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS subject TEXT NOT NULL DEFAULT '';

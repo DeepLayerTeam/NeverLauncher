@@ -995,7 +995,7 @@ for method, path in routes:
         )
     if path.startswith("/api/v1/minecraft/official/"):
         op["description"] = (
-            "Официальные операции Microsoft/Xbox/Minecraft Java (0.25.7). Идентификаторы Never/Yggdrasil и файлы текстур не используются. Всегда требуется Bearer-токен Never; операции связанного аккаунта также требуют официального сеанса AES-GCM, привязанного к текущему сеансу Never."
+            "Официальные операции Microsoft/Xbox/Minecraft Java (0.25.7). Идентификаторы Launcher/Yggdrasil и файлы текстур не используются. Всегда требуется Bearer-токен Launcher; операции связанного аккаунта также требуют официального сеанса AES-GCM, привязанного к текущему сеансу Launcher."
         )
     params = path_parameters(path)
     if path.startswith("/api/v1/me/textures/"):

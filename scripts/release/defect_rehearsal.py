@@ -33,12 +33,12 @@ import native_packages_0522 as native
 import sweep_05211 as sweep
 
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
-SCHEMA = 'neverlauncher.candidate-freeze/' + VERSION
-REPORT = 'neverlauncher.independent-rehearsal/' + VERSION
-ISSUES = 'neverlauncher.defect-closure-export/' + VERSION
-FREEZE_DOMAIN = ('neverlauncher.candidate-freeze.'+VERSION+'\x00').encode()
-ISSUE_DOMAIN = ('neverlauncher.defect-closure.'+VERSION+'\x00').encode()
-REHEARSAL_DOMAIN = ('neverlauncher.independent-rehearsal.'+VERSION+'\x00').encode()
+SCHEMA = 'launcher.candidate-freeze/' + VERSION
+REPORT = 'launcher.independent-rehearsal/' + VERSION
+ISSUES = 'launcher.defect-closure-export/' + VERSION
+FREEZE_DOMAIN = ('launcher.candidate-freeze.'+VERSION+'\x00').encode()
+ISSUE_DOMAIN = ('launcher.defect-closure.'+VERSION+'\x00').encode()
+REHEARSAL_DOMAIN = ('launcher.independent-rehearsal.'+VERSION+'\x00').encode()
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 COMMIT = re.compile(r'[0-9a-f]{40}\Z')
 

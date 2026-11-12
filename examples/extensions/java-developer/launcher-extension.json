@@ -3,7 +3,7 @@
   "id": "org.example.java-developer",
   "name": "Пример Java Developer SDK 0.48.12",
   "version": "0.48.12",
-  "publisher": "NeverLauncher Examples",
+  "publisher": "Launcher Examples",
   "api": "1.0",
   "targets": [
     {

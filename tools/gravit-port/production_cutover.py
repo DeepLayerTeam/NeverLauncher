@@ -28,7 +28,7 @@ from urllib.parse import urlsplit
 from urllib.request import Request, build_opener, HTTPSHandler, HTTPRedirectHandler
 from urllib.error import HTTPError, URLError
 
-FORMAT = "never/gravit-production-cutover/v1"
+FORMAT = "launcher/gravit-production-cutover/v1"
 HEX = re.compile(r"^[a-f0-9]{64}$")
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$")
 SERVER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$")
@@ -283,7 +283,7 @@ def run_cli(cfg: dict, args: list[str], output: Path, timeout=120) -> dict:
                            stdin=sink, stdout=sink, stderr=sink, env=env,
                            timeout=timeout, check=True)
         except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-            raise Blocked("Ошибка команды CLI миграции NeverLauncher: " + args[0]) from exc
+            raise Blocked("Ошибка команды CLI миграции Launcher: " + args[0]) from exc
     require(output.exists(), "CLI не создал результат " + args[0])
     result = document(output, 1 << 20)
     return result.get("data", result)
@@ -311,7 +311,7 @@ def assert_route(route: dict, cfg: dict, active: bool):
 
 def receipt_check(cfg: dict) -> None:
     receipt = document(Path(cfg["fenceReceipt"]), 8192)
-    require(receipt.get("format") == "never/gravit-source-stop/v1" and
+    require(receipt.get("format") == "launcher/gravit-source-stop/v1" and
             all(receipt.get(field) == cfg[cfgfield] for field, cfgfield in
                 (("runId", "runId"), ("profileId", "profileId"), ("channel", "channel"), ("stageId", "stageId"))) and
             receipt.get("unitState") == "inactive" and receipt.get("unitFileState") in ("masked", "masked-runtime") and

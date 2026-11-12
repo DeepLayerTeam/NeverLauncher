@@ -13,7 +13,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
     private final ExtensionManifest manifest;
     private final RuntimeServices runtime;
     private final ExecutorService executor=Executors.newSingleThreadExecutor(r->{
-        Thread t=new Thread(r,"neverext-lifecycle-"+IDS.incrementAndGet());t.setDaemon(true);return t;
+        Thread t=new Thread(r,"launcherext-lifecycle-"+IDS.incrementAndGet());t.setDaemon(true);return t;
     });
     private final Cancellation cancellation=new Cancellation();
     private final ProviderRegistry providers;

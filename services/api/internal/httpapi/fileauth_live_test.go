@@ -19,7 +19,7 @@ import (
 
 // Настоящий маршрут федеративного входа обязан использовать действующий файл,
 // а не формальный тест регистрации или одноразовый импортированный локальный
-// пароль Never.
+// пароль Launcher.
 func TestLiveFileAuthFederatedLogin0426(t *testing.T) {
 	db := filepath.Join(t.TempDir(), "Database.json")
 	secret := "live-legacy-password-426"

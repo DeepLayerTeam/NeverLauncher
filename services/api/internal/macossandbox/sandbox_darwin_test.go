@@ -65,7 +65,7 @@ func TestUnsupportedMacOSResourcePolicyRefusedBeforeExecution04311(t *testing.T)
 
 func TestWritableDirectoryCannotHostTrustedHelper04311(t *testing.T) {
 	dir := t.TempDir()
-	file := filepath.Join(dir, "NeverExtensionSandbox")
+	file := filepath.Join(dir, "LauncherExtensionSandbox")
 	if err := os.WriteFile(file, []byte("not signed"), 0500); err != nil {
 		t.Fatal(err)
 	}

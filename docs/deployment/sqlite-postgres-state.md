@@ -1,4 +1,4 @@
-# NeverLauncher 0.47.4 — автономный импорт состояния Core и копирование хранилища
+# Launcher 0.47.4 — автономный импорт состояния Core и копирование хранилища
 
 Это обновление расширяет существующий проверенный **автономный** импорт SQLite Core 327 в промежуточную область (`sqlite-to-postgres` + `sqlite-to-postgres-live`). Исторические SQL-миграции PostgreSQL и SQLite не изменяются. **Не переключайте работающее приложение только на основании квитанции об импорте.** Исходная и целевая системы должны быть остановлены, а целью должна выступать новая база PostgreSQL с полностью применёнными миграциями.
 
@@ -11,10 +11,10 @@
 
    ```sh
    export LAUNCHER_POSTGRES_DSN='postgres://...'
-   export NEVERLAUNCHER_PG_API_SECRET='the-exact-HTTP-API-secret'
+   export LAUNCHER_PG_API_SECRET='the-exact-HTTP-API-secret'
    launcher-sqlite sqlite-to-postgres-live --from-staging \
      --sqlite-mfa-key-file /path/to/private/core-mfa.key \
-     --postgres-secret-env NEVERLAUNCHER_PG_API_SECRET \
+     --postgres-secret-env LAUNCHER_PG_API_SECRET \
      --ack-live-import
    ```
 

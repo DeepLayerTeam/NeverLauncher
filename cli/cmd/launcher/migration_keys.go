@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 )
 
-// Создаёт независимые ключи JWT Never и манифеста на хосте оператора. Записывается только новый
+// Создаёт независимые ключи JWT Launcher и манифеста на хосте оператора. Записывается только новый
 // файл O_EXCL с правами 0600; секреты НИКОГДА не выводятся в терминал, журнал, аргументы CLI или
 // ответы API. Автоматическое развёртывание не выполняется.
-func generateNeverMigrationKeys0336(path string) (err error) {
+func generateLauncherMigrationKeys0336(path string) (err error) {
 	if path == "" {
 		return errors.New("generate-keys: требуется «--output /secure/private/key-material.json»")
 	}
@@ -75,6 +75,6 @@ func generateNeverMigrationKeys0336(path string) (err error) {
 		return err
 	}
 	completed = true
-	fmt.Fprintln(os.Stderr, "Новые независимые ключи Never созданы в файле с правами 0600; установите их через хранилище секретов и никогда не загружайте этот файл в Gravit или Never API.")
+	fmt.Fprintln(os.Stderr, "Новые независимые ключи Launcher созданы в файле с правами 0600; установите их через хранилище секретов и никогда не загружайте этот файл в Gravit или Launcher API.")
 	return nil
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Проверить *опубликованный* Java SDK NeverLauncher через настоящий подпроцесс JVM Host.
+"""Проверить *опубликованный* Java SDK Launcher через настоящий подпроцесс JVM Host.
 
 Утилита НИКОГДА не компилирует потребителей на классах дерева src и не подписывает пакет. Доверие и
 установка контролируются существующими CLI/Backend.
@@ -20,7 +20,7 @@ from xml.etree import ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = (ROOT / 'VERSION').read_text().strip()
-MODULES = ('launcher-java-sdk-core', 'launcher-gravit-compat', 'neverlauncher-api-sdk')
+MODULES = ('launcher-java-sdk-core', 'launcher-gravit-compat', 'launcher-api-sdk')
 NS = {'m': 'http://maven.apache.org/POM/4.0.0'}
 
 

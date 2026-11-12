@@ -3,7 +3,7 @@ import type {
   OfficialProfile0257,
   OfficialAccount0267,
   OfficialDevice0257,
-  NeverOfficialLink0268,
+  LauncherOfficialLink0268,
 } from "./official_minecraft_0257";
 
 /** Публичное отображение нативного менеджера идентификации в Desktop без чувствительных данных. */
@@ -24,7 +24,7 @@ export type AuthenticationActivity02610 =
 export type AuthenticationState02610 = Readonly<{
   accounts: readonly OfficialAccount0267[];
   profile: OfficialProfile0257 | null;
-  links: readonly NeverOfficialLink0268[] | null;
+  links: readonly LauncherOfficialLink0268[] | null;
   activity: AuthenticationActivity02610;
   device: OfficialDevice0257 | null;
   deviceExpiresAt: number | null;
@@ -155,7 +155,7 @@ export class AuthenticationExperience02610 {
       links: linksResult.status === "fulfilled" ? linksResult.value : null,
       linksIssue:
         linksResult.status === "rejected"
-          ? "Служба идентификации Never временно недоступна."
+          ? "Служба идентификации Launcher временно недоступна."
           : null,
       issue:
         accountsResult.status === "rejected"
@@ -303,7 +303,7 @@ export class AuthenticationExperience02610 {
     await this.execute("link", async (token) => {
       if (this.value.profile?.id.toLowerCase() !== id.toLowerCase())
         throw Error("UUID Minecraft не совпадает");
-      await this.client.linkToNever(id, true);
+      await this.client.linkToLauncher(id, true);
       await this.accepted(token, this.value.profile);
     });
   }
@@ -311,7 +311,7 @@ export class AuthenticationExperience02610 {
     await this.execute("unlink", async (token) => {
       if (this.value.profile?.id.toLowerCase() !== id.toLowerCase())
         throw Error("UUID Minecraft не совпадает");
-      await this.client.unlinkFromNever(id, true);
+      await this.client.unlinkFromLauncher(id, true);
       await this.accepted(token, this.value.profile);
     });
   }

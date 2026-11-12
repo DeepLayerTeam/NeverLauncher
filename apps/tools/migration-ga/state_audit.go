@@ -20,7 +20,7 @@ import (
 // Сравнение изолированных снимков проектов Minecraft непосредственно на диске.
 // Оба корневых каталога должны содержать world/, plugins/ и player-uuids.txt.
 // Аудитор читает реальные байты: предоставленные хеши не скрывают расхождения.
-const stateAuditFormat = "never/gravit-state-audit/v1"
+const stateAuditFormat = "launcher/gravit-state-audit/v1"
 const stateMaxFiles = 150000
 const stateMaxBytes int64 = 1 << 40
 const stateMaxFile int64 = 32 << 30

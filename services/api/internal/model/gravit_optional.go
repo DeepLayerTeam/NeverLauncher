@@ -176,7 +176,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		if raw, has := obj["isPreset"]; has {
 			b, ok := gravitBool02411(raw)
 			if !ok || b {
-				note(label+".isPreset", "blocked", "", "Семантика выбора Gravit isPreset отличается от пресетов Never")
+				note(label+".isPreset", "blocked", "", "Семантика выбора Gravit isPreset отличается от пресетов Launcher")
 			}
 		}
 		for key := range obj {
@@ -207,7 +207,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 				case "limited":
 					c.Limited = b
 					if b {
-						note(label+".limited", "blocked", "", "Маску разрешений Gravit нельзя импортировать как подтверждённые права Never")
+						note(label+".limited", "blocked", "", "Маску разрешений Gravit нельзя импортировать как подтверждённые права Launcher")
 						continue
 					}
 				}
@@ -217,7 +217,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		if v, has := obj["permissions"]; has {
 			n, ok := gravitInt02411(v)
 			if !ok || n != 0 {
-				note(label+".permissions", "blocked", "", "Битовая маска разрешений Gravit не может предоставлять права Never")
+				note(label+".permissions", "blocked", "", "Битовая маска разрешений Gravit не может предоставлять права Launcher")
 			} else {
 				note(label+".permissions", "mapped", "", "Нулевые разрешения")
 			}
@@ -309,7 +309,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 						inverted, iok = gravitBool02411(raw)
 					}
 					if !ok || !rok || !iok || !required || inverted || seen[kind] {
-						note(fld, "blocked", "", "Только отдельные обязательные, неинвертированные условия os/java/arch сохраняют семантику доступности Never")
+						note(fld, "blocked", "", "Только отдельные обязательные, неинвертированные условия os/java/arch сохраняют семантику доступности Launcher")
 						continue
 					}
 					seen[kind] = true
@@ -362,7 +362,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 						if raw, has := t["requireJavaFX"]; has {
 							fx, ok := gravitBool02411(raw)
 							if !ok || fx {
-								note(fld, "blocked", "", "Требование JavaFX Runtime нельзя проверить как условие Never")
+								note(fld, "blocked", "", "Требование JavaFX Runtime нельзя проверить как условие Launcher")
 								continue
 							}
 						}
@@ -419,7 +419,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 					case "file", "classpath":
 						if lower == "classpath" {
 							// У Gravit OptionalActionClassPath есть args: List<String> и useAltClasspath.
-							// Never поддерживает только основной classpath.
+							// Launcher поддерживает только основной classpath.
 							for k := range a {
 								if k != "type" && k != "args" && k != "useAltClasspath" {
 									note(fld+"."+k, "blocked", "", "Неизвестный атрибут действия с путём к классам")
@@ -433,7 +433,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							if v, has := a["useAltClasspath"]; has {
 								alt, ok := gravitBool02411(v)
 								if !ok || alt {
-									note(fld, "blocked", "", "Альтернативный системный classpath не эквивалентен подписанному classpath Never")
+									note(fld, "blocked", "", "Альтернативный системный classpath не эквивалентен подписанному classpath Launcher")
 									continue
 								}
 							}
@@ -506,7 +506,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 							}
 						}
 						if !valid {
-							note(fld, "blocked", "", "Небезопасный или неподдерживаемый аргумент Never; выполнение команд и переопределение аутентификации запрещены")
+							note(fld, "blocked", "", "Небезопасный или неподдерживаемый аргумент Launcher; выполнение команд и переопределение аутентификации запрещены")
 							continue
 						}
 						c.Actions = append(c.Actions, ComponentAction0245{Type: kind, Args: args})
@@ -535,7 +535,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 			}
 		}
 		if len(c.Files) == 0 {
-			note(label, "blocked", "", "Для компонентов Never требуется один или несколько подготовленных подписанных дополнительных файлов")
+			note(label, "blocked", "", "Для компонентов Launcher требуется один или несколько подготовленных подписанных дополнительных файлов")
 		}
 		cat.Components = append(cat.Components, c)
 	}

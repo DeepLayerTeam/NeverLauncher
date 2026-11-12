@@ -1,9 +1,9 @@
 // Настоящая межъязыковая проверка SDK, а не имитация клиента через fetch().
-import { NeverLauncherAPI } from '../dist/client.js';
+import { LauncherAPI } from '../dist/client.js';
 import { createHash } from 'node:crypto';
 const need = (name) => {const v = process.env[name]; if (!v) throw new Error(`Не задан параметр рабочей проверки SDK ${name}`); return v;};
 try {
- const api = new NeverLauncherAPI(need('NL_GA_ORIGIN'), need('NL_GA_BEARER'));
+ const api = new LauncherAPI(need('NL_GA_ORIGIN'), need('NL_GA_BEARER'));
  await api.checkCompatibility();
  const body = await api.request('GET',need('NL_GA_JSON_PATH'));
  if (!body || typeof body !== 'object' || !Object.keys(body).length) throw new Error('Пустой JSON в ответе работающего сервера');

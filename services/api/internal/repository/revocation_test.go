@@ -51,7 +51,7 @@ func TestRevokedDeviceKeyCannotBeResurrected0434(t *testing.T) {
 func TestRevokedMinecraftTokenCannotBeResurrected0434(t *testing.T) {
 	repo := NewMemoryRepository("https://api.example.test")
 	session := model.MinecraftSession{
-		ID: "mc-0434", UserID: "user-0434", NeverSessionID: "sess-0434", ProfileUUID: "00000000-0000-4000-8000-000000000434",
+		ID: "mc-0434", UserID: "user-0434", LauncherSessionID: "sess-0434", ProfileUUID: "00000000-0000-4000-8000-000000000434",
 		AccessTokenHash: "hash-0434", Status: "active", ExpiresAt: time.Now().Add(time.Hour),
 		TrustedDeviceID: "dev-0434", BindingEpoch: 2,
 	}

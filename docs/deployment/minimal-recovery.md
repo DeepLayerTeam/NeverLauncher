@@ -1,4 +1,4 @@
-# NeverLauncher 0.45.2: Minimal — зашифрованная резервная копия и восстановление на другом Linux-хосте
+# Launcher 0.45.2: Minimal — зашифрованная резервная копия и восстановление на другом Linux-хосте
 
 Это инструкция для **single-node SQLite + локальные файлы**, созданной через `scripts/install/minimal-install.py init`. Это не PostgreSQL/Redis/S3 backup, не резервная копия без остановки и не HA. Используйте один экземпляр API, локальную файловую систему (ext4/xfs/btrfs), приватную учётную запись службы и **тот же проверенный выпуск Backend API** на восстанавливаемом хосте.
 
@@ -14,47 +14,47 @@
 
 ```sh
 umask 077
-mkdir -p /srv/never-transfer
-chmod 0700 /srv/never-transfer
-openssl rand -base64 48 > /srv/never-transfer/recovery.key
-chmod 0600 /srv/never-transfer/recovery.key
+mkdir -p /srv/launcher-transfer
+chmod 0700 /srv/launcher-transfer
+openssl rand -base64 48 > /srv/launcher-transfer/recovery.key
+chmod 0600 /srv/launcher-transfer/recovery.key
 
 # Остановить systemd-сервис Backend API, jobs и ВСЕ внешние writers в storage/extensions/factory.
 # Убедиться, что исходная система полностью остановлена.
 python3 scripts/install/minimal-install.py backup-portable \
   --root /var/lib/launcher-minimal \
-  --output /srv/never-transfer/minimal-0452.nmb \
-  --passphrase-file /srv/never-transfer/recovery.key
+  --output /srv/launcher-transfer/minimal-0452.nmb \
+  --passphrase-file /srv/launcher-transfer/recovery.key
 
 python3 scripts/install/minimal-install.py verify-portable \
-  --input /srv/never-transfer/minimal-0452.nmb \
-  --passphrase-file /srv/never-transfer/recovery.key
-sha256sum /srv/never-transfer/minimal-0452.nmb
+  --input /srv/launcher-transfer/minimal-0452.nmb \
+  --passphrase-file /srv/launcher-transfer/recovery.key
+sha256sum /srv/launcher-transfer/minimal-0452.nmb
 ```
 
-Снимок производится под теми же эксклюзивными Linux `flock`, что использует Backend API; если API владеет ими, операция **отказывает**. Но сторонние writers, игнорирующие эти блокировки, должны быть остановлены отдельно. Снимок зашифрован **AES-256-GCM** (ключ выводится через `scrypt`, индивидуальные соль и nonce). Формат `NEVER-MINIMAL-PORTABLE-1`; изменение даже одного байта не позволяет подтвердить его подлинность без пароля. Используйте **отдельный** независимый канал доставки `recovery.key`, с контролем доступа и резервированием этого ключа. Потеря ключа означает невозможность восстановления снимка.
+Снимок производится под теми же эксклюзивными Linux `flock`, что использует Backend API; если API владеет ими, операция **отказывает**. Но сторонние writers, игнорирующие эти блокировки, должны быть остановлены отдельно. Снимок зашифрован **AES-256-GCM** (ключ выводится через `scrypt`, индивидуальные соль и nonce). Формат `LAUNCHER-MINIMAL-PORTABLE-1`; изменение даже одного байта не позволяет подтвердить его подлинность без пароля. Используйте **отдельный** независимый канал доставки `recovery.key`, с контролем доступа и резервированием этого ключа. Потеря ключа означает невозможность восстановления снимка.
 
 При внезапном выключении сервера до завершения команды могут остаться приватные скрытые `.minimal-portable-source-*` в `backups/`: это **незавершённые незашифрованные** снимки. При подтверждённой остановке API и после проверки, что ни одна операция резервирования не работает, их нужно отдельно инвентаризировать и безопасно удалить. Никаких успешных меток для них не создаётся. Исходные нешифрованные offline bundles тоже содержат все секреты — не публиковать их.
 
 ## Перенос и восстановление
 
-Переносить `minimal-0452.nmb` через защищённый канал на **другой Linux-хост**. Сверить SHA-256 с независимо переданным эталоном. Passphrase доставляется **отдельно**, файлы на целевом хосте находятся под владельцем службы (0700/0600). На другом хосте установить проверенный `launcher-api` **той же версии**, `Python` + `cryptography==46.0.4`, скрипты восстановления из того же исходного выпуска. Настроить приватный родительский каталог установки (например, `/srv/never-recovery`, `0700`, владелец — служба):
+Переносить `minimal-0452.nmb` через защищённый канал на **другой Linux-хост**. Сверить SHA-256 с независимо переданным эталоном. Passphrase доставляется **отдельно**, файлы на целевом хосте находятся под владельцем службы (0700/0600). На другом хосте установить проверенный `launcher-api` **той же версии**, `Python` + `cryptography==46.0.4`, скрипты восстановления из того же исходного выпуска. Настроить приватный родительский каталог установки (например, `/srv/launcher-recovery`, `0700`, владелец — служба):
 
 ```sh
 # Выполнять от имени владельца службы, не пересекать разные UID без chown и проверки.
 umask 077
-mkdir -p /srv/never-recovery
-chmod 0700 /srv/never-recovery
+mkdir -p /srv/launcher-recovery
+chmod 0700 /srv/launcher-recovery
 
 python3 scripts/install/minimal-install.py restore-portable \
-  --input /srv/never-transfer/minimal-0452.nmb \
-  --target-root /srv/never-recovery/launcher-minimal \
-  --passphrase-file /srv/never-transfer/recovery.key
+  --input /srv/launcher-transfer/minimal-0452.nmb \
+  --target-root /srv/launcher-recovery/launcher-minimal \
+  --passphrase-file /srv/launcher-transfer/recovery.key
 
 # ОБЯЗАТЕЛЬНО использовать доверенный executable из *того же* выпуска.
 python3 scripts/install/minimal-install.py check \
-  --env-file /srv/never-recovery/launcher-minimal/config/backend.env \
-  --binary /opt/neverlauncher/bin/launcher-api
+  --env-file /srv/launcher-recovery/launcher-minimal/config/backend.env \
+  --binary /opt/launcher/bin/launcher-api
 ```
 
 `restore-portable` **сначала** проверяет GCM authentication tag, затем строгий список tar-объектов, SHA-256 каждого файла и целостность SQLite. Восстановление осуществляется в закрытый временный каталог и становится доступным **одним атомарным переименованием**. Если целевой каталог уже существует или возникла ошибка, данные в него не записываются. `restore-portable` не перезаписывает и не сливает действующее состояние.

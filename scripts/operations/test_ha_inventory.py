@@ -26,7 +26,7 @@ def fixture(service, label, replica, health="healthy", ready=True, image="sha256
 
 
 def node(node_id, names):
-    return {"schema": "neverlauncher.ha-inventory.0.51.1", "project": "launcher",
+    return {"schema": "launcher.ha-inventory.0.51.1", "project": "launcher",
             "nodeIdentity": node_id, "dockerEngineIdentity": "engine-"+node_id,
             "containers": names, "observations": [], "nodeStatus": "OBSERVED"}
 

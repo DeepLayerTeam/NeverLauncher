@@ -42,7 +42,7 @@ func TestProtectionBlocksAuthLaunchJoinAndRestoresAfterUnban0298(t *testing.T) {
 	}
 }
 
-func TestBannedUserCannotReceiveNeverSession0298(t *testing.T) {
+func TestBannedUserCannotReceiveLauncherSession0298(t *testing.T) {
 	repo := repository.NewMemoryRepository("")
 	if _, err := repo.SaveUser(model.User{ID: "banned-user", Email: "banned@example.test", RoleID: "player", Status: "active"}); err != nil {
 		t.Fatal(err)

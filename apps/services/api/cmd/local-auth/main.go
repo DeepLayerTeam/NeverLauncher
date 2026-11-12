@@ -110,7 +110,7 @@ func runOnline(args []string, output io.Writer, input io.Reader) error {
 	email := flags.String("email", "", "Адрес электронной почты новой учётной записи")
 	displayName := flags.String("name", "", "Отображаемое имя")
 	role := flags.String("role", "player", "Роль новой учётной записи")
-	userID := flags.String("user-id", "", "Идентификатор целевого пользователя Never")
+	userID := flags.String("user-id", "", "Идентификатор целевого пользователя Launcher")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}

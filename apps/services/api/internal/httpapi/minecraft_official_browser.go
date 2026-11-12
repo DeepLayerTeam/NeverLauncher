@@ -14,7 +14,7 @@ import (
 
 // OAuth code/verifier поступает исключительно от нативного клиента Desktop, а не
 // от его renderer или браузера пользователя. Учётная запись привязывается к
-// аутентифицированному сеансу Never до выдачи существующего непрозрачного билета.
+// аутентифицированному сеансу Launcher до выдачи существующего непрозрачного билета.
 // Client ID всегда берётся из собственной регистрации приложения на этом сервере.
 type officialBrowserRequest0263 struct {
 	Code        string `json:"code"`
@@ -50,7 +50,7 @@ func (s Server) officialBrowserConfig0263(w http.ResponseWriter, r *http.Request
 	// сеанса из renderer мог бы читать Microsoft-учётные данные другого
 	// локального пользователя.
 	w.Header().Set("Cache-Control", "no-store")
-	officialWrite0257(w, 200, map[string]any{"clientId": policy.ClientID, "enabled": policy.Enabled, "browserEnabled": policy.BrowserEnabled, "deviceEnabled": policy.DeviceEnabled, "issuer": policy.Issuer, "neverSessionId": claims.SessionID, "neverUserId": claims.Sub})
+	officialWrite0257(w, 200, map[string]any{"clientId": policy.ClientID, "enabled": policy.Enabled, "browserEnabled": policy.BrowserEnabled, "deviceEnabled": policy.DeviceEnabled, "issuer": policy.Issuer, "launcherSessionId": claims.SessionID, "launcherUserId": claims.Sub})
 }
 
 // provider — узкая подменяемая точка для проверки полной цепочки токенов локальной

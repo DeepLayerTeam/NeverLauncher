@@ -14,7 +14,7 @@ import (
 )
 
 func migrationIdentityTargets0334(ctx context.Context, tx *sql.Tx) ([]gi.Target, error) {
-	// Проверяйте как локальную/удалённую идентичность Minecraft Never, так и
+	// Проверяйте как локальную/удалённую идентичность Minecraft Launcher, так и
 	// подтверждённые официальные идентичности; противоречащие заявления намеренно не
 	// объединяются молча.
 	rows, e := tx.QueryContext(ctx, `SELECT uuid,name,user_id,'minecraft_profiles' FROM minecraft_profiles UNION ALL

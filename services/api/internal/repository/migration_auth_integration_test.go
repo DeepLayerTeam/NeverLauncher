@@ -115,7 +115,7 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	}
 
 	// Отдельная миграция может сопоставить аккаунт по точному UUID, но не менять
-	// его Never-учётные данные, даже если оператор явно предложил другой хеш
+	// его Launcher-учётные данные, даже если оператор явно предложил другой хеш
 	// источника.
 	run2, e := repo.CreateMigration0331(ctx, project, "gravit", "auth-second-run-0335-key")
 	if e != nil {
@@ -144,10 +144,10 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 		t.Fatalf("Сопоставленная учётная запись перезаписана: %+v %v", preserved, e)
 	}
 	if e = repo.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id=$1`, userID).Scan(&hash); e != nil || hash != "$argon2id$verified-upgrade" {
-		t.Fatalf("Пароль источника перезаписал пароль Never: %v %q", e, hash)
+		t.Fatalf("Пароль источника перезаписал пароль Launcher: %v %q", e, hash)
 	}
 	// В версии 0.44.4 два независимых SQL-источника Gravit могут использовать
-	// id=1. Импорт второго UUID должен создавать отдельную учётную запись Never,
+	// id=1. Импорт второго UUID должен создавать отдельную учётную запись Launcher,
 	// а не сталкиваться с локальным первичным ключом первой БД.
 	run3, e := repo.CreateMigration0331(ctx, project, "gravit", "auth-third-run-0444-key")
 	if e != nil {

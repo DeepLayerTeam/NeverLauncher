@@ -76,7 +76,7 @@ func handleMigrationCutover03311(args []string) error {
 		if e = readFenceFile0448(receiptPath, 8<<10, &receipt); e != nil {
 			return e
 		}
-		if receipt.Format != "never/gravit-source-stop/v1" || receipt.RunID != run || receipt.ProfileID != profile || receipt.Channel != channel ||
+		if receipt.Format != "launcher/gravit-source-stop/v1" || receipt.RunID != run || receipt.ProfileID != profile || receipt.Channel != channel ||
 			receipt.UnitState != "inactive" || (receipt.UnitFileState != "masked" && receipt.UnitFileState != "masked-runtime") ||
 			time.Since(receipt.CheckedAt) > 10*time.Minute || time.Until(receipt.CheckedAt) > time.Minute || !fenceDigest0448.MatchString(receipt.SnapshotSHA256) {
 			return errors.New("Некорректное значение: область действия, статус или актуальность квитанции блокировки источника")

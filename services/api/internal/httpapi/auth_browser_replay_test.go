@@ -136,7 +136,7 @@ func TestBrowserLinkReplayAndLoginSeparation0525(t *testing.T) {
 	if err := json.Unmarshal(begin.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
-	// Транзакцию привязки нельзя использовать для входа без токена владельца Never.
+	// Транзакцию привязки нельзя использовать для входа без токена владельца Launcher.
 	login := call(handler, "/api/v1/auth/oidc/ms-fixture/complete", map[string]any{"code": "microsoft-code", "state": response.Data.State, "transaction": response.Data.Transaction}, "")
 	if login.Code != 401 {
 		t.Fatalf("Подмена привязки входом: HTTP %d", login.Code)

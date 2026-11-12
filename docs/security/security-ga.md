@@ -15,7 +15,7 @@
 |---|---|---|---|
 | `securityDeviceTrust` | `deviceEnrollmentAllowed` | `staleDeviceEpochDenied` | Нативный клиент + backend |
 | `securityHwidPolicy` | `knownDeviceLoginAllowed` | `unapprovedHardwareChangeDenied` | Нативный клиент + backend |
-| `securityNeverGuard` | `protectedGameJoinAllowed` | `tamperedGuardJoinDenied` | Desktop → игра → сервер |
+| `securityLauncherGuard` | `protectedGameJoinAllowed` | `tamperedGuardJoinDenied` | Desktop → игра → сервер |
 | `securityKeyRevocation` | `currentKeyJoinAllowed` | `revokedKeyJoinDenied` | Backend + игровой сервер |
 | `securityAccountRecovery` | `newDeviceRecoveryAllowed` | `oldRecoveryKeyDenied` | Клиент + backend |
 | `securityNativeSandbox` | `authorizedExtensionBrokerAllowed` | `unauthorizedExtensionAccessDenied` | **Backend native extension host**, не Desktop |

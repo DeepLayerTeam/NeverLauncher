@@ -24,7 +24,7 @@ from delivery_verify_0462 import verify_bundle
 import verify_0478
 from check_protected_run import check as check_protected_run
 
-DOMAIN = b'neverlauncher.ga0480.independent-operator.v1\x00'
+DOMAIN = b'launcher.ga0480.independent-operator.v1\x00'
 VERSION = '0.48.0'
 REQUIRED = {
     'live': 'live.json',
@@ -70,7 +70,7 @@ def validate_signed_attestation(root: Path, approval: Path, signature: Path, key
     except (ValueError, InvalidSignature) as exc:
         raise GateError('Независимая подпись оператора GA отклонена') from exc
     meta = json.loads(raw)
-    require(meta.get('schema') == 'neverlauncher.ga0480.independent-operator.v1' and meta.get('version') == VERSION and meta.get('commit') == commit, 'Подтверждение оператора относится к другому выпуску или коммиту')
+    require(meta.get('schema') == 'launcher.ga0480.independent-operator.v1' and meta.get('version') == VERSION and meta.get('commit') == commit, 'Подтверждение оператора относится к другому выпуску или коммиту')
     files = meta.get('files')
     actual = {p.relative_to(root).as_posix() for p in root.rglob('*') if p.is_file() or p.is_symlink()}
     require(isinstance(files, dict) and set(REQUIRED.values()) <= set(files) and set(files) == actual, 'Независимое подписанное подтверждение должно охватывать каждый файл свидетельств и пакета')
@@ -81,7 +81,7 @@ def validate_signed_attestation(root: Path, approval: Path, signature: Path, key
 
 def inspect_live(root: Path):
     live = report(root,'live')
-    require(live.get('schema') == 'neverlauncher.live-upgrade-acceptance-0480-v1' and live.get('version') == VERSION, 'Нет реальной независимой приёмки обновления')
+    require(live.get('schema') == 'launcher.live-upgrade-acceptance-0480-v1' and live.get('version') == VERSION, 'Нет реальной независимой приёмки обновления')
     require(isinstance(live.get('sourceBaselineSHA256'), str) and re.fullmatch('[a-f0-9]{64}',live['sourceBaselineSHA256']), 'Отсутствует исходный контрольный SHA SQLite')
     require(isinstance(live.get('ownerId'), str) and bool(live['ownerId']) and isinstance(live.get('project'), str) and bool(live['project']), 'Не определены прежний владелец или проект')
     require(live.get('ownerLogin') == 'actual-session' and all(live.get(field) is True for field in ('apiEquivalent','sourceSQLiteVerified','storageVerified','cutoverVerified','backendPostgresVerified')), 'Не подтверждена работоспособность обновлённого Backend на PostgreSQL')

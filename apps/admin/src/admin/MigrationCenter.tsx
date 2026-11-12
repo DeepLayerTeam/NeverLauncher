@@ -103,7 +103,7 @@ type Security0336 = {
   format: string;
   runId: string;
   importedAccounts: number;
-  existingNeverUntouched: number;
+  existingLauncherUntouched: number;
   manualResets: number;
   sessionsRevoked: number;
   devicesRevoked: number;
@@ -391,7 +391,7 @@ export function MigrationCenter0331({
     useState("");
   const [rollbackRef03312, setRollbackRef03312] = useState("");
   const [rollbackHash03312, setRollbackHash03312] = useState("");
-  const [rollbackNeverFenced03312, setRollbackNeverFenced03312] =
+  const [rollbackLauncherFenced03312, setRollbackLauncherFenced03312] =
     useState(false);
   const [rollbackSourceFenced03312, setRollbackSourceFenced03312] =
     useState(false);
@@ -737,7 +737,7 @@ export function MigrationCenter0331({
       !runId ||
       busy ||
       cutoverConfirm03311 !== runId ||
-      !rollbackNeverFenced03312 ||
+      !rollbackLauncherFenced03312 ||
       route.state !== "active"
     )
       return;
@@ -753,7 +753,7 @@ export function MigrationCenter0331({
       current = JSON.parse(rollbackSnapshot03312);
     } catch {
       setError(
-        "Введите JSON актуального снимка состояния отдельно остановленного Never или игрового сервера",
+        "Введите JSON актуального снимка состояния отдельно остановленного Launcher или игрового сервера",
       );
       return;
     }
@@ -1321,7 +1321,7 @@ export function MigrationCenter0331({
     <section className="card wide" aria-label="Центр миграции 0.33.7">
       <h2>Центр миграции · 0.33.7</h2>
       <p>
-        Durable workflow для проверки целевого проекта Never и фиксации
+        Durable workflow для проверки целевого проекта Launcher и фиксации
         инвентаризации. Статус «prepared» означает только сохранённый baseline;
         совместимость Gravit анализируется отдельно по ZIP; импорт
         поддерживаемых учётных записей доступен отдельно. Переключение не
@@ -1511,7 +1511,7 @@ export function MigrationCenter0331({
           <h3>Сопоставление идентичности и UUID · MIG04</h3>
           <p>
             Читает FileAuthSystem/Database.json либо sql-export/users.csv из
-            исходного ZIP. Сопоставляет UUID с Never, блокирует конфликтные
+            исходного ZIP. Сопоставляет UUID с Launcher, блокирует конфликтные
             идентичности и не импортирует пароли. Для SQL нужен нормализованный
             CSV со столбцами id,username,uuid.
           </p>
@@ -1528,7 +1528,7 @@ export function MigrationCenter0331({
               disabled={busy || !identities || run.status !== "prepared"}
               onClick={() => void verifyIdentities()}
             >
-              Повторно сверить с Never
+              Повторно сверить с Launcher
             </button>
           </div>
           {identities && (
@@ -1554,7 +1554,7 @@ export function MigrationCenter0331({
             Импортируются только новые local-аккаунты с проверенными исходными
             UUID и поддерживаемыми хешами. SQL: sql-export/users.csv с
             id,username,uuid,password_format,password_hash. Существующие
-            аккаунты Never не перезаписываются. Отсутствующий или неизвестный
+            аккаунты Launcher не перезаписываются. Отсутствующий или неизвестный
             формат пароля FileAuth, а также неподдерживаемые SQL-хеши требуют
             индивидуальной подтверждённой смены пароля. Такие пользователи не
             создаются с пустым паролем и блокируют готовность к переключению.
@@ -1647,7 +1647,7 @@ export function MigrationCenter0331({
           <h3>Сброс безопасности и доверия · 0.33.6</h3>
           <p>
             Для новых импортированных пользователей: транзакционный отзыв всех
-            старых сеансов Never, привязок устройств, challenges,
+            старых сеансов Launcher, привязок устройств, challenges,
             TPM/measured-boot доказательств. Уже существующие аккаунты не
             изменяются. Внешние ключи Gravit не импортируются. Переключение запрещено.
           </p>
@@ -1667,7 +1667,7 @@ export function MigrationCenter0331({
               <p>
                 Предварительный reset для {securityPreview.importedAccounts}{" "}
                 импортированных аккаунтов. Существующие аккаунты без изменений:{" "}
-                {securityPreview.existingNeverUntouched}. KID:{" "}
+                {securityPreview.existingLauncherUntouched}. KID:{" "}
                 {securityPreview.activeJwtKid}; SHA-256 публичного ключа:{" "}
                 {securityPreview.manifestPublicSha256}.
               </p>
@@ -1686,7 +1686,7 @@ export function MigrationCenter0331({
                   onChange={(e) => setFreshKeysConfirmed(e.target.checked)}
                 />{" "}
                 Подтверждаю, что активный JWT secret и manifest Ed25519 seed
-                Never созданы независимо от Gravit и доставлены через защищённое
+                Launcher созданы независимо от Gravit и доставлены через защищённое
                 хранилище секретов
               </label>
               <button
@@ -1731,7 +1731,7 @@ export function MigrationCenter0331({
           <p>
             Проверяемый перенос одного Gravit ClientProfile и содержимого
             updates/&lt;dir&gt;, clients/&lt;dir&gt;, libraries/,
-            assets/ в зашифрованную рабочую область сборки Never. Импортёр использует
+            assets/ в зашифрованную рабочую область сборки Launcher. Импортёр использует
             поле <code>dir</code> Gravit ClientProfile, если оно задано;
             пользовательские файлы не копируются. Каждый запуск миграции
             закрепляет один профиль и собственный пробный запуск. Сервер не выполняет
@@ -1757,7 +1757,7 @@ export function MigrationCenter0331({
             {inventory && <span className="muted">Профилей в проверенном ZIP: {inventory.files.filter((f) => f.kind === "client_profile").length}. Выберите точный путь из списка; для другого профиля создайте отдельный запуск миграции.</span>}
           </label>
           <label className="field">
-            <span>ID нового профиля Never</span>
+            <span>ID нового профиля Launcher</span>
             <input
               value={contentProfileId}
               onChange={(e) => {
@@ -2024,7 +2024,7 @@ export function MigrationCenter0331({
                     </select>
                   </label>
                   <label className="field">
-                    <span>Новый профиль Never</span>
+                    <span>Новый профиль Launcher</span>
                     <input
                       value={migrationPlan0442?.destination.profileId ?? bridgeProfile0338}
                       readOnly={Boolean(migrationPlan0442?.destination.profileId)}
@@ -2044,7 +2044,7 @@ export function MigrationCenter0331({
                       checked={bridgeFreshKeys0338}
                       onChange={(e) => setBridgeFreshKeys0338(e.target.checked)}
                     />{" "}
-                    Новая независимая пара ключей Ed25519 для Never, не унаследованная
+                    Новая независимая пара ключей Ed25519 для Launcher, не унаследованная
                     от Gravit
                   </label>
                   <label className="field">
@@ -2137,9 +2137,9 @@ export function MigrationCenter0331({
           <h3>Подготовленное переключение · MIG11</h3>
           <p>
             Переключает рабочий указатель <code>channel_heads</code> на
-            проверенный и подписанный релиз Never. Пока канал staged, PostgreSQL
+            проверенный и подписанный релиз Launcher. Пока канал staged, PostgreSQL
             блокирует другие публикации. Исходный процесс записи Gravit необходимо
-            остановить и проверить отдельно: Never не умеет подтвердить его
+            остановить и проверить отдельно: Launcher не умеет подтвердить его
             отключение.
           </p>
           <label className="field">
@@ -2238,7 +2238,7 @@ export function MigrationCenter0331({
                 <code>
                   {route.profileId}/{route.channel}
                 </code>{" "}
-                · {statusRu(route.state)} · ревизия {route.revision} · выпуск NeverLauncher{" "}
+                · {statusRu(route.state)} · ревизия {route.revision} · выпуск Launcher{" "}
                 <code>{route.releaseId}</code> · исходная ревизия{" "}
                 {route.baselineRevision} · активная ревизия{" "}
                 {route.activatedRevision ?? "—"}
@@ -2271,8 +2271,8 @@ export function MigrationCenter0331({
                 <div>
                   <h4>Эксплуатационный откат · MIG12</h4>
                   <p>
-                    Только безопасное обратное переключение Never. Перед планом
-                    остановите запись Never и обоих игровых серверов вне панели;
+                    Только безопасное обратное переключение Launcher. Перед планом
+                    остановите запись Launcher и обоих игровых серверов вне панели;
                     подготовьте JSON свежего снимка состояния мира, UUID, инвентаря,
                     прав и экономики. При изменениях данных требуется внешняя
                     сверка/перенос новых записей в Gravit: укажите также новый
@@ -2334,12 +2334,12 @@ export function MigrationCenter0331({
                   <label className="field">
                     <input
                       type="checkbox"
-                      checked={rollbackNeverFenced03312}
+                      checked={rollbackLauncherFenced03312}
                       onChange={(e) =>
-                        setRollbackNeverFenced03312(e.target.checked)
+                        setRollbackLauncherFenced03312(e.target.checked)
                       }
                     />{" "}
-                    Процессы записи Never и игры остановлены оператором
+                    Процессы записи Launcher и игры остановлены оператором
                   </label>
                   <label className="field">
                     <input
@@ -2355,7 +2355,7 @@ export function MigrationCenter0331({
                     disabled={
                       busy ||
                       cutoverConfirm03311 !== runId ||
-                      !rollbackNeverFenced03312 ||
+                      !rollbackLauncherFenced03312 ||
                       !/^[a-f0-9]{64}$/.test(rollbackHash03312)
                     }
                     onClick={() => void rollbackAction03312("plan", route)}
@@ -2368,11 +2368,11 @@ export function MigrationCenter0331({
                       !rollbackPlan03312?.ready ||
                       rollbackPlan03312.routeRevision !== route.revision ||
                       !rollbackSourceFenced03312 ||
-                      !rollbackNeverFenced03312
+                      !rollbackLauncherFenced03312
                     }
                     onClick={() => void rollbackAction03312("commit", route)}
                   >
-                    Подтвердить: восстановить прежний указатель канала Never (многофакторная проверка)
+                    Подтвердить: восстановить прежний указатель канала Launcher (многофакторная проверка)
                   </button>
                   {rollbackPlan03312 &&
                     rollbackPlan03312.profileId === route.profileId &&
@@ -2392,7 +2392,7 @@ export function MigrationCenter0331({
               )}
               {route.state === "rolled_back" && (
                 <p>
-                  Указатель канала Never восстановлен. Gravit не перезапущен; проверьте
+                  Указатель канала Launcher восстановлен. Gravit не перезапущен; проверьте
                   состояние игроков и завершите внешнее переключение отдельно.
                 </p>
               )}
@@ -2453,7 +2453,7 @@ export function MigrationCenter0331({
                 <pre>{JSON.stringify(report03313.items, null, 2)}</pre>
               </details>
               <details>
-                <summary>ID источника → UUID → ID пользователя Never</summary>
+                <summary>ID источника → UUID → ID пользователя Launcher</summary>
                 <pre>{JSON.stringify(report03313.identities, null, 2)}</pre>
               </details>
               <label className="field">

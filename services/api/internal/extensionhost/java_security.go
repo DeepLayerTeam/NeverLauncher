@@ -26,7 +26,7 @@ func prepareJavaScratch04811(cmd *exec.Cmd) (string, error) {
 	if jarAt < 1 || jarAt+1 >= len(cmd.Args) {
 		return "", errors.New("В команде Java отсутствует -jar")
 	}
-	scratch, err := os.MkdirTemp("", "neverlauncher-java-04811-")
+	scratch, err := os.MkdirTemp("", "launcher-java-04811-")
 	if err != nil {
 		return "", err
 	}

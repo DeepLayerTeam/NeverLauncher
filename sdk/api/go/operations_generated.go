@@ -1,5 +1,5 @@
 // Код сформирован скриптом scripts/sdk/generate-http-operations.py; не редактировать вручную.
-package neverapi
+package launcherapi
 
 var Operations = map[string]Operation{
 	"delete_admin_auth_devices_by_deviceId":                                               {Method: "DELETE", Path: "/api/v1/admin/auth/devices/{deviceId}"},
@@ -257,6 +257,7 @@ var Operations = map[string]Operation{
 	"post_admin_config_validate":                                                          {Method: "POST", Path: "/api/v1/admin/config/validate"},
 	"post_admin_extension_cli_by_extensionId_invoke":                                      {Method: "POST", Path: "/api/v1/admin/extension-cli/{extensionId}/invoke"},
 	"post_admin_extension_ga_reconcile":                                                   {Method: "POST", Path: "/api/v1/admin/extension-ga/reconcile"},
+	"post_admin_extension_hosts_by_extensionId_probe":                                     {Method: "POST", Path: "/api/v1/admin/extension-hosts/{extensionId}/probe"},
 	"post_admin_extension_hosts_by_extensionId_restart":                                   {Method: "POST", Path: "/api/v1/admin/extension-hosts/{extensionId}/restart"},
 	"post_admin_extension_hosts_by_extensionId_start":                                     {Method: "POST", Path: "/api/v1/admin/extension-hosts/{extensionId}/start"},
 	"post_admin_extension_hosts_by_extensionId_stop":                                      {Method: "POST", Path: "/api/v1/admin/extension-hosts/{extensionId}/stop"},
@@ -285,6 +286,7 @@ var Operations = map[string]Operation{
 	"post_admin_login":                                                                    {Method: "POST", Path: "/api/v1/admin/login"},
 	"post_admin_logout":                                                                   {Method: "POST", Path: "/api/v1/admin/logout"},
 	"post_admin_migration_runs_by_runId_dry_run":                                          {Method: "POST", Path: "/api/v1/admin/migration-runs/{runId}/dry-run"},
+	"post_admin_migration_runs_by_runId_dry_run_all":                                      {Method: "POST", Path: "/api/v1/admin/migration-runs/{runId}/dry-run-all"},
 	"post_admin_official_provider_diagnostics":                                            {Method: "POST", Path: "/api/v1/admin/official-provider/diagnostics"},
 	"post_admin_projects":                                                                 {Method: "POST", Path: "/api/v1/admin/projects"},
 	"post_admin_projects_by_projectId_channels":                                           {Method: "POST", Path: "/api/v1/admin/projects/{projectId}/channels"},

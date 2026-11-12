@@ -1,4 +1,4 @@
-name: NeverLauncher 0.45.8 — обновление компонентов
+name: Launcher 0.45.8 — обновление компонентов
 on:
   push:
     paths:
@@ -40,7 +40,7 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-      - name: "Собрать CLI NeverLauncher и испытать нативный транзакционный механизм обновления"
+      - name: "Собрать CLI Launcher и испытать нативный транзакционный механизм обновления"
         working-directory: cli
         run: |
           set -euo pipefail

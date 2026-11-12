@@ -44,7 +44,7 @@ func (oidcFixtureConnector115) CompleteBrowserAuth(ctx context.Context, cb authc
 	return authconnector.Authentication{Identity: authconnector.Identity{Subject: "oidc-user-42", Email: "oidc@example.test", Username: "oidc", DisplayName: "OIDC User", Claims: map[string]any{"iss": "fixture"}}, AuthMethods: []string{"oidc"}}, nil
 }
 
-func TestOIDCBeginCompleteCreatesCanonicalNeverSession(t *testing.T) {
+func TestOIDCBeginCompleteCreatesCanonicalLauncherSession(t *testing.T) {
 	cfg := config.Config{PublicURL: "https://launcher.example.test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), Environment: "test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-test"}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	core := federation.New(repo)
@@ -85,7 +85,7 @@ func TestOIDCBeginCompleteCreatesCanonicalNeverSession(t *testing.T) {
 		t.Fatalf("Завершение: состояние=%d, тело ответа=%s", completeRes.Code, completeRes.Body.String())
 	}
 	if !strings.Contains(completeRes.Body.String(), "accessToken") || !strings.Contains(completeRes.Body.String(), "refreshToken") {
-		t.Fatalf("Отсутствуют токены сессии Never: %s", completeRes.Body.String())
+		t.Fatalf("Отсутствуют токены сессии Launcher: %s", completeRes.Body.String())
 	}
 	identity, err := repo.GetAuthIdentity("oidc-fixture", "oidc-user-42")
 	if err != nil || identity.UserID == "" {

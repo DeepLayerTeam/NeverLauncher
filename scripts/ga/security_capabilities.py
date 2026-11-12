@@ -26,7 +26,7 @@ from release_policy import parsed
 SCENARIOS = {
     "securityDeviceTrust": ("deviceEnrollmentAllowed", "staleDeviceEpochDenied"),
     "securityHwidPolicy": ("knownDeviceLoginAllowed", "unapprovedHardwareChangeDenied"),
-    "securityNeverGuard": ("protectedGameJoinAllowed", "tamperedGuardJoinDenied"),
+    "securityLauncherGuard": ("protectedGameJoinAllowed", "tamperedGuardJoinDenied"),
     "securityKeyRevocation": ("currentKeyJoinAllowed", "revokedKeyJoinDenied"),
     "securityAccountRecovery": ("newDeviceRecoveryAllowed", "oldRecoveryKeyDenied"),
     "securityNativeSandbox": ("authorizedExtensionBrokerAllowed", "unauthorizedExtensionAccessDenied"),

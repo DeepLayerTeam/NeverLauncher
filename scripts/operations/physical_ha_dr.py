@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / 'scripts/acceptance'))
 import vanilla_sidecar_live_0529 as vanilla
 
 VERSION = (ROOT / 'VERSION').read_text().strip()
-SCHEMA = 'neverlauncher.physical-ha-dr/0.52.10'
+SCHEMA = 'launcher.physical-ha-dr/0.52.10'
 HEX = re.compile(r'[0-9a-f]{64}\Z')
 SERIAL = re.compile(r'[A-Za-z0-9_.:-]{4,100}\Z')
 NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z')
@@ -287,7 +287,7 @@ def alert_delivery(args, started):
             not target.query and not target.fragment and
             not base.username and not target.username and not base.password and not target.password,
             'Оповещения и подтверждения доставки должны поступать с разных проверенных HTTPS-узлов')
-    require(args.alert_name and re.fullmatch(r'NeverLauncher[A-Za-z0-9]{2,80}', args.alert_name),
+    require(args.alert_name and re.fullmatch(r'Launcher[A-Za-z0-9]{2,80}', args.alert_name),
             'Требуется явно указать ожидаемое имя оповещения')
     import urllib.request
     class NoRedirect(urllib.request.HTTPRedirectHandler):

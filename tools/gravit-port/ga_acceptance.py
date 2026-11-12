@@ -24,7 +24,7 @@ import time
 
 import rehearse_cohort_04910 as rehearsal
 
-FORMAT = "never/gravit-acceptance-0500/v1"
+FORMAT = "launcher/gravit-acceptance-0500/v1"
 MODULE_IDS = tuple(f"M{i:02}" for i in range(1, 20))
 CLASSES = rehearsal.CLASSES
 HEX = re.compile(r"[a-f0-9]{64}\Z")

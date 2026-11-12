@@ -51,7 +51,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	if err := prestarter.Run(ctx, opts); err != nil {
-		fmt.Fprintln(os.Stderr, "neverprestarter "+version+": "+err.Error())
+		fmt.Fprintln(os.Stderr, "prestarter "+version+": "+err.Error())
 		os.Exit(1)
 	}
 	fmt.Println("Первоначальная настройка Launcher завершена")

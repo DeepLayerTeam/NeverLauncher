@@ -14,7 +14,7 @@ import (
 
 // Официальные билеты выдаются только после доказательства Minecraft Services, что
 // bearer владеет выбранным Java-профилем и этот профиль связан с данным
-// пользователем Never. Minecraft bearer не попадает в билет, строку БД или ответ.
+// пользователем Launcher. Minecraft bearer не попадает в билет, строку БД или ответ.
 var errOfficialBridgeProof0397 = errors.New("serverbridge_official_identity_not_verified")
 
 func verifiedOfficialBridgeProfile0397(ctx context.Context, verifier minecraftProfileVerifier0268,
@@ -53,7 +53,7 @@ func officialJoinProof0397(owner, session, device string, bindingEpoch int64,
 		return "", errOfficialBridgeProof0397
 	}
 	proof := model.MinecraftSession{
-		ID: "official-" + uuid, UserID: owner, NeverSessionID: session, ProfileUUID: uuid,
+		ID: "official-" + uuid, UserID: owner, LauncherSessionID: session, ProfileUUID: uuid,
 		TrustedDeviceID: device, BindingEpoch: bindingEpoch, Status: "active",
 		CreatedAt: now.UTC(), LastSeenAt: now.UTC(), ExpiresAt: now.UTC().Add(12 * time.Hour),
 	}
@@ -85,13 +85,13 @@ func (s Server) evaluateOfficialBridgeIntegrity0397(join bridgeJoinRecord) minec
 	now := time.Now().UTC()
 	expected, valid := canonicalMinecraftUUID0268(join.UUID)
 	if !valid || proof.ID != "official-"+expected || proof.ProfileUUID != expected ||
-		proof.UserID != join.UserID || proof.NeverSessionID != join.SessionID ||
+		proof.UserID != join.UserID || proof.LauncherSessionID != join.SessionID ||
 		proof.TrustedDeviceID != join.TrustedDeviceID || proof.BindingEpoch != join.BindingEpoch ||
 		proof.Status != "active" || proof.CreatedAt.Before(join.CreatedAt.Add(-12*time.Hour)) ||
 		proof.CreatedAt.After(join.CreatedAt.Add(5*time.Second)) || !proof.ExpiresAt.After(now) {
 		return deny("official_bridge_proof_binding_mismatch")
 	}
-	// Повторная привязка к другой личности Never и отвязка немедленно отзывают
+	// Повторная привязка к другой личности Launcher и отвязка немедленно отзывают
 	// ожидающие официальные допуски, в том числе выданные на другом узле API.
 	store, ok := s.officialLinkStore0268()
 	if !ok {
@@ -117,7 +117,7 @@ func (s Server) evaluateOfficialBridgeIntegrity0397(join bridgeJoinRecord) minec
 }
 
 // Непрерывный билет Windows Guard привязан к реальному запущенному процессу и
-// текущему устройству Never. В официальном режиме нет ID MinecraftSession
+// текущему устройству Launcher. В официальном режиме нет ID MinecraftSession
 // проекта/Yggdrasil: сравнивайте свидетельства артефактов с независимо проверенной
 // аттестацией запуска, не создавая фиктивный локальный сеанс и не обходя политику
 // Guard.

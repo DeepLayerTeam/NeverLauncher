@@ -180,7 +180,7 @@ func (r *SQLRepository) SaveMigrationRehearsal03310(ctx context.Context, runID s
 	if incompletes > 0 {
 		return empty, mw.ErrConflict
 	}
-	// Данные Never могут меняться между репетицией и переключением; повторная
+	// Данные Launcher могут меняться между репетицией и переключением; повторная
 	// проверка в MIG11 обязательна. Репетиция никогда не разрешает переключение.
 	var previous string
 	err = tx.QueryRowContext(ctx, `SELECT report_sha256 FROM migration_rehearsals_03310 WHERE run_id=$1 AND stage_id=$2`, runID, v.StageID).Scan(&previous)

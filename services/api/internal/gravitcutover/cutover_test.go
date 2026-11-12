@@ -37,7 +37,7 @@ func TestCutoverInputs03311(t *testing.T) {
 		t.Fatal("Разрешено неподвязанное свидетельство")
 	}
 }
-func TestSignedReleaseMustMatchCurrentNeverKey03311(t *testing.T) {
+func TestSignedReleaseMustMatchCurrentLauncherKey03311(t *testing.T) {
 	pub, priv, e := ed25519.GenerateKey(rand.Reader)
 	if e != nil {
 		t.Fatal(e)
@@ -72,7 +72,7 @@ func TestVerifySourceFence0448(t *testing.T) {
 	now := time.Now().UTC()
 	route := Route{RunID: "run12345678", ProfileID: "client", Channel: "stable", StageID: "stage-12345678901234"}
 	digest := strings.Repeat("b", 64)
-	receipt := &SourceFenceReceipt0448{Format: "never/gravit-source-stop/v1", RunID: route.RunID, ProfileID: route.ProfileID, Channel: route.Channel, StageID: route.StageID, Unit: "gravit.service", StoppedAt: now.Add(-time.Minute), CheckedAt: now, UnitState: "inactive", UnitFileState: "masked-runtime", SnapshotSHA256: digest, SnapshotFileSHA256: strings.Repeat("c", 64)}
+	receipt := &SourceFenceReceipt0448{Format: "launcher/gravit-source-stop/v1", RunID: route.RunID, ProfileID: route.ProfileID, Channel: route.Channel, StageID: route.StageID, Unit: "gravit.service", StoppedAt: now.Add(-time.Minute), CheckedAt: now, UnitState: "inactive", UnitFileState: "masked-runtime", SnapshotSHA256: digest, SnapshotFileSHA256: strings.Repeat("c", 64)}
 	makeInput := func() Activate {
 		b, _ := json.Marshal(receipt)
 		h := sha256.Sum256(b)

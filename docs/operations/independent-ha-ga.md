@@ -1,4 +1,4 @@
-# NeverLauncher 0.52.0 — независимая приёмка HA (условие выпуска)
+# Launcher 0.52.0 — независимая приёмка HA (условие выпуска)
 
 **Область действия:** промышленный код для выполнения и наблюдения независимых многохостовых учений по HA на настоящей инфраструктуре. **Сам по себе не сертификат GA.** Приложенные исходники не содержат физического стенда, подписанных окончательных пакетов, действующих учётных данных или одобрения независимого проверяющего. Команда `gate` возвращает `BLOCKED` (код завершения 3), пока отдельные свидетельства оборудования, хранилищ, JVM и выпуска не будут предоставлены и проверены независимым экспертом. Не принимайте успешные тесты Python в CI или разделение Docker bridge за физическую приёмку отказоустойчивости.
 
@@ -18,14 +18,14 @@
 
 ```bash
 export COMMIT=<40-hex-release-commit>
-mkdir -m 700 -p /var/lib/neverlauncher-ga-0520
+mkdir -m 700 -p /var/lib/launcher-ga-0520
 python3 scripts/operations/independent_ha_ga_0520.py rolling \
   --node a=ops@node-a.example.org --node b=ops@node-b.example.org \
   --directory /opt/launcher/deploy/production --project launcher \
   --edge-url https://launcher.example.org/ready \
-  --pg-dsn-file /var/lib/neverlauncher-ga-0520/pg-connection.conf \
+  --pg-dsn-file /var/lib/launcher-ga-0520/pg-connection.conf \
   --publisher release_operator --commit "$COMMIT" --allow-update \
-  --output /var/lib/neverlauncher-ga-0520/rolling.json
+  --output /var/lib/launcher-ga-0520/rolling.json
 ```
 
 Средство требует, чтобы до обновления API/worker имели версию *0.51.10* на **всех** узлах, а после успешного переключения на каждом должна быть *0.52.0*. Квитанция узла `.rolling.json` содержит фактически измеренные ошибки HTTPS и версии процессов. При обнаружении частичного обновления исследуйте `.rolling-state-0520.json` хоста и используйте `local-rollback` либо управляемое восстановление, вместо попытки стирать данные PostgreSQL.
@@ -35,16 +35,16 @@ python3 scripts/operations/independent_ha_ga_0520.py rolling \
 Выполняйте после обновления на тех же двух или более настоящих целевых машинах:
 
 ```bash
-mkdir -m 700 /var/lib/neverlauncher-ga-0520/chaos
+mkdir -m 700 /var/lib/launcher-ga-0520/chaos
 python3 scripts/operations/independent_ha_ga_0520.py chaos \
   --node a=ops@node-a.example.org --node b=ops@node-b.example.org \
   --directory /opt/launcher/deploy/production --project launcher \
   --edge-url https://launcher.example.org/ready \
   --alertmanager-url https://alerts.example.org \
-  --pg-dsn-file /var/lib/neverlauncher-ga-0520/pg-connection.conf \
-  --suite-directory /var/lib/neverlauncher-ga-0520/chaos --iterations 1 \
+  --pg-dsn-file /var/lib/launcher-ga-0520/pg-connection.conf \
+  --suite-directory /var/lib/launcher-ga-0520/chaos --iterations 1 \
   --publisher release_operator --commit "$COMMIT" --allow-disruption \
-  --output /var/lib/neverlauncher-ga-0520/chaos.json
+  --output /var/lib/launcher-ga-0520/chaos.json
 ```
 
 Процедура **действительно выполняет** остановку стека хоста и отключение Docker-сети на каждом узле через исполнитель 0.51.10; требует наблюдаемого настоящего отказа, пяти последовательных измерений ingress, живых проверок оставшихся узлов и PostgreSQL/Redis/S3, активного состояния оповещения Alertmanager `ACTIVE`, полного проверенного восстановления и отсутствия осиротевших журналов разделения. Для каждой дочерней квитанции независимо пересчитывается SHA-256. Один API Alertmanager не подтверждает фактическую доставку webhook. Разделение Docker-сети не эквивалентно разделению стоек или коммутаторов; физическое выключение хостов и разделение кворума БД проверяются отдельно.
@@ -56,11 +56,11 @@ python3 scripts/operations/independent_ha_ga_0520.py recovery \
   --node a=ops@new-a.example.org --node b=ops@new-b.example.org \
   --directory /opt/launcher/deploy/production --project launcher-dr \
   --edge-url https://recovered.example.org/ready \
-  --pg-dsn-file /var/lib/neverlauncher-ga-0520/recovered-pg.conf \
-  --recovery-work /var/lib/neverlauncher-ga-0520/recovery-work \
+  --pg-dsn-file /var/lib/launcher-ga-0520/recovered-pg.conf \
+  --recovery-work /var/lib/launcher-ga-0520/recovery-work \
   --maximum-rto 180 --maximum-sample-rpo 60 \
   --publisher release_operator --commit "$COMMIT" \
-  --output /var/lib/neverlauncher-ga-0520/recovery.json
+  --output /var/lib/launcher-ga-0520/recovery.json
 ```
 
 Контроллер перечитывает **живые** версии API/worker, миграции и HTTPS ingress, проверяет журнал и результат восстановления точных новых машин и отклоняет отсутствующий/неопределённый выборочный RPO аудита или слишком большой измеренный RTO ingress. Выборочный RPO аудита **не доказывает** RPO миров, S3 и системы в целом. Отдельно должны быть собраны свидетельства настоящего запуска/входа в Minecraft и обратного чтения состояния мира.
@@ -71,22 +71,22 @@ python3 scripts/operations/independent_ha_ga_0520.py recovery \
 
 ```bash
 python3 scripts/operations/independent_ha_ga_0520.py bundle \
-  --bundle /var/lib/neverlauncher-ga-0520/final-release \
+  --bundle /var/lib/launcher-ga-0520/final-release \
   --publisher release_operator --commit "$COMMIT" \
-  --output /var/lib/neverlauncher-ga-0520/bundle.json
+  --output /var/lib/launcher-ga-0520/bundle.json
 ```
 
 После получения всех четырёх квитанций этапов независимый оператор запускает шлюз согласованности **без продвижения выпуска**:
 
 ```bash
 python3 scripts/operations/independent_ha_ga_0520.py gate \
-  --bundle /var/lib/neverlauncher-ga-0520/final-release \
-  --receipt /var/lib/neverlauncher-ga-0520/rolling.json \
-  --receipt /var/lib/neverlauncher-ga-0520/chaos.json \
-  --receipt /var/lib/neverlauncher-ga-0520/recovery.json \
-  --receipt /var/lib/neverlauncher-ga-0520/bundle.json \
+  --bundle /var/lib/launcher-ga-0520/final-release \
+  --receipt /var/lib/launcher-ga-0520/rolling.json \
+  --receipt /var/lib/launcher-ga-0520/chaos.json \
+  --receipt /var/lib/launcher-ga-0520/recovery.json \
+  --receipt /var/lib/launcher-ga-0520/bundle.json \
   --publisher release_operator --commit "$COMMIT" \
-  --output /var/lib/neverlauncher-ga-0520/ga-blockers.json
+  --output /var/lib/launcher-ga-0520/ga-blockers.json
 ```
 
 Он привязывает каждую квитанцию к одному выпуску, коммиту и оператору, повторно хеширует окончательные файлы выпуска, отклоняет отсутствующие/повторные/изменённые свидетельства, несоответствие групп хостов и OCI, ненулевые краевые ошибки, изменение схемы, отсутствие результата DR или превышение RTO. Шлюз **никогда не продвигает** сборку и не создаёт вымышленный GA PASS. Для приёмки промышленного GA независимо соберите подписанные извне свидетельства отключения питания, физической сетевой изоляции, переключения кворума, сверки объектов/БД/миров, фактической доставки оповещения, игрового подключения, нативных подписей и независимого одобрения точных окончательных байтов; также пройдите соответствующие нативные/платформенные проверки. Реализация 0.52.0 фиксирует блокирующие условия вместо их отмены.

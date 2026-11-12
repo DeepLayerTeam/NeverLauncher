@@ -15,7 +15,7 @@ from sweep_05211 import raw_soak, signed_soak, ROOT
 import inventory_0521 as inventory
 from inventory_0521 import safe_file, public_key, canonical, write_exclusive
 
-DOMAIN = ('neverlauncher.soak.real.' + inventory.VERSION + '\x00').encode()
+DOMAIN = ('launcher.soak.real.' + inventory.VERSION + '\x00').encode()
 
 def sign(a):
     raw_soak(a.report_dir, a.commit, a.run_id, a.attempt, a.mode)

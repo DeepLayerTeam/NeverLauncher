@@ -72,7 +72,7 @@ func TestRevocationTerminalPostgres0434(t *testing.T) {
 	if err = tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
-	credential := model.MinecraftSession{ID: mid, UserID: uid, NeverSessionID: sid, ProfileUUID: uuid, TrustedDeviceID: did, BindingEpoch: 1, AccessTokenHash: strings.Repeat("a", 64), Status: "active", ExpiresAt: time.Now().Add(time.Hour)}
+	credential := model.MinecraftSession{ID: mid, UserID: uid, LauncherSessionID: sid, ProfileUUID: uuid, TrustedDeviceID: did, BindingEpoch: 1, AccessTokenHash: strings.Repeat("a", 64), Status: "active", ExpiresAt: time.Now().Add(time.Hour)}
 	if _, err := a.SaveMinecraftSession(credential); err != nil {
 		t.Fatal(err)
 	}

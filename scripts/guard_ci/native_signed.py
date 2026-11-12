@@ -109,7 +109,7 @@ def verify(target: str, bundle: Path, commit: str, signer: str, operator: str, e
     row = release['targets'][target]
     verifier = validate_os(target, bundle / row['file'], signer=signer)
     manifest = bundle / 'RELEASE_MANIFEST.json'
-    return {'schema': 'neverlauncher.guard.native-signed/0510',
+    return {'schema': 'launcher.guard.native-signed/0510',
             'version': VERSION, 'commit': commit, 'target': target,
             'status': 'native-verified', 'packageSha256': row['sha256'],
             'releaseManifestSha256': hashlib.sha256(manifest.read_bytes()).hexdigest(),

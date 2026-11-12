@@ -100,7 +100,7 @@ BEGIN
     JOIN auth_sessions s ON s.id=m.session_id
     WHERE s.user_id<>m.user_id;
     IF broken<>0 THEN
-        RAISE EXCEPTION '0.12.10 migration refused: % Minecraft session(s) disagree with parent Never session ownership', broken;
+        RAISE EXCEPTION '0.12.10 migration refused: % Minecraft session(s) disagree with parent Launcher session ownership', broken;
     END IF;
 
     SELECT count(*) INTO broken

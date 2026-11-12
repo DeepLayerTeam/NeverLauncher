@@ -19,7 +19,7 @@ import auth_identity_real_0525 as auth
 def example_input():
     return {
         'scope':'dedicated-disposable-accounts', 'allowIdentityMutation':True,
-        'origin':'https://never.example.test',
+        'origin':'https://launcher.example.test',
         'local': {'identifier':'owner@example.test','password':'secret-password','providerId':'local'},
         'secondary': {'identifier':'second@example.test','password':'different-secret','providerId':'local'},
         'sql': {'identifier':'sqlowner@example.test','password':'external-password','providerId':'sql'},
@@ -57,11 +57,11 @@ class AuthAcceptanceTests(unittest.TestCase):
             with self.assertRaises(auth.Blocked): auth.check_input(changed)
 
     def test_https_no_redirect_or_host_injection(self):
-        for origin in ('http://never.example.test','https://user:pass@never.example.test',
-                       'https://never.example.test/path','https://never.example.test?token=secret',
-                       'https://never.example.test#fragment'):
+        for origin in ('http://launcher.example.test','https://user:pass@launcher.example.test',
+                       'https://launcher.example.test/path','https://launcher.example.test?token=secret',
+                       'https://launcher.example.test#fragment'):
             with self.assertRaises(auth.Blocked): auth.LiveAPI(origin)
-        api=auth.LiveAPI('https://never.example.test')
+        api=auth.LiveAPI('https://launcher.example.test')
         for path in ('http://outside.test','//evil.test','/api/v1/../x#fragment',
                      '/api/v1/\\unsafe','/health'):
             with self.assertRaises(auth.Blocked): api.request('GET',path)
@@ -98,7 +98,7 @@ class AuthAcceptanceTests(unittest.TestCase):
     def test_prepare_requires_true_browser_transactions(self):
         raw=example_input()
         class FakeAPI:
-            origin='https://never.example.test'
+            origin='https://launcher.example.test'
             def __init__(self): self.calls=[]
             def request(self, method, route, *, data=None, token=None):
                 self.calls.append((method,route))

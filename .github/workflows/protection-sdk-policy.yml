@@ -44,7 +44,7 @@ jobs:
         working-directory: services/api
         run: |
           go build ./cmd/...
-          go test -count=1 -timeout=10m ./pkg/protection ./internal/dbmigrate ./internal/repository ./internal/httpapi -run 'TestProtection.*0298|TestEvaluateAppliedSealedCatalog|TestRoleUpdateRevokesLiveNeverToken0297'
+          go test -count=1 -timeout=10m ./pkg/protection ./internal/dbmigrate ./internal/repository ./internal/httpapi -run 'TestProtection.*0298|TestEvaluateAppliedSealedCatalog|TestRoleUpdateRevokesLiveLauncherToken0297'
           go test -race -count=1 -timeout=10m ./pkg/protection ./internal/repository -run 'TestProtection.*0298'
       - name: "Миграции CLI"
         working-directory: cli

@@ -208,7 +208,7 @@ func (s Server) verifyGuardBoundState0507(r *http.Request, b repository.GuardBou
 		}
 		minecraft, err := repo.GetMinecraftSession(b.MinecraftSessionID)
 		if err != nil || minecraft.Status != "active" || !minecraft.ExpiresAt.After(now) ||
-			minecraft.UserID != b.UserID || minecraft.NeverSessionID != b.SessionID || minecraft.TrustedDeviceID != b.TrustedDeviceID ||
+			minecraft.UserID != b.UserID || minecraft.LauncherSessionID != b.SessionID || minecraft.TrustedDeviceID != b.TrustedDeviceID ||
 			minecraft.BindingEpoch != b.BindingEpoch || !equalGuardBinding0507(strings.ToLower(minecraft.GuardSHA256), b.GuardSHA256) ||
 			!equalGuardBinding0507(strings.ToLower(minecraft.LauncherSHA256), b.LauncherSHA256) || minecraft.LauncherVersion != b.LauncherVersion {
 			return errors.New("guard_minecraft_session_invalid")

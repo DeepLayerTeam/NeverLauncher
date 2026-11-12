@@ -1823,7 +1823,7 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn interrupted_install_cleanup_follows_symlink() {
-        let root = std::env::temp_dir().join(format!("neverjava-interrupted-{:016x}", rand::random::<u64>()));
+        let root = std::env::temp_dir().join(format!("launcherjava-interrupted-{:016x}", rand::random::<u64>()));
         let platform = root.join("runtime");
         let external = root.join("unrelated-user-data");
         fs::create_dir_all(platform.join(".staging-dead-process")).await.unwrap();
@@ -1868,7 +1868,7 @@ mod tests {
         let Some(major) = crate::parse_java_major_version(&properties) else { return; };
         let (os, arch) = adoptium_platform().unwrap();
         self_test_java(&executable, major, &os, &arch).await.unwrap();
-        let root = std::env::temp_dir().join(format!("neverjava-tamper-{:016x}", rand::random::<u64>()));
+        let root = std::env::temp_dir().join(format!("launcherjava-tamper-{:016x}", rand::random::<u64>()));
         fs::create_dir_all(&root).await.unwrap();
         let target = root.join("java");
         fs::write(&target, b"not a JVM").await.unwrap();

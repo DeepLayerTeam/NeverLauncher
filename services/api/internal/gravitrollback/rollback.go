@@ -15,7 +15,7 @@ import (
 	gr "gitflic.ru/skif4er/launcher/services/api/internal/gravitrehearsal"
 )
 
-const Format = "never/gravit-rollback/v1"
+const Format = "launcher/gravit-rollback/v1"
 
 var sha = regexp.MustCompile(`^[a-f0-9]{64}$`)
 var id = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$`)
@@ -30,7 +30,7 @@ type PlanInput struct {
 	Current           gr.Snapshot `json:"current"`
 	EvidenceReference string      `json:"evidenceReference"`
 	EvidenceSHA256    string      `json:"evidenceSha256"`
-	// Требуется только при расхождении состояния Never с MIG10. Оператор обязан
+	// Требуется только при расхождении состояния Launcher с MIG10. Оператор обязан
 	// СНАЧАЛА согласовать изменённые данные с изолированным назначением Gravit.
 	ReconciledSource             *gr.Snapshot `json:"reconciledSource,omitempty"`
 	ReconciliationEvidenceSHA256 string       `json:"reconciliationEvidenceSha256,omitempty"`
@@ -41,7 +41,7 @@ type CommitInput struct {
 	ExpectedRevision   int64  `json:"expectedRevision"`
 	PlanSHA256         string `json:"planSha256"`
 	SourceWriterFenced bool   `json:"sourceWriterFenced"`
-	NeverWriterFenced  bool   `json:"neverWriterFenced"`
+	LauncherWriterFenced  bool   `json:"launcherWriterFenced"`
 	// Свежий независимо экспортированный снимок, полученный непосредственно перед
 	// фиксацией.
 	Current                      gr.Snapshot  `json:"current"`
@@ -75,7 +75,7 @@ func ValidatePlan(p PlanInput) error {
 	return nil
 }
 func ValidateCommit(c CommitInput) error {
-	if !id.MatchString(c.ProfileID) || !id.MatchString(c.Channel) || c.ExpectedRevision < 1 || !sha.MatchString(c.PlanSHA256) || !c.SourceWriterFenced || !c.NeverWriterFenced || !sha.MatchString(c.CurrentEvidenceSHA256) {
+	if !id.MatchString(c.ProfileID) || !id.MatchString(c.Channel) || c.ExpectedRevision < 1 || !sha.MatchString(c.PlanSHA256) || !c.SourceWriterFenced || !c.LauncherWriterFenced || !sha.MatchString(c.CurrentEvidenceSHA256) {
 		return errors.New("Для подтверждения отката нужны соответствующий план и оба независимо заблокированных процесса записи")
 	}
 	return nil
@@ -121,7 +121,7 @@ func Compare(input PlanInput, rehearsal gr.Report, runID string) (Result, error)
 		if err != nil {
 			return Result{}, err
 		}
-		// Never → внешне согласованный Gravit, при изоляции всех живых записывающих
+		// Launcher → внешне согласованный Gravit, при изоляции всех живых записывающих
 		// процессов.
 		pair := rehearsal
 		pair.Source = *input.ReconciledSource

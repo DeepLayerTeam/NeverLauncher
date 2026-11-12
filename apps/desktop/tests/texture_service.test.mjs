@@ -89,7 +89,7 @@ test("Адреса запросов API и CAS не передают офици�
     if (url.endsWith("/library")) return mockResponse({ items: [] });
     return mockResponse({ revision: 4, kind: "skin", active: true });
   };
-  const api = new TextureServiceClient0258("https://never.example/", "token");
+  const api = new TextureServiceClient0258("https://launcher.example/", "token");
   await api.identity();
   await api.library();
   await api.select("skin", digest, 3, "slim", "public");
@@ -138,7 +138,7 @@ test("Конфликт параллельных изменений возвра�
     n++;
     return response({ error: { message: "stale" } }, 409);
   };
-  const api = new TextureServiceClient0258("https://never.example", "never");
+  const api = new TextureServiceClient0258("https://launcher.example", "launcher");
   await assert.rejects(
     api.select("skin", digest, 2, "classic", "public"),
     (e) => e instanceof TextureServiceError0258 && e.status === 409,
@@ -159,7 +159,7 @@ test("Предпросмотр владельца отправляет токе�
       blob: async () => new Blob(["png"], { type: "image/png" }),
     };
   };
-  const api = new TextureServiceClient0258("https://never.example", "secret");
+  const api = new TextureServiceClient0258("https://launcher.example", "secret");
   assert.equal(await api.preview("skin", digest), "blob:test");
   assert.equal(seen[0].headers.Authorization, "Bearer secret");
   await assert.rejects(api.preview("skin", "../secret"));
@@ -201,7 +201,7 @@ test("Загрузка multipart отслеживает прогресс XHR и 
   globalThis.XMLHttpRequest = FakeXHR;
   const file = new File(["not-a-real-png"], "test.png", { type: "image/png" });
   const values = [];
-  await new TextureServiceClient0258("https://never.example", "token").upload(
+  await new TextureServiceClient0258("https://launcher.example", "token").upload(
     "skin",
     file,
     0,
@@ -265,7 +265,7 @@ test("Загрузка официального скина идёт только
   };
   try {
     const c = new OfficialMinecraftClient0257(
-      "https://never.example",
+      "https://launcher.example",
       "jwt",
       "session",
       invoke,
@@ -326,7 +326,7 @@ test("0.39.4: реальная выдача Yggdrasil проверяет RSA-п�
       profileName: "Tester",
       textures: {
         SKIN: {
-          url: `https://never.example/api/v1/textures/blob/${hash}`,
+          url: `https://launcher.example/api/v1/textures/blob/${hash}`,
           metadata: { model: "slim" },
         },
       },
@@ -343,7 +343,7 @@ test("0.39.4: реальная выдача Yggdrasil проверяет RSA-п�
   let corrupt = "";
   globalThis.fetch = async (url, opts = {}) => {
     requests.push({ url, opts });
-    if (url === "https://never.example/")
+    if (url === "https://launcher.example/")
       return new Response(JSON.stringify({ signaturePublickey: keyPEM }), {
         status: 200,
       });
@@ -369,7 +369,7 @@ test("0.39.4: реальная выдача Yggdrasil проверяет RSA-п�
     throw Error("Непредусмотренный URL " + url);
   };
   const api = new TextureServiceClient0258(
-    "https://never.example",
+    "https://launcher.example",
     "secret-token",
   );
   await api.verifyYggdrasilDelivery("skin", uuid, hash);

@@ -83,7 +83,7 @@ public final class BundledLibraries implements AutoCloseable {
             }
             for(String name:entries.keySet())if(name.startsWith(PREFIX)&&name.endsWith(".jar")&&(index==null||libraries.stream().noneMatch(x->x.name.equals(name))))throw new SecurityException("Встроенный JAR не указан в файле фиксации: "+name);
             if(libraries.isEmpty())return new BundledLibraries(null,null,parent);
-            directory=Files.createTempDirectory("neverlauncher-ext-libs-");
+            directory=Files.createTempDirectory("launcher-ext-libs-");
             try{Files.setPosixFilePermissions(directory,Set.of(PosixFilePermission.OWNER_READ,PosixFilePermission.OWNER_WRITE,PosixFilePermission.OWNER_EXECUTE));}catch(UnsupportedOperationException ignored){}
             int total=0;Set<String> classes=new HashSet<>(ownClasses);List<URL> urls=new ArrayList<>();
             for(int i=0;i<libraries.size();i++){

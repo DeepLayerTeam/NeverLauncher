@@ -202,7 +202,7 @@ func (c *Connector) DefaultRedirectURI() string {
 }
 
 // EndSessionURL формирует URL выхода через интерфейс провайдера, если метаданные
-// содержат end_session_endpoint. Это намеренно отделено от завершения сеанса Never.
+// содержат end_session_endpoint. Это намеренно отделено от завершения сеанса Launcher.
 func (c *Connector) EndSessionURL(postLogoutRedirectURI string) (string, error) {
 	c.mu.RLock()
 	endpoint := c.discovery.EndSessionEndpoint

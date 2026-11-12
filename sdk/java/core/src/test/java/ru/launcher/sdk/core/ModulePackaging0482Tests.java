@@ -29,7 +29,7 @@ public final class ModulePackaging0482Tests {
             check(extensionType.getClassLoader().loadClass("ru.launcher.sdk.core.Extension")==Extension.class,"идентичность API SDK общая с родительским загрузчиком");
         }
         reject(()->BundledLibraries.open(packageJar,"3.7",ModulePackaging0482Tests.class.getClassLoader()));
-        Path modified=Files.createTempFile("neverlauncher-0482-bad-hash", ".jar");
+        Path modified=Files.createTempFile("launcher-0482-bad-hash", ".jar");
         try{
             try(ZipFile zip=new ZipFile(packageJar.toFile());ZipOutputStream out=new ZipOutputStream(Files.newOutputStream(modified,StandardOpenOption.TRUNCATE_EXISTING))){
                 Enumeration<? extends ZipEntry> contents=zip.entries();

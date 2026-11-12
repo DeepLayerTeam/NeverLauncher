@@ -1,4 +1,4 @@
-# NeverLauncher 0.47.5 — автономный SQLite → PostgreSQL: процедуры оператора и безопасность переключения
+# Launcher 0.47.5 — автономный SQLite → PostgreSQL: процедуры оператора и безопасность переключения
 
 **Статус: кандидат исходников, промышленное переключение ЗАБЛОКИРОВАНО из-за отсутствия полноты данных источника.** Импортёр SQLite Core 0.47.4 заполняет PostgreSQL SQLRepository, но не переносит отдельный снимок `http.sqlite`, `coordinator.sqlite`, все состояния расширений и внешние хранилища Runtime. CLI намеренно не превращает `readyForBackendCutover=false` в положительную сертификацию. Флага обхода нет. Запускать промышленный Backend PostgreSQL только по этим квитанциям запрещено.
 
@@ -15,32 +15,32 @@
 # примените все миграции PostgreSQL к пустому назначению и
 # безопасно задайте LAUNCHER_POSTGRES_DSN и секреты MFA.
 python3 scripts/operations/sqlite_pg_cutover_0475.py run \
-  --work-dir /private/neverlauncher-cutover-0475 \
+  --work-dir /private/launcher-cutover-0475 \
   --launcher-sqlite /usr/local/bin/launcher-sqlite \
-  --source-env /etc/neverlauncher/backend.env \
-  --core-db /var/lib/neverlauncher/core.sqlite \
-  --http-db /var/lib/neverlauncher/http.sqlite \
-  --coordinator-db /var/lib/neverlauncher/coordinator.sqlite \
-  --storage-source /var/lib/neverlauncher/objects \
-  --storage-target /var/lib/neverlauncher/pg-objects \
-  --writer-unit neverlauncher-api.service \
-  --writer-unit neverlauncher-worker.service \
+  --source-env /etc/launcher/backend.env \
+  --core-db /var/lib/launcher/core.sqlite \
+  --http-db /var/lib/launcher/http.sqlite \
+  --coordinator-db /var/lib/launcher/coordinator.sqlite \
+  --storage-source /var/lib/launcher/objects \
+  --storage-target /var/lib/launcher/pg-objects \
+  --writer-unit launcher-api.service \
+  --writer-unit launcher-worker.service \
   --project existing-project-id \
   --owner-email original-owner@example.invalid
 
 # Проверьте состояние. Учётные данные и DSN в этом журнале не сохраняются.
 python3 scripts/operations/sqlite_pg_cutover_0475.py status \
-  --work-dir /private/neverlauncher-cutover-0475
+  --work-dir /private/launcher-cutover-0475
 
 # До запуска любых процессов записи PostgreSQL восстановите прежнее окружение/службу SQLite.
 python3 scripts/operations/sqlite_pg_cutover_0475.py rollback \
-  --work-dir /private/neverlauncher-cutover-0475 \
-  --source-env /etc/neverlauncher/backend.env \
-  --core-db /var/lib/neverlauncher/core.sqlite \
-  --http-db /var/lib/neverlauncher/http.sqlite \
-  --storage-source /var/lib/neverlauncher/objects \
-  --storage-target /var/lib/neverlauncher/pg-objects \
-  --writer-unit neverlauncher-api.service \
+  --work-dir /private/launcher-cutover-0475 \
+  --source-env /etc/launcher/backend.env \
+  --core-db /var/lib/launcher/core.sqlite \
+  --http-db /var/lib/launcher/http.sqlite \
+  --storage-source /var/lib/launcher/objects \
+  --storage-target /var/lib/launcher/pg-objects \
+  --writer-unit launcher-api.service \
   --project existing-project-id \
   --owner-email original-owner@example.invalid
 ```

@@ -53,7 +53,7 @@ def canonical_uuid(value):
 
 
 def role_plan(path, imported, users):
-    """Требуйте явного утверждения для каждого UUID; никогда не повышайте права сопоставленных пользователей Never."""
+    """Требуйте явного утверждения для каждого UUID; никогда не повышайте права сопоставленных пользователей Launcher."""
     if not path:
         return []
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -208,7 +208,7 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
     if counts["manual_reset"] and not allow_resets:
         raise MigrationError("Требуется ручной сброс паролей; импорт приостановлен до явного подтверждения")
     if counts["imported"] == 0:
-        raise MigrationError("Нет новых учётных записей для переноса; доверие существующих пользователей Never изменять нельзя")
+        raise MigrationError("Нет новых учётных записей для переноса; доверие существующих пользователей Launcher изменять нельзя")
     imported = api.request("POST", root + "/credentials/import", source=source, headers={**h, "X-Migration-Import-Confirm": run_id})
     if imported.get("dryRun") or verify_preview(inventory, verified, imported, run_id, digest) != counts:
         raise MigrationError("Импорт учётных данных не совпадает с подтверждённым предпросмотром")
@@ -255,13 +255,13 @@ def migrate(api, run_id, source, mode, password_format, allow_resets=False, role
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--backend", required=True, help="Базовый HTTPS-адрес работающего API NeverLauncher")
+    p.add_argument("--backend", required=True, help="Базовый HTTPS-адрес работающего API Launcher")
     p.add_argument("--run-id", required=True)
     p.add_argument("--source-zip", required=True)
     p.add_argument("--mode", choices=["prepare", "import"], default="prepare")
     p.add_argument("--password-format", default="", help="Явно указанный поддерживаемый формат проверки FileAuth")
     p.add_argument("--allow-manual-resets", action="store_true")
-    p.add_argument("--fresh-keys-confirmed", action="store_true", help="Оператор подтверждает независимое создание ключей подписи Never и JWT")
+    p.add_argument("--fresh-keys-confirmed", action="store_true", help="Оператор подтверждает независимое создание ключей подписи Launcher и JWT")
     p.add_argument("--roles-file", help="Одобренные явные назначения ролей UUID → проект (только импорт, требуется недавняя MFA через passkey)")
     p.add_argument("--texture-mapping-output", help="Проверенная карта UUID для gravit-textures-import-02510 (только импорт)")
     p.add_argument("--receipt", required=True)
@@ -272,7 +272,7 @@ def main(argv=None):
         p.error("Импорт: требуется --fresh-keys-confirmed")
     if args.mode == "prepare" and (args.roles_file or args.allow_manual_resets or args.texture_mapping_output):
         p.error("Изменение ролей и подтверждение сброса требуют режима импорта")
-    token = os.environ.get("NEVERLAUNCHER_MIGRATION_TOKEN", "")
+    token = os.environ.get("LAUNCHER_MIGRATION_TOKEN", "")
     try:
         result = migrate(Backend(args.backend, token), args.run_id, args.source_zip, args.mode, args.password_format, args.allow_manual_resets, args.roles_file, args.texture_mapping_output)
         atomic_receipt(args.receipt, result)

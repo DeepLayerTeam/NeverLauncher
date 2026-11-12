@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Граничный HAProxy/VRRP и отказоустойчивость зависимостей NeverLauncher 0.51.3.
+"""Граничный HAProxy/VRRP и отказоустойчивость зависимостей Launcher 0.51.3.
 
 Запускается на хосте балансировщика. Каждый из двух LB-хостов работает независимо с одинаковыми
 upstream; unicast VRRP VIP переходит между ними. Для PostgreSQL используется Patroni /primary (не
@@ -36,7 +36,7 @@ import multi_host_0512 as multi
 import ha_inventory_0511 as inventory
 
 VERSION = '0.51.3'
-SCHEMA = 'neverlauncher.dependency-ha.0.51.3'
+SCHEMA = 'launcher.dependency-ha.0.51.3'
 NAME = re.compile(r'^[a-zA-Z][a-zA-Z0-9-]{0,62}$')
 DNS = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}$')
 IFACE = re.compile(r'^[a-zA-Z][a-zA-Z0-9_.:-]{0,20}$')
@@ -253,7 +253,7 @@ def generate_haproxy(cfg):
 def generate_keepalived(cfg):
     # В файле нет секретов. VRRP ограничен явно выделенной частной доверенной сетью
     # управления одного уровня L2; защита от split-brain выходит за рамки VRRP.
-    return f'''# NeverLauncher 0.51.3 ingress/dependency VIP. VRRP is NOT a quorum DCS.
+    return f'''# Launcher 0.51.3 ingress/dependency VIP. VRRP is NOT a quorum DCS.
 global_defs {{
     enable_script_security
     script_user root

@@ -1,43 +1,43 @@
 groups:
-  - name: neverlauncher-platform
+  - name: launcher-platform
     rules:
-      - alert: NeverLauncherAPIDown
-        expr: up{job="neverlauncher-api"} == 0
+      - alert: LauncherAPIDown
+        expr: up{job="launcher-api"} == 0
         for: 1m
         labels: {severity: critical}
         annotations:
-          summary: "Сбор метрик API NeverLauncher недоступен"
-      - alert: NeverLauncherBackendNotReady
-        expr: probe_success{job="neverlauncher-readiness"} == 0
+          summary: "Сбор метрик API Launcher недоступен"
+      - alert: LauncherBackendNotReady
+        expr: probe_success{job="launcher-readiness"} == 0
         for: 1m
         labels: {severity: critical}
         annotations:
           summary: "Проверка готовности Backend не пройдена (БД, Redis, S3 или провайдер авторизации)"
-      - alert: NeverLauncherAllAPIsDown
-        expr: sum(up{job="neverlauncher-api"}) == 0
+      - alert: LauncherAllAPIsDown
+        expr: sum(up{job="launcher-api"}) == 0
         for: 1m
         labels: {severity: critical}
         annotations:
-          summary: "Все настроенные реплики API NeverLauncher недоступны"
-      - alert: NeverLauncherBackendErrors
+          summary: "Все настроенные реплики API Launcher недоступны"
+      - alert: LauncherBackendErrors
         expr: launcher_http_requests_60s > 30 and (launcher_http_5xx_60s / clamp_min(launcher_http_requests_60s, 1)) > 0.05
         for: 3m
         labels: {severity: warning}
         annotations:
           summary: "Доля ошибок Backend 5xx превышает 5% за 60 секунд"
-      - alert: NeverLauncherBackendLatency
+      - alert: LauncherBackendLatency
         expr: launcher_http_requests_60s > 30 and launcher_http_latency_p95_seconds_60s > 2
         for: 5m
         labels: {severity: warning}
         annotations:
           summary: "Наблюдаемая задержка Backend p95 превышает 2 секунды"
-      - alert: NeverLauncherRateLimited
+      - alert: LauncherRateLimited
         expr: launcher_http_429_60s > 60
         for: 3m
         labels: {severity: warning}
         annotations:
           summary: "Ограничитель частоты отклоняет слишком частые запросы"
-      - alert: NeverLauncherServerBridgeNodesStale
+      - alert: LauncherServerBridgeNodesStale
         expr: launcher_serverbridge_nodes_active > 0 and launcher_serverbridge_nodes_fresh < launcher_serverbridge_nodes_active
         for: 2m
         labels: {severity: warning}

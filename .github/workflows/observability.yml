@@ -1,4 +1,4 @@
-name: NeverLauncher 0.45.9 — наблюдаемость
+name: Launcher 0.45.9 — наблюдаемость
 on:
   push:
     paths:

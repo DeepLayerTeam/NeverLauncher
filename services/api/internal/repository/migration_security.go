@@ -21,7 +21,7 @@ type MigrationSecurityReport0336 struct {
 	Format                      string     `json:"format"`
 	RunID                       string     `json:"runId"`
 	ImportedAccounts            int        `json:"importedAccounts"`
-	ExistingNeverUntouched      int        `json:"existingNeverUntouched"`
+	ExistingLauncherUntouched      int        `json:"existingLauncherUntouched"`
 	ManualResets                int        `json:"manualResets"`
 	SessionsRevoked             int64      `json:"sessionsRevoked"`
 	DevicesRevoked              int64      `json:"devicesRevoked"`
@@ -41,7 +41,7 @@ type MigrationSecurityReport0336 struct {
 type migrationSecurityTarget0336 struct{ UserID, Name, UUID string }
 
 // Детерминированно выводит затронутые цели из ЗАФИКСИРОВАННОЙ квитанции MIG05, а не из
-// имени пользователя или тела запроса. Существующие пользователи Never явно исключены:
+// имени пользователя или тела запроса. Существующие пользователи Launcher явно исключены:
 // их сеансы и ключи принадлежат им и не являются доверием Gravit.
 func migrationSecurityTargets0336(rows []gc.Row) ([]migrationSecurityTarget0336, error) {
 	out := make([]migrationSecurityTarget0336, 0, len(rows))
@@ -142,7 +142,7 @@ func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid,
 		return report, mw.ErrConflict
 	}
 	// Повтор никогда не должен выполнять новый разрушительный сброс, в том числе
-	// после регистрации нового устройства Never игроком. Проверяйте подписанта и
+	// после регистрации нового устройства Launcher игроком. Проверяйте подписанта и
 	// квитанцию.
 	var raw []byte
 	var oldDigest, oldKID, oldPublic string
@@ -163,7 +163,7 @@ func (r *SQLRepository) ResetMigrationTrust0336(ctx context.Context, runID, kid,
 	if !errors.Is(err, sql.ErrNoRows) {
 		return report, err
 	}
-	report = MigrationSecurityReport0336{Format: "never/migration-security/v1", RunID: runID, ImportedAccounts: len(targets), ExistingNeverUntouched: auth.ExistingUnchanged, ManualResets: auth.ManualReset, ActiveJWTKID: kid, ManifestPublicSHA256: manifestPublicSHA, RequiresLogin: true, RequiresDeviceEnrollment: true, RequiresGuardAttestation: true}
+	report = MigrationSecurityReport0336{Format: "launcher/migration-security/v1", RunID: runID, ImportedAccounts: len(targets), ExistingLauncherUntouched: auth.ExistingUnchanged, ManualResets: auth.ManualReset, ActiveJWTKID: kid, ManifestPublicSHA256: manifestPublicSHA, RequiresLogin: true, RequiresDeviceEnrollment: true, RequiresGuardAttestation: true}
 	// Сохраняйте целевые идентичности в ТОЙ ЖЕ транзакции. Предпросмотр откатывает
 	// их.
 	for start := 0; start < len(targets); start += 200 {

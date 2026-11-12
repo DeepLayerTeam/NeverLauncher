@@ -20,7 +20,7 @@ class ReceiverTests(unittest.TestCase):
         self.webhook = b'accept-real-alertmanager-webhook-token-001'
         self.reader = b'accept-independent-reviewer-read-token-002'
         self.server = ThreadingHTTPServer(('127.0.0.1', 0),
-            alert.make_handler(self.dir, 'NeverLauncherNodeUnavailable', self.webhook, self.reader))
+            alert.make_handler(self.dir, 'LauncherNodeUnavailable', self.webhook, self.reader))
         thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         thread.start()
         self.addCleanup(self.server.server_close)
@@ -38,7 +38,7 @@ class ReceiverTests(unittest.TestCase):
 
     def firing(self):
         return {'status':'firing','alerts':[{'status':'firing','labels':{
-            'alertname':'NeverLauncherNodeUnavailable'},
+            'alertname':'LauncherNodeUnavailable'},
             'fingerprint':'1234abcd1234abcd',
             'startsAt':datetime.now(timezone.utc).isoformat()}]}
 

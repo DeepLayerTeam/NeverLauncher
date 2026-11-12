@@ -1,5 +1,5 @@
 // Package gravitrehearsal проверяет доказательства из изолированного тестового
-// развёртывания Gravit → Never под контролем оператора. Не запускается на
+// развёртывания Gravit → Launcher под контролем оператора. Не запускается на
 // промышленных ресурсах и не считает невыполненные тесты успешными.
 package gravitrehearsal
 
@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const Format = "never/gravit-rehearsal/v1"
+const Format = "launcher/gravit-rehearsal/v1"
 const MaxReportBytes = 8 << 20
 
 var digest = regexp.MustCompile(`^[a-f0-9]{64}$`)

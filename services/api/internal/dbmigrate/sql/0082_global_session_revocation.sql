@@ -61,7 +61,7 @@ CREATE OR REPLACE FUNCTION nl_session_terminal_0297()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF OLD.status='revoked' AND NEW.status <> 'revoked' THEN
-        RAISE EXCEPTION 'revoked Never session cannot be reactivated' USING ERRCODE='23514';
+        RAISE EXCEPTION 'revoked Launcher session cannot be reactivated' USING ERRCODE='23514';
     END IF;
     RETURN NEW;
 END;
@@ -121,7 +121,7 @@ BEGIN
             WHERE user_id=OLD.user_id AND status='active';
     END IF;
     -- A project permission change also fences queued work even when another
-    -- Never session is still active or all sessions have already expired.
+    -- Launcher session is still active or all sessions have already expired.
     UPDATE durable_job_attempts SET status='revoked',finished_at=now(),error='authorization-revoked'
         WHERE status='running' AND job_id IN (
             SELECT id FROM durable_jobs WHERE actor_type='user' AND
@@ -182,7 +182,7 @@ BEGIN
     IF NEW.status <> 'active' THEN RETURN NEW; END IF;
     SELECT role_id,status INTO current_role,current_status FROM users WHERE id=NEW.user_id FOR SHARE;
     IF NOT FOUND OR current_status<>'active' OR NEW.role_id<>current_role THEN
-        RAISE EXCEPTION 'invalid user or stale role for Never session' USING ERRCODE='23514';
+        RAISE EXCEPTION 'invalid user or stale role for Launcher session' USING ERRCODE='23514';
     END IF;
     IF NEW.trusted_device_id IS NOT NULL AND NEW.trusted_device_id<>'' THEN
         PERFORM 1 FROM trusted_devices WHERE id=NEW.trusted_device_id AND user_id=NEW.user_id
@@ -264,7 +264,7 @@ BEGIN
     PERFORM 1 FROM auth_sessions WHERE id=parent_session AND user_id=subject_user
         AND status='active' AND expires_at>now() FOR SHARE;
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Never session revoked or expired for game admission'
+        RAISE EXCEPTION 'Launcher session revoked or expired for game admission'
             USING ERRCODE='23514';
     END IF;
     RETURN NEW;
@@ -359,7 +359,7 @@ BEGIN
     PERFORM 1 FROM auth_sessions WHERE id=sid AND user_id=NEW.user_id
         AND status='active' AND expires_at>now() FOR SHARE;
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Never session revoked for Minecraft join' USING ERRCODE='23514';
+        RAISE EXCEPTION 'Launcher session revoked for Minecraft join' USING ERRCODE='23514';
     END IF;
     PERFORM 1 FROM minecraft_sessions WHERE id=NEW.minecraft_session_id
         AND status='active' FOR SHARE;

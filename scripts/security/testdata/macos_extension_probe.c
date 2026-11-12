@@ -10,8 +10,8 @@
 int main(int argc, char **argv) {
     if (argc < 2) return 42;
     if (!strcmp(argv[1], "sandbox")) {
-        int fd = open("/Users/Shared/neverlauncher-sandbox-04311-denied", O_WRONLY | O_CREAT, 0600);
-        if (fd >= 0) { close(fd); unlink("/Users/Shared/neverlauncher-sandbox-04311-denied"); return 43; }
+        int fd = open("/Users/Shared/launcher-sandbox-04311-denied", O_WRONLY | O_CREAT, 0600);
+        if (fd >= 0) { close(fd); unlink("/Users/Shared/launcher-sandbox-04311-denied"); return 43; }
         usleep(500000); // Parent must have time to verify actual PID and sandbox.
         return 0;
     }

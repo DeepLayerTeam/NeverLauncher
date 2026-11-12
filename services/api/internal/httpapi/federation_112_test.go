@@ -61,6 +61,6 @@ func TestHTTPLoginUsesRegisteredExternalConnector112(t *testing.T) {
 		t.Fatalf("Вход через внешний коннектор вернул %d: %s", res.Code, res.Body.String())
 	}
 	if strings.Contains(res.Body.String(), "provider-secret-must-not-leak") {
-		t.Fatalf("Токен провайдера попал в ответ авторизации Never: %s", res.Body.String())
+		t.Fatalf("Токен провайдера попал в ответ авторизации Launcher: %s", res.Body.String())
 	}
 }

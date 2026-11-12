@@ -1,5 +1,5 @@
 {
-  "name": "@neverlauncher/api-sdk",
+  "name": "@launcher/api-sdk",
   "version": "0.45.12",
   "type": "module",
   "exports": {

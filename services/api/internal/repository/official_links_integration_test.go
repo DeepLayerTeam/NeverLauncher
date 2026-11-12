@@ -12,7 +12,7 @@ import (
 
 // Нужна одноразовая мигрированная БД PostgreSQL. Никогда не запускайте в
 // production.
-func TestOfficialNeverLinkAtomicOwnership0268(t *testing.T) {
+func TestOfficialLauncherLinkAtomicOwnership0268(t *testing.T) {
 	dsn := os.Getenv("TEST_POSTGRES_DSN")
 	if dsn == "" {
 		t.Skip("Для изолированных интеграционных тестов PostgreSQL задайте TEST_POSTGRES_DSN")

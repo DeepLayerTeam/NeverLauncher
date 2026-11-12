@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Проверка воспроизводимой поставки NeverLauncher: реальные байты архивов, а не заявления.
+"""Проверка воспроизводимой поставки Launcher: реальные байты архивов, а не заявления.
 
 capture: независимо изучать *настоящие* неподписанные артефакты (шесть целей и каждый элемент).
 compare: независимо аутентифицировать и повторно прочитать артефакты двух сборочных узлов; нулевое
@@ -84,7 +84,7 @@ def load_json(path: Path) -> dict:
 
 def contract() -> dict:
     data = load_json(CONTRACT_PATH)
-    if data.get('schema') != 'neverlauncher.primary-payload.v1' or data.get('version') != RELEASE_VERSION:
+    if data.get('schema') != 'launcher.primary-payload.v1' or data.get('version') != RELEASE_VERSION:
         raise ValueError('Некорректный контракт основного набора файлов')
     if data.get('targets', {}).keys() != TARGETS:
         raise ValueError('Неполный контракт набора файлов для шести платформ')
@@ -229,7 +229,7 @@ def capture(bundle: Path, *, builder: str, runner: str, commit: str) -> dict:
         raise ValueError('Неожиданная версия базового набора')
     from inputs_guard_0461 import record, verify
     verify(baseline, record())
-    return {'schema':'neverlauncher.unsigned-build.v1','version':RELEASE_VERSION,
+    return {'schema':'launcher.unsigned-build.v1','version':RELEASE_VERSION,
             'commit':commit,'builder':builder,'runner':runner,
             'inputBaselineSha256':sha256_file(BASELINE_PATH),
             'contractSha256':sha256_file(CONTRACT_PATH),
@@ -266,7 +266,7 @@ def signed_json(path: Path, signature: Path, trusted_key: Path) -> dict:
 
 
 def compare(a: dict, b: dict, a_dir: Path, b_dir: Path) -> dict:
-    if a.get('schema')!='neverlauncher.unsigned-build.v1' or b.get('schema')!='neverlauncher.unsigned-build.v1':
+    if a.get('schema')!='launcher.unsigned-build.v1' or b.get('schema')!='launcher.unsigned-build.v1':
         raise ValueError('Неподдерживаемые доказательные данные неподписанной сборки')
     for k in ('version','commit','inputBaselineSha256','contractSha256'):
         if a.get(k) != b.get(k):
@@ -282,7 +282,7 @@ def compare(a: dict, b: dict, a_dir: Path, b_dir: Path) -> dict:
         raise ValueError('Подписанный отчёт сборщика не соответствует фактическим файлам')
     if a['targets'] != b['targets'] or set(a['targets'])!=TARGETS:
         raise ValueError('Неподписанные сборки не совпадают побайтово для всех шести платформ')
-    return {'schema':'neverlauncher.reproducibility-compared.v1', 'version':RELEASE_VERSION,
+    return {'schema':'launcher.reproducibility-compared.v1', 'version':RELEASE_VERSION,
             'commit':a['commit'],'inputBaselineSha256':a['inputBaselineSha256'],
             'contractSha256':a['contractSha256'], 'builders':[{'builder':a['builder'],'runner':a['runner']},
                                                              {'builder':b['builder'],'runner':b['runner']}],
@@ -292,9 +292,9 @@ def compare(a: dict, b: dict, a_dir: Path, b_dir: Path) -> dict:
 
 
 def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, b_key: Path, approval_key: Path, native_reports_dir: Path) -> dict:
-    if comparison.get('schema')!='neverlauncher.reproducibility-compared.v1' or comparison.get('version')!=RELEASE_VERSION or set(comparison.get('targets',{}))!=TARGETS:
+    if comparison.get('schema')!='launcher.reproducibility-compared.v1' or comparison.get('version')!=RELEASE_VERSION or set(comparison.get('targets',{}))!=TARGETS:
         raise ValueError('Отсутствует полное независимое сравнение')
-    if approval.get('schema')!='neverlauncher.native-signing-approval.v1' or approval.get('version')!=RELEASE_VERSION:
+    if approval.get('schema')!='launcher.native-signing-approval.v1' or approval.get('version')!=RELEASE_VERSION:
         raise ValueError('Некорректное разрешение на штатное подписание для ОС')
     if approval.get('commit') != comparison['commit'] or approval.get('comparisonSha256') != hashlib.sha256(canonical(comparison)).hexdigest():
         raise ValueError('Разрешение на подпись не относится к сравненному неподписанному содержимому')
@@ -330,7 +330,7 @@ def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, 
         native_path=native_reports_dir/(target+'.json')
         native=signed_json(native_path,native_reports_dir/(target+'.sig'),approval_key)
         if (row.get('nativeReceiptSha256')!=sha256_file(native_path)
-                or native.get('schema')!='neverlauncher.native-verification.v1'
+                or native.get('schema')!='launcher.native-verification.v1'
                 or native.get('version')!=RELEASE_VERSION or native.get('target')!=target
                 or native.get('nativeCheck')!=row['nativeCheck']
                 or native.get('unsignedSha256')!=row['unsignedSha256']
@@ -340,7 +340,7 @@ def link(comparison: dict, approval: dict, signed_bundle: Path, *, a_key: Path, 
             raise ValueError('Квитанция штатной проверки ОС не охватывает подписанную платформу: '+target)
         if row.get('boundPayload') is not True:
             raise ValueError('Оператор не одобрил преобразование неподписанной сборки в финальный пакет: '+target)
-    return {'schema':'neverlauncher.reproducibility-linked.v1','version':RELEASE_VERSION,
+    return {'schema':'launcher.reproducibility-linked.v1','version':RELEASE_VERSION,
             'commit':comparison['commit'],'comparisonSha256':approval['comparisonSha256'],
             'nativeApprovalSha256':hashlib.sha256(canonical(approval)).hexdigest(),
             'releaseManifestSha256':approval['releaseManifestSha256'],

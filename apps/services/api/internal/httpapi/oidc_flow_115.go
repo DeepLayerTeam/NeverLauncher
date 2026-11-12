@@ -207,7 +207,7 @@ func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, 
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return
 	}
-	// Учётные данные Never нельзя сохранять до завершения локальной политики MFA.
+	// Учётные данные Launcher нельзя сохранять до завершения локальной политики MFA.
 	// При ошибке хранилища отзовите только что созданный сеанс, а не возвращайте
 	// частично аутентифицированный вход браузера.
 	if strings.TrimSpace(result.ProviderToken) != "" {

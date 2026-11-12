@@ -39,7 +39,7 @@ func handleMigrationWorkflow0331(args []string) error {
 		return handleMigrationCutover03311(args)
 	}
 	if command == "generate-keys" {
-		return generateNeverMigrationKeys0336(flagValue(args, "--output", ""))
+		return generateLauncherMigrationKeys0336(flagValue(args, "--output", ""))
 	}
 	if command == "import-content-all" {
 		return migrationImportAll0493(args)

@@ -22,12 +22,12 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: never
-          POSTGRES_USER: never
+          POSTGRES_DB: launcher
+          POSTGRES_USER: launcher
           POSTGRES_PASSWORD: integration-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U never -d never" --health-interval 5s --health-timeout 5s --health-retries 25
+          --health-cmd "pg_isready -U launcher -d launcher" --health-interval 5s --health-timeout 5s --health-retries 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -42,15 +42,15 @@ jobs:
       - name: "Применить реальные миграции PostgreSQL"
         working-directory: services/api
         env:
-          LAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable
+          LAUNCHER_DATABASE_URL: postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable
         run: |
           # Использовать каталог миграций с той же реализацией репозитория, что и в промышленной системе.
           go test ./internal/dbmigrate -count=1
-          psql 'postgres://never:integration-only@localhost:5432/never?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql
+          psql 'postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql
       - name: Проверить мастер настройки провайдера авторизации, гонки и интеграцию с PostgreSQL
         working-directory: services/api
         env:
-          LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
+          LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable
         run: |
           go test -race -count=1 -timeout=8m ./internal/repository ./internal/federation ./internal/httpapi ./internal/sqlconnector -run '02910|TestProviderRouting|TestAuthenticatePassword'
           go vet ./internal/repository ./internal/federation ./internal/httpapi ./internal/sqlconnector

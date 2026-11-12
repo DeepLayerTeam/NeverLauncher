@@ -83,7 +83,7 @@ func handleMigrationRollback03312(args []string) error {
 			}
 			body["planSha256"] = flagValue(args, "--plan-sha256", "")
 			body["sourceWriterFenced"] = true
-			body["neverWriterFenced"] = true
+			body["launcherWriterFenced"] = true
 			if expected := flagValue(args, "--current-evidence-sha256", ""); expected != "" && expected != snapshotHash {
 				return errors.New("SHA-256 нового снимка не совпадает с доказательством отката")
 			}

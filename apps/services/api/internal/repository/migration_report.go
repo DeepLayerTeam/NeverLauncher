@@ -152,7 +152,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 		}
 		add("authentication", state, authSHA, fmt.Sprintf("imported=%d manual_reset=%d", a.Imported, a.ManualReset))
 		for _, row := range a.Rows {
-			status, reason := "manual", "существующие учётные данные Never не изменены"
+			status, reason := "manual", "существующие учётные данные Launcher не изменены"
 			if row.State == "imported" {
 				status, reason = "transferred", ""
 			}
@@ -178,7 +178,7 @@ func migrationEvidence03313(ctx context.Context, tx *sql.Tx, run string) (rr.Rep
 		if !s.Verified || s.ManualResets > 0 || !s.RequiresLogin || !s.RequiresDeviceEnrollment || !s.RequiresGuardAttestation {
 			st = "blocked"
 		}
-		add("security", st, secHash, "Новая цепочка доверия Never; старые сеансы не переносятся")
+		add("security", st, secHash, "Новая цепочка доверия Launcher; старые сеансы не переносятся")
 	}
 	rows, qe := tx.QueryContext(ctx, `SELECT c.profile_path,c.files_sha256,c.report,w.data FROM migration_content_0337 c JOIN build_workspaces_0226 w ON w.id=c.workspace_id WHERE c.run_id=$1 ORDER BY c.profile_path`, run)
 	if qe != nil {

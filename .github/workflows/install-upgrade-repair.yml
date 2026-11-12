@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.7 — реальные установка, обновление, восстановление и откат
+name: Launcher 0.52.7 — реальные установка, обновление, восстановление и откат
 
 on:
   push:
@@ -70,7 +70,7 @@ jobs:
     # Задание расходует гигабайты реальных блоков tmpfs и запускает подписанные установщики.
     # Подходит только выделенная привилегированная одноразовая машина.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, linux, x64, neverlauncher-0527-isolated]
+    runs-on: [self-hosted, linux, x64, launcher-0527-isolated]
     environment: installer-physical-acceptance
     timeout-minutes: 180
     steps:
@@ -92,7 +92,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          : "${NL_INSTALLER:?требуется закреплённый путь к итоговому установщику neverinstaller}"
+          : "${NL_INSTALLER:?требуется закреплённый путь к итоговому установщику installer}"
           : "${NL_INSTALLER_SHA256:?требуется независимо проверенная контрольная сумма установщика}"
           : "${NL_BUNDLE_OLD:?требуется точный путь к прежнему подписанному пакету}"
           : "${NL_BUNDLE_OLD_SHA256:?Требуется SHA-256 прежней конфигурации}"

@@ -64,7 +64,7 @@ def main() -> None:
     sdk = verified_repo(args.sdk_repo.resolve())
     core = sdk['launcher-java-sdk-core']
     evidence = {}
-    with tempfile.TemporaryDirectory(prefix='never-deep-java-0490-') as td:
+    with tempfile.TemporaryDirectory(prefix='launcher-deep-java-0490-') as td:
         work = Path(td)
         # Стенды проверяют реальное исполнение java -jar с обратными вызовами,
         # heartbeat, CLI, загрузкой пакета и жизненным циклом. Созданные JAR

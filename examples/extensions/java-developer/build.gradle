@@ -2,9 +2,9 @@ plugins { id 'java' }
 group = 'org.example'
 version = '0.48.12'
 java { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
-def sdkRepository = providers.gradleProperty('neverLauncherSdkRepo')
+def sdkRepository = providers.gradleProperty('launcherSdkRepo')
     .orElse(file('../../../dist/java-sdk/maven').toURI().toString()).get()
-def sdkVersion = providers.gradleProperty('neverLauncherSdkVersion').orElse('0.48.12').get()
+def sdkVersion = providers.gradleProperty('launcherSdkVersion').orElse('0.48.12').get()
 repositories { maven { url = uri(sdkRepository) } }
 dependencies { compileOnly "ru.launcher:launcher-java-sdk-core:${sdkVersion}" }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = 17 }

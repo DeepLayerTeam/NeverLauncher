@@ -22,7 +22,7 @@ import (
 
 // Реальная HTTP-фикстура с двумя issuer, использующими одинаковые subject и email.
 // Внешний сервис возвращает refresh-секрет, который НИКОГДА не должен появляться в
-// токене Never.
+// токене Launcher.
 type dualIssuerConnector02912 struct{ calls *atomic.Int64 }
 
 func (dualIssuerConnector02912) Metadata() authconnector.Metadata {
@@ -137,7 +137,7 @@ func TestSecurityRealAuthHTTP02912(t *testing.T) {
 		body := fmt.Sprintf(`{"identifier":"shared@example.test","password":%q}`, password)
 		data := securityHTTP02912(t, client, base+"/api/v1/auth/login", http.MethodPost, body, "", http.StatusOK)
 		if bytes.Contains(data, []byte("upstream-secret")) {
-			t.Fatal("Через вход Never произошла утечка учётных данных внешнего провайдера")
+			t.Fatal("Через вход Launcher произошла утечка учётных данных внешнего провайдера")
 		}
 		var response authHTTPResult02912
 		if err := json.Unmarshal(data, &response); err != nil {

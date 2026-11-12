@@ -31,7 +31,7 @@ from urllib.request import Request, build_opener, HTTPSHandler, HTTPRedirectHand
 from legacy_upgrade_real_0528 import private_json, sha_file, require, Blocked
 from sqlite3 import DatabaseError
 
-SCHEMA = 'neverlauncher.java-host-live-0528/v1'
+SCHEMA = 'launcher.java-host-live-0528/v1'
 SHA = re.compile('[a-f0-9]{64}\\Z')
 ID = re.compile('[A-Za-z0-9][A-Za-z0-9_.-]{2,95}\\Z')
 

@@ -78,7 +78,7 @@ func migrationModuleEnroll0338(endpoint, token, run, out, wrapper, id, name, kin
 		return err
 	}
 	if !fresh {
-		return errors.New("Требуется --fresh-keys-confirmed: новая независимая пара ключей Ed25519 Never")
+		return errors.New("Требуется --fresh-keys-confirmed: новая независимая пара ключей Ed25519 Launcher")
 	}
 	if run == "" || wrapper == "" || id == "" || kind == "" || profile == "" || key == "" {
 		return errors.New("Требуется: --run --wrapper --server-id --kind --profile-id --public-key")

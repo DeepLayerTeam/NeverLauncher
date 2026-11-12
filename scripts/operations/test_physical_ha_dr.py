@@ -34,7 +34,7 @@ class PhysicalTests(unittest.TestCase):
             expected_serial='hardware-SN-1234', router='router@router.test',
             victim_ip='10.14.0.11', victim_port=443, ttl=190, timeout=120,
             alertmanager_url='https://alerts.test', delivery_url='https://notifications.test/events/current',
-            alert_name='NeverLauncherNodeUnavailable',
+            alert_name='LauncherNodeUnavailable',
             allow_disruption='I-ACCEPT-PHYSICAL-OUTAGE',
             state=str(self.home / 'state.json'), report=str(self.home / 'report.json'),
             heal_mode='host', world_backup='', world_destination='', game_start='',

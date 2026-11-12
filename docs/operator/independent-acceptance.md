@@ -9,7 +9,7 @@
 В отдельном приватном каталоге (`0700`) хранить отчёты; операции, запускаемые через `sudo`, пишут отчёты от root, поэтому сбор и сверку выполнять тем же защищённым способом; `.env` и пароль первого администратора должны иметь режим `0600`. Команды выполнять от имени **второго** ОС-пользователя; при `sudo` инструмент читает `SUDO_USER` и отклоняет совпадение с `--primary-operator`. Это минимальная локальная проверка независимости, не криптографическая аттестация человека.
 
 ```sh
-sudo install -d -m 0700 /var/lib/neverlauncher-acceptance
+sudo install -d -m 0700 /var/lib/launcher-acceptance
 python3 scripts/operations/independent_accept_04514.py --help
 python3 scripts/operations/independent_accept_04514.py install-standard --help
 ```
@@ -21,10 +21,10 @@ python3 scripts/operations/independent_accept_04514.py install-standard --help
 ```sh
 sudo python3 scripts/operations/independent_accept_04514.py install-standard \
   --primary-operator primaryuser --project launcher \
-  --env-file /opt/neverlauncher/deploy/production/.env \
+  --env-file /opt/launcher/deploy/production/.env \
   --version 0.45.14 --url https://launcher-a.example.org \
   --email admin@example.org --password-file /etc/launcher/first-admin-password \
-  --report /var/lib/neverlauncher-acceptance/install.json
+  --report /var/lib/launcher-acceptance/install.json
 ```
 
 После этого **вручную** подтвердить MFA, первый проект и доступ владельца. `PASS` первого этапа означает фактическую начальную загрузку, вход и готовность, но **не MFA**. Парольный файл безопасно удалить согласно локальной политике.
@@ -43,7 +43,7 @@ sudo python3 scripts/operations/independent_accept_04514.py upgrade-standard \
   --project-id existing-project \
   --snapshot /srv/launcher-backups/acceptance-source \
   --url https://launcher-b.example.org --maintenance-approved \
-  --report /var/lib/neverlauncher-acceptance/upgrade.json
+  --report /var/lib/launcher-acceptance/upgrade.json
 ```
 
 Снимок создаётся **до** переключения. Его следует перенести на хост C вместе с приватным `upgrade.json` и отдельными **внешними** секретами и TLS-конфигурацией (они не входят в Standard-снимок). Не переносить их по незащищённым каналам. Если source schema изменилась из-за стороннего процесса, прекратить приёмку.
@@ -55,13 +55,13 @@ sudo python3 scripts/operations/independent_accept_04514.py upgrade-standard \
 ```sh
 sudo python3 scripts/operations/independent_accept_04514.py restore-standard \
   --primary-operator primaryuser --project launcher --confirm launcher \
-  --source-receipt /var/lib/neverlauncher-acceptance/upgrade.json \
+  --source-receipt /var/lib/launcher-acceptance/upgrade.json \
   --env-file /etc/launcher/standard-restore-04513.env \
   --snapshot /srv/launcher-backups/acceptance-source \
   --admin-email admin@example.org --admin-password-file /etc/launcher/owner-password \
   --project-id existing-project \
   --url https://recovered.example.org --maintenance-approved \
-  --report /var/lib/neverlauncher-acceptance/restore.json
+  --report /var/lib/launcher-acceptance/restore.json
 ```
 
 `restore-fresh` восстанавливает реальный PostgreSQL/volumes, сверяет содержимое, запускает backend и проверяет `/ready`. Затем выполняются независимая live-проверка контейнеров, публичного TLS и автоматическая проверка входа прежнего владельца и чтения заранее существовавшего проекта. **Обязательно отдельно** проверить чтение сохранённого blob: live probe один не подтверждает эти пользовательские действия. Если отказ — целевой контур не объявлять пригодным к эксплуатации.
@@ -76,7 +76,7 @@ sudo --preserve-env=AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY python3 scripts/oper
   --env-file /etc/launcher/ha-chaos.env \
   --url https://127.0.0.1/ready --version 0.45.14 \
   --s3-endpoint http://127.0.0.1:19000 --s3-bucket nl-dr-acceptance \
-  --report /var/lib/neverlauncher-acceptance/failover.json
+  --report /var/lib/launcher-acceptance/failover.json
 ```
 
 Результат `rpoSecondsObservedCanaries: 0` относится **только к подтверждённым контрольным данным**, а не ко всем операциям игроков и реальному RPO. На одном Docker-хосте не доказывается переживание отказа физического узла.
@@ -88,11 +88,11 @@ sudo --preserve-env=AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY python3 scripts/oper
 ```sh
 sudo python3 scripts/operations/independent_accept_04514.py verify-receipts \
   --primary-operator primaryuser \
-  --install-receipt /var/lib/neverlauncher-acceptance/install.json \
-  --upgrade-receipt /var/lib/neverlauncher-acceptance/upgrade.json \
-  --restore-receipt /var/lib/neverlauncher-acceptance/restore.json \
-  --failover-receipt /var/lib/neverlauncher-acceptance/failover.json \
-  --report /var/lib/neverlauncher-acceptance/verified.json
+  --install-receipt /var/lib/launcher-acceptance/install.json \
+  --upgrade-receipt /var/lib/launcher-acceptance/upgrade.json \
+  --restore-receipt /var/lib/launcher-acceptance/restore.json \
+  --failover-receipt /var/lib/launcher-acceptance/failover.json \
+  --report /var/lib/launcher-acceptance/verified.json
 ```
 
 ## Признаки реального успеха

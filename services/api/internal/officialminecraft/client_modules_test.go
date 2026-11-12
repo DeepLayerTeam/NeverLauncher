@@ -50,7 +50,7 @@ func TestMojangWritesNeverAutomaticallyRetried0427(t *testing.T) {
 }
 
 // MojangSupport никогда не должен превращать некорректную идентичность в
-// аутентифицированную связь NeverLauncher, даже если внешний сервис вернул HTTP 200.
+// аутентифицированную связь Launcher, даже если внешний сервис вернул HTTP 200.
 func TestMojangProfileIdentityValidation0496(t *testing.T) {
 	for _, tc := range []struct{ name, id string }{
 		{"ValidName", "123456781234123412341234567890ab"},

@@ -1,4 +1,4 @@
-name: NeverLauncher 0.45.7 — обновление базы данных
+name: Launcher 0.45.7 — обновление базы данных
 on:
   push:
     paths:

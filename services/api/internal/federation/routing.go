@@ -33,7 +33,7 @@ type RoutingConfig struct {
 	RequireExplicitProvider bool          `json:"requireExplicitProvider,omitempty"`
 	Rules                   []RoutingRule `json:"rules,omitempty"`
 	// Если указано, только этих провайдеров можно явно привязать к существующему
-	// аутентифицированному аккаунту Never после нового подтверждения провайдером.
+	// аутентифицированному аккаунту Launcher после нового подтверждения провайдером.
 	LinkingAllowProviders []string `json:"linkingAllowProviders,omitempty"`
 	DisableLinking        bool     `json:"disableLinking,omitempty"`
 }

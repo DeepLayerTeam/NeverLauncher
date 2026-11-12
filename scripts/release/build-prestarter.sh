@@ -20,7 +20,7 @@ mkdir -p "$OUT"
   for target in linux:amd64:x64 linux:arm64:arm64 windows:amd64:x64 windows:arm64:arm64 darwin:amd64:x64 darwin:arm64:arm64; do
     IFS=: read -r os arch label <<<"$target"
     case "$os" in windows) suffix=".exe";platform="windows";;darwin) suffix="";platform="macos";;*)suffix="";platform="linux";;esac
-    name="neverprestarter-${VERSION}-${platform}-${label}${suffix}"
+    name="prestarter-${VERSION}-${platform}-${label}${suffix}"
     echo "Сборка $name со встроенным закреплённым корнем доверия"
     GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 GOPROXY=off \
       go build -trimpath -ldflags="-s -w -X main.embeddedRootPublicKey=${ROOT_KEY} -X main.version=${VERSION}" \

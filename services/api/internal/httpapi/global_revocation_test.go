@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestRoleUpdateRevokesLiveNeverToken0297(t *testing.T) {
+func TestRoleUpdateRevokesLiveLauncherToken0297(t *testing.T) {
 	handler := testServer(t)
 	owner := loginAdmin(t, handler)
 	created := request0211(t, handler, http.MethodPost, "/api/v1/admin/users", owner,

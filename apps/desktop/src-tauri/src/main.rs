@@ -1017,8 +1017,8 @@ async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
        origin.query().is_some() || origin.fragment().is_some() || origin.host_str().is_none() {
         return Err("Для доступа к компоненту необходим HTTPS-адрес серверной части".into());
     }
-    let session=load_auth_session(cfg.backend_url.clone()).await?.ok_or("Для доступа к компоненту требуется вход в учётную запись Never")?;
-    if session.access_token.is_empty() || session.session_id.is_empty() || session.user_id.is_empty(){return Err("Неполный аутентифицированный сеанс Never".into())}
+    let session=load_auth_session(cfg.backend_url.clone()).await?.ok_or("Для доступа к компоненту требуется вход в учётную запись Launcher")?;
+    if session.access_token.is_empty() || session.session_id.is_empty() || session.user_id.is_empty(){return Err("Неполный аутентифицированный сеанс Launcher".into())}
     let mut url=origin.clone();
     {let mut segments=url.path_segments_mut().map_err(|_|"Недопустимые сегменты URL серверной части")?;
       segments.pop_if_empty(); segments.extend(&["api","v1","projects",&manifest.project_id,"profiles",&manifest.profile_id,"component-permissions"]);}
@@ -1994,7 +1994,7 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
 }
 
 // MIG09: не исполняйте ПО Gravit и не доверяйте его сеансам или ключам. Единственный источник доверия к
-// повторно используемым байтам — существующий закреплённый манифест Never с Ed25519.
+// повторно используемым байтам — существующий закреплённый манифест Launcher с Ed25519.
 #[tauri::command]
 fn player_migration_discover_0339() -> Vec<String> {
     runtime::player_migration_0339::discover()
@@ -2088,7 +2088,7 @@ fn main() {
 mod launch_realm_0269_tests {
     use super::*;
     fn local() -> MinecraftLaunchCredentials {
-        MinecraftLaunchCredentials{username:"NeverPlayer".into(),uuid:"11111111222233334444555555555555".into(),access_token:"project-token".into(),user_type:"mojang".into(),auth_server_base_url:"https://example".into()}
+        MinecraftLaunchCredentials{username:"LauncherPlayer".into(),uuid:"11111111222233334444555555555555".into(),access_token:"project-token".into(),user_type:"mojang".into(),auth_server_base_url:"https://example".into()}
     }
     #[test]
     fn native_rejects_cross_realm_launch() {

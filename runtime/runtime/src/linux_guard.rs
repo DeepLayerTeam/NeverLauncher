@@ -203,7 +203,7 @@ fn sha256_open_file(file:&File)->Result<String,String>{
         if n==0{break;}sha.update(&block[..n]);}
     Ok(hex::encode(sha.finalize()))
 }
-const GUARD_MANIFEST_DOMAIN: &[u8] = b"NeverLauncher Linux Guard package manifest v1\0";
+const GUARD_MANIFEST_DOMAIN: &[u8] = b"Launcher Linux Guard package manifest v1\0";
 fn verify_linux_manifest_signature(path:&Path,raw:&[u8])->Result<(),String>{
     // Этот ключ должен быть встроен в Desktop при доверенной сборке
     // релиза. Ключ из манифеста, окружения или соседнего файла находился
@@ -501,7 +501,7 @@ mod integrity_0437_tests {
     use super::*;
     #[test]
     fn pinned_fd_is_stable_when_executable_path_is_replaced() {
-        let dir=std::env::temp_dir().join(format!("never-guard-image-0437-{}",std::process::id()));
+        let dir=std::env::temp_dir().join(format!("launcher-guard-image-0437-{}",std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let image=dir.join("guard");let replacement=dir.join("replacement");
         std::fs::write(&image,b"original guard bytes").unwrap();

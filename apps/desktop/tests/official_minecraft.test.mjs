@@ -54,7 +54,7 @@ test("Официальный сценарий использует только 
       requests.some(
         (r) =>
           r.command === "official_identity_poll_0262" &&
-          r.args.context.neverSessionId === "session",
+          r.args.context.launcherSessionId === "session",
       ),
       true,
     );
@@ -454,7 +454,7 @@ test("0.26.7: устаревшее переключение аккаунта о�
   assert.equal(client.linked, false);
 });
 
-test("0.26.8: привязка Never использует нативные команды и не раскрывает токен Minecraft", async () => {
+test("0.26.8: привязка Launcher использует нативные команды и не раскрывает токен Minecraft", async () => {
   const calls = [];
   const client = new OfficialMinecraftClient0257(
     "https://backend.example",
@@ -480,17 +480,17 @@ test("0.26.8: привязка Never использует нативные ко�
       throw Error(command);
     },
   );
-  assert.equal((await client.neverLinks())[0].minecraftUuid, profile.id);
-  await assert.rejects(client.linkToNever(profile.id, false), /подтверждение/i);
+  assert.equal((await client.launcherLinks())[0].minecraftUuid, profile.id);
+  await assert.rejects(client.linkToLauncher(profile.id, false), /подтверждение/i);
   assert.equal(
-    (await client.linkToNever(profile.id, true)).minecraftName,
+    (await client.linkToLauncher(profile.id, true)).minecraftName,
     "Owner",
   );
   await assert.rejects(
-    client.unlinkFromNever(profile.id, false),
+    client.unlinkFromLauncher(profile.id, false),
     /подтверждение/i,
   );
-  await client.unlinkFromNever(profile.id, true);
+  await client.unlinkFromLauncher(profile.id, true);
   assert.deepEqual(
     calls.map((x) => x.command),
     [
@@ -660,12 +660,12 @@ test("Версия 0.39.5 после отмены серверной запис�
   assert.equal(actual.skins[0].id, "new");
 });
 
-test("Версия 0.39.6 передаёт операциям хранилища проверенный контекст Never вместо непривязанного SID", async () => {
+test("Версия 0.39.6 передаёт операциям хранилища проверенный контекст Launcher вместо непривязанного SID", async () => {
   const received = [];
-  const neverToken = "bearer-live-0396";
+  const launcherToken = "bearer-live-0396";
   const client = new OfficialMinecraftClient0257(
     "https://backend.example",
-    neverToken,
+    launcherToken,
     "sid-0396",
     async (command, args) => {
       received.push({ command, args });
@@ -690,10 +690,10 @@ test("Версия 0.39.6 передаёт операциям хранилища
   for (const { args } of protectedCalls) {
     assert.deepEqual(args.context, {
       backendUrl: "https://backend.example",
-      neverToken,
-      neverSessionId: "sid-0396",
+      launcherToken,
+      launcherSessionId: "sid-0396",
     });
-    assert.equal(args.neverSessionId, undefined);
+    assert.equal(args.launcherSessionId, undefined);
     assert.equal(args.backendUrl, undefined);
     assert.ok(!JSON.stringify(args).includes("minecraft_token"));
   }

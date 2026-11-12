@@ -19,7 +19,7 @@ type MinecraftRepository interface {
 	GetMinecraftSessionByTokenHash(tokenHash string) (model.MinecraftSession, error)
 	TouchMinecraftSession(id string) (model.MinecraftSession, error)
 	RevokeMinecraftSession(id, reason string) error
-	RevokeMinecraftSessionsByNeverSession(neverSessionID, reason string) int
+	RevokeMinecraftSessionsByLauncherSession(launcherSessionID, reason string) int
 	RevokeMinecraftSessionsByUser(userID, reason string) int
 	SaveMinecraftJoin(join model.MinecraftJoin) error
 	GetMinecraftJoin(username, serverID string) (model.MinecraftJoin, error)

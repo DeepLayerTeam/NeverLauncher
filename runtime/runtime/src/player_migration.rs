@@ -167,7 +167,7 @@ fn scan(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset
         }
     }
     let matched_paths: Vec<String> = verified.iter().map(|(f, _)| f.path.clone()).collect();
-    // Определяйте старые необязательные компоненты независимо от Never-пресета,
+    // Определяйте старые необязательные компоненты независимо от Launcher-пресета,
     // выбранного для принятия кэша. Это только рекомендация соответствия ПО ПРОВЕРЕННОМУ
     // СОДЕРЖИМОМУ, а не неявное включение или исполнение необязательных действий.
     let mut found: HashSet<String> = matched_paths.iter().cloned().collect();
@@ -199,7 +199,7 @@ fn scan(manifest: &Manifest, pinned_public_key: &str, legacy_root: &Path, preset
         selected_preset: preset.unwrap_or_default().to_owned(), matched_files: verified.len(),
         missing_files: missing, matched_bytes: matched, matched_paths,
         optional_component_candidates, suggested_settings: options_from(&root, &layouts),
-        warning: "Повторно используется только подписанное содержимое Never. Файлы из кеша повторно проверяются во время установки; вход в систему, регистрация устройства и выбор компонентов выполняются отдельно.".into(),
+        warning: "Повторно используется только подписанное содержимое Launcher. Файлы из кеша повторно проверяются во время установки; вход в систему, регистрация устройства и выбор компонентов выполняются отдельно.".into(),
     };
     Ok(Scan0339 { preview, verified })
 }
@@ -237,7 +237,7 @@ async fn adopt_scanned(scanned: Scan0339, cache: &CacheStore) -> Result<PlayerMi
         unavailable_files: scanned.preview.missing_files,
         optional_component_candidates: scanned.preview.optional_component_candidates,
         suggested_settings: scanned.preview.suggested_settings,
-        message: "Проверенные файлы Never опубликованы в общем кэше. Выполняйте установку или восстановление через штатный механизм подписанных релизов; учётные данные и исполняемые файлы Gravit не переносились.".into() })
+        message: "Проверенные файлы Launcher опубликованы в общем кэше. Выполняйте установку или восстановление через штатный механизм подписанных релизов; учётные данные и исполняемые файлы Gravit не переносились.".into() })
 }
 
 /// Только предлагаемые старые корневые каталоги; игрок самостоятельно выбирает и подтверждает фактическую папку.

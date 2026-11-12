@@ -148,7 +148,7 @@ class OperationsGATests(unittest.TestCase):
             self.attest()
 
     def test_legacy_domain_not_changed(self):
-        self.assertEqual(ga.DOMAIN, b'neverlauncher.operations-ga.0460.v1\x00')
+        self.assertEqual(ga.DOMAIN, b'launcher.operations-ga.0460.v1\x00')
         self.assertEqual(ga.verify_public.__name__, 'verify_public')
 
     def test_refuses_existing_evidence_target(self):

@@ -154,7 +154,7 @@ func TestJITRoleMappingRequiresExplicitLocalPolicy(t *testing.T) {
 		t.Fatalf("Ожидалось явное сопоставление с администратором, получено %q", result.User.RoleID)
 	}
 }
-func TestJITRoleMappingRejectsUnknownNeverRole(t *testing.T) {
+func TestJITRoleMappingRejectsUnknownLauncherRole(t *testing.T) {
 	core := New(repository.NewMemoryRepository("http://example.test"))
 	if err := core.RegisterWithPolicy(roleMappedConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "player", RoleMappings: map[string]string{"external": "does-not-exist"}}); err == nil {
 		t.Fatal("Ошибочно принята неизвестная целевая роль сопоставления")

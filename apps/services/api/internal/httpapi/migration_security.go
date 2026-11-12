@@ -19,21 +19,21 @@ type migrationSecurityStore0336 interface {
 	GetMigrationSecurity0336(context.Context, string) (repository.MigrationSecurityReport0336, error)
 }
 
-// Требуйте явно выделенных независимых подписантов Never Runtime. Это НЕ
+// Требуйте явно выделенных независимых подписантов Launcher Runtime. Это НЕ
 // означает, что разделение ключей доказуемо сравнением имён или KID: оператор
 // должен самостоятельно подготовить новые секреты и отдельно подтвердить это.
 func migrationSigner0336(cfg config.Config) (string, string, error) {
 	kid := strings.TrimSpace(cfg.AuthTokenActiveKID)
 	if kid == "" || len(kid) > 96 {
-		return "", "", errors.New("Требуется: «явно указанный активный KID JWT Never»")
+		return "", "", errors.New("Требуется: «явно указанный активный KID JWT Launcher»")
 	}
 	keys := map[string]string{}
 	if err := json.Unmarshal([]byte(cfg.AuthTokenKeysJSON), &keys); err != nil {
-		return "", "", errors.New("Требуется: «явно указанный набор ключей JWT Never»")
+		return "", "", errors.New("Требуется: «явно указанный набор ключей JWT Launcher»")
 	}
 	active := strings.TrimSpace(keys[kid])
 	if len(active) < 32 {
-		return "", "", errors.New("active Never JWT secret: требуется «создан независимо (не менее 32 байт)»")
+		return "", "", errors.New("active Launcher JWT secret: требуется «создан независимо (не менее 32 байт)»")
 	}
 	for other, name := range keys {
 		if other != kid && name == active {
@@ -45,7 +45,7 @@ func migrationSigner0336(cfg config.Config) (string, string, error) {
 	}
 	seed, err := hex.DecodeString(strings.TrimSpace(cfg.ManifestSigningPrivateKey))
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return "", "", errors.New("необходимо настроить исходное значение Ed25519 для подписи нового манифеста Never")
+		return "", "", errors.New("необходимо настроить исходное значение Ed25519 для подписи нового манифеста Launcher")
 	}
 	public := ed25519.NewKeyFromSeed(seed).Public().(ed25519.PublicKey)
 	digest := sha256.Sum256(public)
@@ -92,7 +92,7 @@ func (s Server) migrationSecurityApply0336(w http.ResponseWriter, r *http.Reques
 	runID := r.PathValue("runId")
 	if !preview {
 		if r.Header.Get("X-Migration-Trust-Confirm") != runID || r.Header.Get("X-Migration-Fresh-Keys-Confirmed") != "true" {
-			writeError(w, 400, "Требуется подтверждение запуска и подтверждение независимо подготовленных ключей Never")
+			writeError(w, 400, "Требуется подтверждение запуска и подтверждение независимо подготовленных ключей Launcher")
 			return
 		}
 	}

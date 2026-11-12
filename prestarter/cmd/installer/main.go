@@ -75,7 +75,7 @@ func main() {
 	}
 
 	if opts.TrustedKey == "" {
-		fmt.Fprintln(os.Stderr, "Установщик neverinstaller не подписан: необходим закреплённый корневой ключ доверия")
+		fmt.Fprintln(os.Stderr, "Установщик installer не подписан: необходим закреплённый корневой ключ доверия")
 		os.Exit(2)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -100,8 +100,8 @@ func main() {
 		os.Exit(2)
 	}
 	if e != nil {
-		fmt.Fprintln(os.Stderr, "NeverInstaller "+version+": "+e.Error())
+		fmt.Fprintln(os.Stderr, "Installer "+version+": "+e.Error())
 		os.Exit(1)
 	}
-	fmt.Println("NeverInstaller " + version + ": действие " + action + " выполнено")
+	fmt.Println("Installer " + version + ": действие " + action + " выполнено")
 }

@@ -8,7 +8,7 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::{collections::{HashMap,HashSet},fs,io::Read,path::{Path,Component},time::{SystemTime,UNIX_EPOCH}};
 
-const DOMAIN: &[u8] = b"NeverLauncher-Guard-Compatibility-v1\n";
+const DOMAIN: &[u8] = b"Launcher-Guard-Compatibility-v1\n";
 const SCHEMA: &str = "launcher.guard-compatibility.v1";
 const POLICY: &str = ".launcher/guard/compatibility.json";
 const FLOOR: &str = ".launcher/guard/accepted.json";

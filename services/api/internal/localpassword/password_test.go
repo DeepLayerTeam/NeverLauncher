@@ -30,7 +30,7 @@ func TestLocalPasswordUpgrade0295(t *testing.T) {
 	}
 }
 
-func TestExistingLegacyNeverSHA0295(t *testing.T) {
+func TestExistingLegacyLauncherSHA0295(t *testing.T) {
 	sum := sha256.Sum256([]byte("old-pw"))
 	stored := "sha256:" + hex.EncodeToString(sum[:])
 	if !Verify("old-pw", stored) || !NeedsRehash(stored) || Verify("bad", stored) {

@@ -186,7 +186,7 @@
         "services/api/internal/httpapi/microsoft_flow_116_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "В Never 0.21.1 реализована производственная федеративная идентификация Microsoft/OIDC, но соответствие цепочке токенов Xbox/XSTS/Minecraft Services в Gravit 5.7.13 не заявлено."
+      "gapReason": "В Launcher 0.21.1 реализована производственная федеративная идентификация Microsoft/OIDC, но соответствие цепочке токенов Xbox/XSTS/Minecraft Services в Gravit 5.7.13 не заявлено."
     },
     {
       "id": "G06",
@@ -491,7 +491,7 @@
         "services/api/internal/httpapi/server_bridge_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "Never выдаёт и сохраняет профили текстур ServerBridge, но в версии 0.21.1 не заявляет полный набор функций отдельного сервиса загрузки и получения текстур Gravit TextureProvider."
+      "gapReason": "Launcher выдаёт и сохраняет профили текстур ServerBridge, но в версии 0.21.1 не заявляет полный набор функций отдельного сервиса загрузки и получения текстур Gravit TextureProvider."
     },
     {
       "id": "G22",
@@ -547,7 +547,7 @@
         "services/api/internal/httpapi/server_integration_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "В Never реализованы производственные сценарии установки и импорта проектов, но побайтовое соответствие преобразования профилей Gravit не заявлено."
+      "gapReason": "В Launcher реализованы производственные сценарии установки и импорта проектов, но побайтовое соответствие преобразования профилей Gravit не заявлено."
     },
     {
       "id": "G25",
@@ -770,7 +770,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Совместимость с PHPASS AdditionalHash не заявлена; SQL-авторизация Never поддерживает собственный настроенный набор проверок паролей."
+      "gapReason": "Совместимость с PHPASS AdditionalHash не заявлена; SQL-авторизация Launcher поддерживает собственный настроенный набор проверок паролей."
     },
     {
       "id": "M02",
@@ -815,7 +815,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "В Desktop Never используется Tauri, а не JavaFX, поэтому оптимизация среды JavaFX неприменима."
+      "gapReason": "В Desktop Launcher используется Tauri, а не JavaFX, поэтому оптимизация среды JavaFX неприменима."
     },
     {
       "id": "M05",
@@ -834,7 +834,7 @@
         "cli/cmd/launcher/release_verification_v2_test.go"
       ],
       "verificationLevel": "unit-tested",
-      "gapReason": "Never поддерживает производственное подписание и сертификацию артефактов, но API генерации сертификатов отличается от модуля LaunchServer."
+      "gapReason": "Launcher поддерживает производственное подписание и сертификацию артефактов, но API генерации сертификатов отличается от модуля LaunchServer."
     },
     {
       "id": "M06",
@@ -867,7 +867,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Интерфейс запуска Never Desktop реализован на Tauri; эквивалентность JavaFX-модулю стартового экрана неприменима."
+      "gapReason": "Интерфейс запуска Launcher Desktop реализован на Tauri; эквивалентность JavaFX-модулю стартового экрана неприменима."
     },
     {
       "id": "M08",

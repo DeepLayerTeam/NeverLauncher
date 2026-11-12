@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Эксплуатационное переключение компонентов через настоящие обновляющие механизмы NeverLauncher.
+"""Эксплуатационное переключение компонентов через настоящие обновляющие механизмы Launcher.
 
 Standard: проверенная холодная контрольная точка PostgreSQL, переключение и откат образов API/Admin.
 Linux host: обновление CLI/ServerBridge с проверкой байтов и атомарной заменой, безопасной при сбое.
@@ -438,7 +438,7 @@ def client_package(cli: Path, package: Path, checksum, delivery: Path, root: Pat
     must(root.is_absolute() and root.is_dir() and not root.is_symlink(), 'Требуется корневой каталог существующей установки клиента')
     must(delivery.is_file() and not delivery.is_symlink(), 'Требуется независимо утверждённый манифест поставки')
     checked_file(package, checksum)
-    must(cli.is_file() and not cli.is_symlink(), 'Требуется установленный CLI NeverLauncher')
+    must(cli.is_file() and not cli.is_symlink(), 'Требуется установленный CLI Launcher')
     output = run([str(cli), 'update', 'components', '--package', str(package),
                   '--expected-sha256', checksum, '--delivery-manifest', str(delivery),
                   '--root', str(root)], timeout=900)
@@ -462,7 +462,7 @@ def extensions(cli: Path, backend: str, coords: list[str], channel: str):
          and not url.query and not url.fragment and not url.path.rstrip('/'),
          'Рабочий Backend расширений должен использовать HTTPS')
     must(channel in ('stable', 'beta'), 'Недопустимый канал расширения')
-    must(cli.is_file() and not cli.is_symlink(), 'CLI NeverLauncher отсутствует')
+    must(cli.is_file() and not cli.is_symlink(), 'CLI Launcher отсутствует')
     must(bool(os.environ.get('LAUNCHER_TOKEN')), 'Предоставьте новый LAUNCHER_TOKEN с подтверждённой MFA в окружении оператора')
     base = [str(cli), 'extension', 'updates']
     flags = ['--backend', backend, '--channel', channel]

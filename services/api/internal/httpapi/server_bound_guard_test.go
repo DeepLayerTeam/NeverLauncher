@@ -13,7 +13,7 @@ func fixtureGuardBoundSession0507(t *testing.T) (bridgeJoinRecord, *verifiedPlan
 	t.Helper()
 	hash := func(b string) string { return strings.Repeat(b, 64) }
 	j := bridgeJoinRecord{
-		ID: "ticket-0507", UserID: "player-0507", SessionID: "never-session-0507",
+		ID: "ticket-0507", UserID: "player-0507", SessionID: "launcher-session-0507",
 		MinecraftSessionID: "minecraft-session-0507", TrustedDeviceID: "device-0507", BindingEpoch: 5,
 		ServerID: "paper-0507", ProjectID: "project", ProfileID: "fabric", Channel: "stable", Username: "TestPlayer", UUID: "1234567890abcdef1234567890abcdef",
 		IdentityRealm: "local", SessionCorrelationID: hash("a"), ProtocolVersion: 3,

@@ -58,7 +58,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			profileID := tc.loader + "-loader-" + tc.loaderVersion + "-test-vanilla"
 			profile := map[string]any{
 				"id": profileID, "inheritsFrom": "test-vanilla", "type": "release", "mainClass": tc.mainClass,
-				"arguments": map[string]any{"game": []any{"--" + tc.loader + ".test", "true"}, "jvm": []any{"-Dneverloader=" + tc.loader}},
+				"arguments": map[string]any{"game": []any{"--" + tc.loader + ".test", "true"}, "jvm": []any{"-Dlauncherloader=" + tc.loader}},
 				"libraries": []any{map[string]any{"name": tc.coordinate, "url": base + "/maven"}},
 			}
 			profileBytes, _ := json.Marshal(profile)

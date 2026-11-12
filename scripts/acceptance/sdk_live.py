@@ -67,16 +67,16 @@ def probe(args):
                         str(ROOT/'sdk/java/core/build/classes')))
     build=ROOT/'sdk/java/http-client/build/tests'
     build.mkdir(parents=True,exist_ok=True)
-    java_source=ROOT/'sdk/java/http-client/src/test/java/ru/neverlauncher/api/LiveAcceptance.java'
+    java_source=ROOT/'sdk/java/http-client/src/test/java/ru/launcher/api/LiveAcceptance.java'
     compiled=subprocess.run([javac,'--release','17','-cp',cp,'-d',str(build),str(java_source)],
                             cwd=ROOT,env=env,stdin=subprocess.DEVNULL,capture_output=True,timeout=80)
     need(compiled.returncode==0,'Средство реальной проверки Java SDK не скомпилировалось')
     java_result=run([str(java),'-cp',os.pathsep.join((cp,str(build))),
-                     'ru.neverlauncher.api.LiveAcceptance'],ROOT,env,180)
+                     'ru.launcher.api.LiveAcceptance'],ROOT,env,180)
     outputs=(go_result,ts_result,java_result)
     need(all(args.binary_sha256 in r and 'checks=3' in r for r in outputs),
          'Не все опубликованные клиенты подтвердили один и тот же двоичный артефакт')
-    return {'schema':'neverlauncher.sdk-live/0.53.0','version':VERSION,
+    return {'schema':'launcher.sdk-live/0.53.0','version':VERSION,
             'status':'LIVE_SDK_OPERATIONS_PASSED_NOT_GA',
             'checks':['go-json','go-text','go-binary','typescript-json','typescript-text',
                       'typescript-binary','java-json','java-text','java-binary'],

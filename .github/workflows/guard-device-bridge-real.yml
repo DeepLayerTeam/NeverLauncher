@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.9 — реальная приёмка Guard, Device Trust и ServerBridge
+name: Launcher 0.52.9 — реальная приёмка Guard, Device Trust и ServerBridge
 on:
   push:
     paths:
@@ -70,7 +70,7 @@ jobs:
   physical-live-review:
     if: github.event_name == 'workflow_dispatch' && inputs.physical_live_acceptance == true
     name: Реальные нативные узлы, подключения к игре и теневой аудит Guard (без автоматического GA)
-    runs-on: [self-hosted, linux, x64, neverlauncher-e2e-0529]
+    runs-on: [self-hosted, linux, x64, launcher-e2e-0529]
     timeout-minutes: 240
     needs: actual-regressions
     steps:
@@ -81,8 +81,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f /etc/neverlauncher/acceptance/guard-device-bridge-0529.json
-          test "$(stat -c %a /etc/neverlauncher/acceptance/guard-device-bridge-0529.json)" = 600
+          test -f /etc/launcher/acceptance/guard-device-bridge-0529.json
+          test "$(stat -c %a /etc/launcher/acceptance/guard-device-bridge-0529.json)" = 600
           test -d artifacts/plugins
           test "$(cat VERSION)" = 0.52.9
       - name: Проверить реальные подписанные сеансы, полный набор 14 адаптеров, Vanilla RCON и ложные срабатывания
@@ -90,11 +90,11 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          mkdir -p "$RUNNER_TEMP/neverlauncher-live-0529"
+          mkdir -p "$RUNNER_TEMP/launcher-live-0529"
           python3 scripts/acceptance/guard_device_bridge_real_0529.py live \
-            --config /etc/neverlauncher/acceptance/guard-device-bridge-0529.json \
-            --output "$RUNNER_TEMP/neverlauncher-live-0529/report.json"
-          python3 - "$RUNNER_TEMP/neverlauncher-live-0529/report.json" <<'PY'
+            --config /etc/launcher/acceptance/guard-device-bridge-0529.json \
+            --output "$RUNNER_TEMP/launcher-live-0529/report.json"
+          python3 - "$RUNNER_TEMP/launcher-live-0529/report.json" <<'PY'
           import json,sys
           d=json.load(open(sys.argv[1]))
           assert d['status']=='LIVE_CHECKS_PASSED_REVIEW_REQUIRED'

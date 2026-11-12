@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.51.1: инвентаризация *живого* HA и аудит доменов отказа только для чтения.
+"""Launcher 0.51.1: инвентаризация *живого* HA и аудит доменов отказа только для чтения.
 
 Требуется Docker на каждом проверяемом хосте и необязательно SSH для удалённых. Контейнеры, БД,
 аренды и файлы установки никогда не меняются. Для диагностики масштабирования используются настоящие
@@ -366,7 +366,7 @@ def node_inventory(project, samples, growth=True, source_root=None):
                                  ("Карты состояния Auth/MFA/ServerBridge в Runtime", "replica_local_state_cross_replica_consistency_unverified"),
                                  ("Игровые миры ServerBridge", "external_game_host_state_not_inspected")):
         state_inventory.append({"surface": name, "classification": classification})
-    return {"schema": "neverlauncher.ha-inventory.0.51.1", "version": VERSION,
+    return {"schema": "launcher.ha-inventory.0.51.1", "version": VERSION,
             "collectedUtc": utc_now(), "project": project, "nodeIdentity": node_id,
             "dockerEngineIdentity": engine_id, "containers": items,
             "stateInventory": state_inventory, "sourceState": source,
@@ -395,7 +395,7 @@ def probe_public_edge(url, samples):
     for _ in range(samples):
         started = time.monotonic_ns()
         try:
-            request = urllib.request.Request(target, headers={"User-Agent": "NeverLauncher-HA-Inventory/0.51.1"})
+            request = urllib.request.Request(target, headers={"User-Agent": "Launcher-HA-Inventory/0.51.1"})
             with opener.open(request, timeout=6) as response:
                 if response.status != 200:
                     raise InventoryError("Публичный пограничный узел не готов: HTTP-ответ отличается от 200")
@@ -537,7 +537,7 @@ def remote_node(target, remote_script, project, samples, growth):
 
 
 def validate_node(node, project):
-    if not isinstance(node, dict) or node.get("schema") != "neverlauncher.ha-inventory.0.51.1" or node.get("project") != project:
+    if not isinstance(node, dict) or node.get("schema") != "launcher.ha-inventory.0.51.1" or node.get("project") != project:
         raise InventoryError("Схема или проект списка узлов не совпадает")
     if not isinstance(node.get("containers"), list) or not isinstance(node.get("observations"), list):
         raise InventoryError("Инвентаризация узла не завершена")
@@ -612,7 +612,7 @@ def main(argv=None):
                 nodes[name] = remote_node(target, args.remote_script, args.project, args.samples, not args.skip_growth)
         edge = probe_public_edge(args.edge_url, args.samples) if args.edge_url else None
         assessment = assess_cluster(nodes, edge)
-        result = {"schema": "neverlauncher.ha-cluster-inventory.0.51.1", "version": VERSION,
+        result = {"schema": "launcher.ha-cluster-inventory.0.51.1", "version": VERSION,
                   "collectedUtc": utc_now(), "project": args.project, "nodes": nodes,
                   "edgeReadiness": edge, "assessment": assessment}
         write_report(args.output, result)

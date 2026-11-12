@@ -204,14 +204,14 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 	if e = json.Unmarshal(marker, &stage); e != nil {
 		return report, e
 	}
-	if stage.Format != "never/migration-stage/v1" || stage.RunID != run || !rehearsalStageID03310.MatchString(stage.StageID) || !stage.Isolated {
+	if stage.Format != "launcher/migration-stage/v1" || stage.RunID != run || !rehearsalStageID03310.MatchString(stage.StageID) || !stage.Isolated {
 		return report, errors.New("Некорректное значение: маркер изолированного тестового окружения")
 	}
 	a, e := rehearsalRead03310(real, "source-snapshot.json", 4<<20)
 	if e != nil {
 		return report, e
 	}
-	report.Format = "never/gravit-rehearsal/v1"
+	report.Format = "launcher/gravit-rehearsal/v1"
 	report.RunID = run
 	report.StageID = stage.StageID
 	report.SourceInventorySHA256 = inventory

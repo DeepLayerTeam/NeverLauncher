@@ -72,7 +72,7 @@ func TestLegacyIssuerRequiresExplicitLink0291(t *testing.T) {
 	}
 }
 
-func TestPasswordProofLinksExistingNeverIdentity0291(t *testing.T) {
+func TestPasswordProofLinksExistingLauncherIdentity0291(t *testing.T) {
 	repo := repository.NewMemoryRepository("http://test.invalid")
 	core := New(repo)
 	if err := core.Register(issuerFixture0291{}); err != nil {

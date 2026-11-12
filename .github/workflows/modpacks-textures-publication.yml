@@ -1,4 +1,4 @@
-name: NeverLauncher 0.52.6 — модпаки, текстуры и публикация игры
+name: Launcher 0.52.6 — модпаки, текстуры и публикация игры
 on:
   push:
     paths:
@@ -61,7 +61,7 @@ jobs:
     # Это намеренно не считается автоматическим прохождением GA: нужны отдельная реальная JVM,
     # уже загруженный пакет, MFA оператора, закреплённые ключи доверия и настоящий Minecraft.
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, linux, x64, neverlauncher-game-acceptance]
+    runs-on: [self-hosted, linux, x64, launcher-game-acceptance]
     environment: modpacks-textures-physical-acceptance
     timeout-minutes: 100
     steps:

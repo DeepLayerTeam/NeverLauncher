@@ -54,7 +54,7 @@ class FailureRecovery0477(unittest.TestCase):
             dsn_env='LAUNCHER_POSTGRES_DSN', mfa_key_file='', pg_secret_env='',
             health_url='http://127.0.0.1:8080/ready')
         self.op = opmod.Operator(args)
-        self.op.env[args.dsn_env] = 'postgres://127.0.0.1/neverlauncher_test'
+        self.op.env[args.dsn_env] = 'postgres://127.0.0.1/launcher_test'
         self.op.init_workdir()
 
     def original(self):

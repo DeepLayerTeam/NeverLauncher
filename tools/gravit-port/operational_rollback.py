@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Безопасный отказ при эксплуатационном откате Gravit/Never через PostgreSQL и HAProxy.
+"""Безопасный отказ при эксплуатационном откате Gravit/Launcher через PostgreSQL и HAProxy.
 
 Это НЕ откатывает файлы действующих миров и НЕ запускает старые процессы записи
 Gravit. Перед планированием и подтверждением оператор должен согласовать
@@ -22,7 +22,7 @@ import time
 
 import production_cutover_04911 as co
 
-FORMAT = "never/gravit-operational-rollback/v1"
+FORMAT = "launcher/gravit-operational-rollback/v1"
 UNIT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.@-]{0,126}\.service$")
 PHASES = ("fenced", "planned", "committing", "committed_fenced", "blocked", "uncertain")
 
@@ -197,11 +197,11 @@ def typed_digest(snapshot: dict) -> str:
 
 
 def validate_source_against_target(current: dict, source: dict, has_reconciliation: bool, baseline: str):
-    # Если Never создал новые игровые данные, потребуйте от оператора сначала согласовать их
+    # Если Launcher создал новые игровые данные, потребуйте от оператора сначала согласовать их
     # с ИЗОЛИРОВАННЫМ источником, затем независимо повторно выгрузить ОБА набора.
     # Backend выполняет дополнительные предметные проверки содержимого.
     if has_reconciliation:
-        require(current == source, "Исходная система не приведена в точное соответствие с текущим состоянием миров и игроков Never")
+        require(current == source, "Исходная система не приведена в точное соответствие с текущим состоянием миров и игроков Launcher")
     else:
         require(typed_digest(source) == baseline, "Снимок Gravit больше не совпадает с базовым состоянием MIG10; сначала выполните сверку")
 
@@ -228,7 +228,7 @@ def plan(cfg, cut, directory, state, proxy):
         args += ["--reconciled-source-snapshot", cfg["sourceSnapshot"],
                  "--reconciliation-evidence-sha256", cfg["reconciliationEvidenceSha256"]]
     report = co.run_cli(cut, args, directory / "rollback-plan-result.json")
-    require(report.get("format") == "never/gravit-rollback/v1" and report.get("runId") == cut["runId"]
+    require(report.get("format") == "launcher/gravit-rollback/v1" and report.get("runId") == cut["runId"]
             and report.get("profileId") == cut["profileId"] and report.get("channel") == cut["channel"]
             and report.get("state") == "planned" and report.get("ready") is True
             and report.get("blockers") in ([], None) and report.get("routeRevision") == state["routeRevision"]
@@ -264,7 +264,7 @@ def commit(cfg, cut, directory, state, proxy, fresh: Path):
     verify_active(cut, get_route(cut, directory, "rollback-route-precommit.json"))
     current, sha, source_sha = snapshots(cfg, state, cut, fresh=fresh)
     require(current != Path(cfg["currentSnapshot"]), "Свежий снимок должен быть отдельным экспортом, выполненным после составления плана")
-    require(current.stat().st_mtime >= state["plannedAtUnix"], "Снимок Never создан раньше плана отката")
+    require(current.stat().st_mtime >= state["plannedAtUnix"], "Снимок Launcher создан раньше плана отката")
     require(sha == state["snapshotSha256"] and source_sha == state["sourceSnapshotFileSha256"],
             "Состояние миров или игроков изменилось после одобрения; требуется новый план")
     args = ["rollback-commit", "--backend", cut["backend"], "--run", cut["runId"],

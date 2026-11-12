@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.47.5: автономная возобновляемая миграция SQLite Core с блокировкой при неопределённости.
+"""Launcher 0.47.5: автономная возобновляемая миграция SQLite Core с блокировкой при неопределённости.
 
 Она не переносит независимое состояние SQLite HTTP/Coordinator. Такая установка явно не допускается
 к переключению Backend, пока преобразование не реализовано и не протестировано. Нельзя выводить
@@ -333,7 +333,7 @@ class Operator:
         self.coordinator_backup = self.work / "coordinator-frozen.db"
         self.env = os.environ.copy()
         self.env[args.dsn_env] = os.environ.get(args.dsn_env, "")
-        self.state = {"format": "neverlauncher-cutover-0475-v1", "completed": [], "blocked": False, "writeBoundaryCrossed": False}
+        self.state = {"format": "launcher-cutover-0475-v1", "completed": [], "blocked": False, "writeBoundaryCrossed": False}
 
     def init_workdir(self):
         refuse_symlink(self.work)

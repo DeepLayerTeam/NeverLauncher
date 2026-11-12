@@ -27,7 +27,7 @@ class ChaosTests(unittest.TestCase):
             chaos_script='/opt/launcher/scripts/operations/multi_host_chaos_05110.py',
             allow_disruption='I-ACCEPT-REAL-OUTAGE',
             approval_file='/opt/launcher/deploy/production/.chaos-approval-05110.json',
-            alertmanager_url=None, alert_name='NeverLauncherHostIngressDown', alert_timeout=45)
+            alertmanager_url=None, alert_name='LauncherHostIngressDown', alert_timeout=45)
 
     def approval(self, home, expires=None):
         path = home / 'approval.json'
@@ -242,8 +242,8 @@ class ChaosTests(unittest.TestCase):
         self.assertEqual(len(conf['scrape_configs']),2)
         self.assertEqual(conf['scrape_configs'][0]['params']['module'],['https_2xx_strict'])
         self.assertEqual({r['alert'] for r in rules['groups'][0]['rules']},
-                {'NeverLauncherHostIngressDown','NeverLauncherInsufficientHealthyHosts',
-                 'NeverLauncherPublicIngressDown'})
+                {'LauncherHostIngressDown','LauncherInsufficientHealthyHosts',
+                 'LauncherPublicIngressDown'})
         with self.assertRaises(chaos.ChaosError):
             chaos.render_monitor(args)
         args.node_url=['a=http://plaintext.example.org/ready','b=https://node-b.example.org/ready']
@@ -291,15 +291,15 @@ class ChaosTests(unittest.TestCase):
         class MockResponse:
             def __enter__(self): return self
             def __exit__(self,*args): return False
-            def read(self,n): return json.dumps([{'labels':{'alertname':'NeverLauncherHostIngressDown'},
+            def read(self,n): return json.dumps([{'labels':{'alertname':'LauncherHostIngressDown'},
                         'status':{'state':'active'}}]).encode()
         class Opener:
             def open(self, url, timeout): return MockResponse()
         with patch.object(chaos.urllib.request,'build_opener',return_value=Opener()):
             self.assertTrue(chaos.alertmanager_observe('https://alerts.example.org',
-                    'NeverLauncherHostIngressDown',deadline=1))
+                    'LauncherHostIngressDown',deadline=1))
             with self.assertRaises(chaos.multi.DeploymentError):
-                chaos.alertmanager_observe('http://alerts.example.org','NeverLauncherHostIngressDown')
+                chaos.alertmanager_observe('http://alerts.example.org','LauncherHostIngressDown')
             with self.assertRaises(chaos.ChaosError):
                 chaos.alertmanager_observe('https://alerts.example.org','../secret')
 

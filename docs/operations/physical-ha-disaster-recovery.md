@@ -1,4 +1,4 @@
-# NeverLauncher 0.52.10 — эксплуатация физического HA и аварийного восстановления
+# Launcher 0.52.10 — эксплуатация физического HA и аварийного восстановления
 
 **Рабочие промышленные пути выполнения, но не заявление о завершённой приёмке.** Эти команды намеренно разрушают работающее состояние. Используйте изолированный аппаратный стенд под независимым управлением без действующих клиентов. CI-тесты 0.52.10 — локальные регрессии; до принятия любой квитанции физической приёмки на целевой инфраструктуре необходимо наблюдать отключение физических хостов, изоляцию маршрутизируемой сети, повышение PostgreSQL/Redis/S3, доставку оповещений и восстановленный игровой процесс Minecraft.
 
@@ -14,13 +14,13 @@
 
 ```sh
 python3 scripts/operations/alert_receiver_05210.py \
-  --directory /srv/neverlauncher-alert-receipts --port 18871 \
-  --expected-alert NeverLauncherHostIngressDown \
+  --directory /srv/launcher-alert-receipts --port 18871 \
+  --expected-alert LauncherHostIngressDown \
   --webhook-token-file /etc/launcher/alerts-webhook.token \
   --reader-token-file /etc/launcher/alerts-observer.token
 ```
 
-Настройте действующую маршрутизацию Alertmanager для доставки нужного события на `https://notifications.example.net/webhook` с `http_config.authorization.credentials_file`, где лежит Bearer-токен webhook, **не** токен читателя. Защитите HTTPS и не открывайте loopback-получатель напрямую. Физический исполнитель независимо опрашивает **и** Alertmanager `/api/v2/alerts`, **и** `/events/latest` внешнего хоста уведомлений, сопоставляя имя события, отпечаток и метки времени **после** начала сбоя. Уже существующее состояние Alertmanager без подтверждения доставки конечному получателю означает BLOCKED, а не PASS. Исправный кластер без настоящего оповещения также даёт BLOCKED. Выбирайте `--alert-name` из развёрнутых правил Prometheus для нужного отказа (например, `NeverLauncherHostIngressDown`).
+Настройте действующую маршрутизацию Alertmanager для доставки нужного события на `https://notifications.example.net/webhook` с `http_config.authorization.credentials_file`, где лежит Bearer-токен webhook, **не** токен читателя. Защитите HTTPS и не открывайте loopback-получатель напрямую. Физический исполнитель независимо опрашивает **и** Alertmanager `/api/v2/alerts`, **и** `/events/latest` внешнего хоста уведомлений, сопоставляя имя события, отпечаток и метки времени **после** начала сбоя. Уже существующее состояние Alertmanager без подтверждения доставки конечному получателю означает BLOCKED, а не PASS. Исправный кластер без настоящего оповещения также даёт BLOCKED. Выбирайте `--alert-name` из развёрнутых правил Prometheus для нужного отказа (например, `LauncherHostIngressDown`).
 
 ## 1. Потеря питания физического сервера: BMC ForceOff и восстановление
 
@@ -39,7 +39,7 @@ python3 scripts/operations/physical_ha_dr_05210.py host \
   --alertmanager-url https://alerts.example.net \
   --delivery-url https://notifications.example.net/events/latest \
   --delivery-token-file /secure/physical-05210/alerts-reader.token \
-  --alert-name NeverLauncherHostIngressDown \
+  --alert-name LauncherHostIngressDown \
   --state /secure/physical-05210/active.state.json \
   --report /secure/physical-05210/power-a.report.json \
   --allow-disruption I-ACCEPT-PHYSICAL-OUTAGE
@@ -68,7 +68,7 @@ python3 scripts/operations/physical_ha_dr_05210.py partition \
   --alertmanager-url https://alerts.example.net \
   --delivery-url https://notifications.example.net/events/latest \
   --delivery-token-file /secure/physical-05210/alerts-reader.token \
-  --alert-name NeverLauncherHostIngressDown \
+  --alert-name LauncherHostIngressDown \
   --state /secure/physical-05210/active.state.json \
   --report /secure/physical-05210/partition-a.report.json \
   --allow-disruption I-ACCEPT-PHYSICAL-OUTAGE
@@ -89,7 +89,7 @@ python3 scripts/operations/physical_ha_dr_05210.py dependency \
   --alertmanager-url https://alerts.example.net \
   --delivery-url https://notifications.example.net/events/latest \
   --delivery-token-file /secure/physical-05210/alerts-reader.token \
-  --alert-name NeverLauncherBackendNotReady \
+  --alert-name LauncherBackendNotReady \
   --state /secure/physical-05210/active.state.json \
   --report /secure/physical-05210/postgres-failover.report.json \
   --allow-disruption I-ACCEPT-PHYSICAL-OUTAGE

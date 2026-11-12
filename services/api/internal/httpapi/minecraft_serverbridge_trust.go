@@ -50,7 +50,7 @@ func gameplayTrustAllow0127(rec authSessionRecord) gameplayTrustDecision0127 {
 }
 
 // evaluateGameplayTrust0127 сверяет авторитетный серверный сеанс
-// Never со снимком устройства и привязки, приложенным к данным
+// Launcher со снимком устройства и привязки, приложенным к данным
 // Minecraft/ServerBridge. Метод намеренно не вызывает observe():
 // серверный /hasJoined и запросы плагинов идут от игрового сервера,
 // а не лаунчера игрока, и не должны менять риск по IP/UA игрока.

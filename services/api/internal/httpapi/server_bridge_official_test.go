@@ -15,11 +15,11 @@ import (
 
 type officialJoinLinkStore0397 struct {
 	owner string
-	links []repository.OfficialNeverLink0268
+	links []repository.OfficialLauncherLink0268
 	err   error
 }
 
-func (s officialJoinLinkStore0397) ListOfficialLinks0268(_ context.Context, owner string) ([]repository.OfficialNeverLink0268, error) {
+func (s officialJoinLinkStore0397) ListOfficialLinks0268(_ context.Context, owner string) ([]repository.OfficialLauncherLink0268, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -28,8 +28,8 @@ func (s officialJoinLinkStore0397) ListOfficialLinks0268(_ context.Context, owne
 	}
 	return s.links, nil
 }
-func (s officialJoinLinkStore0397) UpsertOfficialLink0268(context.Context, string, string, string) (repository.OfficialNeverLink0268, error) {
-	return repository.OfficialNeverLink0268{}, errors.New("неожиданное изменение связи учётной записи")
+func (s officialJoinLinkStore0397) UpsertOfficialLink0268(context.Context, string, string, string) (repository.OfficialLauncherLink0268, error) {
+	return repository.OfficialLauncherLink0268{}, errors.New("неожиданное изменение связи учётной записи")
 }
 func (s officialJoinLinkStore0397) RemoveOfficialLink0268(context.Context, string, string) error {
 	return errors.New("неожиданное изменение связи учётной записи")
@@ -39,19 +39,19 @@ func TestOfficialBridgeProfileRequiresLinkedProviderIdentity0397(t *testing.T) {
 	const uuid = "0123456789abcdef0123456789abcdef"
 	const bearer = "minecraft-verified-access-token"
 	account := officialminecraft.Profile{ID: uuid, Name: "OfficialUser"}
-	link := repository.OfficialNeverLink0268{MinecraftUUID: uuid, MinecraftName: account.Name}
+	link := repository.OfficialLauncherLink0268{MinecraftUUID: uuid, MinecraftName: account.Name}
 	cases := []struct {
 		name, username, owner string
 		store                 officialJoinLinkStore0397
 		token                 string
 		success               bool
 	}{
-		{"verified link", account.Name, "user", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialNeverLink0268{link}}, bearer, true},
-		{"wrong Never owner", account.Name, "attacker", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialNeverLink0268{link}}, bearer, false},
+		{"verified link", account.Name, "user", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialLauncherLink0268{link}}, bearer, true},
+		{"wrong Launcher owner", account.Name, "attacker", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialLauncherLink0268{link}}, bearer, false},
 		{"unlinked profile", account.Name, "user", officialJoinLinkStore0397{owner: "user"}, bearer, false},
-		{"switched Minecraft name", "AnotherUser", "user", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialNeverLink0268{link}}, bearer, false},
-		{"provider bearer rejected", account.Name, "user", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialNeverLink0268{link}}, "forged-bearer", false},
-		{"invalid token content", account.Name, "user", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialNeverLink0268{link}}, bearer + "\r\n", false},
+		{"switched Minecraft name", "AnotherUser", "user", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialLauncherLink0268{link}}, bearer, false},
+		{"provider bearer rejected", account.Name, "user", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialLauncherLink0268{link}}, "forged-bearer", false},
+		{"invalid token content", account.Name, "user", officialJoinLinkStore0397{owner: "user", links: []repository.OfficialLauncherLink0268{link}}, bearer + "\r\n", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestOfficialBridgeProofIsNonSecretAndBound0397(t *testing.T) {
 	if err = json.Unmarshal([]byte(payload), &proof); err != nil {
 		t.Fatal(err)
 	}
-	if proof.UserID != "user" || proof.NeverSessionID != "auth-session" || proof.ProfileUUID != profile.ID || proof.BindingEpoch != 7 {
+	if proof.UserID != "user" || proof.LauncherSessionID != "auth-session" || proof.ProfileUUID != profile.ID || proof.BindingEpoch != 7 {
 		t.Fatal("Неверная привязка доказательства")
 	}
 	if proof.ExpiresAt.Before(now.Add(11*time.Hour)) || proof.ExpiresAt.After(now.Add(13*time.Hour)) {

@@ -232,7 +232,7 @@ export function ProfileManagementWorkspace({
         </button>
       </div>
       <label className="field">
-        <span>Импорт профиля Never из JSON</span>
+        <span>Импорт профиля Launcher из JSON</span>
         <input
           type="file"
           accept=".json,application/json"

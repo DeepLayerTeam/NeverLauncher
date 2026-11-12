@@ -185,13 +185,13 @@ func (s Server) evaluateServerBridgeJoinIntegrity0135(join bridgeJoinRecord) (mo
 	if err != nil || session.Status != "active" || !session.ExpiresAt.After(time.Now().UTC()) {
 		return model.MinecraftSession{}, minecraftIntegrityDeny0135(required, "minecraft_integrity_session_inactive", session)
 	}
-	if session.UserID != join.UserID || session.NeverSessionID != join.SessionID || strings.TrimSpace(session.TrustedDeviceID) != strings.TrimSpace(join.TrustedDeviceID) || session.BindingEpoch != join.BindingEpoch {
+	if session.UserID != join.UserID || session.LauncherSessionID != join.SessionID || strings.TrimSpace(session.TrustedDeviceID) != strings.TrimSpace(join.TrustedDeviceID) || session.BindingEpoch != join.BindingEpoch {
 		return session, minecraftIntegrityDeny0135(required, "minecraft_integrity_binding_mismatch", session)
 	}
 	return session, s.evaluateMinecraftIntegrity0135(session)
 }
 
-func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, neverSessionID, trustedDeviceID string, bindingEpoch int64, minecraftAccessToken string) (model.MinecraftSession, error) {
+func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, launcherSessionID, trustedDeviceID string, bindingEpoch int64, minecraftAccessToken string) (model.MinecraftSession, error) {
 	required, err := guardAttestationRequiredForDevice0135(s, userID, trustedDeviceID)
 	if err != nil {
 		return model.MinecraftSession{}, errors.New("не удалось определить политику целостности Minecraft")
@@ -207,8 +207,8 @@ func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, neverSessi
 	if err != nil {
 		return model.MinecraftSession{}, errors.New("Сеанс Minecraft недействителен")
 	}
-	if session.UserID != strings.TrimSpace(userID) || session.NeverSessionID != strings.TrimSpace(neverSessionID) || strings.TrimSpace(session.TrustedDeviceID) != strings.TrimSpace(trustedDeviceID) || session.BindingEpoch != bindingEpoch {
-		return model.MinecraftSession{}, errors.New("Сеанс Minecraft не соответствует сеансу Never и привязке устройства")
+	if session.UserID != strings.TrimSpace(userID) || session.LauncherSessionID != strings.TrimSpace(launcherSessionID) || strings.TrimSpace(session.TrustedDeviceID) != strings.TrimSpace(trustedDeviceID) || session.BindingEpoch != bindingEpoch {
+		return model.MinecraftSession{}, errors.New("Сеанс Minecraft не соответствует сеансу Launcher и привязке устройства")
 	}
 	decision := s.evaluateMinecraftIntegrity0135(session)
 	if !decision.Allowed {

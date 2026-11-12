@@ -29,10 +29,10 @@ import defect_rehearsal_05212 as rehearsal
 import inventory_0521 as inventory
 
 VERSION = (ROOT/'VERSION').read_text().strip()
-SCHEMA = 'neverlauncher.full-real-user-acceptance/' + VERSION
-DOMAIN = ('neverlauncher.full-real-user-acceptance.'+VERSION+'\x00').encode()
-FINAL_SCHEMA = 'neverlauncher.independent-full-ga/' + VERSION
-FINAL_DOMAIN = ('neverlauncher.independent-full-ga.'+VERSION+'\x00').encode()
+SCHEMA = 'launcher.full-real-user-acceptance/' + VERSION
+DOMAIN = ('launcher.full-real-user-acceptance.'+VERSION+'\x00').encode()
+FINAL_SCHEMA = 'launcher.independent-full-ga/' + VERSION
+FINAL_DOMAIN = ('launcher.independent-full-ga.'+VERSION+'\x00').encode()
 
 # Это не замена верификатора 280+шесть+длительные испытания/воспроизводимость, а
 # дополнительные реальные сценарии владельца, идентичности, модпаков, миграции,

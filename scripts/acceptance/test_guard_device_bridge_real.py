@@ -42,7 +42,7 @@ class Acceptance0529(unittest.TestCase):
 
     def test_no_guard_native_results_not_promoted(self):
         with self.assertRaises(suite.Blocked):
-            suite.inspect_guard_ci(self.root,'a'*40,'120','DeepLayerTeam/NeverLauncher')
+            suite.inspect_guard_ci(self.root,'a'*40,'120','DeepLayerTeam/Launcher')
 
     def test_no_device_native_results_not_promoted(self):
         with self.assertRaises(suite.Blocked):

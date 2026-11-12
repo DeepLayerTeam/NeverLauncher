@@ -3,7 +3,7 @@
   "id":"org.example.java-ui",
   "name":"Пример Java для Admin, Desktop и CLI",
   "version":"0.1.0",
-  "publisher":"NeverLauncher Examples",
+  "publisher":"Launcher Examples",
   "api":"1.0",
   "targets":[
     {"kind":"backend","entrypoint":"backend/workspace.jar"},

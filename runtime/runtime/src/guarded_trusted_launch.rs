@@ -237,7 +237,7 @@ mod signed_launch_tests {
             "revokedDigests":if revoked { vec![sha(agent)] } else { vec![] },
             "revokedTransformations":[]
         })).unwrap();
-        let mut message = b"NeverLauncher-Guard-Compatibility-v1\n".to_vec();
+        let mut message = b"Launcher-Guard-Compatibility-v1\n".to_vec();
         message.extend_from_slice(&payload);
         create(root, ".launcher/guard/compatibility.json", serde_json::to_string(&json!({
             "schemaVersion":"launcher.guard-compatibility.v1", "payload":STANDARD.encode(&payload),

@@ -108,7 +108,7 @@ func (j *guardShadowJournal05012) observe(nodeID, correlation, outcome, reason s
 	// записываются в журнал. Псевдоним сеанса стабилен только для данного секрета,
 	// а не глобально.
 	record := map[string]any{
-		"schema":      "neverlauncher.guard-shadow/v1",
+		"schema":      "launcher.guard-shadow/v1",
 		"version":     j.version,
 		"bootId":      j.boot,
 		"sequence":    j.seq + 1,

@@ -70,7 +70,7 @@ func TestProviderRuntimeParity0296AdminPasswordCredentialAndMFA(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err = repo.GetProviderCredentialByIdentity("admin", identity.ID); err == nil {
-		t.Fatal("токен провайдера сохранён без прохождения MFA NeverLauncher")
+		t.Fatal("токен провайдера сохранён без прохождения MFA Launcher")
 	}
 	if err := api.State.Passkeys.setPolicy("admin", mfaOptional117); err != nil {
 		t.Fatal(err)
@@ -87,7 +87,7 @@ func TestProviderRuntimeParity0296AdminPasswordCredentialAndMFA(t *testing.T) {
 		t.Fatal(err)
 	}
 	if body.RefreshToken == "" || body.SessionID == "" {
-		t.Fatalf("отсутствует сессия NeverLauncher: %s", ok.Body.String())
+		t.Fatalf("отсутствует сессия Launcher: %s", ok.Body.String())
 	}
 	record, err := repo.GetProviderCredentialByIdentity("admin", identity.ID)
 	if err != nil {
@@ -147,7 +147,7 @@ func TestProviderRuntimeParity0296BrowserMFAHasNoPreApprovalCredential(t *testin
 		t.Fatal("токен обновления сохранён до прохождения MFA")
 	}
 	if len(api.State.AuthSessions.listByUser("admin")) != 0 {
-		t.Fatal("вход через браузер создал сессию NeverLauncher до MFA")
+		t.Fatal("вход через браузер создал сессию Launcher до MFA")
 	}
 	if err := api.State.Passkeys.setPolicy("admin", mfaOptional117); err != nil {
 		t.Fatal(err)

@@ -86,9 +86,9 @@ type User struct {
 	UpdatedAt         time.Time         `json:"updatedAt"`
 }
 
-// AuthIdentity связывает канонического пользователя Never с идентификатором внешнего провайдера аутентификации.
+// AuthIdentity связывает канонического пользователя Launcher с идентификатором внешнего провайдера аутентификации.
 // Внешний провайдер не заменяет User: ядро федерации сначала сопоставляет внешнюю идентичность
-// с локальным User, а затем выдаёт сеанс и токен Never.
+// с локальным User, а затем выдаёт сеанс и токен Launcher.
 type AuthIdentity struct {
 	ID                  string         `json:"id"`
 	UserID              string         `json:"userId"`
@@ -276,7 +276,7 @@ type ProviderCredential struct {
 }
 
 // TrustedDevice — каноническая идентичность устройства пользователя
-// Never. PublicKey хранит сырой открытый Ed25519-ключ в base64url;
+// Launcher. PublicKey хранит сырой открытый Ed25519-ключ в base64url;
 // ответы API намеренно показывают только KeyFingerprint.
 type TrustedDevice struct {
 	ID                       string          `json:"id"`
@@ -403,7 +403,7 @@ type DeviceRevocationBatch struct {
 }
 
 // MinecraftProfile — устойчивая идентичность Minecraft у канонического пользователя
-// Never. UUID и имя не зависят от изменяемого email и субъектов внешних провайдеров.
+// Launcher. UUID и имя не зависят от изменяемого email и субъектов внешних провайдеров.
 type MinecraftProfile struct {
 	UserID          string    `json:"userId"`
 	UUID            string    `json:"uuid"`
@@ -417,11 +417,11 @@ type MinecraftProfile struct {
 }
 
 // MinecraftSession — непрозрачный сеанс Minecraft/Yggdrasil на основе сеанса
-// Never. AccessTokenHash — единственная сохраняемая форма bearer-токена.
+// Launcher. AccessTokenHash — единственная сохраняемая форма bearer-токена.
 type MinecraftSession struct {
 	ID                     string    `json:"id"`
 	UserID                 string    `json:"userId"`
-	NeverSessionID         string    `json:"neverSessionId"`
+	LauncherSessionID         string    `json:"launcherSessionId"`
 	ProfileUUID            string    `json:"profileUuid"`
 	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch           int64     `json:"bindingEpoch"`
@@ -746,13 +746,13 @@ type ServerBridgeHandoff struct {
 
 // ServerBridgePlayerSession — авторитетное состояние игрового сеанса на протяжении взаимодействия лаунчера, прокси и серверного
 // узла. Один идентификатор корреляции соответствует одному логическому подключению игрока; новое подключение с тем же сеансом
-// Never/Minecraft аннулирует предыдущую топологию и отключает прежнее соединение, предотвращая клонирование сеанса.
+// Launcher/Minecraft аннулирует предыдущую топологию и отключает прежнее соединение, предотвращая клонирование сеанса.
 type ServerBridgePlayerSession struct {
 	CorrelationID       string    `json:"correlationId"`
 	PlayerUUID          string    `json:"playerUuid"`
 	Username            string    `json:"username"`
 	UserID              string    `json:"userId"`
-	NeverSessionID      string    `json:"neverSessionId"`
+	LauncherSessionID      string    `json:"launcherSessionId"`
 	MinecraftSessionID  string    `json:"minecraftSessionId,omitempty"`
 	TrustedDeviceID     string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch        int64     `json:"bindingEpoch"`
