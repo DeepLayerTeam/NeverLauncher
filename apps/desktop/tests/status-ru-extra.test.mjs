@@ -1,4 +1,4 @@
-import { browserErrorRu } from "../src/status-ru.ts";
+import { browserErrorRu, httpStatusRu } from "../src/status-ru.ts";
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { statusRuDesktop } from '../src/status-ru.ts';
@@ -215,4 +215,11 @@ test('Ошибки браузера, файлов и JSON локализован
 test('Русское сообщение сохраняет контекст, прерывание не считается тайм-аутом', () => {
   assert.equal(browserErrorRu(new Error('Ошибка загрузки отчёта: ERR_CONNECTION_RESET')), 'Ошибка загрузки отчёта: ERR_CONNECTION_RESET');
   assert.equal(browserErrorRu('AbortError'), 'Операция прервана');
+});
+
+
+test('HTTP-ошибки имеют русские пояснения и сохраняют код', () => {
+  assert.equal(httpStatusRu({ status: 404 }), 'HTTP 404: Не найдено');
+  assert.equal(httpStatusRu({ status: 503 }), 'HTTP 503: Сервис временно недоступен');
+  assert.equal(httpStatusRu({ status: 599 }), 'HTTP 599: Ошибка запроса к серверу');
 });

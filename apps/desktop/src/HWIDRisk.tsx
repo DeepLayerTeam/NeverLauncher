@@ -1,5 +1,5 @@
 import { browserErrorRu } from "./status-ru";
-import { statusRuDesktop } from "./status-ru";
+import { statusRuDesktop, httpStatusRu } from "./status-ru";
 import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -21,7 +21,7 @@ export function HWIDRisk0299({ backendUrl, token, deviceId }: Props) {
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     const json = await response.json();
-    if (!response.ok) throw new Error(json?.error?.message || `HTTP ${response.status}`);
+    if (!response.ok) throw new Error(json?.error?.message || httpStatusRu(response));
     return json.data;
   }
   async function reload() {

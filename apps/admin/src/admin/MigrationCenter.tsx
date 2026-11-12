@@ -1,4 +1,4 @@
-import { networkErrorRu } from "../api/client";
+import { networkErrorRu, httpStatusRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from "react";
 import { requestJSON } from "../api/client";
@@ -1200,7 +1200,7 @@ export function MigrationCenter0331({
       if (!response.ok) {
         const payload = await response.text();
         throw new Error(
-          `Ошибка экспорта, HTTP ${response.status}: ${payload.slice(0, 250)}`,
+          `Ошибка экспорта, ${httpStatusRu(response)}: ${payload.slice(0, 250)}`,
         );
       }
       if (

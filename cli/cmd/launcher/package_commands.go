@@ -441,7 +441,7 @@ func handleClient(args []string) error {
 		}
 		payload = snapshot
 	default:
-		return fmt.Errorf("неизвестная client-подкоманда: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда клиента: %s", args[0])
 	}
 	if out != "" && out != "-" {
 		return writeJSONFile(out, payload)

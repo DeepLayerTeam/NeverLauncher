@@ -1,4 +1,4 @@
-import { networkErrorRu } from "../api/client";
+import { networkErrorRu, httpStatusRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -127,7 +127,7 @@ export function ClientFactoryBuilder02710({
       });
       const envelope = (await response.json()) as Envelope<T>;
       if (!response.ok)
-        throw new Error(envelope.error?.message || `HTTP ${response.status}`);
+        throw new Error(envelope.error?.message || httpStatusRu(response));
       return envelope.data;
     },
     [token],
@@ -241,7 +241,7 @@ export function ClientFactoryBuilder02710({
         );
         const response = (await result.json()) as Envelope<Job>;
         if (!result.ok)
-          throw new Error(response.error?.message || `HTTP ${result.status}`);
+          throw new Error(response.error?.message || httpStatusRu(result));
         job = response.data;
       } else job = await request<Job>(endpoint, "POST", configuration);
       setCurrent(job.id);
@@ -316,7 +316,7 @@ export function ClientFactoryBuilder02710({
       );
       if (!response.ok) {
         const data = (await response.json()) as Envelope<unknown>;
-        throw new Error(data.error?.message || `HTTP ${response.status}`);
+        throw new Error(data.error?.message || httpStatusRu(response));
       }
       const objectURL = URL.createObjectURL(await response.blob());
       try {

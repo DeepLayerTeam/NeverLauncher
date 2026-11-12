@@ -1,4 +1,4 @@
-import { browserErrorRu, statusRuDesktop } from "./status-ru";
+import { browserErrorRu, statusRuDesktop, httpStatusRu } from "./status-ru";
 import { serverKindRu } from "./desktop_experience";
 import {
   offlineLaunchSettings0358,
@@ -61,21 +61,7 @@ import {
   type Recovery0354,
 } from "./download_experience_0354";
 
-/** Локализованный HTTP-статус для журналов и сообщений интерфейса. */
-export function httpStatusRu(response: Pick<Response, 'status'>): string {
-  const explanations: Record<number, string> = {
-    400: 'Некорректный запрос', 401: 'Требуется авторизация',
-    403: 'Доступ запрещён', 404: 'Не найдено',
-    408: 'Время ожидания запроса истекло', 409: 'Конфликт данных',
-    410: 'Ресурс больше недоступен', 413: 'Слишком большой запрос',
-    415: 'Неподдерживаемый формат данных', 422: 'Не удалось обработать запрос',
-    423: 'Ресурс заблокирован', 429: 'Слишком много запросов',
-    500: 'Внутренняя ошибка сервера', 501: 'Операция не поддерживается сервером',
-    502: 'Ошибка шлюза', 503: 'Сервис временно недоступен',
-    504: 'Время ответа сервера истекло',
-  };
-  return `HTTP ${response.status}: ${explanations[response.status] ?? 'Ошибка запроса к серверу'}`;
-}
+export { httpStatusRu } from "./status-ru";
 
 // Лениво загружаемые чанки не входят в стартовый бандл: Vite создаёт
 // ресурсы с хешами содержимого, которые WebView кэширует между открытиями экранов.
@@ -1214,7 +1200,7 @@ function App() {
     const controller = new AbortController();
     void fetch(`${base}/api/v1/auth/providers`, { signal: controller.signal })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error(httpStatusRu(response));
         return response.json();
       })
       .then((payload: any) => {

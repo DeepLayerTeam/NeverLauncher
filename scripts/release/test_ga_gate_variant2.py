@@ -78,12 +78,12 @@ class TestGAReleaseApproval(unittest.TestCase):
 
     def test_missing_module_not_accepted(self):
         (self.root / 'M19.evidence').unlink()
-        with self.assertRaisesRegex(gate.Blocked, 'does not bind'):
+        with self.assertRaisesRegex(gate.Blocked, 'Независимая подпись не охватывает все проверки модулей'):
             gate.verify_approval(self.root, self.approval, self.sig, self.pubfile, self.report)
 
     def test_forged_reviewer_signature_blocked(self):
         write(self.sig, b'0' * 64)
-        with self.assertRaisesRegex(gate.Blocked, 'signature invalid'):
+        with self.assertRaisesRegex(gate.Blocked, 'Некорректная подпись независимой проверки'):
             gate.verify_approval(self.root, self.approval, self.sig, self.pubfile, self.report)
 
     def test_original_operator_not_independent(self):
@@ -91,13 +91,13 @@ class TestGAReleaseApproval(unittest.TestCase):
         self.sign()
         with patch.object(gate, 'verify_bundle', return_value={
             'releaseManifestMatchesAssets': True, 'version': '0.50.0'}):
-            with self.assertRaisesRegex(gate.Blocked, 'must not be the original'):
+            with self.assertRaisesRegex(gate.Blocked, 'Независимый утверждающий не должен быть оператором исходной миграции'):
                 gate.promote(self.config, self.root, self.approval, self.sig, self.pubfile)
 
     def test_fake_delivery_never_promoted(self):
         with patch.object(gate, 'verify_bundle', return_value={
             'releaseManifestMatchesAssets': False, 'version': '0.50.0'}):
-            with self.assertRaisesRegex(gate.Blocked, 'signed delivery'):
+            with self.assertRaisesRegex(gate.Blocked, 'Подписанные артефакты поставки 0.50.0 не прошли'):
                 gate.promote(self.config, self.root, self.approval, self.sig, self.pubfile)
 
     def test_stale_real_approval_cannot_be_promoted(self):

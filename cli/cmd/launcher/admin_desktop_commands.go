@@ -12,7 +12,7 @@ import (
 
 func handleAdmin(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные admin-подкоманды: overview, users, roles, audit, storage-health, create-project, update-project, create-profile, update-profile, create-channel, update-channel, create-user")
+		return errors.New("Доступные подкоманды администрирования: overview, users, roles, audit, storage-health, create-project, update-project, create-profile, update-profile, create-channel, update-channel, create-user")
 	}
 	backend := adminBackendURL(args)
 	if backend == "" {
@@ -133,7 +133,7 @@ func adminBackendRequest(args []string, method string, path string, body map[str
 
 func handleDesktop(args []string) error {
 	if len(args) < 1 {
-		return errors.New("доступные desktop-подкоманды: connect, config, platforms, package, verify")
+		return errors.New("Доступные подкоманды настольного приложения: connect, config, platforms, package, verify")
 	}
 	switch args[0] {
 	case "connect":

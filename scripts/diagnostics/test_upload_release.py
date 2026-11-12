@@ -35,7 +35,7 @@ class ReleaseUploadTests(unittest.TestCase):
             env={**os.environ,'SENTRY_AUTH_TOKEN':'test','SENTRY_ORG':'test','SENTRY_PROJECT':'test'}
             result=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit','abcdef1234567890','--jvm-mapping',str(mapping),'--jvm-jar',str(bundle),'--mapping-uuid','98765432-1234-1234-1234-123456789abc'],env=env,capture_output=True)
             self.assertNotEqual(result.returncode,0)
-            self.assertIn(b'UUID does not match',result.stderr)
+            self.assertIn('UUID карты сопоставления не совпадает'.encode('utf-8'),result.stderr)
 
     def test_real_sentry_cli_proguard_upload_and_finalize(self):
         import zipfile

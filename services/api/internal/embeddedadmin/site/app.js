@@ -1,4 +1,20 @@
 "use strict";
+/** Локализованный HTTP-статус для журналов и сообщений интерфейса. */
+function httpStatusRu(response) {
+  const explanations = {
+    400: 'Некорректный запрос', 401: 'Требуется авторизация',
+    403: 'Доступ запрещён', 404: 'Не найдено',
+    408: 'Время ожидания запроса истекло', 409: 'Конфликт данных',
+    410: 'Ресурс больше недоступен', 413: 'Слишком большой запрос',
+    415: 'Неподдерживаемый формат данных', 422: 'Не удалось обработать запрос',
+    423: 'Ресурс заблокирован', 429: 'Слишком много запросов',
+    500: 'Внутренняя ошибка сервера', 501: 'Операция не поддерживается сервером',
+    502: 'Ошибка шлюза', 503: 'Сервис временно недоступен',
+    504: 'Время ответа сервера истекло',
+  };
+  return `HTTP ${response.status}: ${explanations[response.status] ?? 'Ошибка запроса к серверу'}`;
+}
+
 const byId = (id) => document.getElementById(id);
 let token = ""; // Только в оперативной памяти: никогда не сохраняется в sessionStorage, localStorage или URL.
 // Человекочитаемые подписи для статусов API; машинные значения остаются неизменными.
@@ -45,10 +61,10 @@ async function api(path, method = "GET", body = null, bootstrapToken = "") {
   try {
     result = await response.json();
   } catch {
-    throw new Error(`HTTP ${response.status}: некорректный JSON`);
+    throw new Error(`${httpStatusRu(response)}: некорректный JSON`);
   }
   if (!response.ok)
-    throw new Error(result?.error?.message || `HTTP ${response.status}`);
+    throw new Error(result?.error?.message || httpStatusRu(response));
   return result?.data ?? result;
 }
 async function readiness() {
@@ -268,7 +284,7 @@ byId("migration-assess").addEventListener("submit", async (event) => {
     );
     const payload = await response.json();
     if (!response.ok)
-      throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+      throw new Error(payload?.error?.message || httpStatusRu(response));
     await migrationView();
     byId("migration-report").textContent = JSON.stringify(
       { compatibility: payload.data },
@@ -309,7 +325,7 @@ for (const action of ["inventory", "export"]) {
       );
       if (!response.ok) {
         const body = await response.text();
-        throw new Error(`HTTP ${response.status}: ${body.slice(0, 240)}`);
+        throw new Error(`${httpStatusRu(response)}: ${body.slice(0, 240)}`);
       }
       if (action === "inventory") {
         const result = await response.json();
@@ -377,7 +393,7 @@ for (const action of ["map-identities", "verify-identities"]) {
       });
       if (!response.ok)
         throw new Error(
-          `HTTP ${response.status}: ${(await response.text()).slice(0, 240)}`,
+          `${httpStatusRu(response)}: ${(await response.text()).slice(0, 240)}`,
         );
       const result = await response.json();
       byId("migration-report").textContent = JSON.stringify(
@@ -438,7 +454,7 @@ for (const action of ["preview", "import"]) {
         );
         const payload = await response.json();
         if (!response.ok)
-          throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+          throw new Error(payload?.error?.message || httpStatusRu(response));
         byId("migration-report").textContent = JSON.stringify(
           { credentials: payload.data },
           null,
@@ -501,7 +517,7 @@ for (const action of ["preview", "activate", "verify"]) {
         });
         const payload = await response.json();
         if (!response.ok)
-          throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+          throw new Error(payload?.error?.message || httpStatusRu(response));
         byId("migration-report").textContent = JSON.stringify(
           { security: payload.data },
           null,
@@ -594,7 +610,7 @@ for (const action of ["preview", "status", "import", "optionals"]) {
         2,
       );
       if (!res.ok)
-        throw new Error(value?.error?.message || `HTTP ${res.status}`);
+        throw new Error(value?.error?.message || httpStatusRu(res));
       if (action === "preview") migrationContentPreview337 = value.data;
       if (action === "import") migrationContentPreview337 = null;
       message(
@@ -676,7 +692,7 @@ for (const action of ["analyze", "get", "enroll"]) {
         2,
       );
       if (!response.ok)
-        throw new Error(json?.error?.message || `HTTP ${response.status}`);
+        throw new Error(json?.error?.message || httpStatusRu(response));
       message(
         action === "enroll"
           ? "Узел ServerBridge зарегистрирован с новым ключом. Ожидается сигнал активности."
@@ -792,7 +808,7 @@ for (const op of ["list", "stage", "activate", "cancel"]) {
         2,
       );
       if (!response.ok)
-        throw new Error(result?.error?.message || `HTTP ${response.status}`);
+        throw new Error(result?.error?.message || httpStatusRu(response));
       message(
         op === "activate"
           ? "Канал Launcher переключён. Контролируйте состояние и сохраните журнал отката MIG12."
@@ -907,7 +923,7 @@ for (const operation of ["plan", "commit", "status"]) {
         });
         const json = await response.json();
         if (!response.ok)
-          throw new Error(json?.error?.message || `HTTP ${response.status}`);
+          throw new Error(json?.error?.message || httpStatusRu(response));
         const result = json?.data ?? json;
         byId("migration-report").textContent = JSON.stringify(
           { rollback: result },
@@ -973,7 +989,7 @@ for (const action of ["report", "status", "review"]) {
       });
       const result = await response.json();
       if (!response.ok)
-        throw new Error(result?.error?.message || `HTTP ${response.status}`);
+        throw new Error(result?.error?.message || httpStatusRu(response));
       const data = result?.data ?? result;
       if (!review && !status && data.reportSha256)
         byId("migration-rc-report-sha").value = data.reportSha256;

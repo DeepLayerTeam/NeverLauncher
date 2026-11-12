@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { statusRuDesktop } from "./status-ru";
+import { statusRuDesktop, httpStatusRu } from "./status-ru";
 import {
   identity0356,
   validExtension0356,
@@ -134,7 +134,7 @@ export function DesktopExtensions0209({
       const response = await authorized("/api/v1/desktop/extensions/catalog");
       const payload = await response.json();
       if (!response.ok)
-        throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+        throw new Error(payload?.error?.message || httpStatusRu(response));
       if (
         payload?.data?.protocol !== DESKTOP_EXTENSION_PROTOCOL ||
         payload?.data?.extensionApiVersion !== EXTENSION_API_VERSION
@@ -203,7 +203,7 @@ export function DesktopExtensions0209({
         error?: { message?: string };
       };
       if (!response.ok)
-        throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+        throw new Error(payload?.error?.message || httpStatusRu(response));
       const next = verifiedEntrypoint0356(payload.data, item);
       if (generation !== requestGeneration.current) return;
       loadedIdentity.current = identity0356(item);
@@ -366,7 +366,7 @@ export function DesktopExtensions0209({
           const payload = await response.json();
           if (!response.ok)
             throw new Error(
-              payload?.error?.message || `HTTP ${response.status}`,
+              payload?.error?.message || httpStatusRu(response),
             );
           const rpc = payload?.data;
           if (

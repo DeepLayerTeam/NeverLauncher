@@ -84,7 +84,7 @@ func handleExtensionTrust02012(args []string) error {
 
 func handleExtensionQuarantine02012(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные extension quarantine-подкоманды: list, release")
+		return errors.New("Доступные подкоманды карантина расширений: list, release")
 	}
 	backend, token, err := extensionTrustBackend02012(args)
 	if err != nil {

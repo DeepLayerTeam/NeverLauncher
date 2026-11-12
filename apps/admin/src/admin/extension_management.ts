@@ -67,7 +67,7 @@ export class ExtensionManagement0425 {
     if (!response.ok) {
       const err = body?.error;
       const message = typeof err === "string" ? err : err?.message;
-      throw new Error(message || `HTTP ${httpStatusRu(response)}`);
+      throw new Error(message || httpStatusRu(response));
     }
     if (body == null || !Object.prototype.hasOwnProperty.call(body, "data"))
       throw new Error("Сервер вернул ответ без data; состояние не подтверждено");

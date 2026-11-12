@@ -1,4 +1,4 @@
-import { networkErrorRu } from "../api/client";
+import { networkErrorRu, httpStatusRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ClientFactoryBuilder02710 } from "./ClientFactoryBuilder02710";
@@ -160,7 +160,7 @@ export function BuildWorkspacePanel({
       });
       const reply = (await res.json()) as Wrapped<T>;
       if (!res.ok)
-        throw new Error(reply.error?.message || `HTTP ${res.status}`);
+        throw new Error(reply.error?.message || httpStatusRu(res));
       return reply.data;
     },
     [endpoint, token],
@@ -274,7 +274,7 @@ export function BuildWorkspacePanel({
           const reply = (await res.json()) as Wrapped<BuildWorkspace>;
           if (!res.ok)
             throw new Error(
-              `${path}: ${reply.error?.message || `HTTP ${res.status}`}`,
+              `${path}: ${reply.error?.message || httpStatusRu(res)}`,
             );
           current = reply.data;
           uploaded++;

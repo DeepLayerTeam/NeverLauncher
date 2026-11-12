@@ -1,4 +1,4 @@
-import { requestJSON } from './client.ts';
+import { requestJSON, httpStatusRu } from './client.ts';
 
 export interface Draft { id: string; projectId: string; ownerId: string; profileId: string; channel: string; version: string; minecraftVersion: string; loader: string; packageId: string; jobId: string; step: string; revision: number; createdAt: string; updatedAt: string }
 export type DraftFields = Pick<Draft,'projectId'|'profileId'|'channel'|'version'|'minecraftVersion'|'loader'|'packageId'|'jobId'|'step'>;
@@ -57,7 +57,7 @@ export class ReleaseApi {
   private async sendForm(path: string,body: FormData) {
     const res = await fetch(`${this.base.replace(/\/$/,'')}${path}`,{method:'POST',headers:{Authorization:`Bearer ${this.token}`},body,cache:'no-store'});
     const payload: unknown = await res.json().catch(()=>null);
-    if (!res.ok) { const error = payload && typeof payload==='object' && 'error' in payload ? (payload as {error?:{message?:string}}).error?.message : undefined; throw new Error(error || `Загрузка: HTTP ${res.status}`); }
+    if (!res.ok) { const error = payload && typeof payload==='object' && 'error' in payload ? (payload as {error?:{message?:string}}).error?.message : undefined; throw new Error(error || `Загрузка: ${httpStatusRu(res)}`); }
     return payload;
   }
 }

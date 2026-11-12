@@ -1,3 +1,5 @@
+import { httpStatusRu } from "./status-ru";
+
 /** 0.25.8: локальные операции с текстурами в области учётной записи; официальные учётные данные отправляются. */
 export type TextureKind0258 = "skin" | "cape";
 export type SkinModel0258 = "classic" | "slim";
@@ -126,7 +128,7 @@ function textureError0258(
     );
   return new TextureServiceError0258(
     status,
-    typeof message === "string" ? message : `API текстур: HTTP ${status}`,
+    typeof message === "string" ? message : `API текстур: ${httpStatusRu({ status })}`,
   );
 }
 export class TextureServiceClient0258 {
@@ -296,7 +298,7 @@ export class TextureServiceClient0258 {
           signal: ctl.signal,
         });
         if (!response.ok)
-          throw new Error(`Yggdrasil недоступен: HTTP ${response.status}`);
+          throw new Error(`Yggdrasil недоступен: ${httpStatusRu(response)}`);
         return response;
       };
       const metadata = (await (await get("/")).json()) as {

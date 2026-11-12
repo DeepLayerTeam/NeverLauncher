@@ -17,7 +17,7 @@ import (
 
 func handleRelease(args []string) error {
 	if len(args) == 0 {
-		return errors.New("доступные release-подкоманды: doctor, plan, build, package, verify, sign, candidate-verify, production-verify, windows-protection-verify, windows-protection-ga-verify, publish-plan, publish-check")
+		return errors.New("Доступные подкоманды выпуска: doctor, plan, build, package, verify, sign, candidate-verify, production-verify, windows-protection-verify, windows-protection-ga-verify, publish-plan, publish-check")
 	}
 	switch args[0] {
 	case "doctor":

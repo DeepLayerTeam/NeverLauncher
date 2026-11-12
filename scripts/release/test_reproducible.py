@@ -95,7 +95,7 @@ class ReproTests(unittest.TestCase):
     def test_real_file_tamper_blocked_even_with_old_signed_report(self):
         a,b=self.reports()
         create_bundle(self.b,mutate=True)
-        with self.assertRaisesRegex(ValueError,'disagrees with actual files'):
+        with self.assertRaisesRegex(ValueError,'Подписанный отчёт сборщика не соответствует фактическим файлам'):
             repro.compare(a,b,self.a,self.b)
 
     def test_missing_target_and_wrong_architecture_blocked(self):
@@ -114,7 +114,7 @@ class ReproTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Некорректная независимая подпись доказательных данных'):
             repro.signed_json(self.dir/'0.json',self.dir/'0.sig',self.keys[1][2])
         b['builder']=a['builder']
-        with self.assertRaisesRegex(ValueError,'independent builders'):
+        with self.assertRaisesRegex(ValueError,'Требуются независимые сборщики и исполнители проверок'):
             repro.compare(a,b,self.a,self.b)
 
     def test_signed_link_requires_real_native_approval_and_manifest_binding(self):

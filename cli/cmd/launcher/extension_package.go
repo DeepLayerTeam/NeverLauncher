@@ -389,7 +389,7 @@ func collectExtensionPayload0202(root, outputAbs string) ([]extensionPackageSour
 		}
 		if !strings.Contains(rel, "/") {
 			if _, reserved := extensionPackageReservedRoot0202[rel]; reserved {
-				return fmt.Errorf("source содержит зарезервированный package-файл %s", rel)
+				return fmt.Errorf("Исходный каталог содержит зарезервированный файл пакета %s", rel)
 			}
 		}
 		packagePath := extensionPackagePayloadPrefix0202 + rel
