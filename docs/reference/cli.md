@@ -19,7 +19,7 @@ go build -o nl ./cmd/launcher
 | `update` | `nl update plan ...` | Планирование и транзакционная замена |
 | `diagnostics` | `nl diagnostics collect ...` | Логи, анонимизация, отчёты |
 | `runtime` | `nl runtime vanilla-install ...` | Установщики Vanilla и загрузчиков |
-| `server-bridge` | `nl server-bridge status ...` | Регистрация, host и состояние узлов |
+| `server-bridge` | `nl server-bridge status ...` | Регистрация, управление хостами и состояние узлов |
 | `extension` | `nl extension status ...` | Управление Extensions |
 | `install` | `nl install readiness ...` | Первоначальная установка |
 | `db` | `nl db status ...` | Миграции и repository |

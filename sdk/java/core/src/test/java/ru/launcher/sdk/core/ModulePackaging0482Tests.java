@@ -9,7 +9,7 @@ import java.util.zip.*;
 public final class ModulePackaging0482Tests {
     private static int checks;
     private static void check(boolean condition,String label){checks++;if(!condition)throw new AssertionError(label);}
-    private static void reject(Checked action){checks++;try{action.run();throw new AssertionError("небезопасный JAR ошибочно принят");}catch(SecurityException expected){/* fail closed */}catch(Exception unexpected){throw new AssertionError("неожиданное исключение",unexpected);}}
+    private static void reject(Checked action){checks++;try{action.run();throw new AssertionError("небезопасный JAR ошибочно принят");}catch(SecurityException expected){/* отказ с сохранением безопасного состояния */}catch(Exception unexpected){throw new AssertionError("неожиданное исключение",unexpected);}}
     private interface Checked{void run()throws Exception;}
     public static void main(String[] args)throws Exception {
         if(args.length!=1)throw new IllegalArgumentException("укажите настоящий собранный JAR хоста зависимостей");

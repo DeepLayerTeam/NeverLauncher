@@ -449,7 +449,7 @@ def main() -> int:
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     print(
-        f"Набор артефактов ServerBridge проверен (это не Minecraft Runtime E2E): {VERSION}, {len(evidence)} артефактов платформ -> {out}"
+        f"Набор артефактов ServerBridge проверен (это не сквозная проверка среды выполнения Minecraft): {VERSION}, {len(evidence)} артефактов платформ -> {out}"
     )
     return 0
 

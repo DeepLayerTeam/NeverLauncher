@@ -968,9 +968,9 @@ def validate_ready_url(url: str) -> None:
     if (parsed.path != "/ready" or parsed.query or parsed.fragment
             or parsed.username or parsed.password or not parsed.hostname
             or parsed.scheme not in ("https", "http")):
-        raise DrillError("Для проверки готовности требуется HTTPS-адрес /ready или HTTP-адрес /ready на loopback-интерфейсе")
+        raise DrillError("Для проверки готовности требуется HTTPS-адрес /ready или HTTP-адрес /ready на петлевом интерфейсе")
     if parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
-        raise DrillError("Отклонена небезопасная проверка готовности по адресу вне loopback")
+        raise DrillError("Отклонена небезопасная проверка готовности по адресу вне петлевого интерфейса")
 
 
 def target_release(env_file: Path) -> str | None:
@@ -1053,13 +1053,13 @@ def restore_fresh(
             raise DrillError("Безопасное восстановление устаревших снимков Network-HA с Redis не поддерживается")
         validate_world_destinations(manifest["worlds"], world_destinations or {}, folder)
     elif manifest.get("schema") == 3:
-        raise DrillError("network-ha snapshot: требуется --network-ha")
+        raise DrillError("Для снимка Network-HA требуется --network-ha")
     # На новом хосте может использоваться то же ИМЯ проекта. Совпадение имён не означает наличия прежних
     # томов; подходят только проверенные пустые цели.
     if not env_file.is_file() or env_file.is_symlink():
         raise DrillError("Файл окружения Docker Compose отсутствует либо является символической ссылкой")
     if not ready_url:
-        raise DrillError("Для restore-fresh требуется действующий endpoint готовности приложения")
+        raise DrillError("Для restore-fresh требуется действующий адрес проверки готовности приложения")
     validate_ready_url(ready_url)
     if manifest.get("schema") in (2, 3) and target_release(env_file) != manifest.get("version"):
         raise DrillError("Версия целевого образа отличается от резервной копии; сначала восстановите точную версию")
@@ -1203,7 +1203,7 @@ def chaos(
     if not (
         url.startswith("http://127.0.0.1:") or url.startswith("http://localhost:")
     ) or not url.endswith("/ready"):
-        raise DrillError("Для проверки готовности в chaos-тесте требуется адрес /ready на loopback-интерфейсе")
+        raise DrillError("Для проверки готовности в chaos-тесте требуется адрес /ready на петлевом интерфейсе")
     await_readiness(url, expected=True, limit=30)
     outcomes = []
     for svc in ("postgres", "redis") if network_ha else ("postgres",):
@@ -1293,7 +1293,7 @@ def main() -> int:
         if not args.network_ha and (world_backups or world_destinations):
             raise DrillError("Для восстановления мира требуется --network-ha")
         if args.network_ha and args.action == "backup" and not args.s3_source_bucket:
-            raise DrillError("network-ha backup: требуется --s3-source-bucket")
+            raise DrillError("Для резервного копирования Network-HA требуется --s3-source-bucket")
         if args.action == "restore-fresh" and not args.ready_url:
             raise DrillError("Для restore-fresh укажите --ready-url для проверки фактического Backend")
         if args.action == "verify":

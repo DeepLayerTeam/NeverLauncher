@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-MODULE = Path(__file__).with_name("sqlite_pg_cutover_0475.py")
+MODULE = Path(__file__).with_name("sqlite_pg_cutover.py")
 spec = importlib.util.spec_from_file_location("cutover0475", MODULE)
 cutover = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cutover)
@@ -157,7 +157,7 @@ class Operator0475Tests(unittest.TestCase):
         op.init_workdir()
         op.state["writeBoundaryCrossed"] = True
         op.save()
-        with self.assertRaisesRegex(cutover.CutoverError, "automatic rollback forbidden"):
+        with self.assertRaisesRegex(cutover.CutoverError, "автоматический откат запрещён"):
             op.rollback()
 
     def test_safe_rollback_recovers_env_without_replacing_database(self):

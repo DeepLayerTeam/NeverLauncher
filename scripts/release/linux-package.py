@@ -45,7 +45,7 @@ def inspect_elf(path: Path, expected_arch: str) -> str:
     if len(data) < 64 or data[:4] != b"\x7fELF":
         raise SystemExit(f"{path}: файл не является ELF")
     if data[4] != 2 or data[5] != 1:
-        raise SystemExit(f"{path}: для рабочего пакета требуется ELF64 с порядком байтов little-endian")
+        raise SystemExit(f"{path}: для рабочего пакета требуется ELF64 с порядком байтов от младшего к старшему")
     elf_type, machine = struct.unpack_from("<HH", data, 16)
     if elf_type not in (2, 3):
         raise SystemExit(f"{path}: неподдерживаемый тип ELF {elf_type}")

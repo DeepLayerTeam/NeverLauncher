@@ -41,7 +41,7 @@ public final class RuntimeEvents implements AutoCloseable {
     }
     /** Расширенная типизированная подписка; метаданные относятся к неизменяемой записи события Go. */
     public synchronized <T> long subscribeDetailed(String eventType,String mode,JsonSchema schema,Decoder<T> decoder,DetailedListener<T> listener)throws IOException,InterruptedException {
-        if(closed)throw new IllegalStateException("Приём событий Runtime закрыт");
+        if(closed)throw new IllegalStateException("Приём событий среды выполнения закрыт");
         if(eventType==null||!eventType.matches("[a-z][a-z0-9.-]{1,127}")||!Set.of("async","sync").contains(mode))throw new IllegalArgumentException("Некорректная подписка на события");
         Objects.requireNonNull(decoder);Objects.requireNonNull(listener);
         host.requireEvent(eventType);

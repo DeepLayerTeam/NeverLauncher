@@ -14,4 +14,4 @@ CLI содержит `nl auth accounts|roles|sessions|revoke|logout-all|session-
 
 ## Важное
 
-Не используйте фиксированные демонстрационные пароли в промышленной среде. Никогда не помещайте access/refresh токены в issue, screenshots или артефакты CI. Для интеграции внешних провайдеров см. [../authentication/providers.md](../authentication/providers.md).
+Не используйте фиксированные демонстрационные пароли в промышленной среде. Никогда не помещайте токены доступа и обновления в задачи, снимки экрана или артефакты CI. Для интеграции внешних провайдеров см. [../authentication/providers.md](../authentication/providers.md).

@@ -125,7 +125,7 @@ def validate(config: dict, journal_dir: Path):
 
 
 class Proxy:
-    """Реальный сокет Runtime HAProxy. Без командной оболочки и учётных данных сетевого администратора."""
+    """Сокет среды выполнения HAProxy. Без командной оболочки и учётных данных сетевого администратора."""
     def __init__(self, path: str):
         self.path = path
 

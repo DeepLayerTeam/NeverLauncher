@@ -27,7 +27,7 @@ public final class ServerBridgeAdapterCapability0286Harness {
             try {
                 BridgeRuntimeDescriptor.of("1.21.1", id, id, "1", id, List.of("adapter.control.root"));
                 throw new AssertionError("ошибочно приняты поддельные разрешения адаптера для " + id);
-            } catch (IllegalArgumentException expectedError) { /* fail closed */ }
+            } catch (IllegalArgumentException expectedError) { /* отказ с сохранением безопасного состояния */ }
             System.out.println("CAPABILITY_POLICY_OK platform=" + id + " caps=" + profile.capabilities().size());
         }
         BridgeAdapterProfile vanilla = BridgeAdapterProfiles.require("vanilla");

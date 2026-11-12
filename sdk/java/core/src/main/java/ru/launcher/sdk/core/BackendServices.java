@@ -44,7 +44,7 @@ public final class BackendServices {
         return host.capability(capability, payload);
     }
     private static Map<String,Object> record(Map<String,Object> response, String key) {
-        return Json.object(Objects.requireNonNull(response.get(key),"В ответе Backend отсутствует " + key));
+        return Json.object(Objects.requireNonNull(response.get(key),"В ответе серверной части отсутствует " + key));
     }
     private static String text(Map<String,Object> raw,String key) {
         Object v=raw.get(key);

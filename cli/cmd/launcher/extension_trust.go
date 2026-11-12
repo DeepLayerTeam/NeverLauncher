@@ -25,11 +25,11 @@ func extensionTrustBackend02012(args []string) (string, string, error) {
 func responseDataField02012(payload map[string]any, field string) (any, error) {
 	data, ok := payload["data"].(map[string]any)
 	if !ok {
-		return nil, errors.New("В ответе Backend отсутствует объект data")
+		return nil, errors.New("В ответе серверной части отсутствует объект data")
 	}
 	value, ok := data[field]
 	if !ok {
-		return nil, fmt.Errorf("В ответе Backend отсутствует поле data.%s", field)
+		return nil, fmt.Errorf("В ответе серверной части отсутствует поле data.%s", field)
 	}
 	return value, nil
 }

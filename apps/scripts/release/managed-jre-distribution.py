@@ -198,7 +198,7 @@ def validate_binary(platform: str, arch: str, data: bytes) -> None:
         return
     if platform == "linux":
         if len(data) < 20 or data[:4] != b"\x7fELF" or data[4] != 2 or data[5] != 1:
-            die("bin/java не является файлом ELF64 с порядком байтов little-endian")
+            die("bin/java не является файлом ELF64 с порядком байтов от младшего к старшему")
         machine = struct.unpack_from("<H", data, 18)[0]
         expected = 62 if arch == "x64" else 183
         if machine != expected:
@@ -206,7 +206,7 @@ def validate_binary(platform: str, arch: str, data: bytes) -> None:
         return
     if platform == "macos":
         if len(data) < 32 or data[:4] != b"\xcf\xfa\xed\xfe":
-            die("bin/java не является файлом Mach-O64 с порядком байтов little-endian")
+            die("bin/java не является файлом Mach-O64 с порядком байтов от младшего к старшему")
         cpu = struct.unpack_from("<I", data, 4)[0]
         expected = 0x01000007 if arch == "x64" else 0x0100000C
         if cpu != expected:

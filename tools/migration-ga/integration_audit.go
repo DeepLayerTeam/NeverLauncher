@@ -53,7 +53,7 @@ func integrationAuditCommand0491(args []string) error {
 	backend := fs.String("backend", "", "HTTPS-адрес серверной части (или HTTP для числового адреса петлевого интерфейса)")
 	project := fs.String("project", "", "Идентификатор существующего проекта")
 	run := fs.String("run", "", "Идентификатор существующего запуска миграции Gravit")
-	extension := fs.String("extension", "", "Идентификатор установленного и запущенного расширения Java Host")
+	extension := fs.String("extension", "", "Идентификатор установленного и запущенного расширения хоста Java")
 	scope := fs.String("scope", "global", "Глобальная область или проект")
 	scopeID := fs.String("scope-id", "", "Идентификатор проекта для расширения с областью действия проекта")
 	dsnEnv := fs.String("dsn-env", "LAUNCHER_POSTGRES_DSN", "Переменная окружения с DSN PostgreSQL")

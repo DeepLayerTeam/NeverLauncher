@@ -51,7 +51,7 @@ func Environment() (HostEnvironment, error) {
 		InstanceId:          strings.TrimSpace(os.Getenv("LAUNCHER_EXTENSION_INSTANCE_ID")),
 	}
 	if env.HostUrl == "" || env.HostToken == "" || env.ExtensionId == "" || env.InstanceId == "" || env.ExtensionApiVersion == "" {
-		return HostEnvironment{}, errors.New("Окружение Launcher Extension Host настроено не полностью")
+		return HostEnvironment{}, errors.New("Окружение хоста расширений Launcher настроено не полностью")
 	}
 	if env.Scope == "" {
 		env.Scope = "global"
@@ -128,7 +128,7 @@ func (c *Client) Hello(ctx context.Context, callbackURL string) (HelloResponse, 
 		return HelloResponse{}, err
 	}
 	if out.ProtocolVersion != HostProtocolVersion || out.ExtensionApiVersion != ExtensionAPIVersion || out.InstanceId != c.env.InstanceId {
-		return HelloResponse{}, errors.New("Несовпадение идентификатора или протокола при приветствии Launcher Host")
+		return HelloResponse{}, errors.New("Несовпадение идентификатора или протокола при приветствии хоста Launcher")
 	}
 	c.mu.Lock()
 	c.hello = out

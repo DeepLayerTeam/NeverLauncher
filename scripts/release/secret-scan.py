@@ -64,7 +64,7 @@ def scan_content(name: str, data: bytes) -> list[str]:
             and b"replace" not in value
         ):
             issues.append(
-                f"{name}: обнаружено непустое secret/password/private-key значение"
+                f"{name}: обнаружено непустое значение секрета, пароля или закрытого ключа"
             )
     return issues
 

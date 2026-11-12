@@ -17,7 +17,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-MODULE = Path(__file__).with_name('sqlite_pg_cutover_0475.py')
+MODULE = Path(__file__).with_name('sqlite_pg_cutover.py')
 spec = importlib.util.spec_from_file_location('cutover_0477', MODULE)
 opmod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(opmod)
@@ -69,7 +69,7 @@ class FailureRecovery0477(unittest.TestCase):
     def test_preflight_fails_without_disk_reserve_and_never_stops_units(self):
         fake = mock.Mock(f_bavail=1, f_frsize=4096)
         with mock.patch.object(opmod.os, 'statvfs', return_value=fake):
-            with self.assertRaisesRegex(opmod.CutoverError, 'insufficient disk space'):
+            with self.assertRaisesRegex(opmod.CutoverError, 'Недостаточно места на диске'):
                 self.op.preflight()
         self.assertEqual(self.op.state['completed'], [])
         self.assertEqual(self.original(), b'kept')
@@ -86,7 +86,7 @@ class FailureRecovery0477(unittest.TestCase):
         self.op.http_backup.write_bytes(b'partial sqlite copy')
         self.op.http_backup.chmod(0o600)
         with mock.patch.object(self.op, 'inactive'):
-            with self.assertRaisesRegex(opmod.CutoverError, 'incomplete frozen backup'):
+            with self.assertRaisesRegex(opmod.CutoverError, 'незавершённые файлы замороженной резервной копии'):
                 self.op.frozen_backup()
         self.assertEqual(self.op.http_backup.read_bytes(), b'partial sqlite copy')
 
@@ -114,7 +114,7 @@ class FailureRecovery0477(unittest.TestCase):
         resumed = opmod.Operator(self.op.a)
         resumed.init_workdir()
         self.assertTrue(resumed.state['importOutcomeUnknown'])
-        with self.assertRaisesRegex(opmod.CutoverError, 'outcome unknown'):
+        with self.assertRaisesRegex(opmod.CutoverError, 'Результат предыдущего импорта неизвестен'):
             resumed.run()
         self.assertEqual(self.original(), b'kept')
 
@@ -138,7 +138,7 @@ class FailureRecovery0477(unittest.TestCase):
                     'checked': 1, 'catalogSha256': 'b' * 64}
         self.op.state['sourceSHA256'] = 'a' * 64
         with mock.patch.object(self.op, 'inactive'), mock.patch.object(opmod, 'run_cmd', side_effect=corrupted):
-            with self.assertRaisesRegex(opmod.CutoverError, 'source blobs changed'):
+            with self.assertRaisesRegex(opmod.CutoverError, 'Файлы источника изменились во время копирования'):
                 self.op.files()
         self.assertNotIn('copy_files', self.op.state.get('receipts', {}))
 
@@ -147,14 +147,14 @@ class FailureRecovery0477(unittest.TestCase):
         self.op.state['sourceSHA256'] = 'a' * 64
         receipt = {'verified': True, 'sourceSha256': 'a' * 64, 'checked': 1}
         with mock.patch.object(self.op, 'inactive'), mock.patch.object(opmod, 'run_cmd', return_value=receipt):
-            with self.assertRaisesRegex(opmod.CutoverError, 'catalog digest'):
+            with self.assertRaisesRegex(opmod.CutoverError, 'отсутствует подтверждённый хеш каталога'):
                 self.op.files()
 
     def test_space_failure_prevents_copy_start(self):
         (self.source / 'data.bin').write_bytes(b'A' * 32)
         spy = mock.Mock()
-        with mock.patch.object(self.op, 'inactive'), mock.patch.object(opmod, 'run_cmd', spy), mock.patch.object(opmod, 'enough_space', side_effect=opmod.CutoverError('insufficient disk space')):
-            with self.assertRaisesRegex(opmod.CutoverError, 'disk space'):
+        with mock.patch.object(self.op, 'inactive'), mock.patch.object(opmod, 'run_cmd', spy), mock.patch.object(opmod, 'enough_space', side_effect=opmod.CutoverError('Недостаточно места на диске')):
+            with self.assertRaisesRegex(opmod.CutoverError, 'Недостаточно места на диске'):
                 self.op.files()
         spy.assert_not_called()
 
@@ -162,26 +162,26 @@ class FailureRecovery0477(unittest.TestCase):
         outside = self.root / 'outside'
         outside.write_bytes(b'secret')
         (self.source / 'link').symlink_to(outside)
-        with self.assertRaisesRegex(opmod.CutoverError, 'non-directory or symlink|unsafe source'):
+        with self.assertRaisesRegex(opmod.CutoverError, 'Небезопасный исходный объект хранилища: ссылка или специальный файл'):
             opmod.storage_fingerprint(self.source)
 
     def test_hardlinked_blob_rejected_before_copy(self):
         outside = self.root / 'outside'
         outside.write_bytes(b'secret')
         os.link(outside, self.source / 'shared')
-        with self.assertRaisesRegex(opmod.CutoverError, 'link or special'):
+        with self.assertRaisesRegex(opmod.CutoverError, 'ссылка или специальный файл'):
             opmod.storage_fingerprint(self.source)
 
     def test_out_of_order_persisted_stages_rejected(self):
         self.op.state['completed'] = ['preflight', 'import']
         self.op.save()
-        with self.assertRaisesRegex(opmod.CutoverError, 'out-of-order'):
+        with self.assertRaisesRegex(opmod.CutoverError, 'Журнал этапов миграции повреждён либо содержит нарушения порядка'):
             opmod.Operator(self.op.a).init_workdir()
 
     def test_receipt_without_completed_stage_rejected(self):
         self.op.state['receipts'] = {'verify': {'verified': True}}
         self.op.save()
-        with self.assertRaisesRegex(opmod.CutoverError, 'uncommitted'):
+        with self.assertRaisesRegex(opmod.CutoverError, 'подтверждение незафиксированного этапа миграции'):
             opmod.Operator(self.op.a).init_workdir()
 
     def test_precutover_rollback_recovers_both_services_and_data(self):
@@ -205,7 +205,7 @@ class FailureRecovery0477(unittest.TestCase):
                 return (1, b'')
             return (0, b'')
         with mock.patch.object(self.op, 'inactive'), mock.patch.object(self.op, 'service', side_effect=service) as called:
-            with self.assertRaisesRegex(opmod.CutoverError, 'services stopped'):
+            with self.assertRaisesRegex(opmod.CutoverError, 'службы остановлены для диагностики'):
                 self.op.rollback()
         self.assertFalse(self.op.state.get('rolledBack'))
         self.assertEqual(len([args for args, _ in called.call_args_list if args[0] == 'stop']), 2)
@@ -233,20 +233,21 @@ class FailureRecovery0477(unittest.TestCase):
         with mock.patch.object(self.op, 'inactive'), mock.patch.object(opmod, 'change_env', side_effect=killed):
             with self.assertRaisesRegex(OSError, 'Искусственно вызванный сбой при переключении'):
                 self.op.cutover()
-        with self.assertRaisesRegex(opmod.CutoverError, 'automatic rollback forbidden'):
+        with self.assertRaisesRegex(opmod.CutoverError, 'автоматический откат запрещён'):
             opmod.Operator(self.op.a).rollback()
         self.assertEqual(self.original(), b'kept')
 
     def test_post_cutover_fault_stops_writers_without_rollback(self):
-        self.op.state['completed'] = list(opmod.STAGES[:7])
+        self.op.state['completed'] = list(opmod.STAGES[:8])
         self.op.state['writeBoundaryCrossed'] = True
         self.op.save()
         stops = []
         def service(cmd, unit):
             stops.append((cmd, unit))
             return (1, b'inactive') if cmd == 'is-active' else (0, b'')
-        with mock.patch.object(self.op, 'service', side_effect=service):
-            with self.assertRaisesRegex(opmod.CutoverError, 'automatic rollback forbidden|unsafe'):
+        with mock.patch.object(self.op, 'service', side_effect=service), \
+             mock.patch.object(self.op, 'health_check', side_effect=opmod.CutoverError('Проверка состояния после переключения завершилась ошибкой')):
+            with self.assertRaisesRegex(opmod.CutoverError, 'Проверка состояния после переключения завершилась ошибкой'):
                 self.op.run()
         # Успешное переключение не объявляется; все возможные записывающие процессы
         # PostgreSQL остановлены.

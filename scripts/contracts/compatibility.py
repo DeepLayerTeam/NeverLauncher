@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-BASE = ROOT / 'scripts/contracts/baselines/openapi-04511.json'
+BASE = ROOT / 'scripts/contracts/baselines/openapi.json'
 CURRENT = ROOT / 'schemas/openapi.yaml'
 METHODS = {'get','post','put','patch','delete'}
 
@@ -33,7 +33,7 @@ def check(old, new):
             if method not in METHODS: continue
             current = new.get('paths', {}).get(path, {}).get(method)
             if current is None:
-                errors.append(f'Удалён endpoint: {method.upper()} {path}')
+                errors.append(f'Удалён маршрут API: {method.upper()} {path}')
                 continue
             label = f'{method.upper()} {path}'
             if current.get('operationId') != operation.get('operationId'):

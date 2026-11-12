@@ -30,6 +30,6 @@ public final class JavaExtensionHost {
         }else if("cli".equals(target)){
             if(args.length==0)throw new IllegalArgumentException("Для хоста CLI требуется команда");
             ExtensionRunner.runManagedCliFromHost(className,System.getenv(),Arrays.copyOf(args,args.length));
-        }else throw new IllegalArgumentException("Неподдерживаемая цель хоста Java Extension");
+        }else throw new IllegalArgumentException("Неподдерживаемая цель хоста расширений Java");
     }
 }

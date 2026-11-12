@@ -57,7 +57,7 @@ def inspect_macho(
     data = path.read_bytes()
     if len(data) < 32 or data[:4] != b"\xcf\xfa\xed\xfe":
         raise RuntimeError(
-            f"{path}: для промышленного пакета требуется одиночный 64-битный Mach-O с порядком байтов little-endian"
+            f"{path}: для промышленного пакета требуется одиночный 64-битный Mach-O с порядком байтов от младшего к старшему"
         )
     cpu = struct.unpack_from("<I", data, 4)[0]
     meta = ARCHES[expected_arch]

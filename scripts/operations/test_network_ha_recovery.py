@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 
-import dr_03512 as dr
+import dr
 
 
 def make_world(root: Path, name='paper') -> Path:
@@ -56,7 +56,7 @@ class WorldRestore0454Tests(unittest.TestCase):
                              b'actual Minecraft region bytes')
             self.assertEqual((targets['paper'] / 'server.properties').read_text(), 'level-name=world\n')
             self.assertFalse(list(base.glob('.world-restore-*')))
-            with self.assertRaisesRegex(dr.DrillError, 'exists'):
+            with self.assertRaisesRegex(dr.DrillError, 'уже существует'):
                 dr.validate_world_destinations(receipts, targets, stage)
 
     def test_integrity_rejects_corruption_missing_extra_and_symlink(self):
@@ -64,16 +64,16 @@ class WorldRestore0454Tests(unittest.TestCase):
             backup = make_world(Path(tmp))
             world_file = backup / 'payload/world/region/r.0.0.mca'
             world_file.write_bytes(b'altered')
-            with self.assertRaisesRegex(dr.DrillError, 'checksum'):
+            with self.assertRaisesRegex(dr.DrillError, 'Контрольная сумма резервной копии игрового мира не совпадает'):
                 dr.safe_world_backup(backup)
             world_file.write_bytes(b'actual Minecraft region bytes')
             (backup / 'payload/world/extra').write_bytes(b'rogue')
-            with self.assertRaisesRegex(dr.DrillError, 'unexpected'):
+            with self.assertRaisesRegex(dr.DrillError, 'неожиданный файл резервной копии'):
                 dr.safe_world_backup(backup)
             (backup / 'payload/world/extra').unlink()
             world_file.unlink()
             world_file.symlink_to('/etc/hosts')
-            with self.assertRaisesRegex(dr.DrillError, 'unsafe'):
+            with self.assertRaisesRegex(dr.DrillError, 'небезопасный или неожиданный файл резервной копии'):
                 dr.safe_world_backup(backup)
 
     def test_missing_world_dir_and_unconfirmed_stop_refused(self):
@@ -83,12 +83,12 @@ class WorldRestore0454Tests(unittest.TestCase):
             info = json.loads(path.read_text())
             info['consistency'] = 'running'
             path.write_text(json.dumps(info))
-            with self.assertRaisesRegex(dr.DrillError, 'unsupported'):
+            with self.assertRaisesRegex(dr.DrillError, 'Резервная копия игрового мира не поддерживается либо неполная'):
                 dr.safe_world_backup(backup)
             info['consistency'] = 'confirmed-stopped'
             info['entries'] = [e for e in info['entries'] if e['path'] != 'world']
             path.write_text(json.dumps(info))
-            with self.assertRaisesRegex(dr.DrillError, 'directory'):
+            with self.assertRaisesRegex(dr.DrillError, 'отсутствует родительский каталог'):
                 dr.safe_world_backup(backup)
 
     def test_world_restore_cannot_escape_to_snapshot_or_overlap(self):
@@ -100,7 +100,7 @@ class WorldRestore0454Tests(unittest.TestCase):
             for dest in [stage / 'foo', base / 'source', base / 'no-such-directory' / 'foo']:
                 with self.assertRaises(dr.DrillError):
                     dr.validate_world_destinations(receipts, {'a': dest}, stage)
-            with self.assertRaisesRegex(dr.DrillError, 'each captured'):
+            with self.assertRaisesRegex(dr.DrillError, 'Для каждого сохранённого мира'):
                 dr.validate_world_destinations(receipts, {}, stage)
 
     @unittest.skipUnless(os.environ.get('NL_WORLD_CLI'), 'Укажите в NL_WORLD_CLI путь к собранному исполняемому файлу Go-лаунчера')
@@ -211,7 +211,7 @@ class NetworkHA0454Tests(unittest.TestCase):
                     patch.object(dr, 'docker_volume_exists', return_value=True), \
                     patch.object(dr, 'docker_tar_backup', side_effect=fake_tar), \
                     patch.object(dr, 's3_download', side_effect=fake_s3), \
-                    self.assertRaisesRegex(dr.DrillError, 'S3 objects changed'):
+                    self.assertRaisesRegex(dr.DrillError, 'Объекты S3 изменились'):
                 dr.snapshot('launcher', env, dst, 'launcher',
                          'launcher-source', production=True, approved=True,
                          world_backups={'paper':source})
@@ -231,7 +231,7 @@ class NetworkHA0454Tests(unittest.TestCase):
             self.assertIn(b'BEGIN;', kwargs['stdin'].getvalue())
         with patch.object(dr, 'compose') as compose:
             compose.return_value.stdout = b'0|0|1|0|0|0|0|0|0|0\n'
-            with self.assertRaisesRegex(dr.DrillError, 'readback'):
+            with self.assertRaisesRegex(dr.DrillError, 'Проверка повторного чтения блокировки ServerBridge'):
                 dr.fence_restored_serverbridge('launcher', Path('/env'))
 
     def test_network_ha_legacy_snapshot_is_rejected_before_compose_mutation(self):
@@ -242,7 +242,7 @@ class NetworkHA0454Tests(unittest.TestCase):
             manifest = {'schema':2, 'sourceProject':'launcher', 'version':'0.45.4',
                         'volumes':list(dr.VOLUMES), 'storage':'s3-objects'}
             with patch.object(dr, 'verify_snapshot', return_value=manifest), patch.object(dr, 'compose') as compose, \
-                    self.assertRaisesRegex(dr.DrillError, 'legacy Redis-bearing'):
+                    self.assertRaisesRegex(dr.DrillError, 'устаревших снимков Network-HA с Redis не поддерживается'):
                 dr.restore_fresh('launcher', env, root, 'launcher', ready_url='https://launcher.example.org/ready',
                                  production=True, approved=True)
             compose.assert_not_called()
@@ -251,7 +251,7 @@ class NetworkHA0454Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             env = Path(tmp) / '.env'
             env.write_text('LAUNCHER_IMAGE_TAG=0.45.4\n')
-            with patch.object(dr, 'compose_states') as states, self.assertRaisesRegex(dr.DrillError, 'world'):
+            with patch.object(dr, 'compose_states') as states, self.assertRaisesRegex(dr.DrillError, 'требуются проверенные резервные копии игровых миров'):
                 dr.snapshot('launcher', env, Path(tmp)/'backup', 'launcher', 'bucket-name',
                             production=True, approved=True)
             states.assert_not_called()
@@ -359,7 +359,7 @@ class NetworkHA0454Tests(unittest.TestCase):
             dr.validate_world_receipts(stage, receipts)
             file = stage / 'worlds/paper' / source.name / 'payload/world/region/r.0.0.mca'
             file.write_bytes(b'tampered')
-            with self.assertRaisesRegex(dr.DrillError, 'checksum'):
+            with self.assertRaisesRegex(dr.DrillError, 'Контрольная сумма резервной копии игрового мира не совпадает'):
                 dr.validate_world_receipts(stage, receipts)
 
 if __name__ == '__main__':

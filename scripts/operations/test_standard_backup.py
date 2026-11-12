@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import dr_03512 as dr
+import dr
 
 
 def coordinator_tar(target, *, invalid=False, missing=False):
@@ -47,10 +47,10 @@ class StandardBackupTests(unittest.TestCase):
             coordinator_tar(path)
             dr.verify_coordinator(path)
             coordinator_tar(path, invalid=True)
-            with self.assertRaisesRegex(dr.DrillError, 'incompatible schema'):
+            with self.assertRaisesRegex(dr.DrillError, 'Схема базы координатора SQLite несовместима'):
                 dr.verify_coordinator(path)
             coordinator_tar(path, missing=True)
-            with self.assertRaisesRegex(dr.DrillError, 'missing'):
+            with self.assertRaisesRegex(dr.DrillError, 'отсутствует база координатора SQLite'):
                 dr.verify_coordinator(path)
 
     def test_quiescence_uses_actual_postgres_sessions_and_states(self):
@@ -60,13 +60,13 @@ class StandardBackupTests(unittest.TestCase):
             compose.return_value.stdout = b'0|0/ABC123\n'
             dr.assert_quiescent('nl-dr-source', Path('/env'))
             compose.return_value.stdout = b'1|0/ABC123\n'
-            with self.assertRaisesRegex(dr.DrillError, 'active client'):
+            with self.assertRaisesRegex(dr.DrillError, 'активные клиентские сеансы'):
                 dr.assert_quiescent('nl-dr-source', Path('/env'))
         for state in ('running', 'restarting', 'paused'):
             with patch.object(dr, 'compose_states', return_value={
                     'postgres': 'running', 'api': state
                 }), patch.object(dr, 'compose') as compose:
-                with self.assertRaisesRegex(dr.DrillError, 'writes not fenced'):
+                with self.assertRaisesRegex(dr.DrillError, 'Запись не заблокирована'):
                     dr.assert_quiescent('nl-dr-source', Path('/env'))
                 compose.assert_not_called()
 
@@ -79,7 +79,7 @@ class StandardBackupTests(unittest.TestCase):
                 compose.return_value.stdout = data
                 self.assertEqual(dr.compose_states('nl-dr-one', Path('/env')), {'postgres':'running','api':'exited'})
             compose.return_value.stdout = b'{"Service":"api","State":"running"}\n{"Service":"api","State":"exited"}'
-            with self.assertRaisesRegex(dr.DrillError, 'duplicate'):
+            with self.assertRaisesRegex(dr.DrillError, 'Повторяющееся или неизвестное состояние Docker Compose'):
                 dr.compose_states('nl-dr-one', Path('/env'))
 
     def test_cold_snapshot_dumps_postgres_and_copies_every_standard_volume(self):
@@ -149,7 +149,7 @@ class StandardBackupTests(unittest.TestCase):
                 raise AssertionError(cmds)
             with patch.object(dr, 'compose_states', side_effect=lambda *_: states.copy()), \
                  patch.object(dr, 'compose', side_effect=compose), \
-                 self.assertRaisesRegex(dr.DrillError, 'active client'):
+                 self.assertRaisesRegex(dr.DrillError, 'активные клиентские сеансы'):
                 dr.snapshot('nl-dr-source', env, root / 'backup', 'nl-dr-source')
             self.assertEqual(up, ['api'])
             self.assertFalse((root / 'backup').exists())
@@ -190,7 +190,7 @@ class StandardRecoveryHardeningTests(unittest.TestCase):
                  patch.object(dr, 'pg_validate'), \
                  patch.object(dr, 'docker_volume_exists', return_value=True), \
                  patch.object(dr, 'docker_tar_backup', side_effect=fake_tar), \
-                 self.assertRaisesRegex(dr.DrillError, 'WAL advanced'):
+                 self.assertRaisesRegex(dr.DrillError, 'Журнал WAL PostgreSQL изменился'):
                 dr.snapshot('nl-dr-test', env, root / 'backup', 'nl-dr-test')
             self.assertFalse((root / 'backup').exists())
             self.assertEqual(list(root.glob('.dr-stage-*')), [])
@@ -218,7 +218,7 @@ class StandardRecoveryHardeningTests(unittest.TestCase):
             manifest = {'schema':2,'sourceProject':'launcher','version':'0.45.3','volumes':list(dr.STANDARD_VOLUMES),'storage':'local-volume'}
             with patch.object(dr, 'verify_snapshot', return_value=manifest), \
                  patch.object(dr, 'compose') as compose, \
-                 self.assertRaisesRegex(dr.DrillError, 'target image version differs'):
+                 self.assertRaisesRegex(dr.DrillError, 'Версия целевого образа отличается'):
                 dr.restore_fresh('launcher', env, root, 'launcher', ready_url='https://launcher.example.org/ready', production=True, approved=True)
             compose.assert_not_called()
 
@@ -245,7 +245,7 @@ class StandardRecoveryHardeningTests(unittest.TestCase):
                 data = b'untrusted'
                 member.size = len(data)
                 archive.addfile(member, io.BytesIO(data))
-            with self.assertRaisesRegex(dr.DrillError, 'unsafe archive'):
+            with self.assertRaisesRegex(dr.DrillError, 'Небезопасный путь элемента архива'):
                 dr.verify_coordinator(tarfile_path)
 
 
@@ -260,7 +260,7 @@ class RestoredContainerReadinessTests(unittest.TestCase):
         with patch.object(dr, 'compose') as compose, \
              patch.object(dr.time, 'sleep'), patch.object(dr.time, 'monotonic', side_effect=[0, 1, 3]):
             compose.return_value.stdout = b'{"status":"ready", "version":"0.45.2", "repository":"postgres", "storage":"local"}'
-            with self.assertRaisesRegex(dr.DrillError, 'restored API'):
+            with self.assertRaisesRegex(dr.DrillError, 'Восстановленный контейнер API не перешёл в состояние готовности'):
                 dr.check_restored_backend('launcher', Path('/env'), version='0.45.3', storage='local', timeout=2)
 
 

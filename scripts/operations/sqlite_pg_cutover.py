@@ -91,7 +91,7 @@ def enough_space(path: Path, required_bytes: int, reason: str):
     available = stats.f_bavail * stats.f_frsize
     reserve = max(64 * 1024 * 1024, (required_bytes + 4) // 5)
     if available < required_bytes + reserve:
-        raise CutoverError(f"Недостаточно места на диске для {reason}: требуется {required_bytes + reserve} байт, доступно {available}")
+        raise CutoverError(f"Недостаточно места на диске для операции «{reason}»: требуется {required_bytes + reserve} байт, доступно {available}")
 
 
 def sqlite_size_on_disk(path: Path) -> int:
@@ -168,7 +168,7 @@ def check_stage_chain(state: dict):
     if state.get("writeBoundaryCrossed") and "verify" not in completed:
         raise CutoverError("Небезопасное значение: «непроверенный журнал границы записи; автоматический откат запрещён»")
     if "cutover" in completed and not state.get("writeBoundaryCrossed"):
-        raise CutoverError("Запрещено: «переключение зафиксировано без границы записи; автоматический откат»")
+        raise CutoverError("Переключение зафиксировано без границы записи; автоматический откат запрещён")
 
 
 def sha256_file(path: Path):
@@ -270,15 +270,15 @@ def verify_http_snapshot(path: Path):
     with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
         exists = db.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='http_repository_state_0372'").fetchone()[0]
         if exists != 1:
-            raise CutoverError("Отсутствует: «таблица снимка HTTP Repository»")
+            raise CutoverError("Отсутствует таблица снимка HTTP-репозитория")
         rows = db.execute("SELECT singleton,state_version,sequence,sha256,document FROM http_repository_state_0372").fetchall()
         if len(rows) != 1:
-            raise CutoverError("Некорректное значение: «единственная запись снимка HTTP Repository»")
+            raise CutoverError("Некорректная единственная запись снимка HTTP-репозитория")
         singleton, version, sequence, digest, document = rows[0]
         if singleton != 1 or version != 1 or sequence < 1 or not isinstance(document, bytes):
-            raise CutoverError("Некорректное значение: «метаданные снимка HTTP Repository»")
+            raise CutoverError("Некорректные метаданные снимка HTTP-репозитория")
         if hashlib.sha256(document).hexdigest() != digest:
-            raise CutoverError("Несовпадение: «SHA-256 снимка HTTP Repository»")
+            raise CutoverError("Контрольная сумма SHA-256 снимка HTTP-репозитория не совпадает")
         def reject_duplicate(pairs):
             out = {}
             for key, value in pairs:
@@ -460,7 +460,7 @@ class Operator:
         for unit in self.a.units:
             code, _ = self.service("stop", unit)
             if code:
-                raise CutoverError(f"Не удалось остановить «служба записи» {unit}")
+                raise CutoverError(f"Не удалось остановить службу записи {unit}")
         self.inactive()
         return {"stoppedServices": len(self.a.units)}
 
@@ -637,7 +637,7 @@ Backend до объявления завершения миграции опер
         project_path = "/api/v1/projects/" + quote(self.a.project, safe="")
         project = request(project_path, token=login["token"])
         if not isinstance(project, dict) or project.get("id") != self.a.project:
-            raise CutoverError("Импортированный проект не должен быть доступен для чтения через API Backend")
+            raise CutoverError("Импортированный проект недоступен для чтения через API серверной части")
         # Защищённый экспорт Admin требует реального разрешения проекта и подтверждает сопоставление сеанса и
         # роли, а не только доступность общедоступного GET.
         request("/api/v1/admin/projects/" + quote(self.a.project, safe="") + "/export", token=login["token"])
@@ -689,7 +689,7 @@ Backend до объявления завершения миграции опер
         with (self.work / "operator.lock").open("a+b") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             if self.state.get("writeBoundaryCrossed"):
-                raise CutoverError("Запрещено: «записи могли попасть в PostgreSQL; автоматический откат»")
+                raise CutoverError("Записи могли попасть в PostgreSQL; автоматический откат запрещён")
             if self.state.get("importOutcomeUnknown"):
                 # Импорт SQLRepository мог быть зафиксирован, но до переключения источником истины остаётся старая БД. При
                 # восстановлении SQLite не удаляйте данные PostgreSQL и не повторяйте импорт.
