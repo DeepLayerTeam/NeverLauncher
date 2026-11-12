@@ -25,7 +25,7 @@ public final class JoinValidationResult {
             case "node_identity_missing", "node_identity_signing_failed", "serverbridge_node_signature_required", "serverbridge_node_identity_invalid", "serverbridge_node_fingerprint_mismatch" -> "Криптографический идентификатор ServerBridge не зарегистрирован или недействителен.";
             case "serverbridge_node_timestamp_invalid", "serverbridge_node_timestamp_out_of_window" -> "Время узла ServerBridge не синхронизировано с Backend.";
             case "serverbridge_node_nonce_invalid", "serverbridge_node_nonce_replayed" -> "Backend отклонил повторный или некорректный ServerBridge-запрос.";
-            case "serverbridge_node_nonce_store_unavailable" -> "Хранилище replay-защиты ServerBridge временно недоступно.";
+            case "serverbridge_node_nonce_store_unavailable" -> "Хранилище защиты ServerBridge от повторного воспроизведения запросов временно недоступно.";
             case "trusted_device_required", "trusted_device_unverified", "trusted_device_missing", "trusted_device_revoked" -> "Для входа требуется активное доверенное устройство Launcher.";
             case "credential_trust_snapshot_missing", "session_binding_changed", "session_device_changed" -> "Сессия устройства устарела. Перезапустите игру из Launcher.";
             case "device_reattest_required" -> "Требуется повторная проверка устройства в Launcher.";

@@ -253,7 +253,7 @@ func (r *SQLRepository) leaseDurableJobTx0213(ctx context.Context, tx *sql.Tx, i
 		return current, ErrLeaseBusy
 	}
 	if current.AttemptCount >= current.MaxAttempts {
-		if _, err := tx.ExecContext(ctx, `UPDATE durable_jobs SET status='dead',last_error='max attempts exceeded',updated_at=clock_timestamp(),completed_at=clock_timestamp(),lease_owner='',lease_token='',lease_expires_at=NULL WHERE id=$1`, current.ID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE durable_jobs SET status='dead',last_error='Превышено максимальное число попыток',updated_at=clock_timestamp(),completed_at=clock_timestamp(),lease_owner='',lease_token='',lease_expires_at=NULL WHERE id=$1`, current.ID); err != nil {
 			return model.DurableJob{}, err
 		}
 		current.Status = model.DurableJobStatusDead

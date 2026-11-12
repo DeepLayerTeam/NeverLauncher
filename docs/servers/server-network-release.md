@@ -8,7 +8,7 @@
 
 ```bash
 # На доверенном Linux CI runner с реальным Docker, Java 21, Go, Gradle,
-# PostgreSQL и доступными upstream Minecraft/Proxy образами:
+# PostgreSQL и доступными исходными образами Minecraft и прокси:
 GITHUB_SHA="$(git rev-parse HEAD)" \
   bash scripts/test/serverbridge-network-0420.sh
 

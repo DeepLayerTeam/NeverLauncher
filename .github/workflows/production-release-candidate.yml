@@ -38,7 +38,7 @@ on:
       ga0480_evidence_run_id:
         type: string
         required: false
-        description: 'ID защищённого и независимо подписанного реального запуска приёмки 0.48.0: миграция staging, прежние версии, игра и точный подписанный пакет (обязателен для публикации)'
+        description: 'ID защищённого и независимо подписанного реального запуска приёмки 0.48.0: миграция в промежуточной среде, прежние версии, игра и точный подписанный пакет (обязателен для публикации)'
       ga0530_evidence_run_id:
         type: string
         required: false
@@ -178,7 +178,7 @@ jobs:
         run: |
           python3 -m pip install playwright==1.58.0
           python3 -m playwright install --with-deps chromium
-      - name: Сертифицировать кандидата с реальными сборками, PostgreSQL и staging
+      - name: Сертифицировать кандидата с реальными сборками, PostgreSQL и промежуточной средой
         run: bash scripts/release/certify-admin-ga-0220.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -267,7 +267,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Проверить изолированную конфигурацию staging и доступность настоящего Docker
+      - name: Проверить изолированную конфигурацию промежуточной среды и доступность настоящего Docker
         env:
           RC_DR_SOURCE: ${{ vars.NL_RC_DR_SOURCE_PROJECT }}
           RC_DR_TARGET: ${{ vars.NL_RC_DR_TARGET_PROJECT }}
@@ -309,7 +309,7 @@ jobs:
           path: ${{ runner.temp }}/rc-dr-03514.json
           if-no-files-found: error
           retention-days: 30
-      - name: Удалить данные временного окружения staging
+      - name: Удалить данные временного промежуточного окружения
         if: always()
         shell: bash
         run: rm -f "$RUNNER_TEMP/rc-dr.env"

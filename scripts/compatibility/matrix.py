@@ -1159,7 +1159,7 @@ def command_validate(args: argparse.Namespace) -> int:
     vanilla = [target for target in payload["targets"] if target["loader"] == "vanilla"]
     java = sorted({target["javaMajor"] for target in vanilla})
     print(
-        f"Цели совместимости проверены: {len(payload['targets'])} targets for {payload['productVersion']}; Vanilla={len(vanilla)}; Java={java}"
+        f"Цели совместимости проверены: {len(payload['targets'])} целей для версии {payload['productVersion']}; Vanilla={len(vanilla)}; Java={java}"
     )
     return 0
 
@@ -1353,14 +1353,14 @@ def verify_result(
         errors.append("Отсутствуют доказательства")
     else:
         if str(evidence.get("manifestLoader", "")) != target["loader"]:
-            errors.append("Несовпадение evidence manifestLoader")
+            errors.append("Несовпадение manifestLoader в подтверждении")
         runtime = evidence.get("javaRuntime")
         if (
             not isinstance(runtime, dict)
             or runtime.get("matched") is not True
             or runtime.get("detectedMajor") != target["javaMajor"]
         ):
-            errors.append("Несовпадение evidence javaRuntime")
+            errors.append("Несовпадение javaRuntime в подтверждении")
         if compatibility_ii_ga_required():
             if not isinstance(runtime, dict) or runtime.get("certified") is not True:
                 errors.append("Отсутствует сертификация JRE в доказательстве")
@@ -1392,7 +1392,7 @@ def verify_result(
             or platform_runtime.get("detectedOS") != target["os"]
             or platform_runtime.get("detectedArch") != target["arch"]
         ):
-            errors.append("Несовпадение evidence platformRuntime")
+            errors.append("Несовпадение platformRuntime в подтверждении")
         files = evidence.get("files")
         if target["scope"] == "client":
             if target["loader"] in {"fabric", "quilt", "forge", "neoforge"}:

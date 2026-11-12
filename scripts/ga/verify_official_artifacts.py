@@ -90,7 +90,7 @@ def main() -> int:
     try:
         digests = verify_shipped(args.bundle, args.receipt)
     except (ValueError, OSError, KeyError, json.JSONDecodeError) as exc:
-        print(f"Ошибка: «0.27.0 artifact binding»: {exc}", file=sys.stderr)
+        print(f"Ошибка: «0.27.0 привязка артефактов»: {exc}", file=sys.stderr)
         return 2
     print(f"GA 0.27.0: проверено {len(digests)} точных хешей нативных рабочих пакетов")
     return 0

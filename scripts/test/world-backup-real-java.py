@@ -175,7 +175,7 @@ public class WorldLifecycle {
             b = (dest / rel).read_bytes()
             assert (
                 a == b and hashlib.sha256(a).digest() == hashlib.sha256(b).digest()
-            ), f"restore mismatch: {rel}"
+            ), f"Несовпадение после восстановления: {rel}"
         assert (
             run(
                 cli,

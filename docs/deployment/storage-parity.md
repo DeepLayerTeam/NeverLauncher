@@ -6,7 +6,7 @@
 
 - `scripts/storageparity/main.go` обходит Go-код Go AST-парсером, выделяет используемые SQL-открытия, PostgreSQL-драйверы, потенциально PostgreSQL-специфичные запросы и конфигурацию. Для SQL, shell, Python, CI и конфигурационных файлов дополнительно фиксируются текстовые маркеры с реальными путями и строками.
 - `docs/deployment/storage-dependencies-0371.json` — детерминированный исходный снимок обнаруженных зависимостей и surface методов. В нём **пути, номера строк и фрагменты исходника**, а не придуманные классификации в таблице.
-- `services/api/internal/storageparity/*_test.go` запускает **один и тот же набор действий** против SQLite Core на диске и настоящего PostgreSQL с миграциями. Ни mock, ни memory fallback не принимаются.
+- `services/api/internal/storageparity/*_test.go` запускает **один и тот же набор действий** против SQLite Core на диске и настоящего PostgreSQL с миграциями. Имитации и резервное хранение в памяти не допускаются.
 - `.github/workflows/ci.yml` запускает проверку снимка и оба теста в отдельном обязательном job с PostgreSQL 18; `required-ci` зависит от успеха этого job.
 
 ## Обнаруженная граница HTTP ↔ SQLite
@@ -18,7 +18,7 @@
 - **99 имён HTTP Repository не найдены** в SQLite Core. Это только сравнение конкретных двух интерфейсов, не доказательство отсутствия отдельных вспомогательных store-реализаций.
 - В картотеке обнаружены PostgreSQL-ориентированные миграции и прямые зависимости (включая конфигурацию и CLI). Общее число файлов с совпавшими маркерами не равно числу блокирующих зависимостей: некоторые файлы содержат только тестовые fixtures или SQLite SQL.
 
-Полный список — `methodSurface.httpRepositoryMethods`, `methodSurface.sqliteCoreMethods`, `methodSurface.httpRepositoryMethodsWithoutSQLiteCoreName` в JSON. К каждому найденному source marker привязаны `path`, `line`, `category`, `evidence`.
+Полный список — `methodSurface.httpRepositoryMethods`, `methodSurface.sqliteCoreMethods`, `methodSurface.httpRepositoryMethodsWithoutSQLiteCoreName` в JSON. К каждой найденной отметке в исходном коде привязаны `path`, `line`, `category`, `evidence`.
 
 ### Основные блокирующие точки подключения (проверять в следующей версии)
 

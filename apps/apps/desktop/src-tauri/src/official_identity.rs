@@ -523,7 +523,7 @@ impl IdentityManager {
             }
         };
         let validated = (|| -> Result<(String, DeviceChallenge), String> {
-            let ticket = result.data.get("flow").and_then(Value::as_str).filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Microsoft не вернул flow")?.to_owned();
+            let ticket = result.data.get("flow").and_then(Value::as_str).filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Microsoft не вернул данные сценария авторизации")?.to_owned();
             let uri = result.data.get("verificationUri").and_then(Value::as_str).ok_or("Сервис Microsoft не вернул адрес подтверждения verificationUri")?;
             let url = Url::parse(uri).map_err(|_| "Некорректная ссылка Microsoft")?;
             let trusted = matches!(url.host_str(), Some("microsoft.com" | "microsoftonline.com"))

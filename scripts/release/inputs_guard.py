@@ -132,7 +132,7 @@ def main():
             if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', snapshot['release']):
                 raise ValueError('Недопустимая версия релиза')
             BASELINE.write_text(json.dumps(snapshot, indent=2, sort_keys=True)+'\n',encoding='utf8')
-            print(f'frozen {len(snapshot["files"])} Реальные входные исходники')
+            print(f'Закреплено исходных файлов: {len(snapshot["files"])}')
         else:
             verify(json.loads(BASELINE.read_text(encoding='utf8')),snapshot)
             print(f'ПРОЙДЕНО: {len(snapshot["files"])} закреплённых исходных файлов не изменились')

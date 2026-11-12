@@ -7,8 +7,8 @@
 | Команда | Подтверждение | Ограничение |
 |---|---|---|
 | `server.maintenance`, `server.drain` | `succeeded`, локально проверено состояние режима admission/routing | Подтверждение отражает собственное состояние агента |
-| `whitelist.add/remove/enable/disable` | `succeeded` при совпадении фактического Bukkit readback | Вызов диспетчера без эффекта — `indeterminate` |
-| `ban.add/remove` | `succeeded` только при соответствии `OfflinePlayer.isBanned()` | При недоступном readback — `indeterminate` |
+| `whitelist.add/remove/enable/disable` | `succeeded` при совпадении фактического состояния, считанного из Bukkit | Вызов диспетчера без эффекта — `indeterminate` |
+| `ban.add/remove` | `succeeded` только при соответствии `OfflinePlayer.isBanned()` | Если невозможно считать фактическое состояние — `indeterminate` |
 | `player.kick` | `succeeded` только при наблюдении `PlayerQuitEvent` для UUID игрока | При тайм-ауте или остановке плагина — `indeterminate`; повтор автоматически запрещён журналом |
 | `message.broadcast` | `executed` после успешного platform вызова / доставки в entity scheduler | Нельзя подтвердить фактическое прочтение сообщения клиентом; частичная ошибка Folia — `indeterminate` |
 | `server.save` | `executed` после принятия `save-all flush` | Нет достоверного подтверждения fsync / целостности мира; это не backup |

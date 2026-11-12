@@ -87,7 +87,7 @@ jobs:
           set -euo pipefail
           test -n "$STAGED_BACKEND" && test -n "$STAGED_OPERATOR" && test -n "$STAGED_PACKAGE_ID" && test -n "$STAGED_MANIFEST_KEY"
           export LIBGL_ALWAYS_SOFTWARE=1
-          # Только диагностика CI: краткоживущие данные staging; доверенную официальную
+          # Только диагностика CI: временные данные промежуточной среды; доверенную официальную
           # цепочку OAuth выполняет независимый аттестатор.
           [[ "$AUTH_MODE" == official || "$AUTH_MODE" == custom ]] || { echo 'Отсутствует реальный режим провайдера V07' >&2; exit 2; }
           [[ -n "$AUTH_CREDENTIAL" ]] || { echo 'Отсутствуют учётные данные реального промежуточного стенда; имитация запрещена' >&2; exit 2; }

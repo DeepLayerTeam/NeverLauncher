@@ -70,7 +70,7 @@ dynamic_version_expectations = {
 for rel, expected in dynamic_version_expectations.items():
     path = ROOT / rel
     if not path.is_file():
-        fail(f"отсутствует version integration: {rel}")
+        fail(f"отсутствует интеграция версии: {rel}")
     elif expected not in read(rel):
         fail(f"{rel}: отсутствует canonical VERSION integration")
 
@@ -86,7 +86,7 @@ for rel in (
     "plugins/fabric-bridge/src/main/resources/fabric.mod.json",
 ):
     if "${version}" not in read(rel):
-        fail(f"{rel}: plugin descriptor должен получать version из Gradle")
+        fail(f"{rel}: дескриптор плагина должен получать версию из Gradle")
 
 if '"productVersion"' in read("compatibility/targets.json"):
     fail("compatibility/targets.json: productVersion не должен дублировать VERSION")
@@ -186,7 +186,7 @@ for rel in ui_files:
             continue
         line = text.count("\n", 0, match.start()) + 1
         fail(
-            f"{rel}:{line}: UI содержит ручной product version literal {match.group(0)}"
+            f"{rel}:{line}: UI содержит ручной литерал версии продукта {match.group(0)}"
         )
 
 # Документация Markdown не является обязательным входом CI или выпуска.
@@ -248,7 +248,7 @@ for forbidden in [
 ]:
     if forbidden in config_go or forbidden in admin_handlers or forbidden in compose:
         fail(
-            f"production auth содержит запрещённый password/email fallback: {forbidden}"
+            f"промышленная авторизация содержит запрещённый резервный вход по паролю или электронной почте: {forbidden}"
         )
 for rel in [
     "scripts/install/production-setup.sh",
@@ -257,28 +257,28 @@ for rel in [
 ]:
     text = read(rel)
     if "LAUNCHER_ADMIN_PASSWORD" in text or "LAUNCHER_ADMIN_EMAIL" in text:
-        fail(f"{rel}: устаревшие runtime admin credentials запрещены")
+        fail(f"{rel}: устаревшие учётные данные администратора среды исполнения запрещены")
 admin_ui = read("apps/admin/src/main.tsx")
 if "useState('admin@launcher.local')" in admin_ui or "useState('admin')" in admin_ui:
-    fail("Admin UI не должен предзаполнять production credentials")
+    fail("Интерфейс Admin не должен предзаполнять промышленные учётные данные")
 if "req.Password == s.Config." in admin_handlers:
-    fail("admin login содержит config-password fallback")
+    fail("вход администратора допускает резервный пароль из конфигурации")
 if (
     "используется local storage" in api_main
     or "return storage.NewLocalStorage(cfg.StorageLocalPath)"
     in api_main.split('case "s3", "s3-compatible":', 1)[-1].split("default:", 1)[0]
 ):
-    fail("S3 init не должен иметь local-storage fallback")
+    fail("инициализация S3 не должна переключаться на локальное хранилище")
 if 'Access-Control-Allow-Origin", "*"' in server_go:
-    fail("CORS wildcard запрещён")
+    fail("подстановочный символ CORS запрещён")
 for required in ["BackupRoot", "CORSAllowedOrigins", "ValidateProduction"]:
     if required not in config_go:
-        fail(f"config: отсутствует production hardening {required}")
+        fail(f"config: отсутствует усиление промышленной конфигурации {required}")
 for required in ["LAUNCHER_BACKUP_ROOT", "LAUNCHER_CORS_ALLOWED_ORIGINS"]:
     if required not in compose:
-        fail(f"production compose: отсутствует {required}")
+        fail(f"промышленная конфигурация Compose: отсутствует {required}")
 if 'POST /api/v1/operations/backups/{backupId}/restore"' not in routes_operations:
-    fail("реальный backup restore route отсутствует")
+    fail("реальный маршрут восстановления резервной копии отсутствует")
 for required in [
     "pg_dump",
     "pg_restore",
@@ -295,7 +295,7 @@ for legacy in [
     "operations_observability.go",
 ]:
     if (ROOT / "services/api/internal/httpapi" / legacy).exists():
-        fail(f"legacy handler должен быть удалён из production tree: {legacy}")
+        fail(f"устаревший обработчик должен быть удалён из промышленных исходников: {legacy}")
 if "compatibility-matrix" not in preflight:
     fail("Предварительная проверка не запускает тесты определения и усиления защиты матрицы совместимости")
 if (
@@ -304,7 +304,7 @@ if (
 ):
     fail("Предварительная проверка не запускает обязательную сквозную проверку федерации перед выпуском")
 if "LAUNCHER_PREFLIGHT_FEDERATION_POSTGRES" not in preflight:
-    fail("strict preflight не умеет запускать PostgreSQL multi-instance federation E2E")
+    fail("строгая предварительная проверка не умеет запускать сквозной тест федерации с несколькими экземплярами PostgreSQL")
 federation_routes = read("services/api/internal/httpapi/routes_auth.go")
 federation_registry = read("services/api/internal/httpapi/sql_connector_113.go")
 for required in [
@@ -664,11 +664,11 @@ if "Minecraft/ServerBridge trust enforcement gate OK" not in gameplay_trust_gate
 
 for required in ["LAUNCHER_PREFLIGHT_STRICT", "LAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
-        fail(f"preflight не содержит strict gate {required}")
+        fail(f"preflight не содержит обязательную строгую проверку {required}")
 if "release doctor" not in ci.lower():
     fail("CI не запускает диагностику выпуска")
 if "LAUNCHER_CORS_ALLOWED_ORIGINS" not in ci:
-    fail("CI Compose validation не задаёт обязательный CORS origin")
+    fail("проверка Compose в CI не задаёт обязательный источник CORS")
 
 e2e_compose = read("e2e/docker-compose.minecraft-e2e.yml")
 for required in [
@@ -703,7 +703,7 @@ for required in [
     if required not in federation_e2e:
         fail(f"В E2E-сценарии федерации PostgreSQL отсутствует проверка стабилизации: {required}")
 if 'case "production", "prod", "e2e-production"' not in config_go:
-    fail("config: e2e-production должен проходить production validation")
+    fail("config: e2e-production должен проходить проверку промышленной конфигурации")
 
 # 7. Завершение производственного этапа P3.2v3: настоящая подпись выпусков, строгие артефакты, реальные
 # проверки конвейера, хранилища, миграций, установки и детерминированных разрешений развёртывания.
@@ -726,7 +726,7 @@ for required in [
 ]:
     if required not in dockerfile:
         fail(
-            f"services/api/Dockerfile: отсутствует volume ownership hardening: {required}"
+            f"services/api/Dockerfile: отсутствует защита прав владельца тома: {required}"
         )
 for required in [
     "api-volume-init:",
@@ -736,7 +736,7 @@ for required in [
 ]:
     if required not in compose:
         fail(
-            f"production compose: отсутствует deterministic volume ownership gate: {required}"
+            f"промышленная конфигурация Compose: отсутствует deterministic volume ownership gate: {required}"
         )
 
 for required in [
@@ -865,12 +865,12 @@ for name in ["docker-compose.yml", "nginx.conf", "env.production.example"]:
         try:
             embedded_bytes = bundle.read("production/" + name)
         except KeyError:
-            fail(f"first-run embedded template отсутствует: {name}")
+            fail(f"встроенный шаблон первого запуска отсутствует: {name}")
             continue
     if canonical.read_bytes() != embedded_bytes:
-        fail(f"first-run embedded template рассинхронизирован с canonical deploy/production: {name}")
+        fail(f"встроенный шаблон первого запуска рассинхронизирован с каноническим deploy/production: {name}")
 if '"beta-smoke"' in install_handlers:
-    fail("install readiness содержит удалённый beta-smoke placeholder")
+    fail("проверка готовности установки содержит удалённый заглушку предварительной проверки beta")
 
 for required in [
     "storageIntegrityReport",
@@ -880,11 +880,11 @@ for required in [
 ]:
     if required not in operations_integrity:
         fail(
-            f"storage audit/consistency не выполняет полный integrity scan: {required}"
+            f"проверка согласованности хранилища не выполняет полный проверку целостности: {required}"
         )
 for required in ["operations/migrations/apply", "isMaintenanceOperation"]:
     if required not in maintenance_go:
-        fail(f"maintenance gate не защищает migration/backup lifecycle: {required}")
+        fail(f"проверка режима обслуживания не защищает жизненный цикл миграции и резервного копирования: {required}")
 for required in [
     "страховочную резервную копию",
     "restoreLocalStorageAtomic880",
@@ -893,7 +893,7 @@ for required in [
 ]:
     if required not in backup_go:
         fail(
-            f"backup/restore не содержит maintenance-safe/atomic primitive: {required}"
+            f"резервное копирование и восстановление не содержит атомарную операцию, безопасную при обслуживании: {required}"
         )
 
 
@@ -915,7 +915,7 @@ package_product_tests = read("services/api/internal/httpapi/package_product_test
 for required in ["ErrImmutable", 'Status == "published"']:
     if required not in memory_repo or required not in postgres_repo:
         fail(
-            f"repository immutable guard отсутствует на memory/postgres слое: {required}"
+            f"защита неизменности репозитория отсутствует на уровне памяти/PostgreSQL: {required}"
         )
 # Конвейер выпуска разделён между package_product, блокировкой изменений,
 # обработчиками Admin и устойчивым обработчиком отката. Проверяйте настоящие
@@ -945,11 +945,11 @@ for required in [
     "PublishVersionWithManifest",
 ]:
     if required not in immutable_tests:
-        fail(f"repository immutable regression-test не покрывает {required}")
+        fail(f"регрессионный тест неизменности репозитория не покрывает {required}")
 if "TestPublishedPackageIsImmutable" not in package_product_tests:
     fail("Отсутствует регрессионный HTTP-тест неизменяемости опубликованного выпуска")
 if "lockPackageMutation" not in package_mutation_lock:
-    fail("package storage+metadata mutation serialization отсутствует")
+    fail("сериализация изменений хранилища пакетов и метаданных отсутствует")
 
 for required in [
     "clientInstallOrUpdate",
@@ -961,7 +961,7 @@ for required in [
     "verifiedCopyClientFile",
 ]:
     if required not in client_lifecycle:
-        fail(f"client lifecycle не реализован рабочим кодом: {required}")
+        fail(f"жизненный цикл клиента не реализован рабочим кодом: {required}")
 for legacy in [
     "clientDeliveryPlan",
     "clientVerifyReport",
@@ -970,7 +970,7 @@ for legacy in [
     "clientRollbackPlan",
 ]:
     if legacy in package_commands:
-        fail(f"client lifecycle содержит удалённую status-only заглушку: {legacy}")
+        fail(f"жизненный цикл клиента содержит удалённую заглушку, возвращающую только статус: {legacy}")
 if "TestClientLifecycleInstallRepairCleanupRollback" not in product_tests:
     fail("Отсутствует сквозной регрессионный тест жизненного цикла клиента")
 
@@ -981,11 +981,11 @@ for required in [
     "hashFile",
 ]:
     if required not in desktop_package:
-        fail(f"desktop package/verify не проверяет реальный artifact: {required}")
+        fail(f"проверка пакета Desktop не проверяет реальный артефакт: {required}")
 if "checksums are populated by the native release build" in read(
     "cli/cmd/launcher/admin_desktop_commands.go"
 ):
-    fail("desktop package вернулся к placeholder checksum")
+    fail("пакет Desktop вернулся к заглушке контрольной суммы")
 if "TestDesktopPackageRequiresRealArtifactAndDetectsTampering" not in product_tests:
     fail("Отсутствует регрессионный тест целостности пакета Desktop")
 
@@ -1001,7 +1001,7 @@ for required in [
         fail(f"Неполная реализация «постоянная ротация, отзыв и аттестация ключей»: {required}")
 for forbidden in ["rotation-policy", "attestation-plan"]:
     if forbidden in security_commands or forbidden in security_keyring:
-        fail(f"security key lifecycle содержит declaration-only status: {forbidden}")
+        fail(f"жизненный цикл ключей безопасности содержит статус, существующий только в декларации: {forbidden}")
 if "TestKeyRotationAttestationAndRevocation" not in product_tests:
     fail("Отсутствует регрессионный тест ротации, отзыва и аттестации ключей")
 
@@ -1022,14 +1022,14 @@ for required in [
     "verifyDetachedFileWithKey",
 ]:
     if required not in release_signing_v4:
-        fail(f"provenance attestation не подписывается/проверяется: {required}")
+        fail(f"аттестация происхождения не подписывается/проверяется: {required}")
 for required in [
     "launcher-desktop-package-${VERSION}.zip",
     "desktop package",
     "desktop verify",
 ]:
     if required not in build_release:
-        fail(f"release bundle не включает реальный Desktop package: {required}")
+        fail(f"комплект выпуска не включает реальный пакет Desktop: {required}")
 if "launcher-desktop-package-" not in release_commands:
     fail("Манифест выпуска не требует артефакт пакета Desktop")
 if "PROVENANCE.json.sig" not in release_commands:
@@ -1054,15 +1054,15 @@ for required in [
     "--max-runtime-seconds",
 ]:
     if required not in e2e_script:
-        fail(f"actual Minecraft E2E отсутствует обязательный primitive: {required}")
+        fail(f"реальная сквозная проверка Minecraft отсутствует обязательную операцию: {required}")
 for forbidden in ["LaunchFixture", "LAUNCHER_E2E_FIXTURE_OK", "launch-fixture"]:
     if forbidden in e2e_script:
         fail(
-            f"production Minecraft E2E снова использует synthetic fixture: {forbidden}"
+            f"промышленная сквозная проверка Minecraft снова использует искусственные тестовые данные: {forbidden}"
         )
 if 'expect="$4" out="$RUNTIME_DIR/validate-$id-$expect.json"' in e2e_script:
     fail(
-        "actual Minecraft E2E validate_join снова разыменовывает local id/expect до их присваивания при set -u"
+        "реальная сквозная проверка Minecraft validate_join снова разыменовывает local id/expect до их присваивания при set -u"
     )
 for required in [
     'local id="$1" key="$2" plugin_sha="$3" expect="$4"',
@@ -1079,7 +1079,7 @@ for forbidden in [
 ]:
     if forbidden in e2e_script:
         fail(
-            f"actual Minecraft E2E сравнивает PostgreSQL ::text boolean с устаревшим psql token t: {forbidden}"
+            f"реальная сквозная проверка Minecraft сравнивает PostgreSQL ::text boolean с устаревшим psql token t: {forbidden}"
         )
 for required in [
     '$fingerprint_match" == "true"',
@@ -1136,7 +1136,7 @@ for required in [
 ]:
     if required not in e2e_publish:
         fail(
-            f"E2E package publisher не проверяет реальный artifact lifecycle/rate-limit contract: {required}"
+            f"издатель пакетов в сквозном тесте не проверяет реальный контракт жизненного цикла артефакта и ограничения частоты запросов: {required}"
         )
 runtime_lib = read("runtime/runtime/src/lib.rs")
 if "#[serde(default)]\n    pub executable: bool," not in runtime_lib:
@@ -1189,7 +1189,7 @@ for required in [
     '--java "$JAVA_BIN"',
 ]:
     if required not in e2e_script:
-        fail(f"actual Minecraft E2E не закрепляет setup-java runtime: {required}")
+        fail(f"реальная сквозная проверка Minecraft не закрепляет setup-java runtime: {required}")
 for required in [
     "webauthn-test-authenticator.py",
     "/api/v1/auth/passkeys/register/begin",
@@ -1198,7 +1198,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(
-            f"actual Minecraft E2E не выполняет реальный fresh WebAuthn step-up перед publish: {required}"
+            f"реальная сквозная проверка Minecraft не выполняет реальный свежее усиленное подтверждение WebAuthn перед публикацией: {required}"
         )
 for required in [
     '"--transaction-token=$(jq -er',
@@ -1207,7 +1207,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(
-            f"actual Minecraft E2E передаёт opaque WebAuthn argv небезопасно: {required}"
+            f"реальная сквозная проверка Minecraft передаёт непрозрачные аргументы WebAuthn небезопасно: {required}"
         )
 for required in [
     "device-trust-crypto.py",
@@ -1224,7 +1224,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(
-            f"actual Minecraft E2E не проходит hardware-attested Guard-bound Minecraft integrity flow: {required}"
+            f"реальная сквозная проверка Minecraft не проходит сценарий проверки целостности Minecraft с аппаратной аттестацией и привязкой к Guard: {required}"
         )
 if (
     "actual-mojang-client" not in ci
@@ -1697,7 +1697,7 @@ for required in [
     '"--user-handle=$(jq -er',
 ]:
     if required not in device_trust_e2e:
-        fail(f"Device Trust E2E передаёт opaque WebAuthn argv небезопасно: {required}")
+        fail(f"Device Trust E2E передаёт непрозрачные аргументы WebAuthn небезопасно: {required}")
 for required in [
     "webauthn.create",
     "webauthn.get",
@@ -1835,7 +1835,7 @@ guard_purpose_migration_cli = read(
     "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
 )
 if guard_purpose_migration_api != guard_purpose_migration_cli:
-    fail("Обнаружено несовпадение «0.16.1 API/CLI Guard challenge-purpose migration 0031»")
+    fail("Обнаружено несовпадение «0.16.1 API/CLI Guard миграция назначения проверочного запроса 0031»")
 for required in [
     "device_challenges_purpose_check",
     "guard-attest-v1",
@@ -1844,7 +1844,7 @@ for required in [
     "key-recover",
 ]:
     if required not in guard_purpose_migration_api:
-        fail(f"В проверке «0.16.1 Guard challenge-purpose migration» отсутствует обязательный инвариант: {required}")
+        fail(f"В проверке «0.16.1 Guard миграция назначения проверочного запроса» отсутствует обязательный инвариант: {required}")
 
 guard_migration_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
 for required in [
@@ -1868,7 +1868,7 @@ for required in [
     "ticketExpires := canonicalGuardAttestationTime0134",
 ]:
     if required not in guard_attestation_backend_0161:
-        fail(f"В проверке «0.16.1 Guard Attestation timestamp canonicalization» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.16.1 Guard Attestation канонизация временной метки» отсутствует обязательный компонент: {required}")
 
 
 # В 0.18.10: Guard Attestation v2 требует фиксированных назначений запросов и билетов для
@@ -1912,7 +1912,7 @@ for required in [
     '"launcherSha256"',
 ]:
     if required not in attestation_v2_backend:
-        fail(f"В проверке «0.18.10 Guard Attestation v2 backend invariant» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.10 Guard Attestation v2 серверный инвариант» отсутствует обязательный компонент: {required}")
 attestation_v2_bridge = read("services/api/internal/httpapi/server_bridge.go")
 for required in [
     "continuousGuardRequiredForJoin01810",
@@ -1920,7 +1920,7 @@ for required in [
     "Continuous Guard Attestation v2 policy unavailable",
 ]:
     if required not in attestation_v2_bridge:
-        fail(f"В проверке «0.18.10 ServerBridge continuous evidence binding» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.10 ServerBridge непрерывная привязка подтверждений» отсутствует обязательный компонент: {required}")
 attestation_v2_runtime = read("runtime/runtime/src/windows_attestation_v2.rs")
 for required in [
     "collect_windows_continuous_evidence_v2",
@@ -1928,12 +1928,12 @@ for required in [
     "build_windows_attestation_v2",
 ]:
     if required not in attestation_v2_runtime:
-        fail(f"В проверке «0.18.10 Guard Attestation v2 runtime invariant» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.18.10 Guard Attestation v2 инвариант среды исполнения» отсутствует обязательный компонент: {required}")
 if (
     "guard-attestation-v2-01810.py" not in preflight
     or "guard-attestation-v2-01810.py" not in ci
 ):
-    fail("Проверка «0.18.10 Guard Attestation v2 mandatory gate» не подключена к предварительным проверкам и CI")
+    fail("Проверка «0.18.10 Guard Attestation v2 обязательная проверка: gate» не подключена к предварительным проверкам и CI")
 
 # В 0.13.2: свидетельства целостности Guard Windows v1 собирает отдельный
 # Guard-процесс и аутентифицирует через существующий локальный IPC-сеанс.
@@ -1971,7 +1971,7 @@ if (
 ):
     fail("Проверка «0.13.2 integrity evidence gate» не подключена к предварительным проверкам и CI")
 if "Integrity Evidence v1 gate OK" not in integrity_gate_0132:
-    fail("Не завершена реализация «0.13.2 mandatory integrity evidence gate»")
+    fail("Не завершена реализация «0.13.2 обязательная проверка: integrity evidence gate»")
 
 # В 0.13.3: контроль политик процесса и выполнения Guard Windows. Защитные
 # меры Guard применяются до Tokio; Java запускается приостановленной внутри
@@ -2009,7 +2009,7 @@ for required in [
     "runtime_policy: Some(runtime_policy)",
 ]:
     if required not in supervisor_0133:
-        fail(f"В проверке «0.13.3 runtime supervisor policy enforcement» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.13.3 применение политики наблюдателя среды исполнения» отсутствует обязательный компонент: {required}")
 if (
     "launch заблокирован: Guard Windows process policy verification failed"
     not in desktop_0133
@@ -2054,7 +2054,7 @@ for required in [
     "command_aggregate",
 ]:
     if required not in guard_matrix_0139:
-        fail(f"Неполная реализация «0.13.9 Guard CI matrix verifier»: {required}")
+        fail(f"Неполная реализация «0.13.9 Guard CI проверка матрицы»: {required}")
 for required in [
     "copy_verified",
     "os.replace",
@@ -2063,7 +2063,7 @@ for required in [
     "missing certified platform artifacts",
 ]:
     if required not in guard_stage_0139:
-        fail(f"Неполная реализация «0.13.9 exact-artifact staging»: {required}")
+        fail(f"Неполная реализация «0.13.9 подготовка точных артефактов»: {required}")
 for required in [
     "GUARD_CI_TARGETS.json",
     "GUARD_CI_MATRIX.json",
@@ -2073,7 +2073,7 @@ for required in [
     "all-required-cross-platform-guard-targets-pass-exact-commit-and-release-artifact-hashes",
 ]:
     if required not in guard_release_0139:
-        fail(f"Неполная реализация «0.13.9 release certification enforcement»: {required}")
+        fail(f"Неполная реализация «0.13.9 обязательная сертификация выпуска»: {required}")
 for required in [
     "LAUNCHER_GUARD_CI_MATRIX_FILE",
     "LAUNCHER_GUARD_CI_TARGETS_FILE",
@@ -2090,18 +2090,18 @@ for required in [
     "guard-ci-macos-universal",
 ]:
     if required not in ci and required != "Guard CI matrix":
-        fail(f"В проверке «0.13.9 CI matrix wiring» отсутствует обязательный компонент: {required}")
+        fail(f"В проверке «0.13.9 подключение матрицы CI» отсутствует обязательный компонент: {required}")
 if "guard-certification:" not in ci:
     fail("Отсутствует «0.13.9 aggregate Guard certification CI job»")
 if (
     "guard-ci-release-certification-0139.py" not in preflight
     or "guard-ci-release-certification-0139.py" not in ci
 ):
-    fail("Проверка «0.13.9 Guard release certification gate» не подключена к предварительным проверкам и CI")
+    fail("Проверка «0.13.9 Guard сертификация выпуска gate» не подключена к предварительным проверкам и CI")
 if "cross-platform Guard CI matrix + release certification gate" not in guard_gate_0139:
     fail("Не завершена реализация «0.13.9 обязательная проверка Guard перед выпуском»")
 if not (ROOT / "cli/cmd/launcher/guard_ci_release_test.go").is_file():
-    fail("Отсутствуют регрессионные тесты «0.13.9 Guard release certification»")
+    fail("Отсутствуют регрессионные тесты «0.13.9 Guard сертификация выпуска»")
 
 
 # В 0.14.2: криптографические идентичности узлов. Привилегированный трафик
@@ -2131,7 +2131,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
         "identity_epoch",
     ]:
         if required not in crypto_migration_0142:
-            fail(f"Неполная реализация «0.14.2 cryptographic node identity migration»: {required}")
+            fail(f"Неполная реализация «0.14.2 криптографическая идентификация узла migration»: {required}")
     for required in [
         "ed25519.Verify",
         "serverbridge_node_nonce_replayed",
@@ -2293,7 +2293,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "delivery-manifest-platform-architecture",
     ]:
         if required not in release_0151:
-            fail(f"Неполная реализация «0.15.1 release integration»: {required}")
+            fail(f"Неполная реализация «0.15.1 интеграция выпуска»: {required}")
     if "DELIVERY_MANIFEST.json" not in read(
         "scripts/smoke/release-required/release-bundle.sh"
     ):
@@ -2304,7 +2304,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("Проверка «0.15.1 delivery gate» не подключена к предварительным проверкам и CI")
     if "Delivery Manifest + platform/architecture gate: OK" not in delivery_gate_0151:
-        fail("Не завершена реализация «0.15.1 mandatory delivery gate»")
+        fail("Не завершена реализация «0.15.1 обязательная поставка gate»")
     if not (ROOT / "cli/cmd/launcher/delivery_manifest_test.go").is_file():
         fail("Отсутствуют регрессионные тесты «0.15.1 delivery»")
 
@@ -2335,7 +2335,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "verifyLinuxProductionEvidence0153",
     ]:
         if required not in linux_delivery_0153:
-            fail(f"Неполная реализация «0.15.3 Linux delivery verifier»: {required}")
+            fail(f"Неполная реализация «0.15.3 Linux проверка поставки»: {required}")
     for required in [
         'ARCH="x64"',
         'ARCH="arm64"',
@@ -2378,16 +2378,16 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "LINUX_PACKAGE_MANIFEST_ARM64.json",
     ]:
         if required not in release_bundle_0153:
-            fail(f"Неполная реализация «0.15.3 release bundle gate»: {required}")
+            fail(f"Неполная реализация «0.15.3 комплект выпуска gate»: {required}")
     if (
         "linux-x64-arm64-production-packages-0153.py" not in preflight
         or "linux-x64-arm64-production-packages-0153.py" not in ci
     ):
-        fail("Проверка «0.15.3 Linux dual-arch package gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.15.3 пакет Linux для двух архитектур gate» не подключена к предварительным проверкам и CI")
     if "Linux x64 + ARM64 production packages gate: OK" not in linux_gate_0153:
-        fail("Не завершена реализация «0.15.3 mandatory Linux production package gate»")
+        fail("Не завершена реализация «0.15.3 обязательная проверка: промышленный пакет Linux gate»")
     if not (ROOT / "cli/cmd/launcher/linux_delivery_test.go").is_file():
-        fail("Отсутствуют регрессионные тесты «0.15.3 Linux delivery»")
+        fail("Отсутствуют регрессионные тесты «0.15.3 поставка Linux»")
 
 
 # В 0.15.4: производственная поставка macOS требует тонких пакетов двух архитектур, Developer ID
@@ -2418,7 +2418,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Gatekeeper",
     ]:
         if required not in macos_delivery_0154:
-            fail(f"Неполная реализация «0.15.4 macOS delivery verifier»: {required}")
+            fail(f"Неполная реализация «0.15.4 macOS проверка поставки»: {required}")
     for required in [
         "x86_64-apple-darwin",
         "aarch64-apple-darwin",
@@ -2463,16 +2463,16 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "macos-arm64.zip",
     ]:
         if required not in release_bundle_0154:
-            fail(f"Неполная реализация «0.15.4 release bundle gate»: {required}")
+            fail(f"Неполная реализация «0.15.4 комплект выпуска gate»: {required}")
     if (
         "notarized-macos-x64-arm64-0154.py" not in preflight
         or "notarized-macos-x64-arm64-0154.py" not in ci
     ):
-        fail("Проверка «0.15.4 macOS notarization gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.15.4 нотаризация macOS gate» не подключена к предварительным проверкам и CI")
     if "notarized macOS x64 + ARM64 gate: OK" not in macos_gate_0154:
-        fail("Не завершена реализация «0.15.4 mandatory macOS notarization gate»")
+        fail("Не завершена реализация «0.15.4 обязательная проверка: нотаризация macOS gate»")
     if not (ROOT / "cli/cmd/launcher/macos_delivery_test.go").is_file():
-        fail("Отсутствуют регрессионные тесты «0.15.4 macOS delivery»")
+        fail("Отсутствуют регрессионные тесты «0.15.4 поставка macOS»")
 
 
 # В 0.15.5: распространение управляемых JRE — собственная поставка для шести
@@ -2566,14 +2566,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "launcher-jre-temurin21-macos-arm64",
     ]:
         if required not in release_bundle_0155:
-            fail(f"Неполная реализация «0.15.5 release bundle JRE gate»: {required}")
+            fail(f"Неполная реализация «0.15.5 комплект выпуска JRE gate»: {required}")
     if (
         "managed-jre-distribution-0155.py" not in preflight
         or "managed-jre-distribution-0155.py" not in ci
     ):
         fail("Проверка «0.15.5 Managed JRE gate» не подключена к предварительным проверкам и CI")
     if "Managed JRE Distribution gate: OK" not in jre_gate_0155:
-        fail("Не завершена реализация «0.15.5 mandatory Managed JRE Distribution gate»")
+        fail("Не завершена реализация «0.15.5 обязательная проверка: Managed JRE Distribution gate»")
     if not (ROOT / "cli/cmd/launcher/managed_jre_delivery_test.go").is_file():
         fail("Отсутствуют регрессионные тесты «0.15.5 Managed JRE»")
 
@@ -2634,7 +2634,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             "0.16.5 Проверка обязательных артефактов выпуска не требует свидетельство Managed Java II"
         )
     if "Managed Java II gate: OK" not in managed_java_gate_0165:
-        fail("Не завершена реализация «0.16.5 mandatory Managed Java II gate»")
+        fail("Не завершена реализация «0.16.5 обязательная проверка: Managed Java II gate»")
 
 
 # В 0.16.6: Vanilla с Java 16/17 проверяется настоящими материализатором и средой
@@ -2684,7 +2684,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "java16_17_vanilla_required",
     ]:
         if required not in matrix_0166:
-            fail(f"Неполная реализация «0.16.6 compatibility matrix Java 16/17 gate»: {required}")
+            fail(f"Неполная реализация «0.16.6 матрица совместимости Java 16/17 gate»: {required}")
     if "vanilla-1.17.1-1.20.4-java16-17-exact" not in release_0166:
         fail(
             "0.16.6 Сертификация выпуска не привязана к точной политике Java 16/17 для Vanilla"
@@ -2754,7 +2754,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "java21_vanilla_required",
     ]:
         if required not in matrix_0167:
-            fail(f"Неполная реализация «0.16.7 compatibility matrix Java 21 gate»: {required}")
+            fail(f"Неполная реализация «0.16.7 матрица совместимости Java 21 gate»: {required}")
     if "vanilla-1.20.5-1.21.10-java21-exact" not in release_0167:
         fail("0.16.7: сертификация выпуска не закрепляет точную политику Vanilla для Java 21")
     for required in [
@@ -2809,7 +2809,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "java25_vanilla_required",
     ]:
         if required not in matrix_0168:
-            fail(f"Неполная реализация «0.16.8 compatibility matrix Java 25 gate»: {required}")
+            fail(f"Неполная реализация «0.16.8 матрица совместимости Java 25 gate»: {required}")
     if "vanilla-26.1.x-26.3-java25-exact" not in release_0168:
         fail("0.16.8: сертификация выпуска не закрепляет точную политику Vanilla для Java 25")
     for required in [
@@ -3058,7 +3058,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         ".launcher/client-state.json",
     ]:
         if required not in updater_client_0156:
-            fail(f"Неполная реализация «0.15.6 client updater integration»: {required}")
+            fail(f"Неполная реализация «0.15.6 client интеграция обновления»: {required}")
     for required in [
         "TestTransactionalUpdaterCommitAndDelete0156",
         "TestTransactionalUpdaterPostVerifyFailureRollsBack0156",
@@ -3067,7 +3067,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in updater_tests_0156:
             fail(f"Отсутствуют регрессионные тесты «0.15.6 updater»: {required}")
     if "Unified Transactional Updater Core gate: OK" not in updater_gate_0156:
-        fail("Не завершена реализация «0.15.6 updater mandatory gate»")
+        fail("Не завершена реализация «0.15.6 обновление gate»")
     if (
         "unified-transactional-updater-core-0156.py" not in preflight
         or "unified-transactional-updater-core-0156.py" not in ci
@@ -3168,14 +3168,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "TestComponentUpdateRequiresPinnedProductionArchive0157",
     ]:
         if required not in component_tests_0157:
-            fail(f"Отсутствуют регрессионные тесты «0.15.7 component updater»: {required}")
+            fail(f"Отсутствуют регрессионные тесты «0.15.7 обновление компонентов»: {required}")
     if "Desktop/Guard/Runtime transactional update gate: OK" not in component_gate_0157:
-        fail("Не завершена реализация «0.15.7 component updater mandatory gate»")
+        fail("Не завершена реализация «0.15.7 component обновление gate»")
     if (
         "desktop-guard-runtime-transactional-update-0157.py" not in preflight
         or "desktop-guard-runtime-transactional-update-0157.py" not in ci
     ):
-        fail("Проверка «0.15.7 component updater gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.15.7 обновление компонентов gate» не подключена к предварительным проверкам и CI")
     if ci.count("update component-self-test") < 4:
         fail("0.15.7: в CI отсутствуют самопроверки нативного обновления компонентов")
 
@@ -3217,7 +3217,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "release-verification-v2-trust-lifecycle-anti-rollback",
     ]:
         if required not in release_0158:
-            fail(f"Неполная реализация «0.15.8 release integration»: {required}")
+            fail(f"Неполная реализация «0.15.8 интеграция выпуска»: {required}")
     for required in [
         "LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE",
         "LAUNCHER_RELEASE_TRUST_POLICY_FILE",
@@ -3232,7 +3232,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in tests_0158:
             fail(f"Отсутствуют регрессионные тесты «0.15.8 verification»: {required}")
     if "Release Verification v2 + trust/key lifecycle gate: OK" not in gate_0158:
-        fail("Не завершена реализация «0.15.8 mandatory verification gate»")
+        fail("Не завершена реализация «0.15.8 обязательная проверка: verification gate»")
     if (
         "release-verification-v2-trust-lifecycle-0158.py" not in preflight
         or "release-verification-v2-trust-lifecycle-0158.py" not in ci
@@ -3269,20 +3269,20 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Базовый URL публичной поставки должен использовать HTTPS",
     ]:
         if required not in public_delivery_0159:
-            fail(f"Неполная реализация «0.15.9 public delivery implementation»: {required}")
+            fail(f"Неполная реализация «0.15.9 публичная поставка implementation»: {required}")
     for required in [
         'case "public-matrix":',
         'case "verify-public-matrix":',
         'case "public-e2e":',
     ]:
         if required not in delivery_cmd_0159:
-            fail(f"Неполная реализация «0.15.9 public delivery CLI»: {required}")
+            fail(f"Неполная реализация «0.15.9 публичная поставка CLI»: {required}")
     for required in [
         "publicProductionDeliveryRequired0159",
         "public-production-delivery-matrix-six-target-e2e",
     ]:
         if required not in release_0159:
-            fail(f"Неполная реализация «0.15.9 release integration»: {required}")
+            fail(f"Неполная реализация «0.15.9 интеграция выпуска»: {required}")
     for required in [
         "LAUNCHER_PUBLIC_RELEASE_BASE_URL",
         "runtime-windows-x64.exe",
@@ -3305,14 +3305,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "TestFetchPublicMatrix0159LoopbackHTTP",
     ]:
         if required not in tests_0159:
-            fail(f"Отсутствуют регрессионные тесты «0.15.9 public delivery»: {required}")
+            fail(f"Отсутствуют регрессионные тесты «0.15.9 публичная поставка»: {required}")
     if "Public Production Delivery Matrix + E2E gate: OK" not in gate_0159:
-        fail("Не завершена реализация «0.15.9 mandatory public delivery gate»")
+        fail("Не завершена реализация «0.15.9 обязательная проверка: публичная поставка gate»")
     if (
         "public-production-delivery-matrix-e2e-0159.py" not in preflight
         or "public-production-delivery-matrix-e2e-0159.py" not in ci
     ):
-        fail("Проверка «0.15.9 public delivery gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.15.9 публичная поставка gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.13.0: сертификация выпуска Device Trust и контракт выполнения.
@@ -3393,7 +3393,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "runMigrationStabilizationSelfTest01510",
     ]:
         if required not in release_01510:
-            fail(f"Неполная реализация «0.15.10 release integration»: {required}")
+            fail(f"Неполная реализация «0.15.10 интеграция выпуска»: {required}")
     for required in [
         "TestMigrationStabilization01510MigratesLegacyComponentState",
         "TestReleaseTrustState01510MigratesAndBindsSameVersionManifest",
@@ -3403,7 +3403,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in stabilization_tests_01510:
             fail(f"Отсутствуют регрессионные тесты «0.15.10 stabilization»: {required}")
     if "Migration + stabilization 0.15.10 gate: OK" not in gate_01510:
-        fail("Не завершена реализация «0.15.10 mandatory migration stabilization gate»")
+        fail("Не завершена реализация «0.15.10 обязательная проверка: стабилизация миграции gate»")
     if (
         "migration-stabilization-01510.py" not in preflight
         or "migration-stabilization-01510.py" not in ci
@@ -3449,7 +3449,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "productionReleaseCandidateRequired01511",
     ]:
         if required not in release_01511:
-            fail(f"Неполная реализация «0.15.11 release integration»: {required}")
+            fail(f"Неполная реализация «0.15.11 интеграция выпуска»: {required}")
     for required in [
         "PRODUCTION_RC_REQUIRED",
         "Кандидат на промышленный выпуск требует полного набора сертификационных проверок совместимости, доверия к устройствам и Guard CI",
@@ -3487,7 +3487,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in rc_tests_01511:
             fail(f"Отсутствуют регрессионные тесты «0.15.11 production candidate»: {required}")
     if "Production release candidate 0.15.11 gate: OK" not in gate_01511:
-        fail("Не завершена реализация «0.15.11 mandatory Production Release Candidate gate»")
+        fail("Не завершена реализация «0.15.11 обязательная проверка: Production Release Candidate gate»")
     if (
         "production-release-candidate-01511.py" not in preflight
         or "production-release-candidate-01511.py" not in ci
@@ -3533,7 +3533,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         'manifest["channel"] = productionDeliveryReleaseChannel0160',
     ]:
         if required not in release_0160:
-            fail(f"Неполная реализация «0.16.0 release integration»: {required}")
+            fail(f"Неполная реализация «0.16.0 интеграция выпуска»: {required}")
     for required in [
         "PRODUCTION_DELIVERY_RELEASE_REQUIRED",
         "PRODUCTION_DELIVERY_RELEASE.json",
@@ -3610,7 +3610,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         '"jreBase"',
     ]:
         if required not in ga_matrix_0170:
-            fail(f"Неполная реализация «0.17.0 GA compatibility matrix»: {required}")
+            fail(f"Неполная реализация «0.17.0 GA матрица совместимости»: {required}")
     for required in [
         "executableSha256",
         "java.runtime.version",
@@ -3638,7 +3638,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base",
     ]:
         if required not in ga_release_0170:
-            fail(f"Неполная реализация «0.17.0 GA release certification»: {required}")
+            fail(f"Неполная реализация «0.17.0 GA сертификация выпуска»: {required}")
     for required in [
         "test_ga_matrix_contains_certified_jre_base",
         "test_certify_binds_binary_hash_and_runtime_identity",
@@ -3657,7 +3657,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in ga_tests_0170:
             fail(f"Отсутствуют регрессионные тесты «0.17.0 GA»: {required}")
     if "Minecraft Compatibility II GA 0.17.0 gate: OK" not in ga_gate_0170:
-        fail("Не завершена реализация «0.17.0 mandatory Minecraft Compatibility II GA gate»")
+        fail("Не завершена реализация «0.17.0 обязательная проверка: Minecraft Compatibility II GA gate»")
     if "java16_17_0170v2" not in ga_gate_0170:
         fail("Отсутствует «0.17.0v2 complete Java 16/17 Vanilla gate»")
     if "0.17.0v3 Java 21/25 grid" not in ga_gate_0170:
@@ -3728,7 +3728,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "certification_file = f\"{target['loader']}-certification.json\"",
     ]:
         if required not in fabric_matrix_0171:
-            fail(f"Неполная реализация «0.17.1 Fabric compatibility matrix»: {required}")
+            fail(f"Неполная реализация «0.17.1 Fabric матрица совместимости»: {required}")
     for required in [
         "runtime fabric-package",
         "client verify",
@@ -3739,7 +3739,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "actual-mojang-client",
     ]:
         if required not in fabric_case_0171:
-            fail(f"Неполная реализация «0.17.1 Fabric actual-client execution»: {required}")
+            fail(f"Неполная реализация «0.17.1 Fabric запуск реального клиента»: {required}")
     for required in [
         "run-fabric-certification-case.sh",
         'loader in ("fabric", "quilt", "forge", "neoforge")',
@@ -3748,7 +3748,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "resolvedLoaderVersion",
     ]:
         if required not in compat_case_0171:
-            fail(f"Неполная реализация «0.17.1 Fabric compatibility routing»: {required}")
+            fail(f"Неполная реализация «0.17.1 Fabric маршрутизация совместимости»: {required}")
     for required in [
         "fabricCompatibilityII0171",
         "compatibilityFabricII0171Required",
@@ -3756,7 +3756,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "fabric-compatibility-II-0.17.1-stable-1.14-through-current-actual-client",
     ]:
         if required not in fabric_release_0171:
-            fail(f"Неполная реализация «0.17.1 Fabric release certification»: {required}")
+            fail(f"Неполная реализация «0.17.1 Fabric сертификация выпуска»: {required}")
     fabric_rows = [
         row
         for row in fabric_targets_0171
@@ -3783,9 +3783,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Отсутствуют регрессионные тесты «0.17.1 Fabric»: {required}")
     for required in ["fabric-install.json", "fabric-certification.json"]:
         if required not in compat_workflow_0171:
-            fail(f"В проверке «0.17.1 Fabric raw CI evidence upload» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.17.1 Fabric загрузка исходных подтверждений CI» отсутствует обязательный компонент: {required}")
     if "Fabric Compatibility II 0.17.1 gate: OK" not in fabric_gate_0171:
-        fail("Не завершена реализация «0.17.1 mandatory Fabric Compatibility II gate»")
+        fail("Не завершена реализация «0.17.1 обязательная проверка: Fabric Compatibility II gate»")
     if (
         "fabric-compatibility-II-0171.py" not in preflight
         or "fabric-compatibility-II-0171.py" not in ci
@@ -3818,7 +3818,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Quilt Compatibility II 0.17.2",
     ]:
         if required not in quilt_matrix_0172:
-            fail(f"Неполная реализация «0.17.2 Quilt compatibility matrix»: {required}")
+            fail(f"Неполная реализация «0.17.2 Quilt матрица совместимости»: {required}")
     for required in [
         "isStableQuiltLoaderVersion",
         "selectModernMetaEntry0272",
@@ -3826,7 +3826,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "installed-and-verified",
     ]:
         if required not in quilt_runtime_0172:
-            fail(f"Неполная реализация «0.17.2 Quilt runtime/materializer»: {required}")
+            fail(f"Неполная реализация «0.17.2 Quilt среда исполнения и материализация»: {required}")
     for required in [
         "runtime quilt-package",
         "client verify",
@@ -3837,7 +3837,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "actual-mojang-client",
     ]:
         if required not in quilt_case_0172:
-            fail(f"Неполная реализация «0.17.2 Quilt actual-client execution»: {required}")
+            fail(f"Неполная реализация «0.17.2 Quilt запуск реального клиента»: {required}")
     for required in [
         "run-quilt-certification-case.sh",
         'loader in ("fabric", "quilt", "forge", "neoforge")',
@@ -3846,7 +3846,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "resolvedLoaderVersion",
     ]:
         if required not in compat_case_0172:
-            fail(f"Неполная реализация «0.17.2 Quilt compatibility routing»: {required}")
+            fail(f"Неполная реализация «0.17.2 Quilt маршрутизация совместимости»: {required}")
     for required in [
         "quiltCompatibilityII0172",
         "compatibilityQuiltII0172Required",
@@ -3854,7 +3854,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client",
     ]:
         if required not in quilt_release_0172:
-            fail(f"Неполная реализация «0.17.2 Quilt release certification»: {required}")
+            fail(f"Неполная реализация «0.17.2 Quilt сертификация выпуска»: {required}")
     quilt_rows = [
         row
         for row in quilt_targets_0172
@@ -3879,9 +3879,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Отсутствуют регрессионные тесты «0.17.2 Quilt»: {required}")
     for required in ["quilt-install.json", "quilt-certification.json"]:
         if required not in compat_workflow_0172:
-            fail(f"В проверке «0.17.2 Quilt raw CI evidence upload» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.17.2 Quilt загрузка исходных подтверждений CI» отсутствует обязательный компонент: {required}")
     if "Quilt Compatibility II 0.17.2 gate: OK" not in quilt_gate_0172:
-        fail("Не завершена реализация «0.17.2 mandatory Quilt Compatibility II gate»")
+        fail("Не завершена реализация «0.17.2 обязательная проверка: Quilt Compatibility II gate»")
     if (
         "quilt-compatibility-II-0172.py" not in preflight
         or "quilt-compatibility-II-0172.py" not in ci
@@ -3916,7 +3916,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Forge Modern 0.17.3",
     ]:
         if required not in forge_matrix_0173:
-            fail(f"Неполная реализация «0.17.3 Forge compatibility matrix»: {required}")
+            fail(f"Неполная реализация «0.17.3 Forge матрица совместимости»: {required}")
     if (
         '"id": "forge"' not in forge_api_0173
         or '"installer": "launcher-forge-materializer"' not in forge_api_0173
@@ -3933,7 +3933,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "installed-and-verified",
     ]:
         if required not in forge_runtime_0173:
-            fail(f"Неполная реализация «0.17.3 Forge processor materializer»: {required}")
+            fail(f"Неполная реализация «0.17.3 Forge материализация с помощью процессоров»: {required}")
     for required in [
         "runtime forge-package",
         "--java",
@@ -3948,7 +3948,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "actual-mojang-client",
     ]:
         if required not in forge_case_0173:
-            fail(f"Неполная реализация «0.17.3 Forge actual-client execution»: {required}")
+            fail(f"Неполная реализация «0.17.3 Forge запуск реального клиента»: {required}")
     for required in [
         "run-forge-certification-case.sh",
         'loader in ("fabric", "quilt", "forge", "neoforge")',
@@ -3957,7 +3957,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "resolvedLoaderVersion",
     ]:
         if required not in compat_case_0173:
-            fail(f"Неполная реализация «0.17.3 Forge compatibility routing»: {required}")
+            fail(f"Неполная реализация «0.17.3 Forge маршрутизация совместимости»: {required}")
     for required in [
         "forgeModern0173",
         "compatibilityForgeModern0173Required",
@@ -3965,7 +3965,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "forge-modern-0.17.3-processor-based-1.13.2-through-current-actual-client",
     ]:
         if required not in forge_release_0173:
-            fail(f"Неполная реализация «0.17.3 Forge release certification»: {required}")
+            fail(f"Неполная реализация «0.17.3 Forge сертификация выпуска»: {required}")
     forge_rows = [
         row
         for row in forge_targets_0173
@@ -3996,9 +3996,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Отсутствуют регрессионные тесты «0.17.3 Forge»: {required}")
     for required in ["forge-install.json", "forge-certification.json"]:
         if required not in compat_workflow_0173:
-            fail(f"В проверке «0.17.3 Forge raw CI evidence upload» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.17.3 Forge загрузка исходных подтверждений CI» отсутствует обязательный компонент: {required}")
     if "Forge Modern 0.17.3 gate: OK" not in forge_gate_0173:
-        fail("Не завершена реализация «0.17.3 mandatory Forge Modern gate»")
+        fail("Не завершена реализация «0.17.3 обязательная проверка: Forge Modern gate»")
     if "forge-modern-0173.py" not in preflight or "forge-modern-0173.py" not in ci:
         fail("Проверка «0.17.3 Forge Modern gate» не подключена к предварительным проверкам и CI")
 
@@ -4034,10 +4034,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "net.minecraftforge.fml.common.launcher.FMLTweaker",
     ]:
         if required not in legacy_runtime_0174:
-            fail(f"Неполная реализация «0.17.4 Forge legacy materializer»: {required}")
+            fail(f"Неполная реализация «0.17.4 Forge материализация устаревших версий»: {required}")
     for required in ['"forge-legacy-1.12.2"', "legacy V1 universal installer"]:
         if required not in legacy_commands_0174:
-            fail(f"Неполная реализация «0.17.4 runtime capability status»: {required}")
+            fail(f"Неполная реализация «0.17.4 статус возможностей среды исполнения»: {required}")
     for required in ['alias = "clientreq"', "library.client_req == Some(false)"]:
         if required not in legacy_runtime_0174:
             fail(
@@ -4068,7 +4068,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "forge-legacy-0.17.4-real-1.12.2-universal-fmltweaker-actual-client",
     ]:
         if required not in legacy_release_0174:
-            fail(f"Неполная реализация «0.17.4 Forge legacy release certification»: {required}")
+            fail(f"Неполная реализация «0.17.4 Forge legacy сертификация выпуска»: {required}")
     legacy_rows = [
         row
         for row in legacy_targets_0174
@@ -4097,7 +4097,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in legacy_tests_0174:
             fail(f"Отсутствуют регрессионные тесты «0.17.4 Forge legacy»: {required}")
     if "Forge Legacy 1.12.2 0.17.4 gate: OK" not in legacy_gate_0174:
-        fail("Не завершена реализация «0.17.4 mandatory Forge Legacy gate»")
+        fail("Не завершена реализация «0.17.4 обязательная проверка: Forge Legacy gate»")
     if (
         "forge-legacy-1122-0174.py" not in preflight
         or "forge-legacy-1122-0174.py" not in ci
@@ -4140,7 +4140,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "legacy V1 universal installer",
     ]:
         if required not in legacy_commands_0175:
-            fail(f"Неполная реализация «0.17.5 runtime capability status»: {required}")
+            fail(f"Неполная реализация «0.17.5 статус возможностей среды исполнения»: {required}")
     for required in [
         "metadata predates downloads.classifiers",
         "library.downloads.classifiers.is_empty()",
@@ -4171,7 +4171,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "forge-legacy-0.17.5-real-1.7.10-launchwrapper-cpw-fml-actual-client",
     ]:
         if required not in legacy_release_0175:
-            fail(f"Неполная реализация «0.17.5 Forge 1.7.10 release certification»: {required}")
+            fail(f"Неполная реализация «0.17.5 Forge 1.7.10 сертификация выпуска»: {required}")
     legacy_rows = [
         row
         for row in legacy_targets_0175
@@ -4200,7 +4200,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in legacy_tests_0175:
             fail(f"Отсутствуют регрессионные тесты «0.17.5 Forge 1.7.10»: {required}")
     if "Forge Legacy 1.7.10 0.17.5 gate: OK" not in legacy_gate_0175:
-        fail("Не завершена реализация «0.17.5 mandatory Forge Legacy gate»")
+        fail("Не завершена реализация «0.17.5 обязательная проверка: Forge Legacy gate»")
     if (
         "forge-legacy-1710-0175.py" not in preflight
         or "forge-legacy-1710-0175.py" not in ci
@@ -4239,7 +4239,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "runForgeProcessors",
     ]:
         if required not in neo_runtime_0176:
-            fail(f"Неполная реализация «0.17.6 NeoForge production materializer»: {required}")
+            fail(f"Неполная реализация «0.17.6 NeoForge промышленная материализация»: {required}")
     for required in [
         "runtime neoforge-package",
         "neoforge-install.json",
@@ -4249,14 +4249,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "mutable loader selector leaked",
     ]:
         if required not in neo_case_0176:
-            fail(f"Неполная реализация «0.17.6 NeoForge actual-client certification»: {required}")
+            fail(f"Неполная реализация «0.17.6 NeoForge сертификация реального клиента»: {required}")
     for required in [
         '"$LOADER" == "neoforge"',
         "run-neoforge-certification-case.sh",
         'loader in ("fabric", "quilt", "forge", "neoforge")',
     ]:
         if required not in neo_compat_0176:
-            fail(f"Неполная реализация «0.17.6 NeoForge compatibility routing»: {required}")
+            fail(f"Неполная реализация «0.17.6 NeoForge маршрутизация совместимости»: {required}")
     for required in [
         "NEOFORGE_COMPATIBILITY_II_0176",
         "neoforge_compatibility_ii_0176_required",
@@ -4271,7 +4271,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "neoforge-compatibility-II-0.17.6-stable-1.20.1-through-26.2-processor-actual-client",
     ]:
         if required not in neo_release_0176:
-            fail(f"Неполная реализация «0.17.6 NeoForge release certification»: {required}")
+            fail(f"Неполная реализация «0.17.6 NeoForge сертификация выпуска»: {required}")
     expected_neo = {
         "1.20.1": 17,
         "1.20.2": 17,
@@ -4341,7 +4341,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in neo_tests_0176:
             fail(f"Недостаточное регрессионное покрытие «0.17.6 NeoForge»: {required}")
     if "NeoForge Compatibility II 0.17.6 gate: OK" not in neo_gate_0176:
-        fail("Не завершена реализация «0.17.6 mandatory NeoForge gate»")
+        fail("Не завершена реализация «0.17.6 обязательная проверка: NeoForge gate»")
     if (
         "neoforge-compatibility-II-0176.py" not in preflight
         or "neoforge-compatibility-II-0176.py" not in ci
@@ -4406,17 +4406,17 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "reproducibleResolution",
     ]:
         if required not in pin_compat_0177:
-            fail(f"Неполная реализация «0.17.7 compatibility pin evidence»: {required}")
+            fail(f"Неполная реализация «0.17.7 подтверждение закрепления совместимости»: {required}")
     for required in ["FIRST_LOCK_SHA256", "resolutionPinned", "loaderResolution"]:
         if required not in pin_integration_0177:
-            fail(f"Неполная реализация «0.17.7 integration replay»: {required}")
+            fail(f"Неполная реализация «0.17.7 повтор интеграционной проверки»: {required}")
     for required in [
         "loader_resolution_pinning_0177_required",
         "resolutionLockSha256",
         "reproducibleResolution",
     ]:
         if required not in pin_matrix_0177:
-            fail(f"Неполная реализация «0.17.7 matrix pin enforcement»: {required}")
+            fail(f"Неполная реализация «0.17.7 применение закрепления матрицы»: {required}")
     for required in [
         "releaseCompatibilityLoaderPin",
         "LoaderPins",
@@ -4424,7 +4424,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-resolution-pinning-0.17.7-immutable-lock-upstream-sha256-profile-sha256-replay",
     ]:
         if required not in pin_release_0177:
-            fail(f"Неполная реализация «0.17.7 release certification pinning»: {required}")
+            fail(f"Неполная реализация «0.17.7 сертификация выпуска pinning»: {required}")
     for loader in ["fabric", "quilt", "forge", "neoforge"]:
         if f"e2e/runtime/{loader}-resolution-lock.json" not in pin_workflow_0177:
             fail(
@@ -4438,12 +4438,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in pin_tests_0177:
             fail(f"Отсутствуют регрессионные тесты «0.17.7 pinning»: {required}")
     if "Loader Resolution & Pinning 0.17.7 gate: OK" not in pin_gate_0177:
-        fail("Не завершена реализация «0.17.7 mandatory loader resolution pinning gate»")
+        fail("Не завершена реализация «0.17.7 обязательная проверка: закрепление разрешённой версии загрузчика gate»")
     if (
         "loader-resolution-pinning-0177.py" not in preflight
         or "loader-resolution-pinning-0177.py" not in ci
     ):
-        fail("Проверка «0.17.7 loader resolution pinning gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.17.7 закрепление разрешённой версии загрузчика gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.8: E2E загрузчиков доказывает, что настоящий подготовленный клиент
@@ -4473,7 +4473,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         '"25580:25565"',
     ]:
         if required not in native_compose_0178:
-            fail(f"Неполная реализация «0.17.8 loader-native dedicated server»: {required}")
+            fail(f"Неполная реализация «0.17.8 нативный выделенный сервер загрузчика»: {required}")
     for required in [
         "RESOLVED_LOADER_VERSION",
         "certify-vanilla",
@@ -4482,14 +4482,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "actual-client-joined-dedicated-loader-server",
     ]:
         if required not in native_runner_0178:
-            fail(f"Неполная реализация «0.17.8 loader-native runtime»: {required}")
+            fail(f"Неполная реализация «0.17.8 нативная среда исполнения загрузчика»: {required}")
     for required in [
         "run-loader-native-e2e.sh",
         "LAUNCHER_E2E_RESOLVED_LOADER_VERSION",
         "loaderNativeClientJoin",
     ]:
         if required not in native_integration_0178:
-            fail(f"Неполная реализация «0.17.8 integration loader-native routing»: {required}")
+            fail(f"Неполная реализация «0.17.8 интеграционная маршрутизация нативного загрузчика»: {required}")
     for required in [
         "loaderNativeServer",
         "loaderVersionMatched",
@@ -4498,7 +4498,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-native-server.json",
     ]:
         if required not in native_compat_0178:
-            fail(f"Неполная реализация «0.17.8 compatibility native evidence»: {required}")
+            fail(f"Неполная реализация «0.17.8 нативное подтверждение совместимости»: {required}")
     for required in [
         "loader_native_e2e_0178_required",
         "Loader-native E2E 0.17.8 requires exactly one",
@@ -4532,12 +4532,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if f"e2e/runtime/{evidence}" not in native_workflow_0178:
             fail(f"0.17.8: процесс проверки совместимости не сохраняет {evidence}")
     if "Loader-native E2E 0.17.8 gate: OK" not in native_gate_0178:
-        fail("Не завершена реализация «0.17.8 mandatory loader-native E2E gate»")
+        fail("Не завершена реализация «0.17.8 обязательная проверка: нативный сквозной тест загрузчика gate»")
     if (
         "loader-native-e2e-0178.py" not in preflight
         or "loader-native-e2e-0178.py" not in ci
     ):
-        fail("Проверка «0.17.8 loader-native E2E gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.17.8 нативный сквозной тест загрузчика gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.9: кроссплатформенные загрузчики сертифицируют настоящих клиентов и нативные
@@ -4567,7 +4567,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "certification_run_client",
     ]:
         if required not in platform_helper_0179:
-            fail(f"Неполная реализация «0.17.9 platform-native certification helper»: {required}")
+            fail(f"Неполная реализация «0.17.9 утилита нативной сертификации платформы»: {required}")
     for required in [
         "materializerTargets",
         "nativeDirectory",
@@ -4575,7 +4575,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "natives/{internal_os}/{arch}",
     ]:
         if required not in platform_verifier_0179:
-            fail(f"Неполная реализация «0.17.9 loader native verifier»: {required}")
+            fail(f"Неполная реализация «0.17.9 нативная проверка загрузчика»: {required}")
     for required in [
         "cross_platform_loader_anchors",
         "loaderPlatformMaterialized",
@@ -4584,7 +4584,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-platform.json",
     ]:
         if required not in platform_compat_0179:
-            fail(f"Неполная реализация «0.17.9 compatibility platform evidence»: {required}")
+            fail(f"Неполная реализация «0.17.9 подтверждение совместимости платформы»: {required}")
     for required in [
         "CROSS_PLATFORM_LOADERS_0179",
         "Cross-platform Loaders 0.17.9",
@@ -4592,7 +4592,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-platform.json",
     ]:
         if required not in platform_matrix_0179:
-            fail(f"Неполная реализация «0.17.9 matrix platform enforcement»: {required}")
+            fail(f"Неполная реализация «0.17.9 применение платформенной матрицы»: {required}")
     for required in [
         "CrossPlatformLoaderTargets",
         "compatibilityCrossPlatformLoaders0179Required",
@@ -4608,7 +4608,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "natives_dir.to_string_lossy().to_string()",
     ]:
         if required not in platform_runtime_0179:
-            fail(f"Неполная реализация «0.17.9 Runtime native-directory evidence»: {required}")
+            fail(f"Неполная реализация «0.17.9 Runtime подтверждение каталога нативных библиотек»: {required}")
     for required in [
         "architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}",
         "e2e/runtime/loader-platform.json",
@@ -4623,14 +4623,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "TestCompatibilityCertificationCrossPlatformLoaders0179RejectsTamperedCoverage",
     ]:
         if required not in platform_tests_0179:
-            fail(f"Отсутствуют регрессионные тесты «0.17.9 cross-platform loader»: {required}")
+            fail(f"Отсутствуют регрессионные тесты «0.17.9 кроссплатформенный загрузчик»: {required}")
     if "Cross-platform Loaders 0.17.9 gate: OK" not in platform_gate_0179:
-        fail("Не завершена реализация «0.17.9 mandatory cross-platform loader gate»")
+        fail("Не завершена реализация «0.17.9 обязательная проверка: кроссплатформенный загрузчик gate»")
     if (
         "cross-platform-loaders-0179.py" not in preflight
         or "cross-platform-loaders-0179.py" not in ci
     ):
-        fail("Проверка «0.17.9 cross-platform loader gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.17.9 кроссплатформенный загрузчик gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.10: усиление загрузчиков доказывает восстановление по неизменяемому lock-файлу
@@ -4661,7 +4661,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "downloadPinnedSHA256Artifact",
     ]:
         if required not in hardening_cache_01710:
-            fail(f"Неполная реализация «0.17.10 content-addressed loader cache»: {required}")
+            fail(f"Неполная реализация «0.17.10 кэш загрузчика с адресацией по содержимому»: {required}")
     for required in [
         "processor-journal.json",
         'state == "running"',
@@ -4670,7 +4670,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "quarantineProcessorOutputs",
     ]:
         if required not in hardening_processors_01710:
-            fail(f"Неполная реализация «0.17.10 processor crash recovery»: {required}")
+            fail(f"Неполная реализация «0.17.10 восстановление после сбоя процессора»: {required}")
     for required in [
         "loaderCacheVerified",
         "loaderUpstreamRecovery",
@@ -4679,7 +4679,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-hardening.json",
     ]:
         if required not in hardening_compat_01710:
-            fail(f"Неполная реализация «0.17.10 compatibility recovery evidence»: {required}")
+            fail(f"Неполная реализация «0.17.10 подтверждение восстановления совместимости»: {required}")
     for required in [
         "LOADER_HARDENING_01710",
         "loader_hardening_01710_required",
@@ -4687,7 +4687,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-hardening.json",
     ]:
         if required not in hardening_matrix_01710:
-            fail(f"Неполная реализация «0.17.10 matrix hardening enforcement»: {required}")
+            fail(f"Неполная реализация «0.17.10 применение усиленной защиты матрицы»: {required}")
     for required in [
         "LoaderHardeningTargets",
         "compatibilityLoaderHardening01710Required",
@@ -4702,7 +4702,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "processor-journal.json",
     ]:
         if required not in hardening_workflow_01710:
-            fail(f"Неполная реализация «0.17.10 hardening workflow evidence»: {required}")
+            fail(f"Неполная реализация «0.17.10 подтверждение процесса усиления защиты»: {required}")
     for required in [
         "LoaderCacheOnly",
         "ProcessorRecovered",
@@ -4712,12 +4712,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in hardening_tests_01710:
             fail(f"Отсутствуют регрессионные тесты «0.17.10 loader hardening»: {required}")
     if "Loader Hardening 0.17.10 gate: OK" not in hardening_gate_01710:
-        fail("Не завершена реализация «0.17.10 mandatory Loader Hardening gate»")
+        fail("Не завершена реализация «0.17.10 обязательная проверка: усиление защиты загрузчика gate»")
     if (
         "loader-hardening-01710.py" not in preflight
         or "loader-hardening-01710.py" not in ci
     ):
-        fail("Проверка «0.17.10 Loader Hardening gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.17.10 усиление защиты загрузчика gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.17.11: кандидат Loader Compatibility RC создаёт один полный
@@ -4752,7 +4752,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "verifyLoaderCompatibilityReleaseCertificate01711",
     ]:
         if required not in rc_cert_01711:
-            fail(f"Неполная реализация «0.17.11 full loader release certificate»: {required}")
+            fail(f"Неполная реализация «0.17.11 полный сертификат выпуска загрузчика»: {required}")
     for required in [
         "compatibilityReleaseCertificate01711Required",
         "writeLoaderCompatibilityReleaseCertificate01711",
@@ -4767,7 +4767,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loaderCompatibilityReleaseCertificateSha256",
     ]:
         if required not in rc_release_01711:
-            fail(f"Неполная реализация «0.17.11 signed release-bundle RC integration»: {required}")
+            fail(f"Неполная реализация «0.17.11 интеграция подписанного комплекта кандидата выпуска»: {required}")
     for required in [
         "LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json",
         "requiredTargetCount == 292",
@@ -4775,7 +4775,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loaderCompatibilityReleaseCertificateSha256",
     ]:
         if required not in rc_production_workflow_01711:
-            fail(f"Неполная реализация «0.17.11 production candidate RC assertion»: {required}")
+            fail(f"Неполная реализация «0.17.11 проверка кандидата промышленного выпуска»: {required}")
     required_rows = [row for row in rc_targets_01711 if row.get("required")]
     unavailable_rows = [row for row in rc_targets_01711 if not row.get("required")]
     # Исторический каталог из 292 целей сохраняется; у 12 нет стабильного загрузчика
@@ -4836,12 +4836,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in rc_tests_01711:
             fail(f"Отсутствуют регрессионные тесты «0.17.11 RC»: {required}")
     if "Loader Compatibility RC 0.17.11 gate: OK" not in rc_gate_01711:
-        fail("Не завершена реализация «0.17.11 mandatory Loader Compatibility RC gate»")
+        fail("Не завершена реализация «0.17.11 обязательная проверка: кандидат выпуска совместимости загрузчиков gate»")
     if (
         "loader-compatibility-rc-01711.py" not in preflight
         or "loader-compatibility-rc-01711.py" not in ci
     ):
-        fail("Проверка «0.17.11 Loader Compatibility RC gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.17.11 кандидат выпуска совместимости загрузчиков gate» не подключена к предварительным проверкам и CI")
 
 
 # В 0.18.0: Loader Compatibility GA превращает данные RC в реальную среду поддержки
@@ -4871,7 +4871,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "forgeLegacy1122_0174",
     ]:
         if required not in ga_runtime_0180:
-            fail(f"Неполная реализация «0.18.0 executable loader GA support»: {required}")
+            fail(f"Неполная реализация «0.18.0 рабочая поддержка стабильных загрузчиков»: {required}")
     for name, body in [
         ("Fabric/Quilt", ga_meta_0180),
         ("Forge/NeoForge", ga_forge_0180),
@@ -4893,7 +4893,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loader-compatibility-ga-0.18.0-runtime-enforced-fabric-quilt-forge-neoforge-legacy-all-292-targets-signed-bundle",
     ]:
         if required not in ga_cert_0180:
-            fail(f"Неполная реализация «0.18.0 GA release certificate»: {required}")
+            fail(f"Неполная реализация «0.18.0 сертификат стабильного выпуска»: {required}")
     for required in [
         "loaderCompatibilityGA",
         "loaderCompatibilityGASupportSha256",
@@ -4901,7 +4901,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "loaderGASupportSHA2560180",
     ]:
         if required not in ga_release_0180:
-            fail(f"Неполная реализация «0.18.0 GA publish enforcement»: {required}")
+            fail(f"Неполная реализация «0.18.0 обязательная проверка стабильной публикации»: {required}")
     for required in [
         "ga-certified",
         "runtimeEnforced",
@@ -4909,7 +4909,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "legacyMinecraftVersions",
     ]:
         if required not in ga_ops_0180:
-            fail(f"Неполная реализация «0.18.0 public loader GA capability»: {required}")
+            fail(f"Неполная реализация «0.18.0 публичная поддержка стабильных загрузчиков»: {required}")
     for required in [
         'status == "ga-certified"',
         "loaderCompatibilityGA == true",
@@ -4986,7 +4986,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 f"0.18.1 Отсутствует интеграционная регрессионная проверка Windows Protection Core II: {required}"
             )
     if "Windows Protection Core II 0.18.1 gate: OK" not in windows_gate_0181:
-        fail("Не завершена реализация «0.18.1 mandatory Windows Protection Core II gate»")
+        fail("Не завершена реализация «0.18.1 обязательная проверка: Windows Protection Core II gate»")
     if (
         "windows-protection-core-II-0181.py" not in preflight
         or "windows-protection-core-II-0181.py" not in ci
@@ -5024,7 +5024,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         ".write_all(&packet)",
     ]:
         if required not in sensor_native_0182:
-            fail(f"Неполная реализация «0.18.2 Guard Sensor native JVM agent»: {required}")
+            fail(f"Неполная реализация «0.18.2 Guard Sensor нативный агент JVM»: {required}")
     for required in [
         "-agentpath:",
         "create_secure_pipe_server",
@@ -5064,7 +5064,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "verify_windows_authenticode_trust(&sensor_path)",
     ]:
         if required not in sensor_ipc_0182:
-            fail(f"Неполная реализация «0.18.2 Guard Sensor package trust boundary»: {required}")
+            fail(f"Неполная реализация «0.18.2 Guard Sensor граница доверия пакета»: {required}")
     for required in [
         "guard_sensor.dll",
         "Sign-And-VerifyAuthenticode $SensorPackagePath",
@@ -5072,17 +5072,17 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard-sensor-windows-$Arch.dll",
     ]:
         if required not in sensor_build_0182:
-            fail(f"Неполная реализация «0.18.2 Guard Sensor signed delivery»: {required}")
+            fail(f"Неполная реализация «0.18.2 Guard Sensor подписанная поставка»: {required}")
     for required in ['expected["sensor"] = false']:
         if required not in sensor_updater_0182:
-            fail(f"Неполная реализация «0.18.2 Guard Sensor updater integration»: {required}")
+            fail(f"Неполная реализация «0.18.2 Guard Sensor интеграция обновления»: {required}")
     for required in [
         "guardSensorRequired0182",
         'packageEntries["sensor"] = "guard-sensor.dll"',
         "expectedComponentCount = 4",
     ]:
         if required not in sensor_signing_0182:
-            fail(f"Неполная реализация «0.18.2 Guard Sensor delivery verifier»: {required}")
+            fail(f"Неполная реализация «0.18.2 Guard Sensor проверка поставки»: {required}")
     for required in [
         "guard_sensor_agentpath_loads_before_jvm_startup",
         "authenticate_sensor_or_kill(bootstrap, &mut child)",
@@ -5090,9 +5090,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "assert!(report.loaded_before_main)",
     ]:
         if required not in sensor_test_0182:
-            fail(f"В проверке «0.18.2 Guard Sensor Java integration regression» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.2 Guard Sensor регрессионная интеграционная проверка Java» отсутствует обязательный компонент: {required}")
     if "Guard Sensor 0.18.2 gate: OK" not in sensor_gate_0182:
-        fail("Не завершена реализация «0.18.2 mandatory Guard Sensor gate»")
+        fail("Не завершена реализация «0.18.2 обязательная проверка: Guard Sensor gate»")
     if "guard-sensor-0182.py" not in preflight or "guard-sensor-0182.py" not in ci:
         fail("Проверка «0.18.2 Guard Sensor gate» не подключена к предварительным проверкам и CI")
     for required in [
@@ -5132,7 +5132,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "handle.join()",
     ]:
         if required not in module_sensor_0183:
-            fail(f"Неполная реализация «0.18.3 Module Guard sensor event stream»: {required}")
+            fail(f"Неполная реализация «0.18.3 Module Guard поток событий датчика»: {required}")
     for required in [
         "WindowsModuleGuardReport",
         "arm_module_guard",
@@ -5147,7 +5147,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "fail_closed",
     ]:
         if required not in module_parent_0183:
-            fail(f"Неполная реализация «0.18.3 Module Guard parent enforcement»: {required}")
+            fail(f"Неполная реализация «0.18.3 Module Guard контроль родительского процесса»: {required}")
     for required in [
         "GUARD_SENSOR_PROTOCOL_VERSION",
         "SENSOR_MAGIC",
@@ -5156,14 +5156,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "WindowsSensorSession",
     ]:
         if required not in module_bootstrap_0183:
-            fail(f"Неполная реализация «0.18.3 Module Guard startup binding»: {required}")
+            fail(f"Неполная реализация «0.18.3 Module Guard привязка при запуске»: {required}")
     for required in [
         "sensor_session: Option<crate::WindowsSensorSession>",
         "process_status_snapshot",
         "session.report()",
     ]:
         if required not in module_supervisor_0183:
-            fail(f"Неполная реализация «0.18.3 Module Guard live status evidence»: {required}")
+            fail(f"Неполная реализация «0.18.3 Module Guard подтверждение текущего состояния»: {required}")
     for required in [
         "guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat",
         "report.load_events >= 1",
@@ -5177,7 +5177,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 f"0.18.3 Отсутствует регрессионная интеграционная проверка Module Guard в Windows: {required}"
             )
     if "Module Guard 0.18.3 gate: OK" not in module_gate_0183:
-        fail("Не завершена реализация «0.18.3 mandatory Module Guard gate»")
+        fail("Не завершена реализация «0.18.3 обязательная проверка: Module Guard gate»")
     if (
         "guard-module-guard-0183.py" not in preflight
         or "guard-module-guard-0183.py" not in ci
@@ -5216,7 +5216,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "hook_set_digest",
     ]:
         if required not in hook_engine_0184:
-            fail(f"Неполная реализация «0.18.4 Hook Engine backend»: {required}")
+            fail(f"Неполная реализация «0.18.4 Hook Engine серверная часть»: {required}")
     for forbidden in [
         "SetWindowsHookEx",
         "WriteProcessMemory",
@@ -5239,7 +5239,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "hook_engine::reconcile_and_verify()",
     ]:
         if required not in hook_sensor_0184:
-            fail(f"Неполная реализация «0.18.4 Hook Engine Sensor lifecycle»: {required}")
+            fail(f"Неполная реализация «0.18.4 Hook Engine жизненный цикл датчика»: {required}")
     for required in [
         "expected HOOK_READY as first event",
         "hook_engine: crate::WindowsHookEngineReport",
@@ -5250,10 +5250,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "fail_closed",
     ]:
         if required not in hook_parent_0184:
-            fail(f"Неполная реализация «0.18.4 Hook Engine parent enforcement»: {required}")
+            fail(f"Неполная реализация «0.18.4 Hook Engine контроль родительского процесса»: {required}")
     for required in ["WindowsHookEngineReport", "GUARD_HOOK_ENGINE_VERSION"]:
         if required not in hook_report_0184:
-            fail(f"В проверке «0.18.4 Hook Engine report» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.4 Hook Engine отчёт» отсутствует обязательный компонент: {required}")
     for required in ["GUARD_SENSOR_PROTOCOL_VERSION: u32 = 3", "NGSENS04"]:
         if required not in hook_bootstrap_0184:
             fail(f"Неполная реализация «0.18.4 protocol-v3 bootstrap»: {required}")
@@ -5266,7 +5266,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in hook_test_0184:
             fail(f"В проверке «0.18.4 real JVM hook integration regression» отсутствует обязательный компонент: {required}")
     if "Aggressive Hook Engine I 0.18.4 gate: OK" not in hook_gate_0184:
-        fail("Не завершена реализация «0.18.4 mandatory Hook Engine gate»")
+        fail("Не завершена реализация «0.18.4 обязательная проверка: Hook Engine gate»")
     if (
         "guard-aggressive-hook-engine-0184.py" not in preflight
         or "guard-aggressive-hook-engine-0184.py" not in ci
@@ -5305,7 +5305,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "code-set v1",
     ]:
         if required not in memory_0185:
-            fail(f"Неполная реализация «0.18.5 Memory Integrity backend»: {required}")
+            fail(f"Неполная реализация «0.18.5 Memory Integrity серверная часть»: {required}")
     for forbidden in [
         "WriteProcessMemory",
         "VirtualAllocEx",
@@ -5321,7 +5321,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "crate::memory_integrity::record_virtual_protect",
     ]:
         if required not in memory_hooks_0185:
-            fail(f"Неполная реализация «0.18.5 Memory Integrity transition feed»: {required}")
+            fail(f"Неполная реализация «0.18.5 Memory Integrity поток переходов»: {required}")
     for required in [
         "MODULE_EVENT_REASON_MEMORY_READY",
         "MODULE_EVENT_REASON_MEMORY_HEARTBEAT",
@@ -5330,7 +5330,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "memory_integrity::reconcile_and_verify()",
     ]:
         if required not in memory_sensor_0185:
-            fail(f"Неполная реализация «0.18.5 Memory Integrity Sensor lifecycle»: {required}")
+            fail(f"Неполная реализация «0.18.5 Memory Integrity жизненный цикл датчика»: {required}")
     for required in [
         "memory_integrity: crate::WindowsMemoryIntegrityReport",
         "expected MEMORY_READY as second event",
@@ -5339,13 +5339,13 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "fail_closed",
     ]:
         if required not in memory_parent_0185:
-            fail(f"Неполная реализация «0.18.5 Memory Integrity parent enforcement»: {required}")
+            fail(f"Неполная реализация «0.18.5 Memory Integrity контроль родительского процесса»: {required}")
     for required in [
         "WindowsMemoryIntegrityReport",
         "GUARD_MEMORY_INTEGRITY_VERSION",
     ]:
         if required not in memory_report_0185:
-            fail(f"В проверке «0.18.5 Memory Integrity report» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.5 Memory Integrity отчёт» отсутствует обязательный компонент: {required}")
     for required in [
         "guard_memory_integrity_fail_closed_on_executable_image_code_page_drift",
         "executable image code-page drift must be fail-closed",
@@ -5362,9 +5362,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard_memory_probe_target",
     ]:
         if required not in memory_probe_0185:
-            fail(f"Неполная реализация «0.18.5 Memory Integrity tamper fixture»: {required}")
+            fail(f"Неполная реализация «0.18.5 Memory Integrity тестовые данные имитации вмешательства»: {required}")
     if "Memory Integrity 0.18.5 gate: OK" not in memory_gate_0185:
-        fail("Не завершена реализация «0.18.5 mandatory Memory Integrity gate»")
+        fail("Не завершена реализация «0.18.5 обязательная проверка: Memory Integrity gate»")
     if (
         "guard-memory-integrity-0185.py" not in preflight
         or "guard-memory-integrity-0185.py" not in ci
@@ -5407,7 +5407,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "reconcile_and_verify",
     ]:
         if required not in thread_sensor_0186:
-            fail(f"Неполная реализация «0.18.6 Thread Integrity backend»: {required}")
+            fail(f"Неполная реализация «0.18.6 Thread Integrity серверная часть»: {required}")
     for forbidden in [
         "CreateRemoteThread",
         "WriteProcessMemory",
@@ -5427,7 +5427,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "thread_integrity::reconcile_and_verify()",
     ]:
         if required not in thread_stream_0186:
-            fail(f"Неполная реализация «0.18.6 Thread Integrity Sensor lifecycle»: {required}")
+            fail(f"Неполная реализация «0.18.6 Thread Integrity жизненный цикл датчика»: {required}")
     for required in [
         "pub struct RuntimeProcessTreeSnapshot",
         "verify_process_tree",
@@ -5439,7 +5439,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "process-tree v1",
     ]:
         if required not in thread_policy_0186:
-            fail(f"Неполная реализация «0.18.6 Process Integrity backend»: {required}")
+            fail(f"Неполная реализация «0.18.6 Process Integrity серверная часть»: {required}")
     for required in [
         "thread_process_integrity: crate::WindowsThreadProcessIntegrityReport",
         "expected THREAD_PROCESS_READY as third event",
@@ -5461,7 +5461,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "process_tree_sha256",
     ]:
         if required not in thread_report_0186:
-            fail(f"В проверке «0.18.6 Thread & Process Integrity report» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.6 Thread & Process Integrity отчёт» отсутствует обязательный компонент: {required}")
     for required in [
         "guard_thread_process_integrity_tracks_job_bound_descendant_processes",
         "descendant_process_peak >= 1",
@@ -5479,9 +5479,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "PAGE_EXECUTE_READWRITE",
     ]:
         if required not in thread_probe_0186:
-            fail(f"Неполная реализация «0.18.6 Thread Integrity adversarial fixture»: {required}")
+            fail(f"Неполная реализация «0.18.6 Thread Integrity тестовый сценарий противодействия»: {required}")
     if "Thread & Process Integrity 0.18.6 gate: OK" not in thread_gate_0186:
-        fail("Не завершена реализация «0.18.6 mandatory Thread & Process Integrity gate»")
+        fail("Не завершена реализация «0.18.6 обязательная проверка: Thread & Process Integrity gate»")
     if (
         "guard-thread-process-integrity-0186.py" not in preflight
         or "guard-thread-process-integrity-0186.py" not in ci
@@ -5524,7 +5524,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "reconcile_and_verify",
     ]:
         if required not in debug_sensor_0187:
-            fail(f"Неполная реализация «0.18.7 Debug Guard backend»: {required}")
+            fail(f"Неполная реализация «0.18.7 Debug Guard серверная часть»: {required}")
     for forbidden in [
         "DebugActiveProcess(",
         "WriteProcessMemory",
@@ -5542,7 +5542,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "debug_instrumentation::reconcile_and_verify()",
     ]:
         if required not in debug_stream_0187:
-            fail(f"Неполная реализация «0.18.7 Debug Guard Sensor lifecycle»: {required}")
+            fail(f"Неполная реализация «0.18.7 Debug Guard жизненный цикл датчика»: {required}")
     for required in [
         "-XX:+DisableAttachMechanism",
         "-javaagent:",
@@ -5557,7 +5557,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "validate_startup_instrumentation_boundary",
     ]:
         if required not in debug_launcher_0187:
-            fail(f"Неполная реализация «0.18.7 JVM instrumentation boundary»: {required}")
+            fail(f"Неполная реализация «0.18.7 JVM граница инструментирования»: {required}")
     for required in [
         "debug_instrumentation: crate::WindowsDebugInstrumentationReport",
         "expected DEBUG_INSTRUMENTATION_READY as fourth event",
@@ -5566,7 +5566,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "fail_closed",
     ]:
         if required not in debug_parent_0187:
-            fail(f"Неполная реализация «0.18.7 Debug Guard parent enforcement»: {required}")
+            fail(f"Неполная реализация «0.18.7 Debug Guard контроль родительского процесса»: {required}")
     for required in [
         "WindowsDebugInstrumentationReport",
         "GUARD_DEBUG_INSTRUMENTATION_VERSION",
@@ -5574,7 +5574,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "state_sha256",
     ]:
         if required not in debug_report_0187:
-            fail(f"В проверке «0.18.7 Debug Guard report» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.7 Debug Guard отчёт» отсутствует обязательный компонент: {required}")
     for required in [
         "guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable",
         "guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach",
@@ -5592,9 +5592,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "DebugSetProcessKillOnExit",
     ]:
         if required not in debug_probe_0187:
-            fail(f"Неполная реализация «0.18.7 debugger adversarial fixture»: {required}")
+            fail(f"Неполная реализация «0.18.7 debugger тестовый сценарий противодействия»: {required}")
     if "Debug & Instrumentation Guard 0.18.7 gate: OK" not in debug_gate_0187:
-        fail("Не завершена реализация «0.18.7 mandatory Debug & Instrumentation Guard gate»")
+        fail("Не завершена реализация «0.18.7 обязательная проверка: Debug & Instrumentation Guard gate»")
     if (
         "guard-debug-instrumentation-0187.py" not in preflight
         or "guard-debug-instrumentation-0187.py" not in ci
@@ -5636,7 +5636,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "outside jvm.dll provenance",
     ]:
         if required not in jvm_sensor_0188:
-            fail(f"Неполная реализация «0.18.8 JVM-Aware Sensor backend»: {required}")
+            fail(f"Неполная реализация «0.18.8 JVM-Aware Sensor серверная часть»: {required}")
     for required in [
         "jvm_awareness::capture_transition_provenance",
         "jvm_awareness::observe_memory_transition",
@@ -5644,7 +5644,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "hook_virtual_protect",
     ]:
         if required not in jvm_hooks_0188:
-            fail(f"Неполная реализация «0.18.8 JVM-Aware hook provenance»: {required}")
+            fail(f"Неполная реализация «0.18.8 JVM-Aware происхождение перехватов»: {required}")
     for required in [
         "MODULE_EVENT_REASON_JVM_AWARE_READY",
         "MODULE_EVENT_REASON_JVM_AWARE_HEARTBEAT",
@@ -5653,7 +5653,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "jvm_awareness::reconcile_and_verify()",
     ]:
         if required not in jvm_stream_0188:
-            fail(f"Неполная реализация «0.18.8 JVM-Aware Sensor lifecycle»: {required}")
+            fail(f"Неполная реализация «0.18.8 JVM-Aware жизненный цикл датчика»: {required}")
     for required in [
         "jvm_aware: crate::WindowsJvmAwareProtectionReport",
         "expected JVM_AWARE_READY as fifth event",
@@ -5662,7 +5662,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "non-JVM executable-memory transition",
     ]:
         if required not in jvm_parent_0188:
-            fail(f"Неполная реализация «0.18.8 JVM-Aware parent enforcement»: {required}")
+            fail(f"Неполная реализация «0.18.8 JVM-Aware контроль родительского процесса»: {required}")
     for required in [
         "WindowsJvmAwareProtectionReport",
         "GUARD_JVM_AWARE_PROTECTION_VERSION",
@@ -5672,7 +5672,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "state_sha256",
     ]:
         if required not in jvm_report_0188:
-            fail(f"Неполная реализация «0.18.8 JVM-Aware report»: {required}")
+            fail(f"Неполная реализация «0.18.8 JVM-Aware отчёт»: {required}")
     for required in [
         "guard_jvm_aware_protection_accepts_certified_hotspot_jit",
         "guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
@@ -5682,12 +5682,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "GUARD_JVM_PROBE_DLL",
     ]:
         if required not in jvm_test_0188:
-            fail(f"В проверке «0.18.8 JVM-Aware Windows integration regression» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.18.8 JVM-Aware регрессионная интеграционная проверка Windows» отсутствует обязательный компонент: {required}")
     for required in ["VirtualAlloc", "PAGE_EXECUTE_READWRITE", "guard-jvm-aware-probe"]:
         if required not in jvm_probe_0188:
-            fail(f"Неполная реализация «0.18.8 JVM-Aware adversarial fixture»: {required}")
+            fail(f"Неполная реализация «0.18.8 JVM-Aware тестовый сценарий противодействия»: {required}")
     if "JVM-Aware Protection 0.18.8 gate: OK" not in jvm_gate_0188:
-        fail("Не завершена реализация «0.18.8 mandatory JVM-Aware Protection gate»")
+        fail("Не завершена реализация «0.18.8 обязательная проверка: JVM-Aware Protection gate»")
     if (
         "guard-jvm-aware-protection-0188.py" not in preflight
         or "guard-jvm-aware-protection-0188.py" not in ci
@@ -5707,7 +5707,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
     ]:
         if required not in jvm_adversarial_ci_0188:
-            fail(f"Неполная реализация «0.18.8 JVM-Aware adversarial runner»: {required}")
+            fail(f"Неполная реализация «0.18.8 JVM-Aware сценарий имитации атак»: {required}")
 
 
 # В 0.18.9: Continuous Guard требует независимого двустороннего heartbeat Sensor/Guard
@@ -5732,7 +5732,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Guard-ACK HMAC mismatch",
     ]:
         if required not in continuous_sensor_0189:
-            fail(f"Неполная реализация «0.18.9 Continuous Guard Sensor backend»: {required}")
+            fail(f"Неполная реализация «0.18.9 Continuous Guard Sensor серверная часть»: {required}")
     for required in [
         "MODULE_EVENT_REASON_CONTINUOUS_READY",
         "MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT",
@@ -5741,7 +5741,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "continuous_guard::wait_for_guard_ack",
     ]:
         if required not in continuous_stream_0189:
-            fail(f"Неполная реализация «0.18.9 Continuous Guard Sensor lifecycle»: {required}")
+            fail(f"Неполная реализация «0.18.9 Continuous Guard жизненный цикл датчика»: {required}")
     for required in [
         "expected CONTINUOUS_READY as sixth event",
         "advance_continuous_event_chain",
@@ -5751,7 +5751,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "last_cross_check_sha256",
     ]:
         if required not in continuous_parent_0189:
-            fail(f"Неполная реализация «0.18.9 Continuous Guard parent cross-check»: {required}")
+            fail(f"Неполная реализация «0.18.9 Continuous Guard перекрёстная проверка родительского процесса»: {required}")
     for required in [
         "WindowsContinuousGuardReport",
         "sensor_heartbeat_count",
@@ -5761,7 +5761,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "last_cross_check_sha256",
     ]:
         if required not in continuous_report_0189:
-            fail(f"Неполная реализация «0.18.9 Continuous Guard report»: {required}")
+            fail(f"Неполная реализация «0.18.9 Continuous Guard отчёт»: {required}")
     for required in [
         "guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat",
         "every Sensor heartbeat must receive exactly one Guard ACK",
@@ -5772,7 +5772,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 f"0.18.9 Отсутствует регрессионная интеграционная проверка Continuous Guard в Windows: {required}"
             )
     if "Continuous Guard 0.18.9 gate: OK" not in continuous_gate_0189:
-        fail("Не завершена реализация «0.18.9 mandatory Continuous Guard gate»")
+        fail("Не завершена реализация «0.18.9 обязательная проверка: Continuous Guard gate»")
     if (
         "guard-continuous-guard-0189.py" not in preflight
         or "guard-continuous-guard-0189.py" not in ci
@@ -5845,7 +5845,7 @@ if (
     "Windows Adversarial CI attack-simulation + compatibility certification 0.18.11 gate: OK"
     not in adversarial_gate_01811
 ):
-    fail("Не завершена реализация «0.18.11 mandatory Windows Adversarial CI gate»")
+    fail("Не завершена реализация «0.18.11 обязательная проверка: Windows Adversarial CI gate»")
 
 
 # В 0.18.12: Windows Protection RC должен связывать точную атакующую
@@ -5922,7 +5922,7 @@ if (
     or "windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812"
     not in production_delivery_01812
 ):
-    fail("0.18.12: Production Delivery Release не фиксирует обязательность Windows Protection RC")
+    fail("0.18.12: промышленный выпуск не фиксирует обязательность Windows Protection RC")
 for required in [
     "guard-windows-adversarial-certificate-${{ github.sha }}",
     "LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE",
@@ -5945,7 +5945,7 @@ if (
     "Windows Protection RC release certificate + production gates 0.18.12 gate: OK"
     not in windows_protection_gate_01812
 ):
-    fail("Не завершена реализация «0.18.12 mandatory Windows Protection RC gate»")
+    fail("Не завершена реализация «0.18.12 обязательная проверка: Windows Protection RC gate»")
 
 
 # В 0.19.0: Guard Windows Protection GA переводит проверенный набор RC в производственную
@@ -6018,7 +6018,7 @@ if (
     not in production_delivery_01812
     or "windowsProtectionGAFile0190" not in production_delivery_01812
 ):
-    fail("0.19.0: Production Delivery Release не фиксирует обязательность Windows Protection GA")
+    fail("0.19.0: промышленный выпуск не фиксирует обязательность Windows Protection GA")
 for required in [
     "WINDOWS_PROTECTION_GA_CERTIFICATE.json",
     "windowsProtectionGACertified",
@@ -6054,7 +6054,7 @@ if (
     "Guard Windows Protection GA 0.19.0 production gate: OK"
     not in windows_protection_ga_gate_0190
 ):
-    fail("Не завершена реализация «0.19.0 mandatory Windows Protection GA gate»")
+    fail("Не завершена реализация «0.19.0 обязательная проверка: Windows Protection GA gate»")
 
 # 0.29.0: промышленный кандидат должен содержать доказательства от настоящей
 # JVM Minecraft и независимо проверенного восстановления ЕЁ сохранённого мира.
@@ -6106,7 +6106,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "returnedToHealthyService",
     ]:
         if required not in certification:
-            fail(f"В проверке «0.29.0 required E2E attestation validation» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.29.0 обязательная сквозная проверка аттестации» отсутствует обязательный компонент: {required}")
     if (
         "verify_server_control_0290.py" not in pipeline
         or "world-backup-0290.json" not in pipeline

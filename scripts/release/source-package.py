@@ -179,7 +179,7 @@ def main() -> int:
     out = Path(ns.output).resolve()
     files = tracked_files(root)
     if not files:
-        raise SystemExit("source allowlist пуст")
+        raise SystemExit("Список разрешённых исходных файлов пуст")
     out.parent.mkdir(parents=True, exist_ok=True)
     write_zip(root, out, [(rel, rel) for rel in files])
     if ns.list_file:

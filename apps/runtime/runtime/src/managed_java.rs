@@ -538,7 +538,7 @@ async fn install_managed_java_archive(
     let java = find_java_executable(&staging).ok_or_else(|| "в распакованном JRE не найден bin/java".to_string())?;
     let java_relative = java
         .strip_prefix(&staging)
-        .map_err(|_| "java executable вышел за staging".to_string())?
+        .map_err(|_| "исполняемый файл Java находится за пределами промежуточного каталога".to_string())?
         .to_string_lossy()
         .replace('\\', "/");
     if let Some(expected) = expected_java_entry {

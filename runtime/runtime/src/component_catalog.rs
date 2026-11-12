@@ -434,7 +434,7 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     }
     fn visit<'a>(id:&'a str,items:&HashMap<&'a str,&'a CatalogComponent>,state:&mut HashMap<&'a str,u8>,stack:&mut Vec<&'a str>)->Result<(),String>{
         if state.get(id)==Some(&2){return Ok(())}
-        if state.get(id)==Some(&1){let i=stack.iter().position(|s|*s==id).unwrap_or(0);let mut path=stack[i..].to_vec();path.push(id);return Err(format!("cycle: {}",path.join(" -> ")))}
+        if state.get(id)==Some(&1){let i=stack.iter().position(|s|*s==id).unwrap_or(0);let mut path=stack[i..].to_vec();path.push(id);return Err(format!("Циклическая зависимость: {}",path.join(" -> ")))}
         state.insert(id,1);stack.push(id);
         let current=*items.get(id).ok_or_else(||format!("Отсутствует узел зависимости {id}"))?;
         for dep in &current.dependencies {visit(dep.id.as_str(),items,state,stack)?}

@@ -669,7 +669,7 @@ fn manifest_signing_payload(manifest: &Manifest) -> Result<Vec<u8>, String> {
     unsigned.signature = None;
     // Go encoding/json (подписант публикации) экранирует метасимволы HTML
     // и разделители строк JavaScript. Rust обязан проверять именно эти байты.
-    let json = serde_json::to_string(&unsigned).map_err(|err| format!("не удалось сериализовать payload подписи: {err}"))?;
+    let json = serde_json::to_string(&unsigned).map_err(|err| format!("не удалось сериализовать данные для подписи: {err}"))?;
     Ok(json.replace('&', "\\u0026").replace('<', "\\u003c").replace('>', "\\u003e")
         .replace('\u{2028}', "\\u2028").replace('\u{2029}', "\\u2029").into_bytes())
 }

@@ -23,6 +23,7 @@ export function httpStatusRu(response: Pick<Response, 'status'>): string {
 export function networkErrorRu(value: unknown): string {
   const message = value instanceof Error ? value.message : String(value ?? '');
   if (!message.trim()) return 'Причина не указана';
+  if (/^max attempts exceeded\.?$/i.test(message.trim())) return 'Превышено максимальное число попыток';
   if (/[А-Яа-яЁё]/.test(message)) return message;
   if (/^(?:(?:TypeError|NetworkError):\s*)?(?:Failed to fetch|Network request failed|Load failed|fetch failed)$/i.test(message.trim()))
     return 'Не удалось выполнить сетевой запрос';

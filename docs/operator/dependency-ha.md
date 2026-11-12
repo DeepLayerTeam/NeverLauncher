@@ -141,7 +141,7 @@ sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py verify \
 различными прямыми S3 шлюзами, с TLS hostname verification. Отчёт не
 содержит DSN/секреты; отсутствие права или сервера — ошибка, не PASS.
 
-## Разрушающие failure drills (ТОЛЬКО разрешённый staging)
+## Испытания с имитацией отказов (ТОЛЬКО разрешённая тестовая среда)
 
 Пример: отключение **текущего** процесса записи PostgreSQL `pg-a`, если HAProxy stats до
 испытания показывает `pg-a` UP. `--target` — независимо сверенный SSH

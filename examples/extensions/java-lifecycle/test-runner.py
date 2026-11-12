@@ -114,13 +114,13 @@ if __name__ == "__main__":
             proc.send_signal(signal.SIGTERM)
             out, err = proc.communicate(timeout=6)
             assert proc.returncode in (0, 128 + signal.SIGTERM), (
-                f"Java extension exited with {proc.returncode}: {err}"
+                f"Расширение Java завершилось с кодом {proc.returncode}: {err}"
             )
         assert "Java extension started" in out and "Java extension stopped" in out, (
             f"отсутствуют обратные вызовы жизненного цикла: {out}"
         )
         if os.name != "nt":
-            assert not err.strip(), f"unexpected Java extension stderr: {err}"
+            assert not err.strip(), f"Неожиданный вывод ошибок расширения Java: {err}"
         print("PASS: реальный подпроцесс Java, приветствие, PID, сигнал активности и остановка")
     finally:
         if proc.poll() is None:

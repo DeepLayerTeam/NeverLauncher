@@ -509,7 +509,7 @@ impl GuardSupervisor {
             .ok_or_else(|| "Граница изоляции процесса Guard не инициализирована".to_string())?;
         let payload = send_command(handle, "process-policy").await?;
         let policy: GuardProcessPolicyReport = serde_json::from_value(payload)
-            .map_err(|err| format!("Guard process policy payload повреждён: {err}"))?;
+            .map_err(|err| format!("Данные политики процессов Guard повреждены: {err}"))?;
         validate_guard_process_policy(handle, &policy)?;
         Ok(policy)
     }
@@ -550,7 +550,7 @@ impl GuardSupervisor {
         }
         let payload = send_command_with_payload(handle, "guard-attestation", &request_payload).await?;
         let attestation: GuardRemoteAttestation = serde_json::from_value(payload)
-            .map_err(|err| format!("Guard remote attestation payload повреждён: {err}"))?;
+            .map_err(|err| format!("Данные удалённой аттестации Guard повреждены: {err}"))?;
         validate_remote_attestation(handle, challenge_id, challenge, &attestation)?;
         Ok(attestation)
     }
@@ -939,7 +939,7 @@ async fn send_command_inner(
 #[cfg(windows)]
 fn parse_status(value: Value) -> Result<GuardStatus, String> {
     let status: GuardStatus = serde_json::from_value(value)
-        .map_err(|err| format!("Guard status payload повреждён: {err}"))?;
+        .map_err(|err| format!("Данные состояния Guard повреждены: {err}"))?;
     validate_release_identity(&status, expected_windows_platform())?;
     Ok(status)
 }
@@ -1521,7 +1521,7 @@ async fn serve_authenticated_session(
             }
             "guard-attestation" => {
                 let request: GuardAttestationRequest = serde_json::from_str(&request.payload)
-                    .map_err(|err| format!("Guard attestation request payload повреждён: {err}"))?;
+                    .map_err(|err| format!("Данные запроса аттестации Guard повреждены: {err}"))?;
                 if request.challenge_id.trim().is_empty()
                     || request.challenge_id.len() > 160
                     || request.challenge.is_empty()

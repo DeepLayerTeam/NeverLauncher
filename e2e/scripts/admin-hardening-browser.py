@@ -141,7 +141,7 @@ async def main():
                     ctx.request.put(target, headers=headers, data=copy2),
                 )
                 assert sorted([first.status, second.status]) == [200, 409], (
-                    f"CAS failure: {first.status}, {second.status}"
+                    f"Ошибка проверки атомарного изменения (CAS): {first.status}, {second.status}"
                 )
                 # Браузер теряет соединение, но ранее сохранённый черновик остаётся.
                 await ctx.set_offline(True)
@@ -160,7 +160,7 @@ async def main():
                     headers={"Authorization": "Bearer " + operator},
                 )
                 assert denied.status == 403, (
-                    f"Cross-project jobs were visible: {denied.status}"
+                    f"Обнаружены задания других проектов: {denied.status}"
                 )
                 op_ctx = await browser.new_context()
                 await op_ctx.add_init_script(
