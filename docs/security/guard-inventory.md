@@ -57,7 +57,7 @@ python3 scripts/guard_ci/inventory_0501.py matrix \
 | Внутрипроцессный датчик Windows | `BLOCKED` без игры | `UNSUPPORTED` | `UNSUPPORTED` |
 | Осведомлённость о JVM и непрерывный датчик | `BLOCKED` без игры | `UNSUPPORTED` | `UNSUPPORTED` |
 | Совместимость Runtime с Vanilla/Fabric/Quilt/Forge/NeoForge | `BLOCKED` до реального запуска и подключения | `BLOCKED` | `BLOCKED` |
-| Trusted Java Agent + Guard | `BLOCKED` до разрешённого реального запуска агента (0.50.3) | `BLOCKED` | `BLOCKED` |
+| Доверенный агент Java + Guard | `BLOCKED` до разрешённого реального запуска агента (0.50.3) | `BLOCKED` | `BLOCKED` |
 
 Существующий исходный код для Windows отклоняет `-javaagent` при запуске датчика. Версия 0.50.1 **не отключает эту защиту**. Согласование одобренных владельцем агентов с подписанными политиками Guard предусмотрено версиями 0.50.2–0.50.4.
 

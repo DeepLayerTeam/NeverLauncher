@@ -1,6 +1,6 @@
 # Launcher 0.48.12 — пример Java-разработчика
 
-Этот проект — настоящий **внешний** потребитель Java SDK. Собирайте его после публикации трёх артефактов SDK в `dist/java-sdk/maven` (см. `scripts/java/developer_e2e_04812.py`).
+Этот проект — настоящий **внешний** потребитель SDK Java. Собирайте его после публикации трёх артефактов SDK в `dist/java-sdk/maven` (см. `scripts/java/developer_e2e_04812.py`).
 
 ```sh
 mvn --batch-mode --no-transfer-progress -f examples/extensions/java-developer-04812/pom.xml package

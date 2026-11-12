@@ -201,7 +201,7 @@ func TestImportAllRejectsStaleTargetAndTamperedInputs0493(t *testing.T) {
 	}))
 	defer server.Close()
 	args := []string{"import-content-all", "--backend", server.URL, "--token", "token", "--run", "run", "--confirm", "run", "--source", source, "--mapping", mapping, "--report", report}
-	if err := handleMigrationWorkflow0331(args); err == nil || !strings.Contains(err.Error(), "target changed") {
+	if err := handleMigrationWorkflow0331(args); err == nil || !strings.Contains(err.Error(), "Целевая система изменилась") {
 		t.Fatalf("устаревшая цель не была отклонена: %v", err)
 	}
 	if imports != 0 {
@@ -210,7 +210,7 @@ func TestImportAllRejectsStaleTargetAndTamperedInputs0493(t *testing.T) {
 	if err := os.WriteFile(source, []byte("altered"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := handleMigrationWorkflow0331(args); err == nil || !strings.Contains(err.Error(), "source changed") {
+	if err := handleMigrationWorkflow0331(args); err == nil || !strings.Contains(err.Error(), "Источник Gravit изменился") {
 		t.Fatalf("принят изменённый ZIP-файл: %v", err)
 	}
 	args[7] = "wrong" // wrong confirmation

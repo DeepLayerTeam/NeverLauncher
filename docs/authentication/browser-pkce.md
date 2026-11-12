@@ -6,7 +6,7 @@
 2. Укажите UUID приложения в существующей настройке Backend `LAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID` (см. `.env.example` и настройки аутентификации Admin). Настройте отдельно надёжный секрет шифрования токенов Backend, как требует 0.25.7.
 3. Получите **реальные** разрешения Microsoft/Xbox/Minecraft Services для приложения. Успешный Microsoft OAuth не доказывает одобрение Minecraft. Запустите CLI `official-provider-poc` 0.26.1 с тем же Client ID и реальным Minecraft Java аккаунтом; сохраните очищенный отчёт этапов вне репозитория.
 4. Разверните вместе Backend 0.26.3 и Desktop 0.26.3. Сперва войдите в платформенный аккаунт Launcher; в Desktop выберите **Официальный Minecraft → Войти через браузер Microsoft (PKCE)**. Системный браузер открывается автоматически; после согласия владельца аккаунта локальный callback покажет завершение, а Desktop — проверенный Minecraft-профиль.
-5. Если браузер или обратный вызов на петлевом интерфейсе заблокирован, например защитным ПО, выберите **Device Code (резервный режим)**. Не внедряйте форму Microsoft в webview и не копируйте чужой Client ID.
+5. Если браузер или обратный вызов на петлевом интерфейсе заблокирован, например защитным ПО, выберите **Код устройства (резервный режим)**. Не внедряйте форму Microsoft в webview и не копируйте чужой Client ID.
 
 ## Реализованный путь обработки запросов
 
@@ -42,6 +42,6 @@ go run ./cmd/official-provider-poc --client-id YOUR_REGISTERED_UUID --flow brows
 - HTTP 403 `Invalid app registration` от Minecraft Services означает блокировку одобрения провайдером; нельзя обходить её чужим публичным Client ID.
 - Состояние Official Ready допускает только Java-профиль, полученный из Minecraft Services. Одного Microsoft/OIDC-входа на платформу недостаточно.
 - При отмене после выдачи кода Microsoft Backend может уже обменять его, но нативный менеджер не сохранит зашифрованный билет. Повторно использовать код нельзя.
-- Backend и Desktop для нового потока обновляются вместе; существующий Device Code совместим с 0.26.2.
+- Backend и Desktop для нового потока обновляются вместе; существующий режим кода устройства совместим с 0.26.2.
 
 Ссылки: Microsoft Learn — [ограничения redirect URI](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url), [authorization code PKCE](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow), [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252).

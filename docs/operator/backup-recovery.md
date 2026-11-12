@@ -48,7 +48,7 @@ sudo python3 scripts/operations/dr_03512.py verify \
   --snapshot /srv/backups/standard-04513
 ```
 
-На новом хосте: идентичная версия Docker-образов и секретов; пустые Docker volumes и контейнеры; TLS/HTTPS должны указывать на новый хост (не на исходный DNS endpoint). Пример **разрушающей операции только на чистом целевом project**:
+На новом хосте: идентичная версия Docker-образов и секретов; пустые тома Docker и контейнеры; TLS/HTTPS должны указывать на новый хост (не на исходный DNS endpoint). Пример **разрушающей операции только на чистом целевом project**:
 
 ```sh
 sudo python3 scripts/operations/dr_03512.py restore-fresh \

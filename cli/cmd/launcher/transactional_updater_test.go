@@ -93,7 +93,7 @@ func TestTransactionalUpdaterPostVerifyFailureRollsBack0156(t *testing.T) {
 		},
 		Verify: func() error { return errors.New("имитация ошибки проверки обновления") },
 	})
-	if err == nil || !strings.Contains(err.Error(), "rolled back") {
+	if err == nil || !strings.Contains(err.Error(), "отменена с откатом") {
 		t.Fatalf("Ожидалась ошибка отката, получено: %v", err)
 	}
 	if raw, _ := os.ReadFile(filepath.Join(root, "app.bin")); string(raw) != "old" {

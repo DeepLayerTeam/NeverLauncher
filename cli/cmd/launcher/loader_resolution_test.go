@@ -62,7 +62,7 @@ func TestLoaderResolutionLockRejectsMutableResolvedVersion(t *testing.T) {
 		PayloadURL: "https://meta.quiltmc.org/v3/versions/loader/1.21.1/latest-stable/profile/json", PayloadSHA256: strings.Repeat("2", 64),
 		RuntimeProfileSHA256: strings.Repeat("3", 64), MaterializationSHA256: strings.Repeat("4", 64), ReproducibilitySHA256: strings.Repeat("5", 64),
 	}
-	if err := validateLoaderResolutionLock(&lock, "quilt", "1.21.1", "latest-stable", true); err == nil || !strings.Contains(err.Error(), "immutable resolvedVersion") {
+	if err := validateLoaderResolutionLock(&lock, "quilt", "1.21.1", "latest-stable", true); err == nil || !strings.Contains(err.Error(), "отсутствует неизменяемое значение resolvedVersion") {
 		t.Fatalf("Принята изменяемая разрешённая версия: %v", err)
 	}
 }

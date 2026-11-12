@@ -206,7 +206,7 @@ func TestLoader0403RejectsMavenArtifactPathDrift(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(jar) }))
 	defer server.Close()
 	profile := loaderVersionProfile{Libraries: []MojangLibrary{{Name: name, URL: server.URL, Downloads: MojangLibraryDownloads{Artifact: MojangDownload{Path: "different/path.jar", URL: server.URL, SHA1: sha10403(jar)}}}}}
-	if _, err := materializeLoaderLibraries(context.Background(), server.Client(), t.TempDir(), &profile, 1, true); err == nil || !strings.Contains(err.Error(), "Maven identity") {
+	if _, err := materializeLoaderLibraries(context.Background(), server.Client(), t.TempDir(), &profile, 1, true); err == nil || !strings.Contains(err.Error(), "отличается от идентификатора Maven") {
 		t.Fatalf("Неверный путь к артефакту должен вызывать ошибку; получено %v", err)
 	}
 }

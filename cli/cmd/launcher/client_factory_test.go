@@ -98,7 +98,7 @@ func TestClientFactory0271RejectsUnpinnedOutputAndSymlink(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := executeFactoryBuild0271(context.Background(), factoryBuildOptions0271{Loader: "vanilla", Minecraft: "latest-release", ClientDir: dir, StrictUpstream: true})
-	if err == nil || !strings.Contains(err.Error(), "empty destination") {
+	if err == nil || !strings.Contains(err.Error(), "требуется пустой каталог назначения") {
 		t.Fatalf("Принят непустой неуправляемый каталог: %v", err)
 	}
 	if err := os.Remove(filepath.Join(dir, "extra.jar")); err != nil {

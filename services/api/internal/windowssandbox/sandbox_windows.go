@@ -458,13 +458,13 @@ func runChild() {
 	}
 	sidPtr, _, e := newProfile(c.Profile)
 	if e != nil {
-		signalReady(c.Ready, "ERROR profile: "+e.Error())
+		signalReady(c.Ready, "ERROR профиль: "+e.Error())
 		os.Exit(113)
 	}
 	defer freeSID(sidPtr)
 	proc, thread, job, pid, e := createIsolatedProcess(c, sidPtr)
 	if e != nil {
-		signalReady(c.Ready, "ERROR launch: "+e.Error())
+		signalReady(c.Ready, "ERROR запуск: "+e.Error())
 		os.Exit(114)
 	}
 	defer closeHandle(proc)
@@ -489,7 +489,7 @@ func runChild() {
 	}
 	r, _, resumeErr := resumeThread.Call(thread)
 	if r == ^uintptr(0) {
-		_ = send("ERROR resume: " + resumeErr.Error())
+		_ = send("ERROR возобновление: " + resumeErr.Error())
 		terminateJob.Call(job, 1)
 		os.Exit(121)
 	}

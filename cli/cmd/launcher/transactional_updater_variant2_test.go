@@ -124,7 +124,7 @@ func TestUpdaterDamagedBackupCannotPoisonRollback0527(t *testing.T) {
 	if err := os.WriteFile(backup, []byte("attacker-replaced-backup"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := u.rollbackLocked(j, errors.New("untrusted-backup")); err == nil || !strings.Contains(err.Error(), "integrity") {
+	if err := u.rollbackLocked(j, errors.New("untrusted-backup")); err == nil || !strings.Contains(err.Error(), "целостности резервной копии для отката") {
 		t.Fatalf("Принят откат с повреждёнными данными: %v", err)
 	}
 	old, _ := os.ReadFile(filepath.Join(root, "runtime.bin"))

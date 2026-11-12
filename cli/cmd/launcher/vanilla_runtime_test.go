@@ -790,7 +790,7 @@ func TestInstallVanillaRejectsWrongJavaBeforeArtifactDownload(t *testing.T) {
 		StrictUpstream:   true,
 		HTTPClient:       server.Client(),
 	})
-	if err == nil || !strings.Contains(err.Error(), "Java mismatch") {
+	if err == nil || !strings.Contains(err.Error(), "Java не соответствует метаданным Mojang") {
 		t.Fatalf("Ожидалось отклонение неподходящей версии Java, получено: %v", err)
 	}
 	if clientRequested {
@@ -831,7 +831,7 @@ func TestInstallVanilla0168RejectsWrongJavaBeforeArtifactDownload(t *testing.T) 
 		StrictUpstream:   true,
 		HTTPClient:       server.Client(),
 	})
-	if err == nil || !strings.Contains(err.Error(), "Java mismatch") {
+	if err == nil || !strings.Contains(err.Error(), "Java не соответствует метаданным Mojang") {
 		t.Fatalf("Ожидалось отклонение неподходящей Java в 0.16.8, получено: %v", err)
 	}
 	if clientRequested {
@@ -872,7 +872,7 @@ func TestInstallVanilla0167RejectsWrongJavaBeforeArtifactDownload(t *testing.T) 
 		StrictUpstream:   true,
 		HTTPClient:       server.Client(),
 	})
-	if err == nil || !strings.Contains(err.Error(), "Java mismatch") {
+	if err == nil || !strings.Contains(err.Error(), "Java не соответствует метаданным Mojang") {
 		t.Fatalf("Ожидалось отклонение неподходящей Java в 0.16.7, получено: %v", err)
 	}
 	if clientRequested {

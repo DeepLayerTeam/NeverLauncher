@@ -13,7 +13,7 @@
 | `message.broadcast` | `executed` после успешного platform вызова / доставки в entity scheduler | Нельзя подтвердить фактическое прочтение сообщения клиентом; частичная ошибка Folia — `indeterminate` |
 | `server.save` | `executed` после принятия `save-all flush` | Нет достоверного подтверждения fsync / целостности мира; это не backup |
 | `server.console` | `executed` после успешного allowlisted dispatch | Эффект произвольной команды не верифицируется |
-| `server.shutdown` | `accepted` после постановки в планировщик | Реальное завершение JVM подтверждает Host Supervisor, не Bukkit plugin |
+| `server.shutdown` | `accepted` после постановки в планировщик | Реальное завершение JVM подтверждает диспетчер хоста, не плагин Bukkit |
 
 Backend сохраняет результат в журнале ServerBridge и независимо проверяет тип доказательства и исходное содержимое для `player.kick`, ban/whitelist и режимов. ACK подписывает зарегистрированный агент; независимой аттестацией игрового мира со стороны Backend он не является.
 

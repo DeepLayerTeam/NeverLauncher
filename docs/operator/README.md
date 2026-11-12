@@ -24,6 +24,6 @@ python3 scripts/contracts/validate-openapi.py
 
 ### Границы и роли
 
-Minimal — один API с SQLite и локальными файлами; не распределяйте SQLite по NFS. Standard — PostgreSQL и локальные Docker volumes, SQLite-координатор, один API. Network-HA — PostgreSQL, Redis, внешнее S3 и два API/два workers; Compose на одном хосте **не является** multi-host HA. Оператор не должен одновременно поднимать прежний и восстановленный контур с одинаковыми подписывающими ключами, ServerBridge-узлами и игровыми мирами. Нужны отдельно проверенные TLS/DNS, бэкап секретов, тест входа прежнего владельца и запуск Minecraft.
+Minimal — один API с SQLite и локальными файлами; не распределяйте SQLite по NFS. Standard — PostgreSQL и локальные тома Docker, SQLite-координатор, один API. Network-HA — PostgreSQL, Redis, внешнее S3 и два API/два workers; Compose на одном хосте **не является** multi-host HA. Оператор не должен одновременно поднимать прежний и восстановленный контур с одинаковыми подписывающими ключами, ServerBridge-узлами и игровыми мирами. Нужны отдельно проверенные TLS/DNS, бэкап секретов, тест входа прежнего владельца и запуск Minecraft.
 
 Подробности продукта: [OpenAPI и SDK](../releases/0.45.12-api-sdk-freeze-candidate.md), [обзор политики выпуска](../operations/release-policy.md), [проверки безопасности](../security/trust-model.md).

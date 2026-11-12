@@ -61,7 +61,7 @@ func TestForgeNeoForgeLibrariesOnlyForSelectedTargets0404(t *testing.T) {
 
 func TestForgeLibraryRejectsMavenArtifactSubstitution0404(t *testing.T) {
 	libraries := []MojangLibrary{{Name: "example:real:1.0", Downloads: MojangLibraryDownloads{Artifact: MojangDownload{Path: "example/other/1.0/other-1.0.jar", URL: "https://example.org/other.jar", SHA1: strings.Repeat("a", 40)}}}}
-	if _, err := materializeForgeLibraries(context.Background(), nil, t.TempDir(), &libraries, "forge", 2, true); err == nil || !strings.Contains(err.Error(), "Maven identity") {
+	if _, err := materializeForgeLibraries(context.Background(), nil, t.TempDir(), &libraries, "forge", 2, true); err == nil || !strings.Contains(err.Error(), "не совпадает с идентификатором Maven") {
 		t.Fatalf("принят неверный путь артефакта: %v", err)
 	}
 	// Неподходящая несовместимая запись не должна ломать установку только для Linux.

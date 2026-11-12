@@ -1281,7 +1281,7 @@ func TestCompatibilityCertificationFabricII0171RejectsMutableResolvedLoader(t *t
 		}
 	}
 	matrixRaw, _ = json.Marshal(matrix)
-	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.1", "commit-171"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.1", "commit-171"); err == nil || !strings.Contains(err.Error(), "не зафиксирована версия загрузчика") {
 		t.Fatalf("Версия 0.17.1 должна отклонять изменяемое свидетельство загрузчика Fabric; получено %v", err)
 	}
 }
@@ -1354,7 +1354,7 @@ func TestCompatibilityCertificationQuiltII0172RejectsMutableResolvedLoader(t *te
 		}
 	}
 	matrixRaw, _ = json.Marshal(matrix)
-	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.2", "commit-172"); err == nil || !strings.Contains(err.Error(), "не зафиксирована версия загрузчика") {
 		t.Fatalf("Версия 0.17.2 должна отклонять изменяемое свидетельство загрузчика Quilt; получено %v", err)
 	}
 }
@@ -1471,7 +1471,7 @@ func TestCompatibilityCertificationForgeModern0173RejectsMutableResolvedLoader(t
 		}
 	}
 	matrixRaw, _ = json.Marshal(matrix)
-	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.3", "commit-173"); err == nil || !strings.Contains(err.Error(), "не зафиксирована версия загрузчика") {
 		t.Fatalf("Версия 0.17.3 должна отклонять изменяемое свидетельство загрузчика Forge; получено %v", err)
 	}
 }
@@ -1522,7 +1522,7 @@ func TestCompatibilityCertificationForgeLegacy1122_0174RejectsMutableResolvedLoa
 		}
 	}
 	matrixRaw, _ = json.Marshal(matrix)
-	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.4", "commit-174"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.4", "commit-174"); err == nil || !strings.Contains(err.Error(), "не зафиксирована версия загрузчика") {
 		t.Fatalf("Версия 0.17.4 должна отклонять изменяемое свидетельство устаревшего загрузчика Forge; получено %v", err)
 	}
 }
@@ -1573,7 +1573,7 @@ func TestCompatibilityCertificationForgeLegacy1710_0175RejectsMutableResolvedLoa
 		}
 	}
 	matrixRaw, _ = json.Marshal(matrix)
-	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.5", "commit-175"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.5", "commit-175"); err == nil || !strings.Contains(err.Error(), "не зафиксирована версия загрузчика") {
 		t.Fatalf("Версия 0.17.5 должна отклонять изменяемое свидетельство загрузчика Forge 1.7.10; получено %v", err)
 	}
 }
@@ -1664,7 +1664,7 @@ func TestCompatibilityCertificationNeoForgeII0176RejectsMutableResolvedLoader(t 
 		}
 	}
 	matrixRaw, _ = json.Marshal(matrix)
-	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176"); err == nil || !strings.Contains(err.Error(), "immutable version") {
+	if _, err := validateCompatibilityEvidence(matrixRaw, targetsRaw, "0.17.6", "commit-176"); err == nil || !strings.Contains(err.Error(), "не зафиксирована версия загрузчика") {
 		t.Fatalf("Версия 0.17.6 должна отклонять изменяемые свидетельства загрузчика NeoForge, получено %v", err)
 	}
 }
@@ -1701,7 +1701,7 @@ func TestCompatibilityCertificationNeoForgeII0176BundleRejectsTamperedCoverage(t
 	if err := os.WriteFile(certPath, append(raw, '\n'), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.6"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.6"); err == nil || !strings.Contains(err.Error(), "Не совпадает покрытие платформ, загрузчиков, Vanilla или Java") {
 		t.Fatalf("Проверка пакета должна отклонять подменённый охват NeoForge, получено %v", err)
 	}
 }
@@ -1784,7 +1784,7 @@ func TestCompatibilityCertificationLoaderResolutionPinning0177BundleRejectsTampe
 	if err := os.WriteFile(certPath, append(raw, '\n'), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.7"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.7"); err == nil || !strings.Contains(err.Error(), "Не совпадает покрытие платформ, загрузчиков, Vanilla или Java") {
 		t.Fatalf("Проверка пакета должна отклонять подменённый охват закреплённых загрузчиков, получено %v", err)
 	}
 }
@@ -1854,7 +1854,7 @@ func TestCompatibilityCertificationLoaderNativeE2E0178BundleRejectsTamperedCover
 	if err := os.WriteFile(certPath, append(raw, '\n'), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.8"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.8"); err == nil || !strings.Contains(err.Error(), "Не совпадает покрытие платформ, загрузчиков, Vanilla или Java") {
 		t.Fatalf("Проверка пакета должна отклонять подменённый охват нативного загрузчика, получено %v", err)
 	}
 }
@@ -1922,7 +1922,7 @@ func TestCompatibilityCertificationCrossPlatformLoaders0179RejectsTamperedCovera
 	if err := os.WriteFile(certPath, raw, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.9"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.9"); err == nil || !strings.Contains(err.Error(), "Не совпадает покрытие платформ, загрузчиков, Vanilla или Java") {
 		t.Fatalf("Подменённый кроссплатформенный охват версии 0.17.9 должен вызывать безопасный отказ: %v", err)
 	}
 }
@@ -1991,7 +1991,7 @@ func TestCompatibilityCertificationLoaderHardening01710RejectsTamperedCoverage(t
 	if err := os.WriteFile(certPath, raw, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.10"); err == nil || !strings.Contains(err.Error(), "coverage mismatch") {
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.10"); err == nil || !strings.Contains(err.Error(), "Не совпадает покрытие платформ, загрузчиков, Vanilla или Java") {
 		t.Fatalf("Подменённый охват усиления защиты версии 0.17.10 должен вызывать безопасный отказ: %v", err)
 	}
 }

@@ -4,7 +4,7 @@ Java-расширения используют `context.runtime().serverBridge()
 
 ## Действующие данные и разрешения
 
-| Вызов Java SDK | Операция брокера | Необходимые действующие разрешения |
+| Вызов SDK Java | Операция брокера | Необходимые действующие разрешения |
 | --- | --- | --- |
 | `serverBridge().servers(projectId, offset, limit)` | `bridge.servers` | `serverbridge:read` |
 | `serverBridge().server(projectId, serverId)` | `bridge.server` | `serverbridge:read` |
