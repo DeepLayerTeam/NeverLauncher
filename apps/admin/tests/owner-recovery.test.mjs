@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { durableOwnerKey, findOriginalOwnerJob } from '../src/admin/owner-recovery-0388.ts';
+import { durableOwnerKey, findOriginalOwnerJob } from '../src/admin/owner-recovery.ts';
 import { ReleaseApi } from '../src/api/release.ts';
-import { readOwnerPending, saveOwnerPending } from '../src/admin/owner-lifecycle-03513.ts';
+import { readOwnerPending, saveOwnerPending } from '../src/admin/owner-lifecycle.ts';
 
 const intent={kind:'package-publish',projectId:'p1',profileId:'fabric',channel:'stable',resourceId:'pkg1',idempotencyKey:'lost-response-0388'};
 const record={intent,before:{projectId:'p1',profileId:'fabric',channel:'stable',revision:4,releaseId:'old'}};

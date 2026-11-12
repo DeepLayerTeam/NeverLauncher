@@ -87,7 +87,7 @@ require(
     ],
     "Принудительное применение политик macOS в Desktop",
 )
-backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
+backend = read("services/api/internal/httpapi/guard_attestation.go")
 require(
     backend,
     [
@@ -99,7 +99,7 @@ require(
     ],
     "Проверка macOS на Backend",
 )
-tests = read("services/api/internal/httpapi/guard_attestation_0134_test.go")
+tests = read("services/api/internal/httpapi/guard_attestation_test.go")
 require(
     tests,
     ["TestMacOSGuardAttestationValidation0138", "LibraryValidation = false"],
@@ -134,10 +134,10 @@ require(
         "guard_macos",
         "codesign --force --sign - --options runtime",
         "build-macos-desktop.sh",
-        "macos-production-implementation-0138.py",
+        "macos-production-implementation.py",
     ],
     "Обязательная проверка macOS в CI",
 )
 preflight = read("scripts/release/preflight.sh")
-require(preflight, ["macos-production-implementation-0138.py"], "Предварительная обязательная проверка macOS")
+require(preflight, ["macos-production-implementation.py"], "Предварительная обязательная проверка macOS")
 print("Launcher 0.13.8: проверка готовности macOS: OK")

@@ -2,16 +2,16 @@ name: HA зависимостей 0.51.3 — регрессии Runtime и си�
 on:
   push:
     paths:
-      - 'scripts/operations/dependency_ha_0513.py'
-      - 'scripts/operations/test_dependency_ha_0513.py'
-      - 'deploy/production/dependency-ha-0513.example.env'
-      - '.github/workflows/dependency-ha-0513.yml'
+      - 'scripts/operations/dependency_ha.py'
+      - 'scripts/operations/test_dependency_ha.py'
+      - 'deploy/production/dependency-ha.example.env'
+      - '.github/workflows/dependency-ha.yml'
   pull_request:
     paths:
-      - 'scripts/operations/dependency_ha_0513.py'
-      - 'scripts/operations/test_dependency_ha_0513.py'
-      - 'deploy/production/dependency-ha-0513.example.env'
-      - '.github/workflows/dependency-ha-0513.yml'
+      - 'scripts/operations/dependency_ha.py'
+      - 'scripts/operations/test_dependency_ha.py'
+      - 'deploy/production/dependency-ha.example.env'
+      - '.github/workflows/dependency-ha.yml'
 jobs:
   validate-proxy-and-vrrp:
     runs-on: ubuntu-24.04
@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m unittest discover -s scripts/operations -p 'test_dependency_ha_0513.py' -v
+          python -m unittest discover -s scripts/operations -p 'test_dependency_ha.py' -v
           sudo apt-get update -qq
           sudo apt-get install -y -qq haproxy keepalived
           d="$(mktemp -d)"
@@ -36,13 +36,13 @@ jobs:
           import sys
           from pathlib import Path
           d = Path(sys.argv[1])
-          text = Path('deploy/production/dependency-ha-0513.example.env').read_text()
+          text = Path('deploy/production/dependency-ha.example.env').read_text()
           text = text.replace('/etc/launcher/secrets/redis-ha-health-password', str(d / 'redis-health'))
           (d / 'ha.env').write_text(text)
           (d / 'ha.env').chmod(0o600)
           PY
           mkdir "$d/out"
-          python scripts/operations/dependency_ha_0513.py render --env-file "$d/ha.env" --output-dir "$d/out"
+          python scripts/operations/dependency_ha.py render --env-file "$d/ha.env" --output-dir "$d/out"
           sudo haproxy -c -f "$d/out/haproxy.launcher-0513.cfg"
           # Проверка конфигурации не меняет сеть системы и не запускает VRRP.
           sudo keepalived --config-test --use-file="$d/out/keepalived.launcher-0513.conf"

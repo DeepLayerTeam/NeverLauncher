@@ -7,7 +7,7 @@ on:
       - 'services/api/cmd/launcher-sqlite/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
-      - '.github/workflows/sqlite-full-state-0326.yml'
+      - '.github/workflows/sqlite-full-state.yml'
   pull_request:
   workflow_dispatch:
 permissions:

@@ -7,7 +7,7 @@ import argparse
 from pathlib import Path
 import subprocess
 import tempfile
-from package_java_0310 import package
+from package_java import package
 
 
 def run(cmd):

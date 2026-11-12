@@ -33,8 +33,8 @@ nl server-bridge host world-backup restore --server-root /srv/minecraft --backup
 ```bash
 cd cli && go test -race ./cmd/launcher -run 'TestWorldBackup' -count=1
 cd cli && go build -o /tmp/nl ./cmd/launcher
-python3 scripts/test/world-backup-real-java-04110.py --cli /tmp/nl
-python3 scripts/test/world-backup-host-e2e-02810.py --cli /tmp/nl
+python3 scripts/test/world-backup-real-java.py --cli /tmp/nl
+python3 scripts/test/world-backup-host-e2e.py --cli /tmp/nl
 ```
 
-Тест с OpenJDK запускает **реальный процесс JVM**, однако его минимальная Java-программа является тестовым образцом, а не оригинальным JAR Minecraft. Для теста репозитория `e2e/scripts/verify-real-world-backup-0290.py` нужны Docker, настоящий контейнер Paper, подключение реального игрока, сохранённый UUID игрока и постоянные данные плагинов. Пока эта проверка не пройдена, восстановление мира на оригинальном Paper нельзя считать полностью сертифицированным.
+Тест с OpenJDK запускает **реальный процесс JVM**, однако его минимальная Java-программа является тестовым образцом, а не оригинальным JAR Minecraft. Для теста репозитория `e2e/scripts/verify-real-world-backup.py` нужны Docker, настоящий контейнер Paper, подключение реального игрока, сохранённый UUID игрока и постоянные данные плагинов. Пока эта проверка не пройдена, восстановление мира на оригинальном Paper нельзя считать полностью сертифицированным.

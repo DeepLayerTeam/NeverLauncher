@@ -9,8 +9,8 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from verify_six_native_game_0440 import TARGETS, verify
-from run_native_validation_03410 import requires_adversarial_acceptance
+from verify_six_native_game import TARGETS, verify
+from run_native_validation import requires_adversarial_acceptance
 
 
 class NativeGameIntegrationTests(unittest.TestCase):

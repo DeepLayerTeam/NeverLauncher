@@ -12,16 +12,16 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_verified_targets import VersionIndependentGATests
-from test_verified_targets_0360 import COMMIT, NOW, timevalue
+from test_verified_targets_variant2 import COMMIT, NOW, timevalue
 from verified_targets import (Blocked, paths, verify,
                               PLAYER_CHECKS_0400, PLAYER_OBSERVATIONS_0400)
-from security_capabilities_0431 import (SCENARIOS, SCHEMA, LOG_SCHEMA, expected_scope, verify_all)
+from security_capabilities import (SCENARIOS, SCHEMA, LOG_SCHEMA, expected_scope, verify_all)
 from release_policy import policy
-from package_security_0431 import package, evidence_files
+from package_security import package, evidence_files
 from zipfile import ZipFile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
-from publish_0370 import verify_security_archive
+from publish import verify_security_archive
 
 
 class SecurityGATests(unittest.TestCase):
@@ -278,7 +278,7 @@ class SecurityGATests(unittest.TestCase):
 # 0.43.1 читаемы, но не сертифицируют поведение работающей игры в 0.43.8.
 class SecurityGameLifetime0438Tests(unittest.TestCase):
     def test_0438_requires_new_live_game_capability(self):
-        from security_capabilities_0431 import checks
+        from security_capabilities import checks
         self.assertNotIn("securityGuardLifetime", checks("0.43.7"))
         self.assertIn("securityGuardLifetime", checks("0.43.8"))
         self.assertIn("securityGuardLifetime", checks("0.44.0"))
@@ -294,7 +294,7 @@ class SecurityGameLifetime0438Tests(unittest.TestCase):
 
 class NativeExtensionRevocation04312Tests(unittest.TestCase):
     def test_04312_requires_separate_native_lifetime_evidence(self):
-        from security_capabilities_0431 import checks, scenarios_for_version, expected_scope
+        from security_capabilities import checks, scenarios_for_version, expected_scope
         self.assertNotIn("securityNativeRevocation", checks("0.43.11"))
         self.assertIn("securityNativeRevocation", checks("0.43.12"))
         self.assertIn("securityNativeRevocation", checks("0.44.0"))

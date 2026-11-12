@@ -17,7 +17,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 from verified_targets import (
     TARGETS, PLAYER_CHECKS_0400, checks_for, verify,
 )
-from security_capabilities_0431 import checks as security_checks
+from security_capabilities import checks as security_checks
 
 ARCHIVE_NAME = "GA_EXECUTION_EVIDENCE_04315.zip"
 MAX_MEMBER = 32 * 1024 * 1024

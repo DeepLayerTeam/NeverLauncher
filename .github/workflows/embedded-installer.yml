@@ -5,13 +5,13 @@ on:
       - 'installer/**'
       - 'services/api/internal/embeddedadmin/**'
       - 'services/api/internal/httpapi/handler.go'
-      - '.github/workflows/embedded-installer-0329.yml'
+      - '.github/workflows/embedded-installer.yml'
   pull_request:
     paths:
       - 'installer/**'
       - 'services/api/internal/embeddedadmin/**'
       - 'services/api/internal/httpapi/handler.go'
-      - '.github/workflows/embedded-installer-0329.yml'
+      - '.github/workflows/embedded-installer.yml'
 jobs:
   installer:
     runs-on: ubuntu-24.04

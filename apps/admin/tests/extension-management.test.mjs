@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ExtensionManagement0425, lifecyclePayload0425, verifyLifecycle0425 } from '../src/admin/extension_management_0425.ts';
+import { ExtensionManagement0425, lifecyclePayload0425, verifyLifecycle0425 } from '../src/admin/extension_management.ts';
 const globalScope = {scope: 'global', scopeId: ''};
 test('Перед привилегированным запросом проверяются область действия, версия и канал', () => {
   assert.deepEqual(lifecyclePayload0425('install', globalScope, '1.2.3'), {scope:'global', scopeId:'', version:'1.2.3'});

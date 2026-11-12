@@ -28,10 +28,10 @@ version = read("VERSION").strip()
 if version_tuple(version) < (0, 19, 0):
     raise SystemExit(f"Общедоступный выпуск защиты Windows: требуется версия не ниже 0.19.0, получено {version}")
 
-impl = read("cli/cmd/launcher/windows_protection_ga_0190.go")
+impl = read("cli/cmd/launcher/windows_protection_ga.go")
 require(
     impl,
-    "cli/cmd/launcher/windows_protection_ga_0190.go",
+    "cli/cmd/launcher/windows_protection_ga.go",
     [
         "windowsProtectionGAFile0190",
         '"WINDOWS_PROTECTION_GA_CERTIFICATE.json"',
@@ -54,10 +54,10 @@ require(
     ],
 )
 
-tests = read("cli/cmd/launcher/windows_protection_ga_0190_test.go")
+tests = read("cli/cmd/launcher/windows_protection_ga_test.go")
 require(
     tests,
-    "cli/cmd/launcher/windows_protection_ga_0190_test.go",
+    "cli/cmd/launcher/windows_protection_ga_test.go",
     [
         "TestWindowsProtectionGARequired0190",
         "TestWindowsProtectionGABoundaryBindsRCAndArtifacts0190",
@@ -75,11 +75,11 @@ require(
     ],
 )
 
-attestation = read("services/api/internal/httpapi/guard_attestation_v2_01810.go")
+attestation = read("services/api/internal/httpapi/guard_attestation_v2_.go")
 bridge = read("services/api/internal/httpapi/server_bridge.go")
 require(
     attestation,
-    "services/api/internal/httpapi/guard_attestation_v2_01810.go",
+    "services/api/internal/httpapi/guard_attestation_v2_.go",
     [
         "guardAttestationV2Schema01810",
         "guardContinuousEvidenceSchema01810",
@@ -112,11 +112,11 @@ require(
     ],
 )
 
-candidate = read("cli/cmd/launcher/production_release_candidate_01511.go")
-delivery = read("cli/cmd/launcher/production_delivery_release_0160.go")
+candidate = read("cli/cmd/launcher/production_release_candidate.go")
+delivery = read("cli/cmd/launcher/production_delivery_release.go")
 require(
     candidate,
-    "cli/cmd/launcher/production_release_candidate_01511.go",
+    "cli/cmd/launcher/production_release_candidate.go",
     [
         '"windows-protection-ga-fail-closed-user-mode-boundary"',
         "verifyWindowsProtectionGA0190(dir, ver)",
@@ -124,7 +124,7 @@ require(
 )
 require(
     delivery,
-    "cli/cmd/launcher/production_delivery_release_0160.go",
+    "cli/cmd/launcher/production_delivery_release.go",
     [
         '"windows-protection-ga-fail-closed-user-mode-boundary"',
         "windowsProtectionGAFile0190",
@@ -159,7 +159,7 @@ for text, path in [
     (ci, ".github/workflows/ci.yml"),
     (preflight, "scripts/release/preflight.sh"),
 ]:
-    if "guard-windows-protection-ga-0190.py" not in text:
+    if "guard-windows-protection-ga.py" not in text:
         raise SystemExit(
             f"[Launcher] Проверка защиты Windows GA 0.19.0: обязательная проверка не подключена в {path}"
         )

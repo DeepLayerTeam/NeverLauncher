@@ -83,7 +83,7 @@ def is_descendant(pid, ancestor):
 
 def find_window(root_pid, java_binary=None):
     if sys.platform in ("win32", "darwin"):
-        from native_window_03410 import find_window as native_find_window
+        from native_window import find_window as native_find_window
 
         return native_find_window(root_pid, java_binary)
     listing = command(["xwininfo", "-root", "-tree"], 5)
@@ -155,7 +155,7 @@ def log_health(client_dir, runtime_log, loader):
 
 def capture_menu(wid, destination):
     if sys.platform in ("win32", "darwin"):
-        from native_window_03410 import capture_menu as native_capture_menu
+        from native_window import capture_menu as native_capture_menu
 
         return native_capture_menu(wid, destination, MENU)
     # Захватывайте конкретное окно с проверенным PID, а не весь экран или чужое
@@ -223,7 +223,7 @@ class StartupObserver:
         self.evidence_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         # V10: проверяйте реальные возможности хоста, включая новый контекст OpenGL в
         # нативных Windows/macOS, а не переданное вызывающим утверждение hasGPU.
-        from runtime_capabilities_03410 import evaluate
+        from runtime_capabilities import evaluate
 
         caps = evaluate("gui", java_binary)
         if caps["status"] != "ready":
@@ -280,7 +280,7 @@ class StartupObserver:
             else:
                 path.unlink(missing_ok=True)
         except Exception as exc:
-            from native_window_03410 import GUIUnavailable
+            from native_window import GUIUnavailable
 
             if isinstance(exc, GUIUnavailable):
                 self.blocked = str(exc)[:240]

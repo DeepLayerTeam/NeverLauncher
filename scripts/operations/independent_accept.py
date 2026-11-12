@@ -25,15 +25,15 @@ import urllib.request
 import urllib.error
 import tempfile
 
-import operator_accept_04513 as live
-import dr_03512 as dr
+import operator_accept as live
+import dr as dr
 
 ROOT = Path(__file__).resolve().parents[2]
 INSTALL = ROOT / 'scripts/install/production-deploy.py'
-UPGRADE = ROOT / 'scripts/operations/component_upgrade_0458.py'
-DR = ROOT / 'scripts/operations/dr_03512.py'
-CHAOS = ROOT / 'scripts/operations/chaos_0456.py'
-LIVE = ROOT / 'scripts/operations/operator_accept_04513.py'
+UPGRADE = ROOT / 'scripts/operations/component_upgrade.py'
+DR = ROOT / 'scripts/operations/dr.py'
+CHAOS = ROOT / 'scripts/operations/chaos.py'
+LIVE = ROOT / 'scripts/operations/operator_accept.py'
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 VERSION_RE = re.compile(r'^0\.\d+\.\d+$')
 USER_RE = re.compile(r'^[a-z_][a-z0-9_.-]{0,63}$')

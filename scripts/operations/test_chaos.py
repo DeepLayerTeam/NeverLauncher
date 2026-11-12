@@ -9,8 +9,8 @@ import tempfile
 import unittest
 from unittest.mock import patch, call
 
-import chaos_0456 as ch
-import dr_03512 as dr
+import chaos as ch
+import dr as dr
 
 
 class Chaos0456(unittest.TestCase):
@@ -50,7 +50,7 @@ class Chaos0456(unittest.TestCase):
             ch.configure_compose()
             self.assertEqual(len(dr.COMPOSE_FILES), 3)
             self.assertEqual(dr.COMPOSE_PROFILES, ["network-ha"])
-            self.assertEqual(dr.COMPOSE_FILES[-1].name, "docker-compose.chaos-0456.yml")
+            self.assertEqual(dr.COMPOSE_FILES[-1].name, "docker-compose.chaos.yml")
 
     def test_s3_port_cannot_be_other_tunnel(self):
         with patch.object(ch, "container_id", return_value="1" * 64), patch.object(dr, "run") as invoke:

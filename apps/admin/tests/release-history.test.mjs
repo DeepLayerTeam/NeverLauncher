@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {channelHistory0386} from '../src/admin/release-history-0386.ts';
-import {observeOwnerOperation} from '../src/admin/owner-lifecycle-03513.ts';
+import {channelHistory0386} from '../src/admin/release-history.ts';
+import {observeOwnerOperation} from '../src/admin/owner-lifecycle.ts';
 import {ReleaseApi} from '../src/api/release.ts';
 const before={projectId:'p',profileId:'fabric',channel:'dev',revision:3,releaseId:'old'};
 const entries=[{id:'old',version:'1.0',profileId:'fabric',channel:'dev',status:'published',publishedAt:'2026-09-01T10:00:00Z'},

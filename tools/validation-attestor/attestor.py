@@ -25,13 +25,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ssl
 import urllib.request
 import urllib.parse
-from official_chain_0347 import (
+from official_chain import (
     issue_minecraft_credentials,
     ExternalOutage,
     AccountRejected,
 )
-from component_matrix_0348 import selected_components
-from diagnostics_03412 import (
+from component_matrix import selected_components
+from diagnostics import (
     retain as retain_redacted_diagnostics,
     redact as redact_diagnostics,
 )

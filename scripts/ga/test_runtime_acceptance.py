@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import unittest
 
-MODULE = Path(__file__).with_name('runtime_acceptance_0350.py')
+MODULE = Path(__file__).with_name('runtime_acceptance.py')
 spec = importlib.util.spec_from_file_location('runtime_acceptance_0350', MODULE)
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

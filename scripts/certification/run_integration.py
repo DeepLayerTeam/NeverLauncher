@@ -71,7 +71,7 @@ CASES = {
     ),
     "devtools-e2e": (
         ("go", "build", "-o", "{cli}", "./cmd/launcher"),
-        (sys.executable, "scripts/devtools/smoke_03010.py", "--cli", "{cli}"),
+        (sys.executable, "scripts/devtools/smoke.py", "--cli", "{cli}"),
     ),
     "lan-security": (("go", "test", "-v", "-race", "-count=1", "./internal/lanmdns"),),
     "discord-ipc": (
@@ -84,16 +84,16 @@ CASES = {
         ("go", "test", "-v", "-race", "-count=1", "./internal/sentrydiag"),
     ),
     "asset-integrity": (
-        ("node", "--test", "scripts/desktop/prebuild_assets_03011.test.mjs"),
+        ("node", "--test", "scripts/desktop/prebuild_assets.test.mjs"),
         (
             "node",
             "--experimental-strip-types",
             "--test",
-            "scripts/desktop/startup_prewarmer_03011.test.mjs",
+            "scripts/desktop/startup_prewarmer.test.mjs",
         ),
     ),
     "sentry-release": (
-        (sys.executable, "scripts/diagnostics/test_upload_release_0309.py"),
+        (sys.executable, "scripts/diagnostics/test_upload_release.py"),
     ),
     "module-parity": (
         ("go", "build", "-o", "{cli}", "./cmd/launcher"),

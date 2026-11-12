@@ -6,13 +6,14 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 )
 
-//go:embed sql/*.sql
+//go:embed sql/*.sql migration_names.json
 var migrationFS embed.FS
 
 type Migration struct{ Version, Description, Checksum, SQL string }
@@ -31,7 +32,17 @@ func Catalog() ([]Migration, error) {
 	if err != nil {
 		return nil, err
 	}
+	// File names may change; applied migration identifiers must never change.
+	var names map[string]string
+	mapping, err := migrationFS.ReadFile("migration_names.json")
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(mapping, &names); err != nil {
+		return nil, err
+	}
 	out := make([]Migration, 0, len(entries))
+	seen := make(map[string]bool, len(entries))
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
 			continue
@@ -41,7 +52,19 @@ func Catalog() ([]Migration, error) {
 			return nil, err
 		}
 		sum := sha256.Sum256(b)
-		out = append(out, Migration{Version: strings.TrimSuffix(e.Name(), ".sql"), Description: e.Name(), Checksum: hex.EncodeToString(sum[:]), SQL: string(b)})
+		name := e.Name()
+		if historical, ok := names[name]; ok {
+			name = historical
+			delete(names, e.Name())
+		}
+		if !strings.HasSuffix(name, ".sql") || strings.ContainsAny(name, "/\\") || seen[name] {
+			return nil, fmt.Errorf("invalid or duplicate migration name: %s", name)
+		}
+		seen[name] = true
+		out = append(out, Migration{Version: strings.TrimSuffix(name, ".sql"), Description: name, Checksum: hex.EncodeToString(sum[:]), SQL: string(b)})
+	}
+	if len(names) != 0 {
+		return nil, fmt.Errorf("migration name mapping references missing files")
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Version < out[j].Version })
 	return out, nil

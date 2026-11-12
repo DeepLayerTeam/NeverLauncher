@@ -4,8 +4,8 @@ import struct
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-import native_verify_0470 as native
-import test_reproducible_0470 as fixtures
+import native_verify as native
+import test_reproducible as fixtures
 
 
 class NativeTests(unittest.TestCase):

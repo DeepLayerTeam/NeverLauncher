@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 import re
 import sys
-from official_minecraft_0270 import strict_json, GateError, TARGETS, require, SHA256
+from official_minecraft import strict_json, GateError, TARGETS, require, SHA256
 
 PACKAGES = {
     "windows-amd64": "launcher-desktop-0.27.0-windows-x64.zip",

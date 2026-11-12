@@ -5,13 +5,13 @@ on:
       - 'sdk/java/core/**'
       - 'examples/extensions/java-content-spi/**'
       - 'services/api/internal/extensionhost/**'
-      - '.github/workflows/java-content-spi-0486.yml'
+      - '.github/workflows/java-content-spi.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
       - 'examples/extensions/java-content-spi/**'
       - 'services/api/internal/extensionhost/**'
-      - '.github/workflows/java-content-spi-0486.yml'
+      - '.github/workflows/java-content-spi.yml'
   workflow_dispatch:
 permissions:
   contents: read

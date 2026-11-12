@@ -142,12 +142,12 @@ require(
 
 ci = read(".github/workflows/ci.yml")
 if (
-    "desktop-guard-runtime-transactional-update-0157.py" not in ci
+    "desktop-guard-runtime-transactional-update.py" not in ci
     or ci.count("update component-self-test") < 4
 ):
     raise SystemExit("0.15.7: нативное покрытие CI обновления компонентов неполное")
 preflight = read("scripts/release/preflight.sh")
-if "desktop-guard-runtime-transactional-update-0157.py" not in preflight:
+if "desktop-guard-runtime-transactional-update.py" not in preflight:
     raise SystemExit("Отсутствует: «предварительная проверка обновления компонентов 0.15.7»")
 
 subprocess.run(

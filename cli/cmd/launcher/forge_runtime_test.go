@@ -817,7 +817,7 @@ func TestNeoForgePrereleaseOnlyMetadataDoesNotPassAsStable(t *testing.T) {
 	}))
 	defer server.Close()
 	_, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.5", "latest-stable", server.URL)
-	if err == nil || !strings.Contains(err.Error(), "latest-stable") || !strings.Contains(err.Error(), "20.5.17-beta") || !strings.Contains(err.Error(), "prerelease") {
+	if err == nil || !strings.Contains(err.Error(), "latest-stable") || !strings.Contains(err.Error(), "20.5.17-beta") || !strings.Contains(err.Error(), "предварительный выпуск") {
 		t.Fatalf("Источник только с предварительными версиями должен оставаться недоступным с объяснением причины: %v", err)
 	}
 	got, _, _, err := resolveForgeLikeVersion(context.Background(), server.Client(), "neoforge", "1.20.5", "latest", server.URL)

@@ -118,7 +118,7 @@ def inspect_guard_ci(root, commit, run_id, repository):
     return out
 
 def inspect_jvm(root):
-    tests = module('scripts/guard_ci/adversarial_pilot_05012.py', 'adversarial_0529')
+    tests = module('scripts/guard_ci/adversarial_pilot.py', 'adversarial_0529')
     expected = {'loader-transformations','continuous-watchdog'}
     results = {}
     for native in NATIVE:
@@ -147,7 +147,7 @@ def inspect_jvm(root):
     return results
 
 def inspect_serverbridge(runtime):
-    live = module('serverbridge/live_matrix_04113.py', 'serverbridge_live_0529')
+    live = module('serverbridge/live_matrix.py', 'serverbridge_live_0529')
     # Для всех 10 целей повторно проверьте идентичность процесса Docker, Bridge JAR, нативный журнал,
     # сетевые разрешение и запрет, а также реальное подключение Paper-клиента.
     targets = read_json(ROOT / 'serverbridge/targets.json')['targets']
@@ -186,7 +186,7 @@ def run_live(cfg):
                   'gameServerLog','serverbridgeRuntime')}
     require(all(p.is_absolute() for p in all_paths.values()), 'Требуются абсолютные внешние пути к доказательствам')
     # Закрытый MAC-ключ отдельного сервера никогда не экспортируется в этот приёмочный отчёт.
-    pilot = module('scripts/guard_ci/adversarial_pilot_05012.py', 'shadow_0529')
+    pilot = module('scripts/guard_ci/adversarial_pilot.py', 'shadow_0529')
     shadow = pilot.analyze_shadow(all_paths['guardShadowDir'], all_paths['guardShadowKeyFile'],
                                   all_paths['guardIncidentReviews'])
     require(shadow['status'] == 'EVIDENCE_REVIEW_REQUIRED' and
@@ -204,7 +204,7 @@ def run_live(cfg):
     release = run_command([sys.executable, str(ROOT / 'serverbridge/certify_release.py'),
                            '--artifacts', str(ROOT / 'artifacts/plugins')], timeout=180)
     bridge = inspect_serverbridge(all_paths['serverbridgeRuntime'])
-    vanilla = module('scripts/acceptance/vanilla_sidecar_live_0529.py', 'vanilla_0529')
+    vanilla = module('scripts/acceptance/vanilla_sidecar_live.py', 'vanilla_0529')
     vanilla_result = vanilla.verify(cfg['vanilla'])
     # Три сборочные цели совместимости должны реально присутствовать в наборе производственных
     # JAR выпуска, а не получать статус Runtime лишь по сборочному тесту.
@@ -223,8 +223,8 @@ def run_local(output, only=None):
     import shutil
     require(shutil.which('java') is not None and shutil.which('javac') is not None,
             'Для тестов адаптеров Java необходим настоящий JDK')
-    bridge = run_command(['bash',str(ROOT/'e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh')], timeout=120)
-    guard = module('scripts/guard_ci/adversarial_pilot_05012.py', 'adversarial_local_0529')
+    bridge = run_command(['bash',str(ROOT/'e2e/scripts/run-serverbridge-adapter-capabilities.sh')], timeout=120)
+    guard = module('scripts/guard_ci/adversarial_pilot.py', 'adversarial_local_0529')
     result = guard.run_jvm_suites(output.parent / 'jvm-logs', only)
     require(result['status'] == 'PASS_JVM_REGRESSIONS_ONLY',
             'Реальные нативные регрессионные тесты JVM Guard не пройдены')

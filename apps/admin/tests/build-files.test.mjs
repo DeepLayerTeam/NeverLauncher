@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {planImports0384,normalizeImportPath0384,diffCounts0384,hasCompleteBuild0384} from '../src/admin/build-files-0384.ts';
+import {planImports0384,normalizeImportPath0384,diffCounts0384,hasCompleteBuild0384} from '../src/admin/build-files.ts';
 
 test('Импорт каталога удаляет только выбранный корневой путь, а выбор файла сохраняет имена',()=>{
  const {accepted,skipped}=planImports0384([

@@ -39,8 +39,8 @@ def validate() -> None:
     if version < (0, 21, 3):
         fail("VERSION должна быть не ниже 0.21.3")
 
-    api_m = text("services/api/internal/dbmigrate/sql/0052_durable_boundaries_0213.sql")
-    cli_m = text("cli/internal/dbmigrate/sql/0052_durable_boundaries_0213.sql")
+    api_m = text("services/api/internal/dbmigrate/sql/0052_durable_boundaries.sql")
+    cli_m = text("cli/internal/dbmigrate/sql/0052_durable_boundaries.sql")
     if api_m != cli_m:
         fail("Миграции 0052 для API и CLI различаются")
     for table in (
@@ -54,7 +54,7 @@ def validate() -> None:
         if f"CREATE TABLE IF NOT EXISTS {table}" not in api_m:
             fail(f"В миграции 0052 отсутствует {table}")
 
-    repo = text("services/api/internal/repository/durable_0213.go")
+    repo = text("services/api/internal/repository/durable.go")
     for needle in (
         "FOR UPDATE SKIP LOCKED",
         "func (r *SQLRepository) CommitDurablePublish",
@@ -70,14 +70,14 @@ def validate() -> None:
         if needle not in repo:
             fail(f"Отсутствует инвариант производственного постоянного хранилища: {needle}")
 
-    runtime_repo = text("services/api/internal/repository/validation_0212.go")
+    runtime_repo = text("services/api/internal/repository/validation.go")
     if (
         "runtime-validation-run" not in runtime_repo
         or "used_nonces" not in runtime_repo
     ):
         fail("runId свидетельства Runtime не расходуется через постоянное хранилище nonce")
 
-    worker = text("services/api/internal/httpapi/durable_control_0213.go")
+    worker = text("services/api/internal/httpapi/durable_control.go")
     for needle in (
         "StartDurableControlPlane0213",
         "LeaseDurableJobs",
@@ -121,8 +121,8 @@ def validate() -> None:
     if admin.count("publishDurably0213") < 2:
         fail("Маршруты публикации Admin обходят постоянный механизм публикации")
 
-    tests = text("services/api/internal/repository/durable_0213_test.go") + text(
-        "services/api/internal/repository/durable_0213_integration_test.go"
+    tests = text("services/api/internal/repository/durable_test.go") + text(
+        "services/api/internal/repository/durable_integration_test.go"
     )
     for needle in (
         "TestDurableScopeLeaseFencing0213",

@@ -4,18 +4,18 @@ on:
     paths:
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionpolicy/**'
-      - 'services/api/internal/model/extension_sandbox_0318.go'
+      - 'services/api/internal/model/extension_sandbox.go'
       - 'services/api/internal/linuxsandbox/**'
       - 'services/api/internal/windowssandbox/**'
       - 'services/api/internal/macossandbox/**'
-      - 'apps/admin/src/admin_extensions_0208.tsx'
-      - '.github/workflows/extension-resource-enforcement-03113.yml'
+      - 'apps/admin/src/admin_extensions.tsx'
+      - '.github/workflows/extension-resource-enforcement.yml'
   pull_request:
     paths:
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionpolicy/**'
-      - 'services/api/internal/model/extension_sandbox_0318.go'
-      - 'apps/admin/src/admin_extensions_0208.tsx'
+      - 'services/api/internal/model/extension_sandbox.go'
+      - 'apps/admin/src/admin_extensions.tsx'
   workflow_dispatch:
 jobs:
   go-resource-tests:

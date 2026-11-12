@@ -3,11 +3,11 @@ on:
   push:
     paths:
       - 'apps/desktop/**'
-      - '.github/workflows/desktop-workspace-0353.yml'
+      - '.github/workflows/desktop-workspace.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
-      - '.github/workflows/desktop-workspace-0353.yml'
+      - '.github/workflows/desktop-workspace.yml'
   workflow_dispatch:
 permissions:
   contents: read

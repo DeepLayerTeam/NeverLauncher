@@ -7,9 +7,9 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from gate_03514 import verify, GateBlocked, REQUIRED_NATIVE
-from native_03514 import process, pass_native, reject_native, RCBlocked, check_binary
-from operations_03514 import check_args, OperationsBlocked
+from gate import verify, GateBlocked, REQUIRED_NATIVE
+from native import process, pass_native, reject_native, RCBlocked, check_binary
+from operations import check_args, OperationsBlocked
 
 COMMIT = "a" * 40
 HEX = "b" * 64

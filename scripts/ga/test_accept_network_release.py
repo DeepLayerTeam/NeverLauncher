@@ -11,8 +11,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-SOURCE = Path(__file__).with_name("accept_network_release_0420.py")
-FAULT_SOURCE = Path(__file__).with_name("record_network_faults_0420.py")
+SOURCE = Path(__file__).with_name("accept_network_release.py")
+FAULT_SOURCE = Path(__file__).with_name("record_network_faults.py")
 spec = importlib.util.spec_from_file_location("accept_network_release_0420", SOURCE)
 accept = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(accept)

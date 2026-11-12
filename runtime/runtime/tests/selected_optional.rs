@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[tokio::test]
 async fn missing_selected_legacy_optional_is_not_ready() {
     let mut source: serde_json::Value = serde_json::from_str(
-        include_str!("fixtures/catalog_manifest_v3_go_signed_0242.json")
+        include_str!("fixtures/catalog_manifest_v3_go_signed.json")
     ).expect("создать тестовый заведомо корректный манифест");
     source["schemaVersion"] = serde_json::json!("2.0");
     source.as_object_mut().expect("получить объект манифеста").remove("componentCatalog");

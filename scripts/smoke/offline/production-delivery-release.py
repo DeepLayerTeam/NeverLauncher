@@ -26,10 +26,10 @@ if triple(VERSION) < (0, 16, 0):
 if "-" in VERSION or "+" in VERSION:
     raise SystemExit(f"Промышленный выпуск поставки: требуется семантическая версия GA, получено {VERSION}")
 
-impl = (ROOT / "cli/cmd/launcher/production_delivery_release_0160.go").read_text(
+impl = (ROOT / "cli/cmd/launcher/production_delivery_release.go").read_text(
     encoding="utf-8"
 )
-tests = (ROOT / "cli/cmd/launcher/production_delivery_release_0160_test.go").read_text(
+tests = (ROOT / "cli/cmd/launcher/production_delivery_release_test.go").read_text(
     encoding="utf-8"
 )
 release = (ROOT / "cli/cmd/launcher/release_commands.go").read_text(encoding="utf-8")

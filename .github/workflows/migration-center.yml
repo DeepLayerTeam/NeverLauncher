@@ -3,13 +3,13 @@ on:
   push:
     paths:
       - 'services/api/internal/migrationworkflow/**'
-      - 'services/api/internal/repository/migration_0331*'
-      - 'services/api/internal/httpapi/migration_0331*'
+      - 'services/api/internal/repository/migration*'
+      - 'services/api/internal/httpapi/migration*'
       - 'services/api/internal/dbmigrate/sql/0089_*'
       - 'services/api/internal/httpapi/handler.go'
-      - 'cli/cmd/launcher/migration_workflow_0331*'
+      - 'cli/cmd/launcher/migration_workflow*'
       - 'apps/admin/src/admin/**'
-      - '.github/workflows/migration-center-0331.yml'
+      - '.github/workflows/migration-center.yml'
   pull_request:
   workflow_dispatch:
 permissions:

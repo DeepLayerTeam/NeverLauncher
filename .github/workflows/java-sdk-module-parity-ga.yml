@@ -16,11 +16,14 @@ on:
       - 'scripts/diagnostics/**'
       - 'scripts/ga/**'
       - 'VERSION'
-      - '.github/workflows/java-sdk-module-parity-ga-0310.yml'
+      - '.github/workflows/java-sdk-module-parity-ga.yml'
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   integration:
     strategy:
@@ -57,9 +60,9 @@ jobs:
         shell: bash
         run: |
           python3 scripts/version/manage.py check
-          python3 scripts/certification/test_integration_0310.py
-          python3 scripts/ga/test_verify_java_ga_0310.py
-          python3 scripts/ga/test_java_ga_0310.py
+          python3 scripts/certification/test_integration_variant2.py
+          python3 scripts/ga/test_verify_java_ga.py
+          python3 scripts/ga/test_java_ga.py
       - name: Запуск интеграционных тестов реальных подпроцессов, JAR, Go и платформ
         shell: bash
         env:
@@ -68,7 +71,7 @@ jobs:
           set -euo pipefail
           ext=''
           if [ "$RUNNER_OS" = Windows ]; then ext='.exe'; fi
-          python3 scripts/certification/run_integration_0310.py \
+          python3 scripts/certification/run_integration_variant2.py \
             --cases "$SUITE_CASES" \
             --cli "$RUNNER_TEMP/nl-0310$ext" \
             --report "$RUNNER_TEMP/integration-0310.json" \
@@ -131,7 +134,7 @@ jobs:
           path: reports
       - name: Проверка полной матрицы ОС и сценариев на одном коммите
         run: |
-          python3 scripts/certification/review_integration_0310.py \
+          python3 scripts/certification/review_integration_variant2.py \
             --evidence reports --revision "$GITHUB_SHA" --output integration-review-0310.json
       - uses: actions/upload-artifact@v4
         with:

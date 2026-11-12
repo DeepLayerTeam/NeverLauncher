@@ -18,22 +18,22 @@ def require(ok, msg):
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 11), "Требуется VERSION не ниже 0.20.11")
 required = [
-    "services/api/internal/extensionresolver/semver_02011.go",
-    "services/api/internal/extensionresolver/resolver_02011.go",
-    "services/api/internal/extensionupdates/updates_02011.go",
-    "services/api/internal/repository/extension_updates_02011.go",
-    "services/api/internal/model/extension_updates_02011.go",
-    "services/api/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql",
-    "cli/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql",
-    "cli/cmd/launcher/extension_updates_02011.go",
+    "services/api/internal/extensionresolver/semver.go",
+    "services/api/internal/extensionresolver/resolver.go",
+    "services/api/internal/extensionupdates/updates.go",
+    "services/api/internal/repository/extension_updates.go",
+    "services/api/internal/model/extension_updates.go",
+    "services/api/internal/dbmigrate/sql/0047_extensions_dependencies_updates.sql",
+    "cli/internal/dbmigrate/sql/0047_extensions_dependencies_updates.sql",
+    "cli/cmd/launcher/extension_updates.go",
 ]
 for rel in required:
     require(resource_exists(ROOT, rel), f"Отсутствует рабочий файл зависимостей/обновлений: {rel}")
 
-semver = read("services/api/internal/extensionresolver/semver_02011.go")
+semver = read("services/api/internal/extensionresolver/semver.go")
 for token in ("ParseVersion", "Matches", "^", "~", "||"):
     require(token in semver, f"Отсутствует обработчик версий SemVer: {token}")
-resolver = read("services/api/internal/extensionresolver/resolver_02011.go")
+resolver = read("services/api/internal/extensionresolver/resolver.go")
 for token in (
     "required",
     "optional",
@@ -50,7 +50,7 @@ for token in (
     "ListExtensionUpdatePins",
 ):
     require(token.lower() in resolver.lower(), f"Отсутствует обработчик зависимостей: {token}")
-updates = read("services/api/internal/extensionupdates/updates_02011.go")
+updates = read("services/api/internal/extensionupdates/updates.go")
 for token in (
     "AcquireExtensionUpdateLease",
     "SaveExtensionUpdateTransaction",
@@ -64,7 +64,7 @@ for token in (
     "PackageIdentity",
 ):
     require(token in updates, f"Отсутствует движок транзакций: {token}")
-repo = read("services/api/internal/repository/extension_updates_02011.go")
+repo = read("services/api/internal/repository/extension_updates.go")
 for token in (
     "SetExtensionUpdatePin",
     "AcquireExtensionUpdateLease",
@@ -74,7 +74,7 @@ for token in (
 ):
     require(token in repo, f"Отсутствует репозиторий обновлений: {token}")
 migration = read(
-    "services/api/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql"
+    "services/api/internal/dbmigrate/sql/0047_extensions_dependencies_updates.sql"
 )
 for token in (
     "min_api",
@@ -97,12 +97,12 @@ for token in (
     "/api/v1/admin/extension-updates/pins/{extensionId}",
 ):
     require(token in routes, f"Отсутствует маршрут API обновлений: {token}")
-legacy = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
+legacy = read("services/api/internal/httpapi/extension_lifecycle.go")
 require(
     "resolver02011" in legacy and "updateManager02011" in legacy,
     "Старый путь обновления обходит транзакционный механизм учёта зависимостей",
 )
-cli = read("cli/cmd/launcher/extension_updates_02011.go")
+cli = read("cli/cmd/launcher/extension_updates.go")
 for token in ("plan", "apply", "pins", "pin", "unpin", "transaction"):
     require(token in cli, f"Отсутствует сценарий обновления CLI: {token}")
 tables = read("cli/cmd/launcher/release_commands.go")

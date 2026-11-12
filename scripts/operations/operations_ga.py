@@ -19,7 +19,7 @@ import sys
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
-import independent_accept_04514 as operational
+import independent_accept as operational
 
 ROOT = Path(__file__).resolve().parents[2]
 # Стабильный домен подписи серии 0.46 и имена файлов доказательств. Версия подписана внутри
@@ -83,7 +83,7 @@ def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
     spec = ROOT / 'schemas/openapi.yaml'
     # Проверка v1 должна пройти до подписания оператором кандидата заморозки.
     import subprocess
-    proc = subprocess.run([sys.executable, str(ROOT / 'scripts/contracts/compatibility_04512.py')],
+    proc = subprocess.run([sys.executable, str(ROOT / 'scripts/contracts/compatibility.py')],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
     require(proc.returncode == 0, 'Проверка обратной совместимости OpenAPI v1 не пройдена')
     return {
@@ -95,7 +95,7 @@ def build_attestation(directory: Path, receipts: dict[str, Path], commit: str):
         'stageReceipts': {name: operational.sha(receipts[name]) for name in NAMES},
         'openApiV1Sha256': operational.sha(spec),
         'targets': targets,
-        'scope': 'Фактическая независимая эксплуатационная приёмка; оценён только RPO канареечного сценария, без утверждений об отказоустойчивости физических узлов и неизмеренном RPO нагрузки',
+        'scope': 'actual independent operational acceptance; canary RPO only; no assertion of physical host HA or unmeasured workload RPO',
     }
 
 
@@ -150,7 +150,7 @@ def verify_public(bundle: Path, public_key_file: Path, release_key_file: Path):
     require(document.get('operator') and document.get('sourceMachine') != document.get('restoreMachine') and
             all(isinstance(document.get(name), str) and SHA.fullmatch(document[name]) for name in ('sourceMachine','restoreMachine','openApiV1Sha256')),
             'Некорректные независимо сертифицированные идентификаторы или контрольная сумма API')
-    require(document.get('scope') == 'Фактическая независимая эксплуатационная приёмка; RPO проверен только на контрольных данных, без утверждений об отказоустойчивости физических узлов и неизмеренного RPO нагрузки',
+    require(document.get('scope') == 'actual independent operational acceptance; canary RPO only; no assertion of physical host HA or unmeasured workload RPO',
             'Неподдерживаемая область эксплуатационных операций')
     stages = document.get('stageReceipts', {})
     require(isinstance(stages, dict) and set(stages) == set(NAMES) and

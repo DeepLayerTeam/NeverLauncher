@@ -24,7 +24,7 @@ from contextlib import contextmanager
 from urllib.error import URLError, HTTPError
 from urllib.request import build_opener, ProxyHandler
 
-import dr_03512 as dr
+import dr as dr
 
 MINIMAL_BACKUP = Path(__file__).resolve().parents[1] / 'install/minimal_backup.py'
 TARGET = '0.45.7'

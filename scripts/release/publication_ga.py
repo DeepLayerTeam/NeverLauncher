@@ -10,7 +10,7 @@ import hashlib
 from pathlib import Path
 from cryptography.exceptions import InvalidSignature
 
-import full_real_acceptance_0530 as ga
+import full_real_acceptance as ga
 
 class Blocked(ValueError):pass
 

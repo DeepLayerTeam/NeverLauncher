@@ -8,7 +8,7 @@ import tempfile
 
 here = Path(__file__).parent
 spec = importlib.util.spec_from_file_location(
-    "component_matrix_0348", here / "component_matrix_0348.py"
+    "component_matrix_0348", here / "component_matrix.py"
 )
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)

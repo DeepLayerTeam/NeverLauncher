@@ -1113,7 +1113,7 @@ func TestFlattenLWJGLWindowsNativesRejectsCollisionsAndForeignPaths(t *testing.T
 	if err := os.WriteFile(filepath.Join(root, "lwjgl.dll"), []byte("existing"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "x86_64"); err == nil || !strings.Contains(err.Error(), "collision") {
+	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "x86_64"); err == nil || !strings.Contains(err.Error(), "Конфликт имён нативных файлов LWJGL Windows") {
 		t.Fatalf("Ожидалось строгое отклонение конфликта нативных файлов, получено: %v", err)
 	}
 	if _, err := flattenLWJGLWindowsNatives(root, []string{rel}, "unknown"); err == nil {

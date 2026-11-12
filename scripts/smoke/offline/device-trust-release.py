@@ -28,7 +28,7 @@ api_migs = sorted((ROOT / "services/api/internal/dbmigrate/sql").glob("*.sql"))
 cli_migs = migration_catalog(ROOT)
 if [p.name for p in api_migs] != sorted(cli_migs):
     raise SystemExit("Каталоги миграций API/CLI отличаются")
-if not any(p.name == "0018_device_trust_stabilization_01210.sql" for p in api_migs):
+if not any(p.name == "0018_device_trust_stabilization.sql" for p in api_migs):
     raise SystemExit(
         "Версия 0.13+ должна сохранять запечатанную стабилизационную миграцию Device Trust 0018"
     )
@@ -48,7 +48,7 @@ req(
     ],
     "Сертификация доверия к устройствам через CLI",
 )
-runtime = read("services/api/internal/httpapi/device_trust_release_0130.go")
+runtime = read("services/api/internal/httpapi/device_trust_release.go")
 req(
     runtime,
     [

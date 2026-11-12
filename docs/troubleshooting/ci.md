@@ -2,7 +2,7 @@
 
 ## Источники
 
-Файлы процессов CI: `.github/workflows/ci.yml`, `compatibility.yml`, `device-trust.yml`, `security.yml`, `extensions-ga-0210.yml`, `production-release-candidate.yml` и процессы доставки. Проверяйте **точный SHA и журнал задачи**, а не только общий счётчик проверок.
+Файлы процессов CI: `.github/workflows/ci.yml`, `compatibility.yml`, `device-trust.yml`, `security.yml`, `extensions-ga.yml`, `production-release-candidate.yml` и процессы доставки. Проверяйте **точный SHA и журнал задачи**, а не только общий счётчик проверок.
 
 ## Порядок расследования
 

@@ -127,7 +127,7 @@ func TestGuardPolicyOperations05011ExpiredPolicyCanRotate(t *testing.T) {
 		t.Fatalf("Проверка исторических данных: %v", err)
 	}
 	report, err := guardCompatOperation05011(root, key, []string{"guard-policy-diagnose", "--project", "another"})
-	if err == nil || !strings.Contains(report["detail"].(string), "scope") {
+	if err == nil || !strings.Contains(report["detail"].(string), "Область действия политики совместимости Guard") {
 		t.Fatal("Неверная область проекта не обнаружена диагностикой")
 	}
 }

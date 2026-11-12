@@ -9,8 +9,8 @@ import tempfile
 import unittest
 import zipfile
 
-import delivery_verify_0462 as delivery
-import staged_accept_0462 as stage
+import delivery_verify as delivery
+import staged_accept as stage
 
 
 def elf(arch):

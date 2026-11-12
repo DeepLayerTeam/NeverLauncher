@@ -162,14 +162,14 @@ def main() -> int:
     require(
         ci,
         [
-            "python scripts/smoke/offline/guard-aggressive-hook-engine-0184.py",
+            "python scripts/smoke/offline/guard-aggressive-hook-engine.py",
             "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
             "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         ],
         "Компиляция, интеграция и Clippy для Windows в CI",
     )
-    if "guard-aggressive-hook-engine-0184.py" not in preflight:
+    if "guard-aggressive-hook-engine.py" not in preflight:
         raise SystemExit(
             "[Launcher] Aggressive Hook Engine I 0.18.4: не настроен запуск в предварительных проверках"
         )

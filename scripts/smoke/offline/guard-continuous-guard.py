@@ -110,12 +110,12 @@ require(
     ci,
     ".github/workflows/ci.yml",
     [
-        "guard-continuous-guard-0189.py",
+        "guard-continuous-guard.py",
         "guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat",
         "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
     ],
 )
-if "guard-continuous-guard-0189.py" not in preflight:
+if "guard-continuous-guard.py" not in preflight:
     raise SystemExit(
         "[Launcher] Continuous Guard 0.18.9: не настроен запуск в предварительных проверках"
     )

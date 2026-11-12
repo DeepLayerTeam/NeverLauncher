@@ -22,7 +22,7 @@ from urllib.request import (
 from urllib.error import HTTPError, URLError
 from uuid import uuid4
 
-from ux_0351 import atomic_report, AuditError, require, ROOT
+from ux import atomic_report, AuditError, require, ROOT
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
 from certification_run import identity

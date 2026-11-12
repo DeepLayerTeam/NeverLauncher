@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-SCRIPT = Path(__file__).with_name('upload_release_0309.py')
+SCRIPT = Path(__file__).with_name('upload_release.py')
 VERSION = SCRIPT.parents[2].joinpath('VERSION').read_text().strip()
 
 class ReleaseUploadTests(unittest.TestCase):

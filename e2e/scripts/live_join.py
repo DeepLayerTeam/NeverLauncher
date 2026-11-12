@@ -20,7 +20,7 @@ import time
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from staged_matching_0344 import MatchingServer, JOIN, CRASH, player_online, parse_gametime, file_sha256
+from staged_matching import MatchingServer, JOIN, CRASH, player_online, parse_gametime, file_sha256
 
 SHA = re.compile(r'[0-9a-f]{64}\Z')
 ID = re.compile(r'[a-z0-9][a-z0-9._-]{2,95}\Z')

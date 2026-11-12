@@ -32,7 +32,7 @@
 
    ```sh
    umask 077
-   python3 scripts/acceptance/auth_identity_real_0525.py prepare-oidc \
+   python3 scripts/acceptance/auth_identity_real.py prepare-oidc \
      --secrets /secure/auth-0525-secrets.json \
      --output /secure/auth-0525-oidc-proof.json
    ```
@@ -40,7 +40,7 @@
 4. Сразу после этого выполните:
 
    ```sh
-   python3 scripts/acceptance/auth_identity_real_0525.py run \
+   python3 scripts/acceptance/auth_identity_real.py run \
      --secrets /secure/auth-0525-secrets.json \
      --oidc-proof /secure/auth-0525-oidc-proof.json \
      --source-commit "<exact_40_hex_commit>" \

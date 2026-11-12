@@ -22,7 +22,7 @@ import subprocess
 import sys
 import time
 
-import rehearse_cohort_04910 as rehearsal
+import rehearse_cohort as rehearsal
 
 FORMAT = "launcher/gravit-acceptance-0500/v1"
 MODULE_IDS = tuple(f"M{i:02}" for i in range(1, 20))

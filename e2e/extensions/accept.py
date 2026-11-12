@@ -138,7 +138,7 @@ def main():
                 raise RuntimeError('проверка CLI Gravit не смогла подтвердить 19 заданных результатов модулей')
             report['gravitMatrixAudit'] = {
                 'status': 'source-verified-not-equivalent', 'modules': 19,
-                'sha256': sha(ROOT / 'compatibility/gravit/module-parity-04211.json')}
+                'sha256': sha(ROOT / 'compatibility/gravit/module-parity_variant5.json')}
         for key, script, jar in CASES:
             executable = ROOT / jar
             if not executable.is_file():

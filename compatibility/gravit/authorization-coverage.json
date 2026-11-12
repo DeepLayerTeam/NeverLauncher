@@ -106,7 +106,7 @@
       ],
       "testRefs": [
         "services/api/internal/authorization/service_test.go",
-        "services/api/internal/httpapi/authorization_0211_test.go"
+        "services/api/internal/httpapi/authorization_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -407,11 +407,11 @@
       "status": "implemented",
       "implementationRefs": [
         "services/api/internal/httpapi/server_bridge.go",
-        "services/api/internal/httpapi/server_bridge_identity_0142.go"
+        "services/api/internal/httpapi/server_bridge_identity.go"
       ],
       "testRefs": [
         "services/api/internal/httpapi/server_bridge_test.go",
-        "services/api/internal/httpapi/server_bridge_identity_0142_test.go"
+        "services/api/internal/httpapi/server_bridge_identity_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -426,12 +426,12 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/minecraft_serverbridge_trust_0127.go",
-        "services/api/internal/httpapi/server_bridge_join_tickets_0143.go"
+        "services/api/internal/httpapi/minecraft_serverbridge_trust.go",
+        "services/api/internal/httpapi/server_bridge_join_tickets.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/minecraft_serverbridge_trust_0127_test.go",
-        "services/api/internal/httpapi/server_bridge_join_tickets_0143_test.go"
+        "services/api/internal/httpapi/minecraft_serverbridge_trust_test.go",
+        "services/api/internal/httpapi/server_bridge_join_tickets_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -446,11 +446,11 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/server_bridge_control_0195.go"
+        "services/api/internal/httpapi/server_bridge_control.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/server_bridge_control_0195_test.go",
-        "services/api/internal/repository/server_bridge_control_0195_integration_test.go"
+        "services/api/internal/httpapi/server_bridge_control_test.go",
+        "services/api/internal/repository/server_bridge_control_integration_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -465,11 +465,11 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/server_bridge_events_0194.go",
-        "services/api/internal/repository/extension_events_0206.go"
+        "services/api/internal/httpapi/server_bridge_events.go",
+        "services/api/internal/repository/extension_events.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/server_bridge_events_0194_test.go"
+        "services/api/internal/httpapi/server_bridge_events_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -579,12 +579,12 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "services/api/internal/extensionlifecycle/lifecycle_0204.go",
-        "services/api/internal/httpapi/extensions_0201.go"
+        "services/api/internal/extensionlifecycle/lifecycle.go",
+        "services/api/internal/httpapi/extensions.go"
       ],
       "testRefs": [
-        "services/api/internal/extensionlifecycle/lifecycle_0204_test.go",
-        "services/api/internal/httpapi/extensions_0201_test.go"
+        "services/api/internal/extensionlifecycle/lifecycle_test.go",
+        "services/api/internal/httpapi/extensions_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -599,10 +599,10 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "services/api/internal/extensionhost/host_0205.go"
+        "services/api/internal/extensionhost/host.go"
       ],
       "testRefs": [
-        "services/api/internal/extensionhost/host_0205_test.go"
+        "services/api/internal/extensionhost/host_variant2_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -617,12 +617,12 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/device_trust_0121.go",
-        "services/api/internal/httpapi/device_attestation_0124.go"
+        "services/api/internal/httpapi/device_trust.go",
+        "services/api/internal/httpapi/device_attestation.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/device_trust_0121_test.go",
-        "services/api/internal/httpapi/device_attestation_0124_test.go"
+        "services/api/internal/httpapi/device_trust_test.go",
+        "services/api/internal/httpapi/device_attestation_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -638,10 +638,10 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810.go"
+        "services/api/internal/httpapi/guard_attestation_v2_.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810_test.go"
+        "services/api/internal/httpapi/guard_attestation_v2__test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -695,7 +695,7 @@
         "services/api/internal/httpapi/admin_handlers.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/authorization_0211_test.go"
+        "services/api/internal/httpapi/authorization_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -847,10 +847,10 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810.go"
+        "services/api/internal/httpapi/guard_attestation_v2_.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810_test.go"
+        "services/api/internal/httpapi/guard_attestation_v2__test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -919,7 +919,7 @@
         "cli/cmd/launcher/windows_signing.go"
       ],
       "testRefs": [
-        "cli/cmd/launcher/windows_protection_release_01812_test.go"
+        "cli/cmd/launcher/windows_protection_release_test.go"
       ],
       "verificationLevel": "unit-tested",
       "gapReason": "Подписание Windows для рабочей среды существует, но не предоставляется в виде контракта модуля Gravit."
@@ -950,10 +950,10 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/server_bridge_control_0195.go"
+        "services/api/internal/httpapi/server_bridge_control.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/server_bridge_control_0195_test.go"
+        "services/api/internal/httpapi/server_bridge_control_test.go"
       ],
       "verificationLevel": "integration-tested"
     },
@@ -1079,18 +1079,18 @@
     "services/api/internal/httpapi/routes_operations.go",
     "services/api/internal/httpapi/operations_handlers.go",
     "services/api/internal/httpapi/webauthn_handlers_117.go",
-    "services/api/internal/httpapi/extension_admin_0208.go",
-    "services/api/internal/httpapi/extension_desktop_cli_0209.go",
-    "services/api/internal/httpapi/server_bridge_control_0195.go",
+    "services/api/internal/httpapi/extension_admin.go",
+    "services/api/internal/httpapi/extension_desktop_cli.go",
+    "services/api/internal/httpapi/server_bridge_control.go",
     "services/api/internal/httpapi/installation.go",
     "services/api/internal/httpapi/minecraft_auth_119.go",
-    "services/api/internal/httpapi/authorization_0211_test.go",
+    "services/api/internal/httpapi/authorization_test.go",
     "services/api/internal/repository/memory.go",
     "services/api/internal/repository/postgres.go",
     "services/api/internal/model/model.go",
-    "services/api/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql",
-    "cli/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql",
-    "scripts/compatibility/authorization_frozen_coverage_0211.py",
+    "services/api/internal/dbmigrate/sql/0050_authorization_scopes_identity.sql",
+    "cli/internal/dbmigrate/sql/0050_authorization_scopes_identity.sql",
+    "scripts/compatibility/authorization_frozen_coverage.py",
     ".github/workflows/ci.yml"
   ],
   "sealedFiles": {
@@ -1109,18 +1109,18 @@
     "services/api/internal/httpapi/routes_operations.go": "5cd9c937987303ed6101c6de3a8b12a286c54c6d87407d5b86ce6198d11d07f7",
     "services/api/internal/httpapi/operations_handlers.go": "3c1e7a87ffb090cd153b882e6b8cd09b1c8f37dc6cad5ee163524c2c62207b14",
     "services/api/internal/httpapi/webauthn_handlers_117.go": "f013f3049be3ce396d6a156f39f6267977188839d32be29daaa5ec7fe531463b",
-    "services/api/internal/httpapi/extension_admin_0208.go": "30bc8ed4f3875f284ad14fa53feff133f56411d5ee5d64745fcc4ba07b613a0f",
-    "services/api/internal/httpapi/extension_desktop_cli_0209.go": "cedd3f656f55d5dde40e004646a73c71df5890d0e30dfaf546a47adb6d81b78f",
-    "services/api/internal/httpapi/server_bridge_control_0195.go": "9bd34a918624fb08fcab530c169b5c598159d03c1c7cf475c07ceceead32d582",
+    "services/api/internal/httpapi/extension_admin.go": "30bc8ed4f3875f284ad14fa53feff133f56411d5ee5d64745fcc4ba07b613a0f",
+    "services/api/internal/httpapi/extension_desktop_cli.go": "cedd3f656f55d5dde40e004646a73c71df5890d0e30dfaf546a47adb6d81b78f",
+    "services/api/internal/httpapi/server_bridge_control.go": "9bd34a918624fb08fcab530c169b5c598159d03c1c7cf475c07ceceead32d582",
     "services/api/internal/httpapi/installation.go": "57bc8af59dd03bef4855214114542cedafd047f8d6fc31e5dca4b9f694e25cb7",
     "services/api/internal/httpapi/minecraft_auth_119.go": "888cdd9bfc8f09428d941f480d1ec615b54cb5356e60ff09b0fe2f8d75e53387",
-    "services/api/internal/httpapi/authorization_0211_test.go": "457687303420c038ba0d74154966c66c5a68249d570f2ea1fed416bc525d6deb",
+    "services/api/internal/httpapi/authorization_test.go": "457687303420c038ba0d74154966c66c5a68249d570f2ea1fed416bc525d6deb",
     "services/api/internal/repository/memory.go": "1358d6ca5d526d1d883ea585841a46d64c3a316f4aaf6529f16074382b5473cc",
     "services/api/internal/repository/postgres.go": "2adcb11b1cd1cc92c1bad362a866d6c2b41186b75e7a031248f37bc69015bb8b",
     "services/api/internal/model/model.go": "76b7f64a3277b56a51bdea04eb8816046cf48348b016780a03f72671587e77a1",
-    "services/api/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql": "f82d7b4fa491875c263ecbc88a01cf00b665ef3351b207eacbff6a6a1d4263ff",
-    "cli/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql": "f82d7b4fa491875c263ecbc88a01cf00b665ef3351b207eacbff6a6a1d4263ff",
-    "scripts/compatibility/authorization_frozen_coverage_0211.py": "2eb4dbd9946ae900a674a468ac76c6f600feeaca8cff73406efd0e4992f57c1f",
+    "services/api/internal/dbmigrate/sql/0050_authorization_scopes_identity.sql": "f82d7b4fa491875c263ecbc88a01cf00b665ef3351b207eacbff6a6a1d4263ff",
+    "cli/internal/dbmigrate/sql/0050_authorization_scopes_identity.sql": "f82d7b4fa491875c263ecbc88a01cf00b665ef3351b207eacbff6a6a1d4263ff",
+    "scripts/compatibility/authorization_frozen_coverage.py": "2eb4dbd9946ae900a674a468ac76c6f600feeaca8cff73406efd0e4992f57c1f",
     ".github/workflows/ci.yml": "4056a9c65090574b1f3b21644b8b37545d666a5448e0723330208f641d8be686"
   }
 }

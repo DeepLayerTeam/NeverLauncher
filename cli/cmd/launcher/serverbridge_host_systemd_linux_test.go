@@ -88,7 +88,7 @@ func TestHostSystemdNotifySocketAndWatchdog02811(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := string(buf[:n]); !strings.Contains(got, "READY=1") || !strings.Contains(got, "pid=1234") {
+	if got := string(buf[:n]); !strings.Contains(got, "READY=1") || !strings.Contains(got, "PID=1234") {
 		t.Fatalf("Сообщение=%q", got)
 	}
 	hostServiceStopping02811()

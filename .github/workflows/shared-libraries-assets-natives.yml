@@ -3,12 +3,12 @@ on:
   push:
     paths:
       - 'cli/cmd/launcher/**'
-      - '.github/workflows/shared-libraries-assets-natives-0277.yml'
+      - '.github/workflows/shared-libraries-assets-natives.yml'
       - 'VERSION'
   pull_request:
     paths:
       - 'cli/cmd/launcher/**'
-      - '.github/workflows/shared-libraries-assets-natives-0277.yml'
+      - '.github/workflows/shared-libraries-assets-natives.yml'
       - 'VERSION'
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
       - name: "Проверка форматирования"
         if: runner.os == 'Linux'
         shell: bash
-        run: test -z "$(gofmt -l cli/cmd/launcher/shared_artifacts_0277*.go cli/cmd/launcher/vanilla_runtime.go cli/cmd/launcher/loader_runtime.go cli/cmd/launcher/forge_runtime.go)"
+        run: test -z "$(gofmt -l cli/cmd/launcher/shared_artifacts*.go cli/cmd/launcher/vanilla_runtime.go cli/cmd/launcher/loader_runtime.go cli/cmd/launcher/forge_runtime.go)"
       - name: "Интеграционные тесты общего хранилища, нативных платформ и совместимости"
         working-directory: cli
         shell: bash

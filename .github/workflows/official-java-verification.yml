@@ -4,14 +4,14 @@ on:
     paths:
       - 'apps/desktop/src-tauri/**'
       - 'apps/desktop/src/**'
-      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
+      - 'apps/desktop/tests/official_minecraft.test.mjs'
       - 'docs/authentication/java-profile-verification.md'
-      - '.github/workflows/official-java-verification-0266.yml'
+      - '.github/workflows/official-java-verification.yml'
   pull_request:
     paths:
       - 'apps/desktop/src-tauri/**'
       - 'apps/desktop/src/**'
-      - '.github/workflows/official-java-verification-0266.yml'
+      - '.github/workflows/official-java-verification.yml'
   workflow_dispatch:
 permissions:
   contents: read

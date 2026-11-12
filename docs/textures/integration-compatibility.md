@@ -17,9 +17,9 @@
 python3 scripts/version/manage.py check
 python3 scripts/contracts/validate-openapi.py
 cd services/api
-go test -race -count=1 ./internal/storage ./internal/texturepng ./internal/texturefetch ./internal/yggdrasiltexture ./internal/officialminecraft ./cmd/texture-compat-02512
-go build -o /tmp/texture-compat ./cmd/texture-compat-02512
-go build -o /tmp/texture-maintenance ./cmd/texture-maintenance-0253
+go test -race -count=1 ./internal/storage ./internal/texturepng ./internal/texturefetch ./internal/yggdrasiltexture ./internal/officialminecraft ./cmd/texture-compat
+go build -o /tmp/texture-compat ./cmd/texture-compat
+go build -o /tmp/texture-maintenance ./cmd/texture-maintenance
 ```
 
 Для **реального интеграционного испытания PostgreSQL** укажите переменные окружения `TEST_PG_DSN_0251`, `_0252`, `_0253`, `_0254`, `_0255`, `_0259`, `_02510`, `_02511`, направленные на **одноразовую БД PostgreSQL 17 или новее**. Не используйте промышленную БД: тесты создают и удаляют схемы. Выполните:
@@ -51,7 +51,7 @@ go test -race -count=1 ./internal/storage -run TestTextureRealS3Lifecycle02512 -
 
 ```bash
 cd services/api
-go run ./cmd/texture-compat-02512 \
+go run ./cmd/texture-compat \
   --origin https://launcher.example.com \
   --uuid 12345678-1234-4234-9234-0123456789ab \
   --expect-skin=true --expect-cape=false
@@ -70,7 +70,7 @@ go run ./cmd/texture-compat-02512 \
 
 ## Условия CI
 
-В `.github/workflows/texture-certification-02512.yml` входят:
+В `.github/workflows/texture-certification.yml` входят:
 
 - Полные сборки Go API, модуля обслуживания и импортёра Gravit, проверки гонок и `vet` с **реальным контейнером PostgreSQL 17** и всеми DSN интеграционных испытаний текстур.
 - **Настоящий MinIO** для условной записи, жизненного цикла объектов и восстановления.

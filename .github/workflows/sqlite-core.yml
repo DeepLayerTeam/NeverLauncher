@@ -7,7 +7,7 @@ on:
       - 'services/api/cmd/launcher-sqlite/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
-      - '.github/workflows/sqlite-core-0322.yml'
+      - '.github/workflows/sqlite-core.yml'
   pull_request:
   workflow_dispatch:
 jobs:

@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-PATH = Path(__file__).with_name('owner_admin_real_0523.py')
+PATH = Path(__file__).with_name('owner_admin_real.py')
 SPEC = importlib.util.spec_from_file_location('owner_admin_real_0523', PATH)
 mod = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mod)
@@ -120,7 +120,7 @@ class OwnerAdminReal0523Tests(unittest.TestCase):
                            + 'LAUNCHER_0523_HOST_TOKEN_FILE=' + str(root/'token') + '\n')
             env.chmod(0o600)
             args = mod.DEPLOY.compose_args(env, 'standard')
-            self.assertIn(str(mod.ROOT/'deploy/production/docker-compose.owner-e2e-0523.yml'), args)
+            self.assertIn(str(mod.ROOT/'deploy/production/docker-compose.owner-e2e.yml'), args)
             self.assertIn('nl0523abcdefgh', args)
             env.write_text(env.read_text().replace('nl0523abcdefgh', 'launcher'))
             with self.assertRaisesRegex(RuntimeError, 'изолированном'):

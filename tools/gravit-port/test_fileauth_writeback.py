@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-MODULE_PATH = Path(__file__).with_name("fileauth_writeback_0496.py")
+MODULE_PATH = Path(__file__).with_name("fileauth_writeback.py")
 spec = importlib.util.spec_from_file_location("writeback", MODULE_PATH)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)

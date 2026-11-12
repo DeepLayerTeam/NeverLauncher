@@ -137,7 +137,7 @@ require(
     ci,
     ".github/workflows/ci.yml",
     [
-        "guard-jvm-aware-protection-0188.py",
+        "guard-jvm-aware-protection.py",
         "runtime/guard-jvm-probe/Cargo.toml",
         "java: [8, 16, 17, 21, 25]",
         "scripts/guard_ci/windows_adversarial.py run",
@@ -153,7 +153,7 @@ require(
         "guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
     ],
 )
-if "guard-jvm-aware-protection-0188.py" not in preflight:
+if "guard-jvm-aware-protection.py" not in preflight:
     raise SystemExit(
         "[Launcher] JVM-Aware Protection 0.18.8: не настроен запуск в предварительных проверках"
     )

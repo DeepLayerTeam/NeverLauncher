@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from unittest.mock import patch, call
 
-import db_upgrade_0457 as u
-import dr_03512 as dr
+import db_upgrade as u
+import dr as dr
 
 
 class SQLiteUpgradeTests(unittest.TestCase):

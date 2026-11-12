@@ -10,7 +10,7 @@ import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from benchmark_03511 import (MIB, ProcessMonitor, RepeatingRangeServer, benchmark_api,
+from benchmark import (MIB, ProcessMonitor, RepeatingRangeServer, benchmark_api,
                             describe, percentile, repeating_hash, run_native)
 
 
@@ -75,7 +75,7 @@ class Bench03511Tests(unittest.TestCase):
     def test_no_measurement_can_be_published_without_real_binary(self):
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder) / 'report.json'
-            proc = subprocess.run([sys.executable, str(Path(__file__).with_name('benchmark_03511.py')),
+            proc = subprocess.run([sys.executable, str(Path(__file__).with_name('benchmark.py')),
                 '--runtime', str(Path(folder) / 'nonexistent'), '--signer', str(Path(folder) / 'missing'),
                 '--output', str(output), '--download-mib', '8'], capture_output=True)
             self.assertNotEqual(proc.returncode, 0)

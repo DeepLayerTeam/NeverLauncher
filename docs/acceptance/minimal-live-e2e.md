@@ -22,7 +22,7 @@ CI создаёт изолированные **тестовые** файлы с�
 Для ручного прогона понадобятся собранный API, реальные файлы конфигурационных политик и пустой приватный каталог на Linux с локальной FS:
 
 ```bash
-python3 scripts/acceptance/minimal_live_e2e_0378.py \
+python3 scripts/acceptance/minimal_live_e2e.py \
   --binary /opt/launcher/bin/launcher-api \
   --guard-policy /secure/guard-policy.json \
   --bridge-policy /secure/bridge-policy.json \

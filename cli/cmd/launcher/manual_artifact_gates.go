@@ -333,7 +333,7 @@ func missingModpackArtifact0276(f modpackFile0275, cause error) modpackMissing02
 	message := cause.Error()
 	code := "download_failed"
 	switch {
-	case strings.Contains(message, "Отсутствует разрешённый URL загрузки"):
+	case strings.Contains(message, "Нет разрешённого URL загрузки"):
 		code = "manual_required"
 	case strings.Contains(message, "HTTP 403") || strings.Contains(message, "HTTP 451"):
 		code = "download_forbidden"

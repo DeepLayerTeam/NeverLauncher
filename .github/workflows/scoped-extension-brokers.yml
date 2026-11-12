@@ -6,14 +6,14 @@ on:
       - 'services/api/internal/linuxsandbox/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionpolicy/**'
-      - '.github/workflows/scoped-extension-brokers-03110.yml'
+      - '.github/workflows/scoped-extension-brokers.yml'
   pull_request:
     paths:
       - 'services/api/internal/extensionbroker/**'
       - 'services/api/internal/linuxsandbox/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionpolicy/**'
-      - '.github/workflows/scoped-extension-brokers-03110.yml'
+      - '.github/workflows/scoped-extension-brokers.yml'
 jobs:
   broker-test:
     runs-on: ubuntu-24.04

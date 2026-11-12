@@ -3,17 +3,20 @@ on:
   push:
     paths:
       - 'cli/internal/devtools/**'
-      - 'cli/cmd/launcher/devtools_03010*'
+      - 'cli/cmd/launcher/devtools*'
       - 'scripts/devtools/**'
-      - '.github/workflows/devtools-test-isolation-03010.yml'
+      - '.github/workflows/devtools-test-isolation.yml'
   pull_request:
     paths:
       - 'cli/internal/devtools/**'
-      - 'cli/cmd/launcher/devtools_03010*'
+      - 'cli/cmd/launcher/devtools*'
       - 'scripts/devtools/**'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   native-test:
     strategy:
@@ -45,7 +48,7 @@ jobs:
         working-directory: cli
       - run: go build -o /tmp/nl-devtools ./cmd/launcher
         working-directory: cli
-      - run: python3 scripts/devtools/smoke_03010.py --cli /tmp/nl-devtools
+      - run: python3 scripts/devtools/smoke.py --cli /tmp/nl-devtools
       - run: python3 scripts/version/manage.py check
   linux-bubblewrap:
     runs-on: ubuntu-24.04
@@ -59,4 +62,4 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y bubblewrap
       - run: go build -o /tmp/nl-devtools ./cmd/launcher
         working-directory: cli
-      - run: bash scripts/devtools/sandbox_smoke_03010.sh /tmp/nl-devtools
+      - run: bash scripts/devtools/sandbox_smoke.sh /tmp/nl-devtools

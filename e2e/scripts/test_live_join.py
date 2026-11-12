@@ -10,8 +10,8 @@ import zipfile
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).parent))
-import live_join_0524 as gate
-from staged_matching_0344 import MatchingServer
+import live_join as gate
+from staged_matching import MatchingServer
 
 
 def put(path, doc):

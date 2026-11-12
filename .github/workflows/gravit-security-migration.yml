@@ -2,15 +2,15 @@ name: Миграция безопасности Gravit 0.33.6
 on:
   push:
     paths:
-      - 'services/api/internal/repository/migration_security_0336*'
-      - 'services/api/internal/httpapi/migration_security_0336*'
+      - 'services/api/internal/repository/migration_security*'
+      - 'services/api/internal/httpapi/migration_security*'
       - 'services/api/internal/httpapi/handler.go'
       - 'services/api/internal/dbmigrate/sql/0094*'
-      - 'cli/cmd/launcher/migration_security_0336*'
-      - 'cli/cmd/launcher/migration_workflow_0331.go'
-      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'cli/cmd/launcher/migration_security*'
+      - 'cli/cmd/launcher/migration_workflow.go'
+      - 'apps/admin/src/admin/MigrationCenter.tsx'
       - 'schemas/openapi*'
-      - '.github/workflows/gravit-security-migration-0336.yml'
+      - '.github/workflows/gravit-security-migration.yml'
   pull_request:
   workflow_dispatch:
 permissions:

@@ -27,7 +27,7 @@ python3 scripts/install/minimal-install.py run \
 В действующем Minimal на хосте с приватным HTTPS URL:
 
 ```sh
-python3 scripts/operations/operator_accept_04513.py live \
+python3 scripts/operations/operator_accept.py live \
   --mode minimal --minimal-root /var/lib/launcher-minimal \
   --url https://launcher.example.org --version 0.45.14 \
   --report /var/tmp/launcher-minimal-acceptance.json
@@ -61,7 +61,7 @@ sudo python3 scripts/install/production-deploy.py compose first-admin \
 Используйте свой адрес, удалите временный парольный файл после проверки входа/смены пароля и выполните MFA. Повторное создание владельца через первичную настройку должно быть запрещено. Проверяйте `repository=postgres`, `storage=local`.
 
 ```sh
-python3 scripts/operations/operator_accept_04513.py live \
+python3 scripts/operations/operator_accept.py live \
   --mode standard --project launcher --env-file deploy/production/.env \
   --url https://launcher.example.org --version 0.45.14 \
   --report /var/tmp/launcher-standard-acceptance.json
@@ -91,7 +91,7 @@ cd ../..
 Только после реального создания bucket, миграции и достижения готовности обоих экземпляров API и рабочих процессов:
 
 ```sh
-python3 scripts/operations/operator_accept_04513.py live \
+python3 scripts/operations/operator_accept.py live \
   --mode network-ha --project launcher --env-file deploy/production/.env \
   --url https://launcher.example.org --version 0.45.14 \
   --report /var/tmp/launcher-network-ha-acceptance.json

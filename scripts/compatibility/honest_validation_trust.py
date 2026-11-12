@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-COVERAGE_0211 = ROOT / "compatibility/gravit/authorization-coverage-0211.json"
+COVERAGE_0211 = ROOT / "compatibility/gravit/authorization-coverage.json"
 
 
 def fail(message: str) -> None:
@@ -53,12 +53,12 @@ def validate_frozen_coverage_registry() -> dict:
 
 def validate_validation_pipeline() -> None:
     routes = text("services/api/internal/httpapi/routes_packages.go")
-    validation = text("services/api/internal/httpapi/package_validation_0212.go")
+    validation = text("services/api/internal/httpapi/package_validation.go")
     product = text("services/api/internal/httpapi/package_product.go")
     admin = text("services/api/internal/httpapi/admin_handlers.go")
     install = text("services/api/internal/httpapi/install_handlers.go")
-    model = text("services/api/internal/model/validation_0212.go")
-    repo = text("services/api/internal/repository/validation_0212.go")
+    model = text("services/api/internal/model/validation.go")
+    repo = text("services/api/internal/repository/validation.go")
     config = text("services/api/internal/config/config.go")
     cli = text("cli/cmd/launcher/package_commands.go")
 
@@ -140,11 +140,11 @@ def validate_validation_pipeline() -> None:
 
 
 def validate_trust_boundaries() -> None:
-    devices = text("services/api/internal/httpapi/device_trust_0121.go")
-    device_repo = text("services/api/internal/repository/devices_0121.go")
-    attestation = text("services/api/internal/httpapi/device_attestation_0124.go")
-    host = text("services/api/internal/extensionhost/host_0205.go")
-    host_api = text("services/api/internal/httpapi/extension_host_0205.go")
+    devices = text("services/api/internal/httpapi/device_trust.go")
+    device_repo = text("services/api/internal/repository/devices.go")
+    attestation = text("services/api/internal/httpapi/device_attestation.go")
+    host = text("services/api/internal/extensionhost/host.go")
+    host_api = text("services/api/internal/httpapi/extension_host.go")
     admin = text("apps/admin/src/main.tsx")
 
     for needle in [
@@ -174,9 +174,9 @@ def validate_trust_boundaries() -> None:
 
 def validate_migration_and_contract() -> None:
     api_m = text(
-        "services/api/internal/dbmigrate/sql/0051_honest_validation_trust_0212.sql"
+        "services/api/internal/dbmigrate/sql/0051_honest_validation_trust.sql"
     )
-    cli_m = text("cli/internal/dbmigrate/sql/0051_honest_validation_trust_0212.sql")
+    cli_m = text("cli/internal/dbmigrate/sql/0051_honest_validation_trust.sql")
     if api_m != cli_m:
         fail("Миграции 0051 для API и CLI различаются")
     for needle in [
@@ -218,7 +218,7 @@ def validate(online: bool) -> None:
     validate_migration_and_contract()
     if online:
         module_path = (
-            ROOT / "scripts/compatibility/authorization_frozen_coverage_0211.py"
+            ROOT / "scripts/compatibility/authorization_frozen_coverage.py"
         )
         spec = importlib.util.spec_from_file_location(
             "authorization_frozen_coverage_0211", module_path

@@ -30,11 +30,11 @@
 ## Проверка
 
 ```sh
-python3 e2e/scripts/test_staged_matching_0344.py -v
-python3 e2e/scripts/test_run_staged_package_0342.py -v
-python3 e2e/scripts/test_staged_readiness_0343.py -v
+python3 e2e/scripts/test_staged_matching.py -v
+python3 e2e/scripts/test_run_staged_package.py -v
+python3 e2e/scripts/test_staged_readiness.py -v
 # При наличии Go 1.27.3 и зависимостей модулей:
 cd services/api && go test ./internal/httpapi -run 'TestMatchingStagedReportObservations0344' -count=1
-# Настоящий GUI-запуск Minecraft: workflow staged-package-runtime-0342.yml,
+# Настоящий GUI-запуск Minecraft: workflow staged-package-runtime.yml,
 # защищённое окружение runtime-validation-staging, настоящий ID подготовленного пакета.
 ```

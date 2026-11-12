@@ -96,9 +96,9 @@ require(
 )
 
 guard_purpose_migration_api = read(
-    "services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
+    "services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes.sql"
 )
-guard_purpose_migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
+guard_purpose_migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes.sql")
 if guard_purpose_migration_api != guard_purpose_migration_cli:
     raise SystemExit("Миграция назначения проверочного запроса Guard 0.16.1 отличается между API и CLI")
 require(
@@ -127,7 +127,7 @@ require(
     "Сквозная миграция PostgreSQL для назначения запроса Guard",
 )
 
-backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
+backend = read("services/api/internal/httpapi/guard_attestation.go")
 require(
     backend,
     [
@@ -169,7 +169,7 @@ require(
     "Настройка списка разрешённых файлов промышленного релиза",
 )
 
-backend_test = read("services/api/internal/httpapi/guard_attestation_0134_test.go")
+backend_test = read("services/api/internal/httpapi/guard_attestation_test.go")
 require(
     backend_test,
     [
@@ -208,9 +208,9 @@ require(
 
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
-if "guard-guard-attestation-0134.py" not in ci:
+if "guard-guard-attestation.py" not in ci:
     raise SystemExit("Guard 0.13.4: проверка аттестации не подключена к CI")
-if "guard-guard-attestation-0134.py" not in preflight:
+if "guard-guard-attestation.py" not in preflight:
     raise SystemExit(
         "Guard 0.13.4: этап аттестации не подключён к предварительной проверке релиза"
     )

@@ -23,7 +23,7 @@ import tempfile
 import time
 from urllib.parse import urlsplit
 
-import dr_03512 as dr
+import dr as dr
 
 SERVICES = ("postgres", "redis", "s3", "api", "api-b", "worker-a", "worker-b", "nginx")
 REPLICA = ("api", "api-b", "worker-a", "worker-b")
@@ -83,7 +83,7 @@ def dotenv_value(path: Path, key: str) -> str | None:
 
 def configure_compose() -> None:
     dr.COMPOSE_FILES[:] = [dr.COMPOSE, dr.ROOT / "deploy/production/docker-compose.network-ha.yml",
-                          dr.ROOT / "deploy/production/docker-compose.chaos-0456.yml"]
+                          dr.ROOT / "deploy/production/docker-compose.chaos.yml"]
     dr.COMPOSE_PROFILES[:] = ["network-ha"]
 
 

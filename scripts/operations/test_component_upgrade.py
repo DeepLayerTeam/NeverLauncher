@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import component_upgrade_0458 as c
-import dr_03512 as dr
+import component_upgrade as c
+import dr as dr
 
 
 class StandardComponentTests(unittest.TestCase):

@@ -9,7 +9,7 @@ on:
       - 'services/api/cmd/launcher-api/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
-      - '.github/workflows/sqlite-coordinator-0327.yml'
+      - '.github/workflows/sqlite-coordinator.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
           go mod download
           go mod verify
-          test -z "$(gofmt -l internal/sqlitecoord internal/sqlitedurable internal/config/sqlite_single_node_0327_test.go internal/httpapi/rate_limit.go internal/httpapi/runtime_state.go cmd/launcher-api/main.go)"
+          test -z "$(gofmt -l internal/sqlitecoord internal/sqlitedurable internal/config/sqlite_single_node_test.go internal/httpapi/rate_limit.go internal/httpapi/runtime_state.go cmd/launcher-api/main.go)"
       - name: "Интеграция локальной файловой системы и WAL (пропуски запрещены)"
         env:
           LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-coordinator-327

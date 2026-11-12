@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_TARGETS = ROOT / "extensions/ga-targets-0210.json"
+DEFAULT_TARGETS = ROOT / "extensions/ga-targets.json"
 BASELINE_VERSION = "0.21.0"
 
 

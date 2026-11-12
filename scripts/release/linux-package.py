@@ -11,7 +11,7 @@ import struct
 import tarfile
 
 from component_set_sign import signed_set, sign_delegated_set
-from guard_manifest_sign_0437 import sign_manifest
+from guard_manifest_sign import sign_manifest
 from pathlib import Path
 
 MACHINES = {

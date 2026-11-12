@@ -2,19 +2,19 @@ name: Оператор ServerBridge 0.28.12
 on:
   push:
     paths:
-      - 'cli/cmd/launcher/serverbridge_operator_02812*'
-      - 'cli/cmd/launcher/serverbridge_provisioning_0199.go'
+      - 'cli/cmd/launcher/serverbridge_operator*'
+      - 'cli/cmd/launcher/serverbridge_provisioning.go'
       - 'apps/admin/src/api/serverbridge.ts'
       - 'apps/admin/src/admin/ServerBridgeWorkspace.tsx'
       - 'apps/admin/src/admin/AdminApp.tsx'
-      - 'apps/admin/tests/serverbridge-operator-02812.test.mjs'
-      - '.github/workflows/serverbridge-operator-02812.yml'
+      - 'apps/admin/tests/serverbridge-operator.test.mjs'
+      - '.github/workflows/serverbridge-operator.yml'
   pull_request:
     paths:
-      - 'cli/cmd/launcher/serverbridge_operator_02812*'
-      - 'cli/cmd/launcher/serverbridge_provisioning_0199.go'
+      - 'cli/cmd/launcher/serverbridge_operator*'
+      - 'cli/cmd/launcher/serverbridge_provisioning.go'
       - 'apps/admin/**'
-      - '.github/workflows/serverbridge-operator-02812.yml'
+      - '.github/workflows/serverbridge-operator.yml'
 jobs:
   cli:
     runs-on: ubuntu-latest

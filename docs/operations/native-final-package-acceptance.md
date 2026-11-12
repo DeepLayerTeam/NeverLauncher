@@ -2,7 +2,7 @@
 
 ## Что действительно запускается
 
-`native_packages_0522.py run` **не** компилирует подменный исполняемый файл, не вызывает фиктивную функцию `main` и не принимает кросс-компиляцию как доказательство. На каждом **нативном** одноразовом исполнителе скачиваются внешний независимо закреплённый неизменяемый индекс и настоящий **окончательный** пакет. До запуска проверяются длина скачивания и SHA-256 по независимо утверждённому индексу источников. Нужны ровно шесть целей: Windows, Linux и macOS на x64 и ARM64. Отсутствие хотя бы одной проваливает весь шлюз.
+`native_packages.py run` **не** компилирует подменный исполняемый файл, не вызывает фиктивную функцию `main` и не принимает кросс-компиляцию как доказательство. На каждом **нативном** одноразовом исполнителе скачиваются внешний независимо закреплённый неизменяемый индекс и настоящий **окончательный** пакет. До запуска проверяются длина скачивания и SHA-256 по независимо утверждённому индексу источников. Нужны ровно шесть целей: Windows, Linux и macOS на x64 и ARM64. Отсутствие хотя бы одной проваливает весь шлюз.
 
 | ОС | Обязательная проверка платформы | Реальное выполнение установщика |
 | --- | --- | --- |
@@ -21,7 +21,7 @@
 3. Разместите все шесть пакетов и обе отдельные подписи Linux в одном каталоге выпуска и сформируйте индекс с дайджестами:
 
 ```sh
-python3 scripts/acceptance/native_packages_0522.py index \
+python3 scripts/acceptance/native_packages.py index \
   --packages /absolute/release/final-files \
   --base-url 'https://download.example.net/releases/v0.52.2/' \
   --version 0.52.2 --commit <40-hex-release-commit> \
@@ -31,7 +31,7 @@ python3 scripts/acceptance/native_packages_0522.py index \
 
 4. Утвердите `indexSha256` и `indexSize` **через независимый канал** (защищённая среда, подписанная заявка на изменение). Хеш внутри скачанного индекса сам по себе не является независимым закреплением. Опубликуйте `native-final-sources-0522.json` без изменений. Каждый артефакт должен быть доступен по HTTPS под точным ожидаемым именем и с ожидаемым размером.
 5. Ограничьте защищённую среду `production-acceptance` утверждёнными ссылками выпуска (`main` и доверенные теги `v*`), потребуйте разрешения оператора и установите `NL_NATIVE_ACCEPTANCE_INDEX_SHA256` в независимо утверждённый хеш индекса, а `LAUNCHER_BRANDED_PROJECT_ID` — в реальный подписанный проект. Workflow отклоняет входные данные выпуска, не совпадающие с защищёнными значениями. В среде отдельно задайте доверенные переменные `NL_NATIVE_ACCEPTANCE_WINDOWS_SIGNER_SHA1`, `NL_NATIVE_ACCEPTANCE_LINUX_GPG_FINGERPRINT`, `NL_NATIVE_ACCEPTANCE_LINUX_KEYRING_SHA256`, `NL_NATIVE_ACCEPTANCE_APPLE_TEAM_ID`, а `NL_NATIVE_ACCEPTANCE_GPG_KEYRING_BASE64` задайте секретом с закреплённым минимальным доверенным двоичным хранилищем ключей GPG. Никогда не извлекайте доверенные идентичности из релизного пакета, индекса, вывода CI или самого HTTPS-ответа.
-6. Запустите `.github/workflows/native-final-packages-0522.yml` из точного коммита выпуска с независимо утверждёнными `manifest_url`, `manifest_sha256`, `manifest_size` и подписанным `project`.
+6. Запустите `.github/workflows/native-final-packages.yml` из точного коммита выпуска с независимо утверждёнными `manifest_url`, `manifest_sha256`, `manifest_size` и подписанным `project`.
 
 Рабочий процесс параллельно выполняет шесть *нативных* заданий с `fail-fast: false`. Затем `six-native-gate` повторно скачивает тот же независимо закреплённый индекс, сверяет идентичность пакетов, проверяет SHA-256 всех обязательных журналов команд, требует код завершения 0 каждого процесса и сверяет точный коммит Git, запуск и попытку. Механизмов `always-pass`, `continue-on-error`, `optional platform` и обхода отсутствующих хостов нет. При сбое проверки или установки CLI возвращает код 2.
 
@@ -42,7 +42,7 @@ python3 scripts/acceptance/native_packages_0522.py index \
 Сводка CI **не является** доверенной аттестацией человека или физического оборудования. Независимый оператор должен отдельно проверить журналы шести исполнителей и байты выпуска. Для защиты от изменений после проверки оператор может дополнительно подписать точно **пересчитанную** сводку по шести целям. Инструмент отказывает при отсутствии цели, изменённом журнале, неверном запуске или повторном использовании исходного индекса.
 
 ```sh
-python3 scripts/acceptance/native_packages_0522.py sign-review \
+python3 scripts/acceptance/native_packages.py sign-review \
   --results /absolute/receipt-folders --source-index /absolute/native-final-sources-0522.json \
   --manifest-sha256 <approved-index-hash> --version 0.52.2 \
   --commit <40-hex-commit> --project <signed-project-id> \
@@ -52,7 +52,7 @@ python3 scripts/acceptance/native_packages_0522.py sign-review \
   --public-key-sha256 <independently-pinned-SPKI-DER-SHA256> \
   --output /secure/unused/native-package-review.json
 
-python3 scripts/acceptance/native_packages_0522.py verify-review \
+python3 scripts/acceptance/native_packages.py verify-review \
   --results /absolute/receipt-folders --source-index /absolute/native-final-sources-0522.json \
   --manifest-sha256 <approved-index-hash> --version 0.52.2 \
   --commit <40-hex-commit> --project <signed-project-id> \
@@ -73,6 +73,6 @@ python3 scripts/acceptance/native_packages_0522.py verify-review \
 Локальная команда регрессии (только тесты безопасности, **не** свидетельство реальной платформы):
 
 ```sh
-python3 -m unittest scripts/acceptance/test_native_packages_0522.py -v
+python3 -m unittest scripts/acceptance/test_native_packages.py -v
 python3 scripts/version/manage.py check
 ```

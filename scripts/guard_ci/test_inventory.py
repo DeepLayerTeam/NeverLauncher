@@ -5,9 +5,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from inventory_0501 import MATRIX_SCHEMA, REQUIRED, TARGETS, EXPECTED_VERSION, validate_report
+from inventory import MATRIX_SCHEMA, REQUIRED, TARGETS, EXPECTED_VERSION, validate_report
 
-TOOL = Path(__file__).with_name('inventory_0501.py')
+TOOL = Path(__file__).with_name('inventory.py')
 
 def fixture(os_name='linux', arch='x86_64'):
     checks = [

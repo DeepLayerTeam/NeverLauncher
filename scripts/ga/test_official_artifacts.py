@@ -8,7 +8,7 @@ import unittest
 
 folder = Path(__file__).parent
 sys.path.insert(0, str(folder))
-from verify_official_artifacts_0270 import PACKAGES, verify_shipped, GateError
+from verify_official_artifacts import PACKAGES, verify_shipped, GateError
 
 
 class ExactPackagesTest(unittest.TestCase):

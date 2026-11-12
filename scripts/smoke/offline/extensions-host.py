@@ -18,7 +18,7 @@ def require(ok: bool, message: str) -> None:
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 5), "Требуется VERSION не ниже 0.20.5")
 
-host = read("services/api/internal/extensionhost/host_0205.go")
+host = read("services/api/internal/extensionhost/host.go")
 for token in (
     "exec.Command(entrypoint)",
     'net.Listen("tcp"',
@@ -43,7 +43,7 @@ for token in (
 ):
     require(token in host, f"Отсутствует среда выполнения Extension Host: {token}")
 
-linux = read("services/api/internal/extensionhost/process_linux_0205.go")
+linux = read("services/api/internal/extensionhost/process_linux.go")
 for token in (
     "Setpgid: true",
     "Pdeathsig: syscall.SIGKILL",
@@ -63,7 +63,7 @@ for token in (
 ):
     require(token in main, f"Отсутствует подключение Extension Host к Backend: {token}")
 
-lifecycle = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
+lifecycle = read("services/api/internal/httpapi/extension_lifecycle.go")
 for token in (
     "stopExtensionHostForLifecycle0205",
     "startEnabledExtensionHost0205",
@@ -72,8 +72,8 @@ for token in (
 ):
     require(token in lifecycle, f"Отсутствует интеграция жизненного цикла и хоста {token}")
 updates = (
-    read("services/api/internal/extensionupdates/updates_02011.go")
-    if (ROOT / "services/api/internal/extensionupdates/updates_02011.go").is_file()
+    read("services/api/internal/extensionupdates/updates.go")
+    if (ROOT / "services/api/internal/extensionupdates/updates.go").is_file()
     else ""
 )
 require(
@@ -96,7 +96,7 @@ for suffix in (
         f"В административном API хоста отсутствует маршрут: {suffix}",
     )
 
-cli = read("cli/cmd/launcher/extension_host_0205.go")
+cli = read("cli/cmd/launcher/extension_host.go")
 for token in (
     "list",
     "status",

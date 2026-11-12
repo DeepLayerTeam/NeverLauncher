@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-SPEC = importlib.util.spec_from_file_location("rehearse", Path(__file__).with_name("rehearse_cohort_04910.py"))
+SPEC = importlib.util.spec_from_file_location("rehearse", Path(__file__).with_name("rehearse_cohort.py"))
 mod = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mod)
 H = "a" * 64

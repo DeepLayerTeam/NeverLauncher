@@ -4,12 +4,12 @@ on:
     paths:
       - 'services/api/**'
       - 'cli/internal/dbmigrate/**'
-      - '.github/workflows/tpm-certify-verifier-0312.yml'
+      - '.github/workflows/tpm-certify-verifier.yml'
   pull_request:
     paths:
       - 'services/api/**'
       - 'cli/internal/dbmigrate/**'
-      - '.github/workflows/tpm-certify-verifier-0312.yml'
+      - '.github/workflows/tpm-certify-verifier.yml'
   workflow_dispatch:
 permissions:
   contents: read

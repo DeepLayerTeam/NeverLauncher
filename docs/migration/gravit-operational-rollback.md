@@ -37,7 +37,7 @@
 **1. Оградите трафик:** прекратите новые сеансы на *всех* маршрутах ingress в окне обслуживания. Первая команда действительно переводит источники и цели авторизации и игры в HAProxy `MAINT`, проверяет тот же PID и сохраняет устойчивый журнал этапов. Требуется, чтобы исходный маршрут Backend всё ещё был активен. Возможен обрыв игроков. При любой неопределённости оставьте firewall/HAProxy закрытыми.
 
 ```sh
-python3 tools/gravit-port/operational_rollback_04912.py fence \
+python3 tools/gravit-port/operational_rollback.py fence \
   --cutover-config /srv/launcher-cutover/config.json \
   --rollback-config /srv/launcher-cutover/rollback.json \
   --journal-dir /srv/launcher-cutover/journal --confirm run_12345678
@@ -46,7 +46,7 @@ python3 tools/gravit-port/operational_rollback_04912.py fence \
 **2. Остановите и замаскируйте всех независимых писателей источника/цели.** Только после подтверждения настоящей остановки экспортируйте НОВЫЕ согласованные JSON-снимки источника и Launcher. Команда `plan` повторно проверяет каждый указанный systemd-юнит, работающий HAProxy, дайджест базового источника и текущий маршрут PostgreSQL. Если данные Launcher изменились, без законченной сверки она отказывает. `plan` вызывает настоящий планировщик отката Backend и требует `ready=true`, отсутствия блокировок, правильного режима и точного SHA-256 исходных байтов снимка.
 
 ```sh
-python3 tools/gravit-port/operational_rollback_04912.py plan \
+python3 tools/gravit-port/operational_rollback.py plan \
   --cutover-config /srv/launcher-cutover/config.json \
   --rollback-config /srv/launcher-cutover/rollback.json \
   --journal-dir /srv/launcher-cutover/journal --confirm run_12345678
@@ -55,7 +55,7 @@ python3 tools/gravit-port/operational_rollback_04912.py plan \
 **3. Экспортируйте ещё один независимый НОВЫЙ снимок Launcher после плана** (другой абсолютный путь; байты должны по-прежнему точно совпадать). Завершите фиксацию в десятиминутном окне одобрения Backend. Средство консервативно отвергает планы старше девяти минут. `commit` заново проверяет обе группы писателей и закрытый HAProxy, сравнивает свежие байты и экспорт источника с планом, вызывает существующий `rollback-commit` с обеими блокировками записи. Затем независимо считывает сохранённый статус отката и новый маршрут PostgreSQL.
 
 ```sh
-python3 tools/gravit-port/operational_rollback_04912.py commit \
+python3 tools/gravit-port/operational_rollback.py commit \
   --cutover-config /srv/launcher-cutover/config.json \
   --rollback-config /srv/launcher-cutover/rollback.json \
   --journal-dir /srv/launcher-cutover/journal --confirm run_12345678 \
@@ -65,7 +65,7 @@ python3 tools/gravit-port/operational_rollback_04912.py commit \
 Если фиксация неоднозначна из-за тайм-аута, средство сохраняет статус `uncertain` и пытается закрыть ingress. **Не повторяйте `commit`.** Исследуйте PostgreSQL и используйте `reconcile` только для чтения авторитетного состояния/маршрута Backend. Код завершения локального процесса сам по себе не превращает результат в успех.
 
 ```sh
-python3 tools/gravit-port/operational_rollback_04912.py reconcile \
+python3 tools/gravit-port/operational_rollback.py reconcile \
   --cutover-config /srv/launcher-cutover/config.json \
   --rollback-config /srv/launcher-cutover/rollback.json \
   --journal-dir /srv/launcher-cutover/journal --confirm run_12345678
@@ -75,16 +75,16 @@ python3 tools/gravit-port/operational_rollback_04912.py reconcile \
 
 ## Восстановление файлов остановленного Minecraft (не работающей базы данных)
 
-`cold_data_restore_04912.py` может запечатать уже **согласованный автономный каталог резервной копии** и восстановить обычные файлы мира, игроков и конфигурации в остановленный каталог. Он отвергает символьные и жёсткие ссылки, устройства, повторные/опасные пути, несовпадения размера/хеша и слишком большие входы. Файлы копируются в подготовительный каталог той же файловой системы, проверяется каждый SHA-256, прежняя цель сохраняется как `TARGET.before-RUN`, после чего устанавливается замена. Устойчивый журнал позволяет выполнить `recover` после принудительного завершения между двумя переименованиями; старый каталог не удаляется незаметно.
+`cold_data_restore.py` может запечатать уже **согласованный автономный каталог резервной копии** и восстановить обычные файлы мира, игроков и конфигурации в остановленный каталог. Он отвергает символьные и жёсткие ссылки, устройства, повторные/опасные пути, несовпадения размера/хеша и слишком большие входы. Файлы копируются в подготовительный каталог той же файловой системы, проверяется каждый SHA-256, прежняя цель сохраняется как `TARGET.before-RUN`, после чего устанавливается замена. Устойчивый журнал позволяет выполнить `recover` после принудительного завершения между двумя переименованиями; старый каталог не удаляется незаметно.
 
 ```sh
-python3 tools/gravit-port/cold_data_restore_04912.py seal \
+python3 tools/gravit-port/cold_data_restore.py seal \
   --source /srv/verified-backups/gravit-world \
   --manifest /srv/launcher-cutover/gravit-world-backup.json --run run_12345678
 
 # Только ПОСЛЕ блокировки входящего трафика для отката и остановки всех процессов записи
 # источника и назначения. Файлы восстанавливаются в указанный неактивный каталог.
-python3 tools/gravit-port/cold_data_restore_04912.py restore \
+python3 tools/gravit-port/cold_data_restore.py restore \
   --source /srv/verified-backups/gravit-world \
   --target /srv/gravit/minecraft \
   --manifest /srv/launcher-cutover/gravit-world-backup.json \
@@ -93,7 +93,7 @@ python3 tools/gravit-port/cold_data_restore_04912.py restore \
   --journal-dir /srv/launcher-cutover/journal --run run_12345678
 
 # При завершении посреди переименования, пока запись и входящий трафик заблокированы:
-python3 tools/gravit-port/cold_data_restore_04912.py recover \
+python3 tools/gravit-port/cold_data_restore.py recover \
   --source /srv/verified-backups/gravit-world \
   --target /srv/gravit/minecraft \
   --manifest /srv/launcher-cutover/gravit-world-backup.json \

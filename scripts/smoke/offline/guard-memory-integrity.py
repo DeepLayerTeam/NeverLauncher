@@ -143,7 +143,7 @@ def main() -> int:
     require(
         ci,
         [
-            "python scripts/smoke/offline/guard-memory-integrity-0185.py",
+            "python scripts/smoke/offline/guard-memory-integrity.py",
             "cargo build --manifest-path runtime/guard-memory-probe/Cargo.toml",
             "GUARD_MEMORY_PROBE_DLL",
             "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
@@ -151,7 +151,7 @@ def main() -> int:
         ],
         "CI сборки Windows, проверок атак и Clippy",
     )
-    if "guard-memory-integrity-0185.py" not in preflight:
+    if "guard-memory-integrity.py" not in preflight:
         raise SystemExit(
             "[Launcher] Memory Integrity 0.18.5: не настроен запуск в предварительных проверках"
         )

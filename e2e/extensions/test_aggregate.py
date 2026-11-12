@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from aggregate_04212 import TARGETS, CASES, validate
+from aggregate import TARGETS, CASES, validate
 
 
 class FailClosedEvidenceTests(unittest.TestCase):
@@ -25,7 +25,7 @@ class FailClosedEvidenceTests(unittest.TestCase):
                     check['signing'] = {'sha256': 'c' * 64, 'wrongKeyDenied': True, 'tamperDenied': True}
                 checks[case] = check
             source_root = Path(__file__).resolve().parents[2]
-            matrix_sha = hashlib.sha256((source_root / 'compatibility/gravit/module-parity-04211.json').read_bytes()).hexdigest()
+            matrix_sha = hashlib.sha256((source_root / 'compatibility/gravit/module-parity_variant5.json').read_bytes()).hexdigest()
             self.write(target, {'target': target, 'status': 'pass', 'version': self.version,
                                 'sourceCommit': self.commit, 'runId': self.run_id,
                                 'runAttempt': self.run_attempt, 'checks': checks,

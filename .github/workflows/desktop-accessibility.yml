@@ -3,11 +3,11 @@ on:
   push:
     paths:
       - 'apps/desktop/**'
-      - '.github/workflows/desktop-accessibility-0357.yml'
+      - '.github/workflows/desktop-accessibility.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
-      - '.github/workflows/desktop-accessibility-0357.yml'
+      - '.github/workflows/desktop-accessibility.yml'
 jobs:
   desktop-ui:
     runs-on: ubuntu-24.04

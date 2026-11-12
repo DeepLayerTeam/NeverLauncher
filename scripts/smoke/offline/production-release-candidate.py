@@ -26,13 +26,13 @@ if triple(VERSION) < (0, 15, 11):
         f"Кандидат на промышленный выпуск: требуется версия не ниже 0.15.11, получено {VERSION}"
     )
 
-impl = (ROOT / "cli/cmd/launcher/production_release_candidate_01511.go").read_text(
+impl = (ROOT / "cli/cmd/launcher/production_release_candidate.go").read_text(
     encoding="utf-8"
 )
 release = (ROOT / "cli/cmd/launcher/release_commands.go").read_text(encoding="utf-8")
 build = (ROOT / "scripts/release/build-release.sh").read_text(encoding="utf-8")
 tests = (
-    ROOT / "cli/cmd/launcher/production_release_candidate_01511_test.go"
+    ROOT / "cli/cmd/launcher/production_release_candidate_test.go"
 ).read_text(encoding="utf-8")
 
 require(

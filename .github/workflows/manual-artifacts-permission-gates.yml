@@ -3,12 +3,12 @@ on:
   push:
     paths:
       - 'cli/cmd/launcher/**'
-      - '.github/workflows/manual-artifacts-permission-gates-0276.yml'
+      - '.github/workflows/manual-artifacts-permission-gates.yml'
       - 'VERSION'
   pull_request:
     paths:
       - 'cli/cmd/launcher/**'
-      - '.github/workflows/manual-artifacts-permission-gates-0276.yml'
+      - '.github/workflows/manual-artifacts-permission-gates.yml'
       - 'VERSION'
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
       - name: Проверка форматирования
         if: runner.os == 'Linux'
         shell: bash
-        run: test -z "$(gofmt -l cli/cmd/launcher/manual_artifact_gates_0276*.go cli/cmd/launcher/modpack_import_0275.go cli/cmd/launcher/client_factory_0271.go)"
+        run: test -z "$(gofmt -l cli/cmd/launcher/manual_artifact_gates*.go cli/cmd/launcher/modpack_import.go cli/cmd/launcher/client_factory.go)"
       - name: Запустить функциональные и регрессионные тесты
         working-directory: cli
         shell: bash

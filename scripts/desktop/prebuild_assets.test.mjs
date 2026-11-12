@@ -10,7 +10,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { packDist03011, verifyDist03011 } from "./prebuild_assets_03011.mjs";
+import { packDist03011, verifyDist03011 } from "./prebuild_assets.mjs";
 
 async function fixture(run) {
   const root = await mkdtemp(join(tmpdir(), "nl-asset-03011-"));

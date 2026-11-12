@@ -9,7 +9,7 @@ on:
       - 'e2e/**'
       - 'apps/admin/**'
       - 'apps/desktop/**'
-      - '.github/workflows/integration-matrix-0478.yml'
+      - '.github/workflows/integration-matrix.yml'
   pull_request:
   workflow_dispatch:
     inputs:
@@ -136,8 +136,8 @@ jobs:
       - name: Выполнить нативное обновление CLI из каждой установленной старой версии с побайтовой проверкой пользовательских данных
         run: |
           set -euo pipefail
-          sudo python3 scripts/integration/legacy_matrix_0478.py --manifest "$RUNNER_TEMP/baselines.json" --candidate-cli "$RUNNER_TEMP/launcher-0478" --out "$RUNNER_TEMP/legacy-0478.json"
-          python3 scripts/integration/verify_0478.py legacy --path "$RUNNER_TEMP/legacy-0478.json"
+          sudo python3 scripts/integration/legacy_matrix.py --manifest "$RUNNER_TEMP/baselines.json" --candidate-cli "$RUNNER_TEMP/launcher-0478" --out "$RUNNER_TEMP/legacy-0478.json"
+          python3 scripts/integration/verify.py legacy --path "$RUNNER_TEMP/legacy-0478.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -174,7 +174,7 @@ jobs:
           set -euo pipefail
           export LAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"
           bash e2e/scripts/run-minecraft-e2e.sh
-          python3 scripts/integration/verify_0478.py full-game --path e2e/runtime --minecraft-version 1.21.1
+          python3 scripts/integration/verify.py full-game --path e2e/runtime --minecraft-version 1.21.1
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -213,7 +213,7 @@ jobs:
           set -euo pipefail
           export LAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"
           bash e2e/scripts/run-vanilla-matching-e2e.sh
-          python3 scripts/integration/verify_0478.py matching-game --path e2e/runtime --minecraft-version '${{ matrix.mc }}'
+          python3 scripts/integration/verify.py matching-game --path e2e/runtime --minecraft-version '${{ matrix.mc }}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -252,8 +252,8 @@ jobs:
       - name: Войти как существующий владелец, управлять Admin, опубликовать подписанный пакет и проверить откат
         run: |
           set -euo pipefail
-          python3 e2e/scripts/owner-cycle-0390-browser.py
-          python3 scripts/integration/verify_0478.py owner --path dist/ga-certification/owner-cycle-0390.json --commit "$GITHUB_SHA"
+          python3 e2e/scripts/owner-cycle-browser.py
+          python3 scripts/integration/verify.py owner --path dist/ga-certification/owner-cycle-0390.json --commit "$GITHUB_SHA"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

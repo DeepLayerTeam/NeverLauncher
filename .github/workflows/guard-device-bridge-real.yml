@@ -2,15 +2,18 @@ name: Launcher 0.52.9 — реальная приёмка Guard, Device Trust и
 on:
   push:
     paths:
-      - 'services/api/internal/httpapi/guard_shadow_05012*'
-      - 'services/api/internal/httpapi/server_bound_guard_0507.go'
+      - 'services/api/internal/httpapi/guard_shadow*'
+      - 'services/api/internal/httpapi/server_bound_guard.go'
       - 'plugins/vanilla-bridge/**'
-      - 'scripts/acceptance/*0529.py'
-      - 'scripts/guard_ci/adversarial_pilot_05012.py'
+      - 'scripts/acceptance/guard_device_bridge_real.py'
+      - 'scripts/acceptance/test_guard_device_bridge_real.py'
+      - 'scripts/acceptance/test_guard_shadow_crosslang.py'
+      - 'scripts/acceptance/vanilla_sidecar_live.py'
+      - 'scripts/guard_ci/adversarial_pilot.py'
       - 'serverbridge/**'
       - 'device-trust/**'
       - 'guard-ci/**'
-      - '.github/workflows/guard-device-bridge-real-0529.yml'
+      - '.github/workflows/guard-device-bridge-real.yml'
   pull_request:
   workflow_dispatch:
     inputs:
@@ -42,15 +45,15 @@ jobs:
       - name: "Проверить реальную совместимость журналов Go и свидетельства враждебных воздействий"
         run: |
           set -euo pipefail
-          python3 -m unittest discover -s scripts/acceptance -p 'test_guard_shadow_crosslang_0529.py' -v
-          python3 -m unittest discover -s scripts/acceptance -p 'test_guard_device_bridge_real_0529.py' -v
-          python3 scripts/guard_ci/test_adversarial_pilot_05012.py
+          python3 -m unittest discover -s scripts/acceptance -p 'test_guard_shadow_crosslang.py' -v
+          python3 -m unittest discover -s scripts/acceptance -p 'test_guard_device_bridge_real.py' -v
+          python3 scripts/guard_ci/test_adversarial_pilot.py
       - name: "Выполнить промышленные JVM-тесты политик Java-адаптеров ServerBridge"
-        run: bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
+        run: bash e2e/scripts/run-serverbridge-adapter-capabilities.sh
       - name: Проверить разрешённые преобразования загрузчика и враждебные изменения JVM в реальных дочерних JVM
         run: |
           set -euo pipefail
-          python3 scripts/acceptance/guard_device_bridge_real_0529.py local \
+          python3 scripts/acceptance/guard_device_bridge_real.py local \
             --only-suite loader-transformations --output "$RUNNER_TEMP/guard-0529-local.json"
           python3 - "$RUNNER_TEMP/guard-0529-local.json" <<'PY'
           import json,sys
@@ -91,7 +94,7 @@ jobs:
           set -euo pipefail
           umask 077
           mkdir -p "$RUNNER_TEMP/launcher-live-0529"
-          python3 scripts/acceptance/guard_device_bridge_real_0529.py live \
+          python3 scripts/acceptance/guard_device_bridge_real.py live \
             --config /etc/launcher/acceptance/guard-device-bridge-0529.json \
             --output "$RUNNER_TEMP/launcher-live-0529/report.json"
           python3 - "$RUNNER_TEMP/launcher-live-0529/report.json" <<'PY'

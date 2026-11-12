@@ -9,7 +9,7 @@
 
    ```sh
    export LAUNCHER_MIGRATION_TOKEN='your-current-operator-token'
-   python3 tools/gravit-port/migrate_users_0494.py \
+   python3 tools/gravit-port/migrate_users.py \
        --backend https://launcher.example.org --run-id YOUR_RUN_ID \
        --source-zip /private/gravit-source.zip \
        --password-format sha256-hex --mode prepare \
@@ -20,7 +20,7 @@
 3. После проверки записей пользователей выполните настоящий импорт. Укажите другой путь для отчёта: программа откажется перезаписывать существующие подтверждающие данные.
 
    ```sh
-   python3 tools/gravit-port/migrate_users_0494.py \
+   python3 tools/gravit-port/migrate_users.py \
        --backend https://launcher.example.org --run-id YOUR_RUN_ID \
        --source-zip /private/gravit-source.zip --password-format sha256-hex \
        --mode import --fresh-keys-confirmed \
@@ -45,14 +45,14 @@
 `--texture-mapping-output` записывает приватную (0600) карту соответствия UUID «один к одному» **только** для сопоставленных или успешно импортированных аккаунтов. Используйте с ней существующий **рабочий** импортёр TextureProvider и настоящий экспорт текстур/PNG-объектов исходной системы. Сначала запустите пробный режим, проверьте `planSha256` и явно подтвердите план перед импортом:
 
 ```sh
-# Требуется собранный бинарный файл services/api/cmd/gravit-textures-import-02510,
+# Требуется собранный бинарный файл services/api/cmd/gravit-textures-import,
 # LAUNCHER_DATABASE_DSN и конфигурация целевого хранилища.
-gravit-textures-import-02510 --source-id source-one \
+gravit-textures-import --source-id source-one \
     --source-json /private/textures.json --source-root /private/gravit-png \
     --mapping /private/texture-map.json --dry-run \
     --report /private/textures-preview.json
 
-gravit-textures-import-02510 --source-id source-one \
+gravit-textures-import --source-id source-one \
     --source-json /private/textures.json --source-root /private/gravit-png \
     --mapping /private/texture-map.json \
     --approved-plan-sha256 REVIEWED_PLAN_SHA256 \

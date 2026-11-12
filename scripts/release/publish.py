@@ -26,12 +26,12 @@ from release_policy import policy, parsed
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ga"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ci"))
 from verified_targets import TARGETS, checks_for, approval_data, paths, Blocked, verify as verify_exact_ga
-from security_capabilities_0431 import checks as security_checks, verify_all as verify_security
-from package_security_0431 import evidence_files as security_evidence_files
-from package_full_evidence_04315 import (ARCHIVE_NAME as FULL_GA_ARCHIVE,
+from security_capabilities import checks as security_checks, verify_all as verify_security
+from package_security import evidence_files as security_evidence_files
+from package_full_evidence import (ARCHIVE_NAME as FULL_GA_ARCHIVE,
                                          extract_verified as extract_full_ga)
-from verified_support_0440 import check_file as verify_support_file, NAME as SUPPORT_REPORT_0440
-from required_jobs_0363 import declared_jobs
+from verified_support import check_file as verify_support_file, NAME as SUPPORT_REPORT_0440
+from required_jobs import declared_jobs
 
 PRODUCTION_WORKFLOW = (
     Path(__file__).resolve().parents[2]
@@ -348,7 +348,7 @@ def validate(
     if parsed(version)[0] >= (0, 46, 2):
         # До любых сетевых записей проверяйте не только контрольную сумму внешнего ZIP, но и формат бинарных
         # файлов и хеши вложенных пакетов.
-        from delivery_verify_0462 import verify_bundle
+        from delivery_verify import verify_bundle
         try:
             verify_bundle(bundle, True)
         except (OSError, ValueError, KeyError, TypeError) as exc:
@@ -360,7 +360,7 @@ def validate(
         operator_key = os.environ.get('LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE', '')
         require(bool(operator_key), 'GA версии 0.46.0 ЗАБЛОКИРОВАНА: отсутствует открытый ключ независимого оператора')
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'operations'))
-        from operations_ga_0460 import verify_public
+        from operations_ga import verify_public
         try:
             verify_public(bundle, Path(operator_key), release_key)
         except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
@@ -368,7 +368,7 @@ def validate(
     if version == '0.53.0':
         # Явно подтвердите допуск ещё до попытки публикации на GitHub. Защищённая среда выпуска предоставляет
         # одобренные исходные пакеты только для чтения и отдельный закреплённый ключ независимого проверяющего.
-        from publication_ga_0530 import verify as verify_0530
+        from publication_ga import verify as verify_0530
         base = os.environ.get('NL_GA0530_INBOX','')
         key = os.environ.get('NL_GA0530_VERIFIER_KEY','')
         pin = os.environ.get('NL_GA0530_VERIFIER_PIN','')
@@ -532,7 +532,7 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
                     "Данные удалённого артефакта GitHub не совпадают: " + name,
                 )
             if parsed(version)[0] >= (0, 46, 2):
-                from delivery_verify_0462 import verify_bundle
+                from delivery_verify import verify_bundle
                 try:
                     verify_bundle(remote, True)
                 except (OSError, ValueError, KeyError, TypeError) as exc:
@@ -642,7 +642,7 @@ def main() -> int:
             require(all((a.ga0480_evidence_dir, a.ga0480_approval,
                          a.ga0480_signature, a.ga0480_trusted_key)),
                     "Для версии 0.48.x требуются независимые подписанные свидетельства реальной миграции, игровой проверки и приёмки устаревших версий GA")
-            from ga_gate_0480 import gate as ga0480_gate
+            from ga_gate import gate as ga0480_gate
             evidence_root = Path(a.ga0480_evidence_dir)
             ga0480_gate(evidence_root, Path(a.ga0480_approval),
                         Path(a.ga0480_signature), Path(a.ga0480_trusted_key), a.commit)
@@ -653,7 +653,7 @@ def main() -> int:
                     'Фактический публикуемый пакет 0.48.0 не идентичен независимо одобренному финальному выпуску')
             # Сравнивайте каждый платформенный пакет поставки, а не только объявленную версию. Побайтовое совпадение
             # обязательно до первой записи в сеть.
-            from delivery_verify_0462 import verify_bundle
+            from delivery_verify import verify_bundle
             current = verify_bundle(actual_bundle, True)['targets']
             certified = verify_bundle(certified_bundle, True)['targets']
             require(current == certified, 'Фактические хеши пакетов 0.48.0 не совпадают с подтверждённой поставкой')

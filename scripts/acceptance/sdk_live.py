@@ -96,7 +96,7 @@ def main():
         need(a.output.is_absolute() and not a.output.exists() and a.output.parent.is_dir(),
              'Требуется новый абсолютный путь для сохранения свидетельства SDK')
         result=probe(a)
-        import inventory_0521 as inventory
+        import inventory as inventory
         inventory.write_exclusive(a.output,(json.dumps(result,sort_keys=True)+'\n').encode())
         print('ПРОЙДЕНО: реальные операции HTTP SDK Go, TS и Java прошли на одном HTTPS Backend')
         return 0

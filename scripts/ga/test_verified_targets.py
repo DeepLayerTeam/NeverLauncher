@@ -8,7 +8,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_verified_targets_0360 import TargetGateTests, COMMIT, NOW, timevalue, digest
+from test_verified_targets_variant2 import TargetGateTests, COMMIT, NOW, timevalue, digest
 from verified_targets import Blocked, approval_data, paths, verify
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))

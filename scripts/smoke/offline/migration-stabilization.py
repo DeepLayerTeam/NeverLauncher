@@ -33,13 +33,13 @@ def require(text: str, needles: list[str], label: str) -> None:
 if version_tuple(VERSION) < (0, 15, 10):
     raise SystemExit(f"VERSION ниже 0.15.10: {VERSION}")
 
-stabilization = read("cli/cmd/launcher/migration_stabilization_01510.go")
+stabilization = read("cli/cmd/launcher/migration_stabilization.go")
 trust = read("cli/cmd/launcher/release_verification_v2.go")
 updater = read("cli/cmd/launcher/transactional_updater.go")
 component = read("cli/cmd/launcher/component_update.go")
 main = read("cli/cmd/launcher/main.go")
 release = read("cli/cmd/launcher/release_commands.go")
-tests = read("cli/cmd/launcher/migration_stabilization_01510_test.go")
+tests = read("cli/cmd/launcher/migration_stabilization_test.go")
 preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
 policy = read("scripts/smoke/offline/repository-policy.py")
@@ -108,11 +108,11 @@ require(
     ],
     "Регрессионные тесты версии 0.15.10",
 )
-require(preflight, ["migration-stabilization-01510.py"], "Предварительная проверка релиза")
-require(ci, ["migration-stabilization-01510.py"], "CI")
+require(preflight, ["migration-stabilization.py"], "Предварительная проверка релиза")
+require(ci, ["migration-stabilization.py"], "CI")
 require(
     policy,
-    ["0.15.10 Migration + stabilization", "migration-stabilization-01510.py"],
+    ["0.15.10 Migration + stabilization", "migration-stabilization.py"],
     "Политика хранилища",
 )
 

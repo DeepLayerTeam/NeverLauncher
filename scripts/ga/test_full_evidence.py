@@ -13,11 +13,11 @@ import unittest
 from zipfile import ZipFile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_security_capabilities_0431 import SecurityGATests
-from test_verified_targets_0360 import COMMIT, NOW, timevalue
-from security_capabilities_0431 import scenarios_for_version, LOG_SCHEMA, expected_scope
+from test_security_capabilities import SecurityGATests
+from test_verified_targets_variant2 import COMMIT, NOW, timevalue
+from security_capabilities import scenarios_for_version, LOG_SCHEMA, expected_scope
 from verified_targets import paths, verify, PLAYER_CHECKS_0400, Blocked
-from package_full_evidence_04315 import package, extract_verified, evidence_files
+from package_full_evidence import package, extract_verified, evidence_files
 
 VER = "0.43.15"
 
@@ -164,8 +164,8 @@ class CompleteExecutionEvidenceTests(unittest.TestCase):
                 row["checks"][check]["sha256"] = write(path, trace)
         self.base.sign()
         package(self.bundle, self.evidence, self.key, VER, COMMIT, self.archive)
-        from package_security_0431 import package as security_package
-        from publish_0370 import verify_ga, RECEIPT, REHEARSAL
+        from package_security import package as security_package
+        from publish import verify_ga, RECEIPT, REHEARSAL
         security_package(self.evidence, signed,
                          self.bundle / "SECURITY_CAPABILITY_EVIDENCE_0431.zip")
         for name in ("approval.json", "approval.sig"):

@@ -16,7 +16,7 @@ import re
 import subprocess
 import sys
 
-from components_02413 import current_target
+from components import current_target
 
 
 def verify_external(path: Path | None, target: str, commit: str, kind: str) -> bool:

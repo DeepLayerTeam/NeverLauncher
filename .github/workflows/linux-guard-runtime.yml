@@ -4,14 +4,14 @@ on:
     paths:
       - 'runtime/runtime/**'
       - 'sdk/java/trusted-agent/**'
-      - 'scripts/tests/linux_runtime_guard_0508.py'
-      - '.github/workflows/linux-guard-runtime-0508.yml'
+      - 'scripts/tests/linux_runtime_guard.py'
+      - '.github/workflows/linux-guard-runtime.yml'
   pull_request:
     paths:
       - 'runtime/runtime/**'
       - 'sdk/java/trusted-agent/**'
-      - 'scripts/tests/linux_runtime_guard_0508.py'
-      - '.github/workflows/linux-guard-runtime-0508.yml'
+      - 'scripts/tests/linux_runtime_guard.py'
+      - '.github/workflows/linux-guard-runtime.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -55,8 +55,8 @@ jobs:
           chmod 700 "$XDG_RUNTIME_DIR"
           cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_linux -- --nocapture
       - name: "Проверить сценарии для защищённой и незащищённой JVM"
-        run: python3 scripts/tests/linux_runtime_guard_0508.py
+        run: python3 scripts/tests/linux_runtime_guard.py
       - name: "Проверить существующие регрессии подписанных JAR, нативных файлов и непрерывной защиты JVM"
         run: |
-          python3 scripts/tests/guard_runtime_integrity_0505.py
-          python3 scripts/tests/continuous_game_protection_0506.py
+          python3 scripts/tests/guard_runtime_integrity.py
+          python3 scripts/tests/continuous_game_protection.py

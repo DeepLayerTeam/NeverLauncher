@@ -12,7 +12,7 @@ import unittest
 
 HERE=pathlib.Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
-import owner_player_api_0351 as live
+import owner_player_api as live
 
 class Handler(BaseHTTPRequestHandler):
     status = 403

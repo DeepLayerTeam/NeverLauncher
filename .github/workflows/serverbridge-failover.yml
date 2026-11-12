@@ -3,19 +3,19 @@ on:
   push:
     paths:
       - 'plugins/bridge-common/src/**'
-      - 'cli/cmd/launcher/serverbridge_host_remote_0284.go'
-      - 'cli/cmd/launcher/serverbridge_host_receipt_recovery_0515_test.go'
+      - 'cli/cmd/launcher/serverbridge_host_remote.go'
+      - 'cli/cmd/launcher/serverbridge_host_receipt_recovery_test.go'
       - 'services/api/internal/repository/server_bridge_v2.go'
-      - 'services/api/internal/repository/server_bridge_control_0195_integration_test.go'
-      - '.github/workflows/serverbridge-failover-0515.yml'
+      - 'services/api/internal/repository/server_bridge_control_integration_test.go'
+      - '.github/workflows/serverbridge-failover.yml'
   pull_request:
     paths:
       - 'plugins/bridge-common/src/**'
-      - 'cli/cmd/launcher/serverbridge_host_remote_0284.go'
-      - 'cli/cmd/launcher/serverbridge_host_receipt_recovery_0515_test.go'
+      - 'cli/cmd/launcher/serverbridge_host_remote.go'
+      - 'cli/cmd/launcher/serverbridge_host_receipt_recovery_test.go'
       - 'services/api/internal/repository/server_bridge_v2.go'
-      - 'services/api/internal/repository/server_bridge_control_0195_integration_test.go'
-      - '.github/workflows/serverbridge-failover-0515.yml'
+      - 'services/api/internal/repository/server_bridge_control_integration_test.go'
+      - '.github/workflows/serverbridge-failover.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -82,4 +82,4 @@ jobs:
       - name: Проверить версию и форматирование gofmt
         run: |
           python3 scripts/version/manage.py check
-          test -z "$(gofmt -l services/api/internal/repository/server_bridge_v2.go services/api/internal/repository/server_bridge_control_0195_integration_test.go cli/cmd/launcher/serverbridge_host_remote_0284.go cli/cmd/launcher/serverbridge_host_receipt_recovery_0515_test.go)"
+          test -z "$(gofmt -l services/api/internal/repository/server_bridge_v2.go services/api/internal/repository/server_bridge_control_integration_test.go cli/cmd/launcher/serverbridge_host_remote.go cli/cmd/launcher/serverbridge_host_receipt_recovery_test.go)"

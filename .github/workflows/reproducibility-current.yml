@@ -3,10 +3,10 @@ name: 0.53.0 — независимые нативные сборки с точ�
 on:
   push:
     paths:
-      - 'scripts/release/independent_current_05211.py'
-      - 'scripts/release/test_independent_current_05211.py'
-      - 'scripts/release/unsigned_package_0470.py'
-      - '.github/workflows/reproducibility-current-05211.yml'
+      - 'scripts/release/independent_current.py'
+      - 'scripts/release/test_independent_current.py'
+      - 'scripts/release/unsigned_package.py'
+      - '.github/workflows/reproducibility-current.yml'
   pull_request:
   workflow_dispatch:
     inputs:
@@ -23,6 +23,9 @@ concurrency:
   group: repro-05212-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   regression:
     runs-on: ubuntu-24.04
@@ -33,7 +36,7 @@ jobs:
           python-version: '3.12'
       - run: |
           python -m pip install 'cryptography>=42,<47'
-          PYTHONPATH=scripts/release:scripts/acceptance python -m unittest -v scripts/release/test_reproducible_0470.py scripts/release/test_unsigned_package_0470.py scripts/release/test_independent_current_05211.py
+          PYTHONPATH=scripts/release:scripts/acceptance python -m unittest -v scripts/release/test_reproducible.py scripts/release/test_unsigned_package.py scripts/release/test_independent_current.py
           python scripts/version/manage.py check
 
   build:
@@ -150,7 +153,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           test -n "$PRIVATE_PEM"
           mkdir -p dist/repro-receipts
-          python scripts/release/independent_current_05211.py capture \
+          python scripts/release/independent_current.py capture \
             --bundle "$PWD/dist/unsigned-capture" --builder "$BUILDER" \
             --runner "github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${BUILDER}" \
             --commit "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" \
@@ -158,7 +161,7 @@ jobs:
           umask 077
           printf '%s\n' "$PRIVATE_PEM" > "$RUNNER_TEMP/signing.pem"
           trap 'rm -f "$RUNNER_TEMP/signing.pem"' EXIT
-          python scripts/release/reproducible_0470.py sign \
+          python scripts/release/reproducible.py sign \
             --report dist/repro-receipts/unsigned.json \
             --private-key "$RUNNER_TEMP/signing.pem" --out dist/repro-receipts/unsigned.sig
       - uses: actions/upload-artifact@v4
@@ -216,7 +219,7 @@ jobs:
           printf '%s\n' "$A_PUBLIC" > "$RUNNER_TEMP/repro-a.pub"
           printf '%s\n' "$B_PUBLIC" > "$RUNNER_TEMP/repro-b.pub"
           mkdir -p dist/compared
-          python scripts/release/independent_current_05211.py compare \
+          python scripts/release/independent_current.py compare \
             --a-report "$PWD/dist/a-receipt/unsigned.json" --a-sig "$PWD/dist/a-receipt/unsigned.sig" \
             --a-key "$RUNNER_TEMP/repro-a.pub" --a-key-sha256 "$A_PIN" --a-dir "$PWD/dist/a" \
             --b-report "$PWD/dist/b-receipt/unsigned.json" --b-sig "$PWD/dist/b-receipt/unsigned.sig" \

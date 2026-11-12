@@ -19,7 +19,7 @@ import sys
 import tempfile
 import time
 
-import dr_03512 as dr
+import dr as dr
 
 
 def parse_utc(value: str) -> datetime:

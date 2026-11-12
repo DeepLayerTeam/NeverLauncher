@@ -3,21 +3,21 @@ on:
   push:
     paths:
       - 'apps/desktop/src-tauri/**'
-      - 'apps/desktop/src/official_minecraft_0257.ts'
-      - 'apps/desktop/src/OfficialMinecraftPanel0257.tsx'
-      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
-      - 'services/api/internal/httpapi/minecraft_link_0268*'
-      - 'services/api/internal/repository/official_links_0268*'
+      - 'apps/desktop/src/official_minecraft.ts'
+      - 'apps/desktop/src/OfficialMinecraftPanel.tsx'
+      - 'apps/desktop/tests/official_minecraft.test.mjs'
+      - 'services/api/internal/httpapi/minecraft_link*'
+      - 'services/api/internal/repository/official_links*'
       - 'services/api/internal/dbmigrate/sql/0075*'
-      - '.github/workflows/official-linking-0268.yml'
+      - '.github/workflows/official-linking.yml'
   pull_request:
     paths:
       - 'apps/desktop/src-tauri/**'
-      - 'apps/desktop/src/official_minecraft_0257.ts'
-      - 'services/api/internal/httpapi/minecraft_link_0268*'
-      - 'services/api/internal/repository/official_links_0268*'
+      - 'apps/desktop/src/official_minecraft.ts'
+      - 'services/api/internal/httpapi/minecraft_link*'
+      - 'services/api/internal/repository/official_links*'
       - 'services/api/internal/dbmigrate/sql/0075*'
-      - '.github/workflows/official-linking-0268.yml'
+      - '.github/workflows/official-linking.yml'
   workflow_dispatch:
 permissions:
   contents: read

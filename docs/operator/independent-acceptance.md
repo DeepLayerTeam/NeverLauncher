@@ -10,8 +10,8 @@
 
 ```sh
 sudo install -d -m 0700 /var/lib/launcher-acceptance
-python3 scripts/operations/independent_accept_04514.py --help
-python3 scripts/operations/independent_accept_04514.py install-standard --help
+python3 scripts/operations/independent_accept.py --help
+python3 scripts/operations/independent_accept.py install-standard --help
 ```
 
 ### A. Чистая установка 0.45.14 на хосте A
@@ -19,7 +19,7 @@ python3 scripts/operations/independent_accept_04514.py install-standard --help
 Подготовить `.env` для **0.45.14** по [инструкции установки](installation.md), DNS, TLS, первый администратор и его пароль в отдельном файле. Хост должен быть чистым: старый `.launcher-compose-state.json` препятствует приёмке. Запуск делает **`production-deploy.py compose check` → `compose up` → `first-admin` → фактический `operator_accept live`**. Первичная настройка обязана завершиться действительным входом, повторный вызов первичной настройки не выполняется. Секреты не попадают в отчёт.
 
 ```sh
-sudo python3 scripts/operations/independent_accept_04514.py install-standard \
+sudo python3 scripts/operations/independent_accept.py install-standard \
   --primary-operator primaryuser --project launcher \
   --env-file /opt/launcher/deploy/production/.env \
   --version 0.45.14 --url https://launcher-a.example.org \
@@ -34,7 +34,7 @@ sudo python3 scripts/operations/independent_accept_04514.py install-standard \
 Должен работать **именно 0.45.13**. Подготовить два отдельных `.env` с одинаковыми секретами и конфигурацией; разрешено изменить только `LAUNCHER_IMAGE_TAG` (и управление автоматическими миграциями). В целевом `.env` обязательно `LAUNCHER_DATABASE_AUTO_MIGRATE=false`. Обеспечить необходимый исходный код и сборку Docker нового релиза, частный каталог снимков `0700`, окно обслуживания, отсутствие посторонних процессов записи в SQL. Это **только переключение компонентов на новую версию**; при изменениях схемы отдельно использовать [Database Upgrade](upgrades.md). Система сначала собирает новые образы, сохраняет согласованный снимок PostgreSQL/volumes, проверяет неизменность WAL, переключает API/Admin и при ошибке возвращает старые образы. После успеха повторно проверяются снимок, работающий Backend, вход прежнего владельца и чтение заранее существовавшего проекта. При включённом TOTP передайте `--totp-file /etc/launcher/owner-totp-code` (файл `0600` с текущим кодом). Вход, требующий WebAuthn/passkey, нельзя автоматически подменять паролем или объявлять успешным: завершите его вручную и зафиксируйте независимый результат.
 
 ```sh
-sudo python3 scripts/operations/independent_accept_04514.py upgrade-standard \
+sudo python3 scripts/operations/independent_accept.py upgrade-standard \
   --primary-operator primaryuser --project launcher --confirm launcher \
   --source-env /etc/launcher/standard-04513.env \
   --target-env /etc/launcher/standard-04514.env \
@@ -53,7 +53,7 @@ sudo python3 scripts/operations/independent_accept_04514.py upgrade-standard \
 На новом хосте должны быть пустые контейнеры и тома, версии образов **0.45.13**, доступ к тем же данным резервной копии, отдельным секретам и доверенному HTTPS для **нового** хоста. Публичное имя хоста и источник WebAuthn должны относиться к новому тестовому контуру (приложение не должно обращаться к старой серверной части). `--source-receipt` связывает снимок с оригинальным хостом через SHA-256 `manifest.json`. Фактический отпечаток Linux `machine-id` восстановленного хоста должен отличаться от источника. **Не поднимать два пишущих контура с одинаковой идентичностью**.
 
 ```sh
-sudo python3 scripts/operations/independent_accept_04514.py restore-standard \
+sudo python3 scripts/operations/independent_accept.py restore-standard \
   --primary-operator primaryuser --project launcher --confirm launcher \
   --source-receipt /var/lib/launcher-acceptance/upgrade.json \
   --env-file /etc/launcher/standard-restore-04513.env \
@@ -68,10 +68,10 @@ sudo python3 scripts/operations/independent_accept_04514.py restore-standard \
 
 ### D. Failover на изолированном Network-HA стенде D
 
-Отдельный Docker Compose проект с именем `nl-dr-*`, тестовый контейнер объектов MinIO того же формата, изолированный локальный входной HTTPS-прокси и доверенный сертификат. `AWS_ACCESS_KEY_ID` и `AWS_SECRET_ACCESS_KEY` должны соответствовать тестовым учётным данным S3. Требуются **оба API, оба обработчика заданий, PostgreSQL, Redis, MinIO и Nginx**, физически работающие. Запускается **`chaos_0456.py`**: реальные остановки PostgreSQL/Redis/MinIO/API и отключение сети обработчика заданий; контроль подтверждённых PostgreSQL/S3-записей, фактические RTO и canary RPO. Никакой production-проект эта команда не принимает.
+Отдельный Docker Compose проект с именем `nl-dr-*`, тестовый контейнер объектов MinIO того же формата, изолированный локальный входной HTTPS-прокси и доверенный сертификат. `AWS_ACCESS_KEY_ID` и `AWS_SECRET_ACCESS_KEY` должны соответствовать тестовым учётным данным S3. Требуются **оба API, оба обработчика заданий, PostgreSQL, Redis, MinIO и Nginx**, физически работающие. Запускается **`chaos.py`**: реальные остановки PostgreSQL/Redis/MinIO/API и отключение сети обработчика заданий; контроль подтверждённых PostgreSQL/S3-записей, фактические RTO и canary RPO. Никакой production-проект эта команда не принимает.
 
 ```sh
-sudo --preserve-env=AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY python3 scripts/operations/independent_accept_04514.py failover-network-ha \
+sudo --preserve-env=AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY python3 scripts/operations/independent_accept.py failover-network-ha \
   --primary-operator primaryuser --project nl-dr-acceptance --confirm nl-dr-acceptance \
   --env-file /etc/launcher/ha-chaos.env \
   --url https://127.0.0.1/ready --version 0.45.14 \
@@ -86,7 +86,7 @@ sudo --preserve-env=AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY python3 scripts/oper
 Скопировать по защищённому каналу отчёты в отдельный каталог приёмки с правами `0600`; `upgrade.json` должен сохранить **точные байты**, по которым хост C строил свой `restore.json`. Проверка подтверждает различие идентификаторов машин (machine-id) источника и восстановленного узла, связность SHA-256 и единый локальный аккаунт второго оператора. Не выдаёт самоподписанный сертификат независимого аудитора.
 
 ```sh
-sudo python3 scripts/operations/independent_accept_04514.py verify-receipts \
+sudo python3 scripts/operations/independent_accept.py verify-receipts \
   --primary-operator primaryuser \
   --install-receipt /var/lib/launcher-acceptance/install.json \
   --upgrade-receipt /var/lib/launcher-acceptance/upgrade.json \

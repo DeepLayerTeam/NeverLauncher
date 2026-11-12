@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
 from certification_run import identity
 
-DR = ROOT / "scripts/operations/dr_03512.py"
+DR = ROOT / "scripts/operations/dr.py"
 PROJECT = re.compile(r"nl-dr-[a-z0-9][a-z0-9-]{0,35}\Z")
 
 

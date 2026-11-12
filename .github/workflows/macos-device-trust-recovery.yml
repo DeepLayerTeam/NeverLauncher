@@ -3,17 +3,17 @@ on:
   push:
     paths:
       - 'apps/desktop/**'
-      - 'services/api/internal/httpapi/device_key_recovery_0128.go'
-      - 'services/api/internal/httpapi/macos_recovery_0316_test.go'
+      - 'services/api/internal/httpapi/device_key_recovery.go'
+      - 'services/api/internal/httpapi/macos_recovery_test.go'
       - 'services/api/internal/trustbaseline/**'
-      - '.github/workflows/macos-device-trust-recovery-0316.yml'
+      - '.github/workflows/macos-device-trust-recovery.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
-      - 'services/api/internal/httpapi/device_key_recovery_0128.go'
-      - 'services/api/internal/httpapi/macos_recovery_0316_test.go'
+      - 'services/api/internal/httpapi/device_key_recovery.go'
+      - 'services/api/internal/httpapi/macos_recovery_test.go'
       - 'services/api/internal/trustbaseline/**'
-      - '.github/workflows/macos-device-trust-recovery-0316.yml'
+      - '.github/workflows/macos-device-trust-recovery.yml'
   workflow_dispatch:
 permissions:
   contents: read

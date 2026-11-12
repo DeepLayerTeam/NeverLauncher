@@ -3,6 +3,7 @@ package dbmigrate
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,6 +19,14 @@ func TestEmbeddedMigrationCatalogMatchesBackendBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	mapping, err := os.ReadFile(filepath.Join(source, "..", "migration_names.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names map[string]string
+	if err := json.Unmarshal(mapping, &names); err != nil {
+		t.Fatal(err)
+	}
 	expected := make(map[string][]byte)
 	for _, entry := range files {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".sql" {
@@ -27,7 +36,11 @@ func TestEmbeddedMigrationCatalogMatchesBackendBytes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		expected[entry.Name()] = b
+		name := entry.Name()
+		if historical, ok := names[name]; ok {
+			name = historical
+		}
+		expected[name] = b
 	}
 	if len(migrations) != len(expected) || len(migrations) < 100 {
 		t.Fatalf("Количество миграций CLI %d не совпадает с Backend %d", len(migrations), len(expected))

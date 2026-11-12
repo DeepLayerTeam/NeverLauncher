@@ -9,7 +9,7 @@
 3. Для переименования:
 
    ```bash
-   python3 tools/gravit-port/fileauth_writeback_0496.py \
+   python3 tools/gravit-port/fileauth_writeback.py \
       --source /srv/gravit/auth/Database.json \
       --backup /srv/gravit/auth/Database.pre-0496-20261102.json \
       --expected-sha256 <64-CHARACTER-HEX-SHA256> \
@@ -25,13 +25,13 @@
 
 ## Доверие к релизу и делегированные сертификаты
 
-`trust_certificates_0496.py` управляет **доверием к компонентам через делегированные сертификаты с подписью корневым ключом**, а не сертификатами Windows Authenticode или Mojang. Применяется существующий закреплённый корень доверия; ключ, заявленный входными данными Gravit либо созданный при запуске, не становится доверенным. Выполняйте команды только в автономном окружении подписи релизов. Храните исходные данные корневого ключа в предварительно настроенной переменной окружения `LAUNCHER_TRUST_ROOT_ED25519_SEED`, но никогда в распространяемом дереве исходников.
+`trust_certificates.py` управляет **доверием к компонентам через делегированные сертификаты с подписью корневым ключом**, а не сертификатами Windows Authenticode или Mojang. Применяется существующий закреплённый корень доверия; ключ, заявленный входными данными Gravit либо созданный при запуске, не становится доверенным. Выполняйте команды только в автономном окружении подписи релизов. Храните исходные данные корневого ключа в предварительно настроенной переменной окружения `LAUNCHER_TRUST_ROOT_ED25519_SEED`, но никогда в распространяемом дереве исходников.
 
 1. Проверьте и закрепите **точный SHA-256 существующего файла подписанной политики**. Предоставьте открытый ключ корня доверия из заранее настроенного двоичного якоря.
 2. Выпустите делегированный сертификат и ключ:
 
    ```bash
-   python3 scripts/release/trust_certificates_0496.py issue \
+   python3 scripts/release/trust_certificates.py issue \
       --signed-policy /secure/trust/signed.json --output /secure/trust/signed.json \
       --expected-sha256 <SIGNED-POLICY-SHA256> --root-public <PINNED-ROOT-PUBLIC-HEX> \
       --key-id components-0496 --private-key-output /secure/trust/components-0496.key
@@ -53,9 +53,9 @@
 Выполните целевые тесты Python:
 
 ```bash
-python3 -m unittest discover -s tools/gravit-port -p 'test_fileauth_writeback_0496.py'
+python3 -m unittest discover -s tools/gravit-port -p 'test_fileauth_writeback.py'
 python3 -m unittest discover -s scripts/release -p 'test_trust_policy_*.py'
-python3 -m unittest discover -s scripts/release -p 'test_trust_certificates_0496.py'
+python3 -m unittest discover -s scripts/release -p 'test_trust_certificates.py'
 ```
 
 Для тестов Backend требуются **Go 1.27.3**, чистый кеш зависимостей, а для интегрированной авторизации и Guard — PostgreSQL и работающий API. После их успешного выполнения проверьте: внешний вход FileAuth и удаление внешнего аккаунта; выдачу подписанной политики → подпись компонента → отзыв ключа → отказ в подписи; работу Guard в Windows и защиту от повторного воспроизведения; проверку права владения Minecraft и подключение через Microsoft на окружениях, приближенных к промышленным.

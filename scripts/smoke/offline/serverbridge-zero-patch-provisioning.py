@@ -20,8 +20,8 @@ parts = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if parts < (0, 19, 9):
     raise SystemExit(f"Ожидалась VERSION >= 0.19.9, получено {version}")
 main = read("cli/cmd/launcher/main.go")
-prov = read("cli/cmd/launcher/serverbridge_provisioning_0199.go")
-tests = read("cli/cmd/launcher/serverbridge_provisioning_0199_test.go")
+prov = read("cli/cmd/launcher/serverbridge_provisioning.go")
+tests = read("cli/cmd/launcher/serverbridge_provisioning_test.go")
 release = read("cli/cmd/launcher/serverbridge_release.go")
 require(
     main,

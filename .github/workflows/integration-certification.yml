@@ -15,11 +15,14 @@ on:
       - 'scripts/desktop/**'
       - 'scripts/diagnostics/**'
       - 'VERSION'
-      - '.github/workflows/integration-certification-03012.yml'
+      - '.github/workflows/integration-certification.yml'
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   integration:
     strategy:
@@ -56,7 +59,7 @@ jobs:
         shell: bash
         run: |
           python3 scripts/version/manage.py check
-          python3 scripts/certification/test_integration_03012.py
+          python3 scripts/certification/test_integration.py
       - name: Запуск интеграционных тестов реальных подпроцессов, JAR, Go и платформ
         shell: bash
         env:
@@ -65,7 +68,7 @@ jobs:
           set -euo pipefail
           ext=''
           if [ "$RUNNER_OS" = Windows ]; then ext='.exe'; fi
-          python3 scripts/certification/run_integration_03012.py \
+          python3 scripts/certification/run_integration.py \
             --cases "$SUITE_CASES" \
             --cli "$RUNNER_TEMP/nl-03012$ext" \
             --report "$RUNNER_TEMP/integration-03012.json" \
@@ -121,7 +124,7 @@ jobs:
           path: reports
       - name: Проверка полной матрицы ОС и сценариев на одном коммите
         run: |
-          python3 scripts/certification/review_integration_03012.py \
+          python3 scripts/certification/review_integration.py \
             --evidence reports --revision "$GITHUB_SHA" --output integration-review-03012.json
       - uses: actions/upload-artifact@v4
         with:

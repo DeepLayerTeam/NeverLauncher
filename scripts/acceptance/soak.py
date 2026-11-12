@@ -30,7 +30,7 @@ import http.client as http_client
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/acceptance'))
 sys.path.insert(0, str(ROOT / 'scripts/compatibility'))
-import inventory_0521 as inventory
+import inventory as inventory
 
 SCHEMA = 'launcher.real-soak/' + inventory.VERSION
 MAX_LOG = 32 * 1024 * 1024

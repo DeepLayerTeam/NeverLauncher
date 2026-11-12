@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 
-import production_cutover_04911 as co
+import production_cutover as co
 
 FORMAT = "launcher/gravit-operational-rollback/v1"
 UNIT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.@-]{0,126}\.service$")

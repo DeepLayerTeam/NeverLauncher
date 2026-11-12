@@ -10,20 +10,20 @@ if version < (0, 19, 6):
         f"Topology & Routing 2: требуется версия не ниже 0.19.6, получено {version}"
     )
 required = [
-    "services/api/internal/httpapi/server_bridge_routing_0196.go",
-    "services/api/internal/repository/server_bridge_routing_0196.go",
-    "services/api/internal/dbmigrate/sql/0037_serverbridge_topology_routing2_0196.sql",
-    "cli/internal/dbmigrate/sql/0037_serverbridge_topology_routing2_0196.sql",
+    "services/api/internal/httpapi/server_bridge_routing.go",
+    "services/api/internal/repository/server_bridge_routing.go",
+    "services/api/internal/dbmigrate/sql/0037_serverbridge_topology_routing2_.sql",
+    "cli/internal/dbmigrate/sql/0037_serverbridge_topology_routing2_.sql",
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeRoutingSnapshot.java",
 ]
 for rel in required:
     if not resource_exists(ROOT, rel):
         raise SystemExit(f"Отсутствует: «0.19.6 рабочий файл»: {rel}")
 proto = (
-    ROOT / "services/api/internal/httpapi/server_bridge_protocol_0191.go"
+    ROOT / "services/api/internal/httpapi/server_bridge_protocol.go"
 ).read_text()
 route = (
-    ROOT / "services/api/internal/httpapi/server_bridge_routing_0196.go"
+    ROOT / "services/api/internal/httpapi/server_bridge_routing.go"
 ).read_text()
 repo = (ROOT / "services/api/internal/repository/server_bridge_v2.go").read_text()
 client = (
@@ -76,8 +76,8 @@ for text, wants, label in [
         if want not in text:
             raise SystemExit(f"{label}: отсутствует {want!r}")
 for text, want, label in [
-    (preflight, "serverbridge-topology-routing2-0196.py", "preflight"),
-    (ci, "serverbridge-topology-routing2-0196.py", "CI"),
+    (preflight, "serverbridge-topology-routing2-.py", "preflight"),
+    (ci, "serverbridge-topology-routing2-.py", "CI"),
 ]:
     if want not in text:
         raise SystemExit(f"{label}: отсутствует {want!r}")

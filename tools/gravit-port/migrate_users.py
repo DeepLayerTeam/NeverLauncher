@@ -263,7 +263,7 @@ def main(argv=None):
     p.add_argument("--allow-manual-resets", action="store_true")
     p.add_argument("--fresh-keys-confirmed", action="store_true", help="Оператор подтверждает независимое создание ключей подписи Launcher и JWT")
     p.add_argument("--roles-file", help="Одобренные явные назначения ролей UUID → проект (только импорт, требуется недавняя MFA через passkey)")
-    p.add_argument("--texture-mapping-output", help="Проверенная карта UUID для gravit-textures-import-02510 (только импорт)")
+    p.add_argument("--texture-mapping-output", help="Проверенная карта UUID для gravit-textures-import (только импорт)")
     p.add_argument("--receipt", required=True)
     args = p.parse_args(argv)
     if not RUN_ID.fullmatch(args.run_id):

@@ -6,7 +6,7 @@
 
 1. Не менее **двух отдельных физических Docker-хостов** работают с `deploy/production/docker-compose.multi-host.yml`; на каждом API, обработчик заданий, Admin и входной прокси должны быть исправны независимо. Публичный TLS-балансировщик направляет `/ready` на исправный оставшийся узел и сохраняет другой маршрут, пока перезапускается API одного хоста. Используйте разные ID узлов/реплик и независимые идентичности Docker Engine.
 2. Инженеры выпуска независимо проверяют **OCI-дайджест образа API 0.51.7**, подписанные свидетельства цепочки поставки и соответствие пакета коммиту. После запуска `/ready` и `/api/v1/status` должны отражать `0.51.7`. Все остальные образы (Admin, входной прокси и инициализатор) остаются прежними. Сертификаты выпуска и промышленные секреты управляются отдельно; контроллер не подписывает образы и не обходит шлюзы доверия.
-3. На **каждом** хосте установите версии 0.51.7 скриптов `scripts/operations/rolling_update_0517.py`, `multi_host_0512.py`, `nn1_compat_0516.py`, `ha_inventory_0511.py`. Доверенный оператор устанавливает их вместе с полным неизменённым каталогом SQL PostgreSQL и `psql`. SSH должен использовать заранее подготовленный файл известных хостов и `BatchMode=yes`; доступ к Docker ограничен доверенными операторами. Требуются Python 3.11+ и Docker Compose v2.
+3. На **каждом** хосте установите версии 0.51.7 скриптов `scripts/operations/rolling_update.py`, `multi_host.py`, `nn1_compat.py`, `ha_inventory.py`. Доверенный оператор устанавливает их вместе с полным неизменённым каталогом SQL PostgreSQL и `psql`. SSH должен использовать заранее подготовленный файл известных хостов и `BatchMode=yes`; доступ к Docker ограничен доверенными операторами. Требуются Python 3.11+ и Docker Compose v2.
 4. На каждом Docker-хосте создайте **закрытый** `deploy/production/.env.rolling-target-0517` из существующего `.env`; *единственным* отличием должно быть `LAUNCHER_API_IMAGE=<verified-0.51.7-image@sha256:digest>`. Контроллер сравнивает полностью отрисованный Compose JSON, а не только объявленные строки, и отклоняет изменения секретов, доверенных ключей, конечных точек, ID узлов, портов, томов, образов Admin/ingress, монтирований и healthcheck. Владелец файлов должен совпадать, права — 0600, каталог не должен быть доступен группе и посторонним на запись. Не переносите `.env` на машину оператора и не передавайте секреты через argv.
 5. На машине оператора создайте файл 0600 с одним URL PostgreSQL и `sslmode=verify-full` для общего *основного узла записи*. Роли необходимы чтение `schema_migrations` и `information_schema` и право получать рекомендательные блокировки. URL передаётся через локальный файл, а не учётные данные командной строки. Пока работает 0.51.6, DDL запрещён. Проверьте соответствие всех 117 хешей файлов миграций закреплённому каталогу 0.51.5/0.51.6. На время обновления заморозьте другие инструменты развёртывания на этих хостах (блокировку PostgreSQL использует только этот контроллер, но не посторонние инструменты).
 6. До переключения независимо проверьте настоящую явную команду ServerBridge, обработку фоновых заданий и исходящей очереди, аутентификацию, публикацию и трафик чтения/записи к общим зависимостям. Контроллер выполняет HTTP-проверки и проверки живых зависимостей, но **не** повторяет все сценарии приложения.
@@ -18,7 +18,7 @@
 ```sh
 cd /opt/launcher/deploy/production
 chmod 600 .env .env.rolling-target-0517
-python3 /opt/launcher/scripts/operations/rolling_update_0517.py local-plan \
+python3 /opt/launcher/scripts/operations/rolling_update.py local-plan \
   --directory /opt/launcher/deploy/production --project launcher \
   --output /var/lib/launcher/evidence/roll-plan-$(hostname).json
 ```
@@ -28,11 +28,11 @@ python3 /opt/launcher/scripts/operations/rolling_update_0517.py local-plan \
 ## Промышленное развёртывание доверенным оператором
 
 ```sh
-python3 scripts/operations/rolling_update_0517.py cluster-roll \
+python3 scripts/operations/rolling_update.py cluster-roll \
   --node a=deployer@host-a.internal --node b=deployer@host-b.internal \
   --directory /opt/launcher/deploy/production --project launcher \
-  --remote-script /opt/launcher/scripts/operations/multi_host_0512.py \
-  --rolling-script /opt/launcher/scripts/operations/rolling_update_0517.py \
+  --remote-script /opt/launcher/scripts/operations/multi_host.py \
+  --rolling-script /opt/launcher/scripts/operations/rolling_update.py \
   --edge-url https://launcher.example \
   --pg-dsn-file /secure/launcher-ha-writer.url \
   --allow-update \
@@ -57,7 +57,7 @@ python3 scripts/operations/rolling_update_0517.py cluster-roll \
 При неожиданном завершении оператора или SSH проверьте фактические версии кластера и журнал состояния хоста. Если журнал содержит `stopping`, `switching` либо `applied` и требуется откат узла, выполните на нём:
 
 ```sh
-python3 /opt/launcher/scripts/operations/rolling_update_0517.py local-rollback \
+python3 /opt/launcher/scripts/operations/rolling_update.py local-rollback \
   --directory /opt/launcher/deploy/production --project launcher \
   --allow-update --output /var/lib/launcher/evidence/rollback-$(hostname).json
 ```

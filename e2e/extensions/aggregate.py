@@ -52,7 +52,7 @@ def validate(folder, source_commit, version, run_id, run_attempt):
             matrix_sha = hashlib.sha256(
                 (
                     Path(__file__).resolve().parents[2]
-                    / "compatibility/gravit/module-parity-04211.json"
+                    / "compatibility/gravit/module-parity_variant5.json"
                 ).read_bytes()
             ).hexdigest()
             if (

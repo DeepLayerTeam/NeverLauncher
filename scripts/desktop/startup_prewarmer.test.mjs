@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {warmAfterIdle03011} from '../../apps/desktop/src/startup_prewarmer_03011.ts';
+import {warmAfterIdle03011} from '../../apps/desktop/src/startup_prewarmer.ts';
 const flush = () => new Promise(resolve=>setImmediate(resolve));
 test('Фоновый предварительный прогрев отложен и выполняется последовательно, не задерживая запуск', async()=>{
  let fire;const seen=[];let complete;

@@ -34,7 +34,7 @@ jobs:
           python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json
           python3 e2e/scripts/test_prepare_vanilla_1171_void_world.py
           python3 e2e/scripts/test_vanilla_1171_resource_ready_proxy.py
-          python3 e2e/scripts/test_live_join_0524.py
+          python3 e2e/scripts/test_live_join.py
           full_matrix="$(python3 scripts/compatibility/matrix.py plan --targets compatibility/targets.json)"
           matrix="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[:mid]},separators=(",",":")))' <<<"$full_matrix")"
           matrix_b="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[mid:]},separators=(",",":")))' <<<"$full_matrix")"
@@ -534,7 +534,7 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p acceptance-0521
-          python3 scripts/acceptance/inventory_0521.py inventory \
+          python3 scripts/acceptance/inventory.py inventory \
             --results-root compatibility-results \
             --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
             --attempt "$GITHUB_RUN_ATTEMPT" --gate minecraft \
@@ -543,7 +543,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/acceptance/sweep_05211.py minecraft \
+          python3 scripts/acceptance/sweep.py minecraft \
             --compat-results "$PWD/compatibility-results" \
             --commit "$GITHUB_SHA" --compat-run-id "$GITHUB_RUN_ID" \
             --compat-attempt "$GITHUB_RUN_ATTEMPT" \

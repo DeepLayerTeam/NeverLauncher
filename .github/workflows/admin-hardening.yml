@@ -5,7 +5,7 @@ on:
       - 'apps/admin/**'
       - 'services/api/**'
       - 'e2e/scripts/*02112*'
-      - '.github/workflows/admin-hardening-02112.yml'
+      - '.github/workflows/admin-hardening.yml'
   workflow_dispatch:
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
         working-directory: services/api
         run: go test -race -count=1 ./internal/httpapi ./internal/repository
       - name: "Проверить надёжность настоящей интеграции PostgreSQL и ServerBridge"
-        run: bash e2e/scripts/run-admin-hardening-02112-e2e.sh
+        run: bash e2e/scripts/run-admin-hardening-e2e.sh
   admin-build-tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
@@ -65,4 +65,4 @@ jobs:
           python3 -m pip install playwright==1.58.0
           python3 -m playwright install --with-deps chromium
       - name: "Проверка браузером на настоящем тестовом Backend (без имитаций)"
-        run: python3 e2e/scripts/admin-hardening-02112-browser.py
+        run: python3 e2e/scripts/admin-hardening-browser.py

@@ -16,14 +16,14 @@ import re
 import shutil
 import signal
 import sys
-from runtime_capabilities_03410 import host_identity
-from process_group_03410 import group_flags, kill_tree
+from runtime_capabilities import host_identity
+from process_group import group_flags, kill_tree
 import socket
 import subprocess
 import threading
 import time
 import zipfile
-from staged_readiness_0343 import StartupObserver, log_health
+from staged_readiness import StartupObserver, log_health
 
 SCHEMA = "launcher.lifecycle-validation.v1"
 MAX_ZIP_BYTES = 8 << 30
@@ -291,7 +291,7 @@ def run_game_launch(
     max_seconds=180,
 ):
     # Импортируйте настоящий наблюдатель Runtime, а не имитацию проверки готовности.
-    from staged_readiness_0343 import StartupObserver
+    from staged_readiness import StartupObserver
     import time as _time
     import subprocess as _subprocess
 

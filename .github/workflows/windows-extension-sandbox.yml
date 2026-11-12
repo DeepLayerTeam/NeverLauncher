@@ -8,13 +8,13 @@ on:
       - 'services/api/internal/extensionbroker/**'
       - 'sdk/backend/go/**'
       - 'sdk/cli/go/**'
-      - '.github/workflows/windows-extension-sandbox-03111.yml'
+      - '.github/workflows/windows-extension-sandbox.yml'
   pull_request:
     paths:
       - 'services/api/internal/windowssandbox/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionbroker/**'
-      - '.github/workflows/windows-extension-sandbox-03111.yml'
+      - '.github/workflows/windows-extension-sandbox.yml'
   workflow_dispatch:
 
 permissions:

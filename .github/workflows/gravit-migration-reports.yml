@@ -3,15 +3,15 @@ on:
   push:
     paths:
       - 'services/api/internal/gravitreport/**'
-      - 'services/api/internal/repository/migration_report_03313*'
-      - 'services/api/internal/httpapi/migration_report_03313.go'
+      - 'services/api/internal/repository/migration_report*'
+      - 'services/api/internal/httpapi/migration_report.go'
       - 'services/api/internal/httpapi/handler.go'
       - 'services/api/internal/dbmigrate/sql/0100*'
-      - 'cli/cmd/launcher/migration_report_03313*'
-      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'cli/cmd/launcher/migration_report*'
+      - 'apps/admin/src/admin/MigrationCenter.tsx'
       - 'services/api/internal/embeddedadmin/site/**'
       - 'schemas/openapi*'
-      - '.github/workflows/gravit-migration-reports-03313.yml'
+      - '.github/workflows/gravit-migration-reports.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -28,7 +28,7 @@ jobs:
           POSTGRES_PASSWORD: test_only_not_production
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U launcher_test -d launcher_test'
+          --health-cmd "pg_isready -U launcher_test -d launcher_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20

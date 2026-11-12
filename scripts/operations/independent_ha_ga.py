@@ -27,8 +27,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/release'))
-import multi_host_0512 as multi
-import nn1_compat_0516 as compat
+import multi_host as multi
+import nn1_compat as compat
 
 VERSION = '0.52.0'
 SCHEMA = 'launcher.ha-independent-acceptance/0.52.0'
@@ -36,10 +36,10 @@ CHAOS_SCHEMA = 'launcher.multi-host-chaos/0.51.10'
 ROLL_SCHEMA = 'launcher.rolling-update.0.52.0'
 DR_SCHEMA = 'launcher.cross-host-recovery/0.51.9'
 COMMANDS = {
-    'chaos': ROOT / 'scripts/operations/multi_host_chaos_05110.py',
-    'rolling': ROOT / 'scripts/operations/rolling_update_0520.py',
-    'recovery': ROOT / 'scripts/operations/multi_host_0512.py',
-    'bundle': ROOT / 'scripts/release/delivery_verify_0462.py',
+    'chaos': ROOT / 'scripts/operations/multi_host_chaos.py',
+    'rolling': ROOT / 'scripts/operations/rolling_update_variant2.py',
+    'recovery': ROOT / 'scripts/operations/multi_host.py',
+    'bundle': ROOT / 'scripts/release/delivery_verify.py',
 }
 STAGES = ('chaos', 'rolling', 'recovery', 'bundle')
 COMMIT = re.compile(r'[0-9a-f]{40}\Z')
@@ -360,7 +360,7 @@ def validate_stage_receipts(files, *, commit, publisher):
 def final_bundle(args):
     # Фактический каталог выпуска проверяется повторно, а не принимается из
     # сохранённых сведений.
-    from delivery_verify_0462 import verify_bundle
+    from delivery_verify import verify_bundle
     bundle = Path(args.bundle)
     require(bundle.is_absolute(), 'Конечный каталог загрузки должен иметь абсолютный путь')
     verified = verify_bundle(bundle, release_manifest=True)
@@ -417,9 +417,9 @@ def main(argv=None):
     ap.add_argument('--project', default='launcher')
     ap.add_argument('--directory', default='/opt/launcher/deploy/production')
     ap.add_argument('--edge-url', default='')
-    ap.add_argument('--remote-script', default='/opt/launcher/scripts/operations/multi_host_0512.py')
-    ap.add_argument('--chaos-script', default='/opt/launcher/scripts/operations/multi_host_chaos_05110.py')
-    ap.add_argument('--rolling-script', default='/opt/launcher/scripts/operations/rolling_update_0520.py')
+    ap.add_argument('--remote-script', default='/opt/launcher/scripts/operations/multi_host.py')
+    ap.add_argument('--chaos-script', default='/opt/launcher/scripts/operations/multi_host_chaos.py')
+    ap.add_argument('--rolling-script', default='/opt/launcher/scripts/operations/rolling_update_variant2.py')
     ap.add_argument('--pg-dsn-file', default='')
     ap.add_argument('--suite-directory', default='')
     ap.add_argument('--iterations', type=int, default=1)

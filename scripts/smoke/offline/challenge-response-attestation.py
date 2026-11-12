@@ -22,7 +22,7 @@ need('services/api/internal/httpapi/routes_auth.go', [
     '/api/v1/auth/devices/{deviceId}/attest/begin',
     '/api/v1/auth/devices/{deviceId}/attest/complete',
 ])
-need('services/api/internal/httpapi/device_attestation_0124.go', [
+need('services/api/internal/httpapi/device_attestation.go', [
     'deviceAttestationChallengeTTL0124 = 2 * time.Minute',
     'deviceAttestationValidity0124     = 12 * time.Hour',
     'Purpose:       "attest"',
@@ -41,7 +41,7 @@ need('services/api/internal/httpapi/device_attestation_0124.go', [
     'challengeExpires := canonicalDeviceAttestationTime0124(now.Add(deviceAttestationChallengeTTL0124))',
     'validUntil := canonicalDeviceAttestationTime0124(now.Add(deviceAttestationValidity0124))',
 ])
-need('services/api/internal/repository/devices_0121.go', [
+need('services/api/internal/repository/devices.go', [
     'challenge-response-attested',
     'AttestTrustedDevice',
     'attestation_state',
@@ -77,7 +77,7 @@ need('apps/desktop/src/main.tsx', [
     "hardwareProvenance !== 'not-remotely-verified'",
     'vendor TPM/Secure Enclave provenance не заявляется',
 ])
-need('services/api/internal/httpapi/device_attestation_0124_test.go', [
+need('services/api/internal/httpapi/device_attestation_test.go', [
     'TestDeviceChallengeResponseAttestation0124',
     'attestation replay accepted',
     'wrong attestation signature accepted',
@@ -85,14 +85,14 @@ need('services/api/internal/httpapi/device_attestation_0124_test.go', [
     'TestDeviceChallengeResponseAttestationRejectsSoftwareKey0124',
     'TestDeviceAttestationPayloadStableAcrossPostgresTimestampPrecision0124',
 ])
-need('services/api/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql', [
+need('services/api/internal/dbmigrate/sql/0014_challenge_response_attestation.sql', [
     "assurance IN ('proof-of-possession','challenge-response-attested')",
     "attestation_state IN ('unattested','verified','revoked')",
     "purpose IN ('register','session-bind','attest')",
 ])
 
-api = ROOT / 'services/api/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql'
-cli = 'cli/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql'
+api = ROOT / 'services/api/internal/dbmigrate/sql/0014_challenge_response_attestation.sql'
+cli = 'cli/internal/dbmigrate/sql/0014_challenge_response_attestation.sql'
 if not api.is_file() or not resource_exists(ROOT, cli) or api.read_bytes() != resource_read_bytes(ROOT, cli):
     errors.append('SQL-миграция 0014 различается в каталогах API и CLI')
 

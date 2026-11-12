@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+from embedded_resources import resource_read_text
 import zipfile
 import json
 import re
@@ -23,8 +24,7 @@ def fail(message: str) -> None:
 
 def read(rel: str) -> str:
     if rel.startswith("cli/internal/dbmigrate/sql/"):
-        with zipfile.ZipFile(ROOT / "cli/internal/dbmigrate/catalog.zip") as archive:
-            return archive.read("sql/" + rel.rsplit("/", 1)[-1]).decode("utf-8")
+        return resource_read_text(ROOT, rel)
     return (ROOT / rel).read_text(encoding="utf-8")
 
 
@@ -99,21 +99,23 @@ api_files = {p.name: p for p in api_migrations.glob("*.sql")}
 with zipfile.ZipFile(ROOT / "cli/internal/dbmigrate/catalog.zip") as cli_catalog:
     cli_files = {info.filename.removeprefix("sql/"): cli_catalog.read(info)
                  for info in cli_catalog.infolist()}
-if set(api_files) != set(cli_files):
-    missing_cli = sorted(set(api_files) - set(cli_files))
-    missing_api = sorted(set(cli_files) - set(api_files))
+migration_names = json.loads((api_migrations.parent / "migration_names.json").read_text(encoding="utf-8"))
+canonical_api_files = {migration_names.get(name, name): path for name, path in api_files.items()}
+if set(canonical_api_files) != set(cli_files):
+    missing_cli = sorted(set(canonical_api_files) - set(cli_files))
+    missing_api = sorted(set(cli_files) - set(canonical_api_files))
     fail(
         f"Расхождение цепочки миграций: отсутствует в CLI={missing_cli}, отсутствует в API={missing_api}"
     )
 else:
-    for name in sorted(api_files):
-        api_digest = hashlib.sha256(api_files[name].read_bytes()).digest()
+    for name in sorted(canonical_api_files):
+        api_digest = hashlib.sha256(canonical_api_files[name].read_bytes()).digest()
         cli_digest = hashlib.sha256(cli_files[name]).digest()
         if api_digest != cli_digest:
             fail(f"Несовпадение контрольной суммы миграции Backend и CLI: {name}")
-if "0011_auth_federation_release_0120.sql" not in api_files:
+if "0011_auth_federation_release.sql" not in api_files:
     fail("Отсутствует «миграция выпуска федеративной авторизации 0.12.0»")
-release_migration = api_files["0011_auth_federation_release_0120.sql"].read_text(
+release_migration = api_files["0011_auth_federation_release.sql"].read_text(
     encoding="utf-8"
 )
 for required in [
@@ -123,9 +125,9 @@ for required in [
 ]:
     if required not in release_migration:
         fail(f"В проверке «миграция выпуска федерации 0.12.0» отсутствует обязательный инвариант: {required}")
-if "0012_device_trust_core_0121.sql" not in api_files:
+if "0012_device_trust_core.sql" not in api_files:
     fail("Отсутствует «миграция ядра доверия к устройствам 0.12.1»")
-device_migration = api_files["0012_device_trust_core_0121.sql"].read_text(
+device_migration = api_files["0012_device_trust_core.sql"].read_text(
     encoding="utf-8"
 )
 for required in [
@@ -137,10 +139,10 @@ for required in [
 ]:
     if required not in device_migration:
         fail(f"В проверке «миграция доверия к устройствам 0.12.1» отсутствует обязательный инвариант: {required}")
-if "0014_challenge_response_attestation_0124.sql" not in api_files:
+if "0014_challenge_response_attestation.sql" not in api_files:
     fail("Отсутствует «миграция аттестации с запросом и ответом 0.12.4»")
 attestation_migration = api_files[
-    "0014_challenge_response_attestation_0124.sql"
+    "0014_challenge_response_attestation.sql"
 ].read_text(encoding="utf-8")
 for required in [
     "attestation_state",
@@ -329,8 +331,8 @@ if (
 ):
     fail("0.12.0: вход по passkey без пароля не должен выдавать себя за идентификатор локального провайдера")
 device_routes = read("services/api/internal/httpapi/routes_auth.go")
-device_trust = read("services/api/internal/httpapi/device_trust_0121.go")
-device_repo = read("services/api/internal/repository/devices_0121.go")
+device_trust = read("services/api/internal/httpapi/device_trust.go")
+device_repo = read("services/api/internal/repository/devices.go")
 for required in [
     "/api/v1/auth/devices/register/begin",
     "/api/v1/auth/devices/register/complete",
@@ -356,7 +358,7 @@ for required in [
 ]:
     if required not in device_repo:
         fail(f"Неполная реализация «хранение данных и отзыв доверия к устройству 0.12.1»: {required}")
-if not (ROOT / "services/api/internal/httpapi/device_trust_0121_test.go").is_file():
+if not (ROOT / "services/api/internal/httpapi/device_trust_test.go").is_file():
     fail("Отсутствует «сквозной HTTP-тест доверия к устройству 0.12.1»")
 # В 0.12.2 официальный Desktop должен полностью управлять жизненным циклом закрытого
 # ключа устройства. Закрытый seed допустим лишь внутри нативной границы Tauri/keyring;
@@ -413,7 +415,7 @@ if "cargo test --manifest-path src-tauri/Cargo.toml" not in ci:
 # являются удалённой аттестацией и не должны усиливать гарантии MFA или авторизации.
 hardware_gate = read("scripts/smoke/offline/hardware-bound-identity.py")
 hardware_migration = read(
-    "services/api/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql"
+    "services/api/internal/dbmigrate/sql/0013_hardware_bound_identities.sql"
 )
 for required in [
     "hardware-enclave",
@@ -440,7 +442,7 @@ for required in [
     if required not in hardware_migration:
         fail(f"Неполная реализация «миграция аппаратной идентичности 0.12.3»: {required}")
 if "TestDeviceTrustHardwareP256RegistrationAndBinding0123" not in read(
-    "services/api/internal/httpapi/device_trust_0121_test.go"
+    "services/api/internal/httpapi/device_trust_test.go"
 ):
     fail("Отсутствует «сквозной HTTP-тест P-256 0.12.3»")
 if (
@@ -465,8 +467,8 @@ if (
 # ключу. Пока она актуальна, повышается только доверие к устройству; нельзя
 # заявлять происхождение из TPM или Secure Enclave либо усиливать RBAC/MFA.
 attestation_gate = read("scripts/smoke/offline/challenge-response-attestation.py")
-attestation_handler = read("services/api/internal/httpapi/device_attestation_0124.go")
-attestation_test = read("services/api/internal/httpapi/device_attestation_0124_test.go")
+attestation_handler = read("services/api/internal/httpapi/device_attestation.go")
+attestation_test = read("services/api/internal/httpapi/device_attestation_test.go")
 for required in [
     'Purpose:       "attest"',
     "ConsumeDeviceChallenge",
@@ -506,11 +508,11 @@ for forbidden in [
 # транзакционно распространять отзыв; клиент и администратор должны
 # иметь доступ к управлению без повторной регистрации старого отпечатка.
 device_management_gate = read("scripts/smoke/offline/device-management-revocation.py")
-device_management = read("services/api/internal/httpapi/device_management_0125.go")
+device_management = read("services/api/internal/httpapi/device_management.go")
 device_management_test = read(
-    "services/api/internal/httpapi/device_management_0125_test.go"
+    "services/api/internal/httpapi/device_management_test.go"
 )
-device_repository = read("services/api/internal/repository/devices_0121.go")
+device_repository = read("services/api/internal/repository/devices.go")
 for required in [
     "RevokeOtherTrustedDevices",
     "invalidatedChallenges",
@@ -554,10 +556,10 @@ if "Device Management + Revocation gate OK" not in device_management_gate:
 # сервер, старые токены не проходят при несовпадении binding_epoch, обновление
 # привязанного сеанса требует подтверждения текущим ключом, а риски применяют
 # усиленную проверку, повторную аттестацию или отзыв при чувствительных операциях.
-session_device_gate = read("scripts/smoke/offline/session-device-risk-0126.py")
-session_risk = read("services/api/internal/httpapi/session_device_risk_0126.go")
+session_device_gate = read("scripts/smoke/offline/session-device-risk.py")
+session_risk = read("services/api/internal/httpapi/session_device_risk.go")
 session_risk_test = read(
-    "services/api/internal/httpapi/session_device_risk_0126_test.go"
+    "services/api/internal/httpapi/session_device_risk_test.go"
 )
 auth_go = read("services/api/internal/httpapi/auth.go")
 auth_accounts = read("services/api/internal/httpapi/auth_accounts.go")
@@ -595,8 +597,8 @@ for required in [
     if required not in session_risk_test:
         fail(f"Недостаточное регрессионное покрытие «оценка риска сеанса и устройства 0.12.6»: {required}")
 if (
-    "session-device-risk-0126.py" not in preflight
-    or "scripts/smoke/offline/session-device-risk-0126.py" not in ci
+    "session-device-risk.py" not in preflight
+    or "scripts/smoke/offline/session-device-risk.py" not in ci
 ):
     fail("Проверка «0.12.6: риски сеанса и устройства» не подключена к предварительным проверкам и CI")
 if "Session <-> Device binding + risk integration gate OK" not in session_device_gate:
@@ -606,15 +608,15 @@ if "Session <-> Device binding + risk integration gate OK" not in session_device
 # снимок доверенного устройства и привязки, а каждое серверное подтверждение
 # входа повторно оценивает родительский сеанс, устройство и риск без
 # изменения сетевых наблюдений игрока из запроса игрового сервера.
-gameplay_trust_gate = read("scripts/smoke/offline/minecraft-serverbridge-trust-0127.py")
+gameplay_trust_gate = read("scripts/smoke/offline/minecraft-serverbridge-trust.py")
 gameplay_trust = read(
-    "services/api/internal/httpapi/minecraft_serverbridge_trust_0127.go"
+    "services/api/internal/httpapi/minecraft_serverbridge_trust.go"
 )
 minecraft_auth = read("services/api/internal/httpapi/minecraft_auth_119.go")
 server_bridge = read("services/api/internal/httpapi/server_bridge.go")
 bridge_plugins = read("services/api/internal/httpapi/bridge_plugins.go")
 gameplay_trust_test = read(
-    "services/api/internal/httpapi/minecraft_serverbridge_trust_0127_test.go"
+    "services/api/internal/httpapi/minecraft_serverbridge_trust_test.go"
 )
 for required in [
     "evaluateGameplayTrust0127",
@@ -655,8 +657,8 @@ for required in [
     if required not in gameplay_trust_test:
         fail(f"Недостаточное регрессионное покрытие «доверие к игровому процессу 0.12.7»: {required}")
 if (
-    "minecraft-serverbridge-trust-0127.py" not in preflight
-    or "scripts/smoke/offline/minecraft-serverbridge-trust-0127.py" not in ci
+    "minecraft-serverbridge-trust.py" not in preflight
+    or "scripts/smoke/offline/minecraft-serverbridge-trust.py" not in ci
 ):
     fail("Проверка «доверие Minecraft/ServerBridge 0.12.7» не подключена к предварительным проверкам и CI")
 if "Minecraft/ServerBridge trust enforcement gate OK" not in gameplay_trust_gate:
@@ -925,7 +927,7 @@ for required in ["Опубликованный релиз нельзя изме�
         fail(f"В проверке «защита неизменности жизненного цикла HTTP-пакета» отсутствует обязательный компонент: {required}")
 if "lockPackageMutation" not in read("services/api/internal/httpapi/admin_handlers.go"):
     fail("Обработчики файлов и пакетов Admin обязаны блокировать конкурентное изменение пакетов")
-rollback_worker = read("services/api/internal/httpapi/rollback_durable_0217.go")
+rollback_worker = read("services/api/internal/httpapi/rollback_durable.go")
 for required in [
     "lockPackageMutation",
     "rolled-back-as-new-validated-immutable-release",
@@ -1565,15 +1567,15 @@ for required in [
 
 
 # В 0.12.8: кроссплатформенная защита, восстановление и ротация ключей устройств.
-key_recovery_gate = read("scripts/smoke/offline/cross-platform-key-recovery-0128.py")
-key_recovery_handler = read("services/api/internal/httpapi/device_key_recovery_0128.go")
+key_recovery_gate = read("scripts/smoke/offline/cross-platform-key-recovery.py")
+key_recovery_handler = read("services/api/internal/httpapi/device_key_recovery.go")
 key_recovery_native = read("apps/desktop/src-tauri/src/device_keys.rs")
 key_recovery_desktop = read("apps/desktop/src/main.tsx")
 key_recovery_migration_api = read(
-    "services/api/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql"
+    "services/api/internal/dbmigrate/sql/0017_device_key_recovery_rotation.sql"
 )
 key_recovery_migration_cli = read(
-    "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql"
+    "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation.sql"
 )
 for required in [
     "Launcher Device Key Replacement v1",
@@ -1605,8 +1607,8 @@ for required in [
 if key_recovery_migration_api != key_recovery_migration_cli:
     fail("Обнаружено несовпадение «0.12.8 миграция API/CLI 0017»")
 if (
-    "cross-platform-key-recovery-0128.py" not in preflight
-    or "scripts/smoke/offline/cross-platform-key-recovery-0128.py" not in ci
+    "cross-platform-key-recovery.py" not in preflight
+    or "scripts/smoke/offline/cross-platform-key-recovery.py" not in ci
 ):
     fail("Проверка «0.12.8: восстановление ключа» не подключена к предварительным проверкам и CI")
 
@@ -1619,7 +1621,7 @@ device_trust_workflow = read(".github/workflows/device-trust.yml")
 device_trust_e2e = read("e2e/scripts/run-device-trust-e2e.sh")
 device_trust_webauthn = read("e2e/scripts/webauthn-test-authenticator.py")
 device_trust_native_result = read("e2e/scripts/write-device-trust-native-result.py")
-device_trust_gate = read("scripts/smoke/offline/device-trust-e2e-matrix-0129.py")
+device_trust_gate = read("scripts/smoke/offline/device-trust-e2e-matrix.py")
 for required in [
     "postgres-protocol-linux-x64",
     "native-linux",
@@ -1729,8 +1731,8 @@ for required in [
     if required not in device_trust_native_result:
         fail(f"Неполная реализация «доказательства доверия к устройству из нативного модуля 0.12.9»: {required}")
 if (
-    "device-trust-e2e-matrix-0129.py" not in preflight
-    or "scripts/smoke/offline/device-trust-e2e-matrix-0129.py" not in ci
+    "device-trust-e2e-matrix.py" not in preflight
+    or "scripts/smoke/offline/device-trust-e2e-matrix.py" not in ci
 ):
     fail("Проверка «матрица доверия к устройствам 0.12.9» не подключена к предварительным проверкам и CI")
 if "run-device-trust-e2e.sh" not in ci or "RUN_DEVICE_TRUST_E2E" not in preflight:
@@ -1742,14 +1744,14 @@ if "Device Trust E2E + public trust matrix 0.12.9+ gate OK" not in device_trust_
 # В 0.12.10: миграция и стабилизация. Обновление строго со схемы 0.12.9 —
 # полноценное требование к выпуску, а не просто проверка чистой установки.
 stabilization_migration_api = read(
-    "services/api/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql"
+    "services/api/internal/dbmigrate/sql/0018_device_trust_stabilization.sql"
 )
 stabilization_migration_cli = read(
-    "cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql"
+    "cli/internal/dbmigrate/sql/0018_device_trust_stabilization.sql"
 )
 stabilization_upgrade_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
 stabilization_gate = read(
-    "scripts/smoke/offline/device-trust-migration-stabilization-01210.py"
+    "scripts/smoke/offline/device-trust-migration-stabilization.py"
 )
 if stabilization_migration_api != stabilization_migration_cli:
     fail("Миграция 0018 API/CLI 0.12.10 отличается")
@@ -1803,8 +1805,8 @@ if (
 ):
     fail("0.12.10: публичная матрица доверия не содержит свидетельств стабилизации миграции")
 if (
-    "device-trust-migration-stabilization-01210.py" not in preflight
-    or "scripts/smoke/offline/device-trust-migration-stabilization-01210.py" not in ci
+    "device-trust-migration-stabilization.py" not in preflight
+    or "scripts/smoke/offline/device-trust-migration-stabilization.py" not in ci
 ):
     fail("Проверка «стабилизация 0.12.10» не подключена к предварительным проверкам и CI")
 if (
@@ -1829,10 +1831,10 @@ if "Device Trust migration + stabilization 0.12.10 gate OK" not in stabilization
 # В 0.16.1: исправление назначений запросов Guard Attestation в PostgreSQL. Без
 # поддержки одноразовых назначений фиксированной SQL-схемой механизм защиты бесполезен.
 guard_purpose_migration_api = read(
-    "services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
+    "services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes.sql"
 )
 guard_purpose_migration_cli = read(
-    "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
+    "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes.sql"
 )
 if guard_purpose_migration_api != guard_purpose_migration_cli:
     fail("Обнаружено несовпадение «0.16.1 API/CLI Guard миграция назначения проверочного запроса 0031»")
@@ -1859,7 +1861,7 @@ for required in [
         fail(f"В проверке «0.16.1 сквозная проверка PostgreSQL назначения запроса Guard» отсутствует обязательный компонент: {required}")
 
 guard_attestation_backend_0161 = read(
-    "services/api/internal/httpapi/guard_attestation_0134.go"
+    "services/api/internal/httpapi/guard_attestation.go"
 )
 for required in [
     "canonicalGuardAttestationTime0134",
@@ -1874,10 +1876,10 @@ for required in [
 # В 0.18.10: Guard Attestation v2 требует фиксированных назначений запросов и билетов для
 # непрерывных свидетельств Windows после запуска и обязательной проверки до входа ServerBridge.
 guard_v2_migration_api = read(
-    "services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql"
+    "services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_.sql"
 )
 guard_v2_migration_cli = read(
-    "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql"
+    "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_.sql"
 )
 if guard_v2_migration_api != guard_v2_migration_cli:
     fail("Обнаружено несовпадение «0.18.10 API/CLI миграция аттестации Guard v2 0032»")
@@ -1900,7 +1902,7 @@ for required in [
     if required not in guard_migration_e2e:
         fail(f"В проверке «0.18.10 сквозная проверка PostgreSQL аттестации Guard v2» отсутствует обязательный компонент: {required}")
 attestation_v2_backend = read(
-    "services/api/internal/httpapi/guard_attestation_v2_01810.go"
+    "services/api/internal/httpapi/guard_attestation_v2_.go"
 )
 for required in [
     "validateGuardContinuousEvidence01810",
@@ -1930,8 +1932,8 @@ for required in [
     if required not in attestation_v2_runtime:
         fail(f"В проверке «0.18.10 инвариант среды исполнения аттестации Guard v2» отсутствует обязательный компонент: {required}")
 if (
-    "guard-attestation-v2-01810.py" not in preflight
-    or "guard-attestation-v2-01810.py" not in ci
+    "guard-attestation-v2-.py" not in preflight
+    or "guard-attestation-v2-.py" not in ci
 ):
     fail("Проверка «0.18.10 Guard Attestation v2 обязательная проверка: gate» не подключена к предварительным проверкам и CI")
 
@@ -1940,7 +1942,7 @@ if (
 integrity_0132 = read("runtime/runtime/src/integrity.rs")
 guard_0132 = read("runtime/runtime/src/guard_ipc.rs")
 desktop_0132 = read("apps/desktop/src-tauri/src/main.rs")
-integrity_gate_0132 = read("scripts/smoke/offline/guard-integrity-evidence-0132.py")
+integrity_gate_0132 = read("scripts/smoke/offline/guard-integrity-evidence.py")
 for required in [
     "WinVerifyTrust",
     "GetProcessMitigationPolicy",
@@ -1966,8 +1968,8 @@ if (
 ):
     fail("0.13.2: запуск Desktop не блокируется при отказе сбора свидетельств целостности")
 if (
-    "guard-integrity-evidence-0132.py" not in preflight
-    or "guard-integrity-evidence-0132.py" not in ci
+    "guard-integrity-evidence.py" not in preflight
+    or "guard-integrity-evidence.py" not in ci
 ):
     fail("Проверка «0.13.2 обязательная проверка подтверждений целостности» не подключена к предварительным проверкам и CI")
 if "Integrity Evidence v1 gate OK" not in integrity_gate_0132:
@@ -1980,7 +1982,7 @@ policy_0133 = read("runtime/runtime/src/windows_policy.rs")
 guard_0133 = read("runtime/runtime/src/guard_ipc.rs")
 supervisor_0133 = read("runtime/runtime/src/supervisor.rs")
 desktop_0133 = read("apps/desktop/src-tauri/src/main.rs")
-policy_gate_0133 = read("scripts/smoke/offline/guard-process-policy-0133.py")
+policy_gate_0133 = read("scripts/smoke/offline/guard-process-policy.py")
 for required in [
     "SetProcessMitigationPolicy",
     "GetProcessMitigationPolicy",
@@ -2016,8 +2018,8 @@ if (
 ):
     fail("0.13.3: запуск Desktop не блокируется при отказе проверки политики процессов")
 if (
-    "guard-process-policy-0133.py" not in preflight
-    or "guard-process-policy-0133.py" not in ci
+    "guard-process-policy.py" not in preflight
+    or "guard-process-policy.py" not in ci
 ):
     fail("Проверка «0.13.3 обязательная проверка политики процессов» не подключена к предварительным проверкам и CI")
 if "runtime/process policy 0.13.3 gate OK" not in policy_gate_0133:
@@ -2031,7 +2033,7 @@ guard_targets_0139 = read("guard-ci/targets.json")
 guard_matrix_0139 = read("scripts/guard_ci/matrix.py")
 guard_stage_0139 = read("scripts/guard_ci/stage_release.py")
 guard_release_0139 = read("cli/cmd/launcher/guard_ci_release.go")
-guard_gate_0139 = read("scripts/smoke/offline/guard-ci-release-certification-0139.py")
+guard_gate_0139 = read("scripts/smoke/offline/guard-ci-release-certification.py")
 build_release_0139 = read("scripts/release/build-release.sh")
 for required in [
     '"productVersion": "' + VERSION + '"',
@@ -2083,7 +2085,7 @@ for required in [
     if required not in build_release_0139:
         fail(f"Неполная реализация «0.13.9 сертификация Guard при сборке выпуска»: {required}")
 for required in [
-    "guard-ci-release-certification-0139.py",
+    "guard-ci-release-certification.py",
     "Guard CI matrix",
     "guard-ci-linux-amd64",
     "guard-ci-windows-amd64",
@@ -2094,8 +2096,8 @@ for required in [
 if "guard-certification:" not in ci:
     fail("Отсутствует «0.13.9 aggregate Guard certification CI job»")
 if (
-    "guard-ci-release-certification-0139.py" not in preflight
-    or "guard-ci-release-certification-0139.py" not in ci
+    "guard-ci-release-certification.py" not in preflight
+    or "guard-ci-release-certification.py" not in ci
 ):
     fail("Проверка «0.13.9 Guard сертификация выпуска gate» не подключена к предварительным проверкам и CI")
 if "cross-platform Guard CI matrix + release certification gate" not in guard_gate_0139:
@@ -2109,10 +2111,10 @@ if not (ROOT / "cli/cmd/launcher/guard_ci_release_test.go").is_file():
 # только публичные данные и одноразовые nonce, контролируемые PostgreSQL.
 if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
     crypto_migration_0142 = read(
-        "services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql"
+        "services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities.sql"
     )
     crypto_identity_0142 = read(
-        "services/api/internal/httpapi/server_bridge_identity_0142.go"
+        "services/api/internal/httpapi/server_bridge_identity.go"
     )
     crypto_repo_0142 = read("services/api/internal/repository/server_bridge_v2.go")
     crypto_java_identity_0142 = read(
@@ -2122,7 +2124,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
         "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/LauncherApiClient.java"
     )
     crypto_gate_0142 = read(
-        "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"
+        "scripts/smoke/offline/serverbridge-crypto-node-identities.py"
     )
     for required in [
         "server_bridge_node_nonces_v2",
@@ -2164,8 +2166,8 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
     if "X-Launcher-Server-Token" in crypto_java_client_0142:
         fail("0.14.2: плагин по-прежнему использует общую bearer-аутентификацию ServerBridge")
     if (
-        "serverbridge-crypto-node-identities-0142.py" not in preflight
-        or "serverbridge-crypto-node-identities-0142.py" not in ci
+        "serverbridge-crypto-node-identities.py" not in preflight
+        or "serverbridge-crypto-node-identities.py" not in ci
     ):
         fail("Проверка «0.14.2: криптографическая идентичность узла» не подключена к предварительным проверкам и CI")
     if (
@@ -2198,15 +2200,15 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
 # атомарно используется единожды и содержит сохраняемое доказательство погашения.
 if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
     ticket_migration_0143 = read(
-        "services/api/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql"
+        "services/api/internal/dbmigrate/sql/0023_one_time_join_tickets.sql"
     )
     ticket_helper_0143 = read(
-        "services/api/internal/httpapi/server_bridge_join_tickets_0143.go"
+        "services/api/internal/httpapi/server_bridge_join_tickets.go"
     )
     ticket_repo_0143 = read("services/api/internal/repository/server_bridge_v2.go")
     minecraft_repo_0143 = read("services/api/internal/repository/postgres.go")
     ticket_gate_0143 = read(
-        "scripts/smoke/offline/serverbridge-one-time-join-tickets-0143.py"
+        "scripts/smoke/offline/serverbridge-one-time-join-tickets.py"
     )
     for required in [
         "issued_identity_epoch",
@@ -2236,8 +2238,8 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
         if required not in minecraft_repo_0143:
             fail(f"Неполная реализация «0.14.3 репозиторий одноразового использования Yggdrasil»: {required}")
     if (
-        "serverbridge-one-time-join-tickets-0143.py" not in preflight
-        or "serverbridge-one-time-join-tickets-0143.py" not in ci
+        "serverbridge-one-time-join-tickets.py" not in preflight
+        or "serverbridge-one-time-join-tickets.py" not in ci
     ):
         fail("Проверка «0.14.3: одноразовый билет подключения» не подключена к предварительным проверкам и CI")
     if (
@@ -2275,7 +2277,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     delivery_0151 = read("cli/cmd/launcher/delivery_manifest.go")
     release_0151 = read("cli/cmd/launcher/release_commands.go")
     delivery_gate_0151 = read(
-        "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"
+        "scripts/smoke/offline/delivery-manifest-platform-architecture.py"
     )
     for required in [
         "DELIVERY_MANIFEST.json",
@@ -2299,8 +2301,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("0.15.1: проверка публикации не требует DELIVERY_MANIFEST.json")
     if (
-        "delivery-manifest-platform-architecture-0151.py" not in preflight
-        or "delivery-manifest-platform-architecture-0151.py" not in ci
+        "delivery-manifest-platform-architecture.py" not in preflight
+        or "delivery-manifest-platform-architecture.py" not in ci
     ):
         fail("Проверка «0.15.1 обязательная проверка доставки» не подключена к предварительным проверкам и CI")
     if "Delivery Manifest + platform/architecture gate: OK" not in delivery_gate_0151:
@@ -2322,7 +2324,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     linux_packager_0153 = read("scripts/release/linux-package.py")
     linux_release_0153 = read("scripts/release/build-release.sh")
     linux_gate_0153 = read(
-        "scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py"
+        "scripts/smoke/offline/linux-x64-arm64-production-packages.py"
     )
     release_bundle_0153 = read("scripts/smoke/release-required/release-bundle.sh")
     for required in [
@@ -2380,8 +2382,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in release_bundle_0153:
             fail(f"Неполная реализация «0.15.3 комплект выпуска gate»: {required}")
     if (
-        "linux-x64-arm64-production-packages-0153.py" not in preflight
-        or "linux-x64-arm64-production-packages-0153.py" not in ci
+        "linux-x64-arm64-production-packages.py" not in preflight
+        or "linux-x64-arm64-production-packages.py" not in ci
     ):
         fail("Проверка «0.15.3 пакет Linux для двух архитектур gate» не подключена к предварительным проверкам и CI")
     if "Linux x64 + ARM64 production packages gate: OK" not in linux_gate_0153:
@@ -2402,7 +2404,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     macos_builder_0154 = read("scripts/release/build-macos-production.sh")
     macos_packager_0154 = read("scripts/release/macos-package.py")
     macos_release_0154 = read("scripts/release/build-release.sh")
-    macos_gate_0154 = read("scripts/smoke/offline/notarized-macos-x64-arm64-0154.py")
+    macos_gate_0154 = read("scripts/smoke/offline/notarized-macos-x64-arm64-.py")
     macos_workflow_0154 = read(".github/workflows/macos-production-delivery.yml")
     release_bundle_0154 = read("scripts/smoke/release-required/release-bundle.sh")
     for required in [
@@ -2465,8 +2467,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in release_bundle_0154:
             fail(f"Неполная реализация «0.15.4 комплект выпуска gate»: {required}")
     if (
-        "notarized-macos-x64-arm64-0154.py" not in preflight
-        or "notarized-macos-x64-arm64-0154.py" not in ci
+        "notarized-macos-x64-arm64-.py" not in preflight
+        or "notarized-macos-x64-arm64-.py" not in ci
     ):
         fail("Проверка «0.15.4 нотаризация macOS gate» не подключена к предварительным проверкам и CI")
     if "notarized macOS x64 + ARM64 gate: OK" not in macos_gate_0154:
@@ -2487,7 +2489,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     jre_builder_0155 = read("scripts/release/managed-jre-distribution.py")
     jre_runtime_0155 = read("runtime/runtime/src/managed_java.rs")
     jre_release_0155 = read("scripts/release/build-release.sh")
-    jre_gate_0155 = read("scripts/smoke/offline/managed-jre-distribution-0155.py")
+    jre_gate_0155 = read("scripts/smoke/offline/managed-jre-distribution.py")
     jre_workflow_0155 = read(".github/workflows/managed-jre-production-delivery.yml")
     release_bundle_0155 = read("scripts/smoke/release-required/release-bundle.sh")
     for required in [
@@ -2568,8 +2570,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in release_bundle_0155:
             fail(f"Неполная реализация «0.15.5 комплект выпуска JRE gate»: {required}")
     if (
-        "managed-jre-distribution-0155.py" not in preflight
-        or "managed-jre-distribution-0155.py" not in ci
+        "managed-jre-distribution.py" not in preflight
+        or "managed-jre-distribution.py" not in ci
     ):
         fail("Проверка «0.15.5 Managed JRE gate» не подключена к предварительным проверкам и CI")
     if "Managed JRE Distribution gate: OK" not in jre_gate_0155:
@@ -2589,7 +2591,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     managed_java_0165 = read("runtime/runtime/src/managed_java.rs")
     managed_java_cli_0165 = read("runtime/runtime/src/bin/runtime.rs")
     managed_java_e2e_0165 = read("e2e/scripts/run-managed-java-II-e2e.sh")
-    managed_java_gate_0165 = read("scripts/smoke/offline/managed-java-II-0165.py")
+    managed_java_gate_0165 = read("scripts/smoke/offline/managed-java-II.py")
     release_commands_0165 = read("cli/cmd/launcher/release_commands.go")
     release_builder_0165 = read("scripts/release/build-release.sh")
     release_bundle_0165 = read("scripts/smoke/release-required/release-bundle.sh")
@@ -2621,8 +2623,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in ci:
             fail(f"Неполная реализация «0.16.5 Managed Java II CI wiring»: {required}")
     if (
-        "managed-java-II-0165.py" not in preflight
-        or "managed-java-II-0165.py" not in ci
+        "managed-java-II.py" not in preflight
+        or "managed-java-II.py" not in ci
     ):
         fail("Проверка «0.16.5 Managed Java II gate» не подключена к предварительным проверкам и CI")
     if "managed-java-II-8-16-17-21-25" not in release_commands_0165:
@@ -3025,7 +3027,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "cli/cmd/launcher/package_commands.go"
     )
     updater_gate_0156 = read(
-        "scripts/smoke/offline/unified-transactional-updater-core-0156.py"
+        "scripts/smoke/offline/unified-transactional-updater-core.py"
     )
     updater_tests_0156 = read("cli/cmd/launcher/transactional_updater_test.go")
     for required in [
@@ -3069,8 +3071,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Unified Transactional Updater Core gate: OK" not in updater_gate_0156:
         fail("Не завершена реализация «0.15.6 обновление gate»")
     if (
-        "unified-transactional-updater-core-0156.py" not in preflight
-        or "unified-transactional-updater-core-0156.py" not in ci
+        "unified-transactional-updater-core.py" not in preflight
+        or "unified-transactional-updater-core.py" not in ci
     ):
         fail("Проверка «0.15.6 проверка обновления» не подключена к предварительным проверкам и CI")
     if ci.count("update self-test") < 4:
@@ -3093,7 +3095,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "scripts/release/build-macos-production.sh"
     )
     component_gate_0157 = read(
-        "scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py"
+        "scripts/smoke/offline/desktop-guard-runtime-transactional-update.py"
     )
     rust_guard_0157 = (
         read("runtime/runtime/src/guard_ipc.rs")
@@ -3172,8 +3174,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Desktop/Guard/Runtime transactional update gate: OK" not in component_gate_0157:
         fail("Не завершена реализация «0.15.7 component обновление gate»")
     if (
-        "desktop-guard-runtime-transactional-update-0157.py" not in preflight
-        or "desktop-guard-runtime-transactional-update-0157.py" not in ci
+        "desktop-guard-runtime-transactional-update.py" not in preflight
+        or "desktop-guard-runtime-transactional-update.py" not in ci
     ):
         fail("Проверка «0.15.7 обновление компонентов gate» не подключена к предварительным проверкам и CI")
     if ci.count("update component-self-test") < 4:
@@ -3192,7 +3194,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     release_0158 = read("cli/cmd/launcher/release_commands.go")
     build_release_0158 = read("scripts/release/build-release.sh")
     gate_0158 = read(
-        "scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py"
+        "scripts/smoke/offline/release-verification-v2-trust-lifecycle.py"
     )
     tests_0158 = read("cli/cmd/launcher/release_verification_v2_test.go")
     for required in [
@@ -3234,8 +3236,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Release Verification v2 + trust/key lifecycle gate: OK" not in gate_0158:
         fail("Не завершена реализация «0.15.8 обязательная проверка допуска»")
     if (
-        "release-verification-v2-trust-lifecycle-0158.py" not in preflight
-        or "release-verification-v2-trust-lifecycle-0158.py" not in ci
+        "release-verification-v2-trust-lifecycle.py" not in preflight
+        or "release-verification-v2-trust-lifecycle.py" not in ci
     ):
         fail("Проверка «0.15.8 проверка допуска» не подключена к предварительным проверкам и CI")
 
@@ -3254,7 +3256,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     build_release_0159 = read("scripts/release/build-release.sh")
     workflow_0159 = read(".github/workflows/public-production-delivery.yml")
     gate_0159 = read(
-        "scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py"
+        "scripts/smoke/offline/public-production-delivery-matrix-e2e.py"
     )
     tests_0159 = read("cli/cmd/launcher/public_delivery_matrix_test.go")
     for required in [
@@ -3309,8 +3311,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Public Production Delivery Matrix + E2E gate: OK" not in gate_0159:
         fail("Не завершена реализация «0.15.9 обязательная проверка: публичная поставка gate»")
     if (
-        "public-production-delivery-matrix-e2e-0159.py" not in preflight
-        or "public-production-delivery-matrix-e2e-0159.py" not in ci
+        "public-production-delivery-matrix-e2e.py" not in preflight
+        or "public-production-delivery-matrix-e2e.py" not in ci
     ):
         fail("Проверка «0.15.9 публичная поставка gate» не подключена к предварительным проверкам и CI")
 
@@ -3318,7 +3320,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 # В 0.13.0: сертификация выпуска Device Trust и контракт выполнения.
 if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
     dt_release = read("cli/cmd/launcher/device_trust_release.go")
-    dt_runtime = read("services/api/internal/httpapi/device_trust_release_0130.go")
+    dt_runtime = read("services/api/internal/httpapi/device_trust_release.go")
     dt_targets_0130 = read("device-trust/targets.json")
     build_release_0130 = read("scripts/release/build-release.sh")
     if (
@@ -3336,8 +3338,8 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
     if "LAUNCHER_DEVICE_TRUST_MATRIX_FILE" not in build_release_0130:
         fail("0.13.0: build-release не умеет включать матрицу Device Trust")
     if (
-        "device-trust-release-0130.py" not in preflight
-        or "device-trust-release-0130.py" not in ci
+        "device-trust-release.py" not in preflight
+        or "device-trust-release.py" not in ci
     ):
         fail("Проверка «0.13.0 проверка доверия к устройствам перед выпуском» не подключена к предварительным проверкам и CI")
 
@@ -3351,16 +3353,16 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     10,
 ):
-    stabilization_01510 = read("cli/cmd/launcher/migration_stabilization_01510.go")
+    stabilization_01510 = read("cli/cmd/launcher/migration_stabilization.go")
     stabilization_tests_01510 = read(
-        "cli/cmd/launcher/migration_stabilization_01510_test.go"
+        "cli/cmd/launcher/migration_stabilization_test.go"
     )
     rv2_01510 = read("cli/cmd/launcher/release_verification_v2.go")
     update_01510 = read("cli/cmd/launcher/transactional_updater.go") + read(
         "cli/cmd/launcher/component_update.go"
     )
     release_01510 = read("cli/cmd/launcher/release_commands.go")
-    gate_01510 = read("scripts/smoke/offline/migration-stabilization-01510.py")
+    gate_01510 = read("scripts/smoke/offline/migration-stabilization.py")
     for required in [
         "withReleaseTrustStateLock01510",
         "releaseTrustStateSchema01510",
@@ -3405,8 +3407,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Migration + stabilization 0.15.10 gate: OK" not in gate_01510:
         fail("Не завершена реализация «0.15.10 обязательная проверка: стабилизация миграции gate»")
     if (
-        "migration-stabilization-01510.py" not in preflight
-        or "migration-stabilization-01510.py" not in ci
+        "migration-stabilization.py" not in preflight
+        or "migration-stabilization.py" not in ci
     ):
         fail("Проверка «0.15.10 проверка стабилизации» не подключена к предварительным проверкам и CI")
 
@@ -3419,13 +3421,13 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     11,
 ):
-    rc_01511 = read("cli/cmd/launcher/production_release_candidate_01511.go")
-    rc_tests_01511 = read("cli/cmd/launcher/production_release_candidate_01511_test.go")
+    rc_01511 = read("cli/cmd/launcher/production_release_candidate.go")
+    rc_tests_01511 = read("cli/cmd/launcher/production_release_candidate_test.go")
     release_01511 = read("cli/cmd/launcher/release_commands.go")
     build_01511 = read("scripts/release/build-release.sh")
     artifact_layout_01511 = read("scripts/release/resolve-artifact-payload.sh")
     bundle_gate_01511 = read("scripts/smoke/release-required/release-bundle.sh")
-    gate_01511 = read("scripts/smoke/offline/production-release-candidate-01511.py")
+    gate_01511 = read("scripts/smoke/offline/production-release-candidate.py")
     for required in [
         "PRODUCTION_RELEASE_CANDIDATE.json",
         "production-release-candidate",
@@ -3489,8 +3491,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Production release candidate 0.15.11 gate: OK" not in gate_01511:
         fail("Не завершена реализация «0.15.11 обязательная проверка: Production Release Candidate gate»")
     if (
-        "production-release-candidate-01511.py" not in preflight
-        or "production-release-candidate-01511.py" not in ci
+        "production-release-candidate.py" not in preflight
+        or "production-release-candidate.py" not in ci
     ):
         fail("Проверка «0.15.11 Production Release Candidate gate» не подключена к предварительным проверкам и CI")
 
@@ -3502,14 +3504,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     16,
     0,
 ):
-    pdr_0160 = read("cli/cmd/launcher/production_delivery_release_0160.go")
-    pdr_tests_0160 = read("cli/cmd/launcher/production_delivery_release_0160_test.go")
+    pdr_0160 = read("cli/cmd/launcher/production_delivery_release.go")
+    pdr_tests_0160 = read("cli/cmd/launcher/production_delivery_release_test.go")
     release_0160 = read("cli/cmd/launcher/release_commands.go")
     build_0160 = read("scripts/release/build-release.sh")
     bundle_0160 = read("scripts/smoke/release-required/release-bundle.sh")
     public_0160 = read("cli/cmd/launcher/public_delivery_matrix.go")
     public_workflow_0160 = read(".github/workflows/public-production-delivery.yml")
-    gate_0160 = read("scripts/smoke/offline/production-delivery-release-0160.py")
+    gate_0160 = read("scripts/smoke/offline/production-delivery-release.py")
     for required in [
         "PRODUCTION_DELIVERY_RELEASE.json",
         "production-delivery-release",
@@ -3572,8 +3574,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Production Delivery Release 0.16.0 gate: OK" not in gate_0160:
         fail("Не завершена реализация «0.16.0 обязательная проверка промышленной доставки перед выпуском»")
     if (
-        "production-delivery-release-0160.py" not in preflight
-        or "production-delivery-release-0160.py" not in ci
+        "production-delivery-release.py" not in preflight
+        or "production-delivery-release.py" not in ci
     ):
         fail("Проверка «0.16.0 проверка промышленной доставки перед выпуском» не подключена к предварительным проверкам и CI")
 
@@ -3598,7 +3600,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         + read("scripts/compatibility/test_certify_jre.py")
         + read("cli/cmd/launcher/compatibility_release_test.go")
     )
-    ga_gate_0170 = read("scripts/smoke/offline/minecraft-compatibility-II-ga-0170.py")
+    ga_gate_0170 = read("scripts/smoke/offline/minecraft-compatibility-II-ga.py")
     for required in [
         "LEGACY_VANILLA_0170V1",
         "JAVA16_17_VANILLA_0170V2",
@@ -3697,8 +3699,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 f"0.17.0v3 Обязательная целевая платформа недопустима или отсутствует: {minecraft} / Java {java_major}"
             )
     if (
-        "minecraft-compatibility-II-ga-0170.py" not in preflight
-        or "minecraft-compatibility-II-ga-0170.py" not in ci
+        "minecraft-compatibility-II-ga.py" not in preflight
+        or "minecraft-compatibility-II-ga.py" not in ci
     ):
         fail("Проверка «0.17.0 Minecraft Compatibility II GA gate» не подключена к предварительным проверкам и CI")
 
@@ -3717,7 +3719,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     fabric_tests_0171 = read("scripts/compatibility/test_matrix.py") + read(
         "cli/cmd/launcher/compatibility_release_test.go"
     )
-    fabric_gate_0171 = read("scripts/smoke/offline/fabric-compatibility-II-0171.py")
+    fabric_gate_0171 = read("scripts/smoke/offline/fabric-compatibility-II.py")
     compat_workflow_0171 = read(".github/workflows/compatibility.yml")
     for required in [
         "FABRIC_COMPATIBILITY_II_0171",
@@ -3787,8 +3789,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Fabric Compatibility II 0.17.1 gate: OK" not in fabric_gate_0171:
         fail("Не завершена реализация «0.17.1 обязательная проверка: Fabric Compatibility II gate»")
     if (
-        "fabric-compatibility-II-0171.py" not in preflight
-        or "fabric-compatibility-II-0171.py" not in ci
+        "fabric-compatibility-II.py" not in preflight
+        or "fabric-compatibility-II.py" not in ci
     ):
         fail("Проверка «0.17.1 Fabric Compatibility II gate» не подключена к предварительным проверкам и CI")
 
@@ -3810,7 +3812,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         + read("cli/cmd/launcher/compatibility_release_test.go")
         + read("cli/cmd/launcher/loader_runtime_test.go")
     )
-    quilt_gate_0172 = read("scripts/smoke/offline/quilt-compatibility-II-0172.py")
+    quilt_gate_0172 = read("scripts/smoke/offline/quilt-compatibility-II.py")
     compat_workflow_0172 = read(".github/workflows/compatibility.yml")
     for required in [
         "QUILT_COMPATIBILITY_II_0172",
@@ -3883,8 +3885,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Quilt Compatibility II 0.17.2 gate: OK" not in quilt_gate_0172:
         fail("Не завершена реализация «0.17.2 обязательная проверка: Quilt Compatibility II gate»")
     if (
-        "quilt-compatibility-II-0172.py" not in preflight
-        or "quilt-compatibility-II-0172.py" not in ci
+        "quilt-compatibility-II.py" not in preflight
+        or "quilt-compatibility-II.py" not in ci
     ):
         fail("Проверка «0.17.2 Quilt Compatibility II gate» не подключена к предварительным проверкам и CI")
 
@@ -3908,7 +3910,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         + read("cli/cmd/launcher/compatibility_release_test.go")
         + read("cli/cmd/launcher/forge_runtime_test.go")
     )
-    forge_gate_0173 = read("scripts/smoke/offline/forge-modern-0173.py")
+    forge_gate_0173 = read("scripts/smoke/offline/forge-modern.py")
     compat_workflow_0173 = read(".github/workflows/compatibility.yml")
     for required in [
         "FORGE_MODERN_0173",
@@ -3999,7 +4001,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"В проверке «0.17.3 Forge загрузка исходных подтверждений CI» отсутствует обязательный компонент: {required}")
     if "Forge Modern 0.17.3 gate: OK" not in forge_gate_0173:
         fail("Не завершена реализация «0.17.3 обязательная проверка: Forge Modern gate»")
-    if "forge-modern-0173.py" not in preflight or "forge-modern-0173.py" not in ci:
+    if "forge-modern.py" not in preflight or "forge-modern.py" not in ci:
         fail("Проверка «0.17.3 Forge Modern gate» не подключена к предварительным проверкам и CI")
 
 
@@ -4022,7 +4024,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         + read("cli/cmd/launcher/compatibility_release_test.go")
         + read("cli/cmd/launcher/forge_runtime_test.go")
     )
-    legacy_gate_0174 = read("scripts/smoke/offline/forge-legacy-1122-0174.py")
+    legacy_gate_0174 = read("scripts/smoke/offline/forge-legacy-1122-.py")
     for required in [
         "forgeLegacyInstallerProfile",
         "legacy-v1-universal",
@@ -4099,8 +4101,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Forge Legacy 1.12.2 0.17.4 gate: OK" not in legacy_gate_0174:
         fail("Не завершена реализация «0.17.4 обязательная проверка: Forge Legacy gate»")
     if (
-        "forge-legacy-1122-0174.py" not in preflight
-        or "forge-legacy-1122-0174.py" not in ci
+        "forge-legacy-1122-.py" not in preflight
+        or "forge-legacy-1122-.py" not in ci
     ):
         fail("Проверка «0.17.4 Forge Legacy gate» не подключена к предварительным проверкам и CI")
 
@@ -4123,7 +4125,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         + read("cli/cmd/launcher/compatibility_release_test.go")
         + read("cli/cmd/launcher/forge_runtime_test.go")
     )
-    legacy_gate_0175 = read("scripts/smoke/offline/forge-legacy-1710-0175.py")
+    legacy_gate_0175 = read("scripts/smoke/offline/forge-legacy-1710-.py")
     for required in [
         "cpw.mods.fml.common.launcher.FMLTweaker",
         "legacy-v1-universal",
@@ -4202,8 +4204,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Forge Legacy 1.7.10 0.17.5 gate: OK" not in legacy_gate_0175:
         fail("Не завершена реализация «0.17.5 обязательная проверка: Forge Legacy gate»")
     if (
-        "forge-legacy-1710-0175.py" not in preflight
-        or "forge-legacy-1710-0175.py" not in ci
+        "forge-legacy-1710-.py" not in preflight
+        or "forge-legacy-1710-.py" not in ci
     ):
         fail("Проверка «0.17.5 Forge Legacy gate» не подключена к предварительным проверкам и CI")
 
@@ -4229,7 +4231,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         + read("cli/cmd/launcher/compatibility_release_test.go")
         + read("cli/cmd/launcher/forge_runtime_test.go")
     )
-    neo_gate_0176 = read("scripts/smoke/offline/neoforge-compatibility-II-0176.py")
+    neo_gate_0176 = read("scripts/smoke/offline/neoforge-compatibility-II.py")
     for required in [
         "legacyNeoForge1201",
         "/net/neoforged/forge/maven-metadata.xml",
@@ -4343,8 +4345,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "NeoForge Compatibility II 0.17.6 gate: OK" not in neo_gate_0176:
         fail("Не завершена реализация «0.17.6 обязательная проверка: NeoForge gate»")
     if (
-        "neoforge-compatibility-II-0176.py" not in preflight
-        or "neoforge-compatibility-II-0176.py" not in ci
+        "neoforge-compatibility-II.py" not in preflight
+        or "neoforge-compatibility-II.py" not in ci
     ):
         fail("Проверка «0.17.6 NeoForge gate» не подключена к предварительным проверкам и CI")
 
@@ -4370,7 +4372,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         + read("cli/cmd/launcher/compatibility_release_test.go")
         + read("scripts/compatibility/test_matrix.py")
     )
-    pin_gate_0177 = read("scripts/smoke/offline/loader-resolution-pinning-0177.py")
+    pin_gate_0177 = read("scripts/smoke/offline/loader-resolution-pinning.py")
     for required in [
         "ReproducibilitySHA256",
         "ResolutionSourceSHA256",
@@ -4440,8 +4442,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Loader Resolution & Pinning 0.17.7 gate: OK" not in pin_gate_0177:
         fail("Не завершена реализация «0.17.7 обязательная проверка: закрепление разрешённой версии загрузчика gate»")
     if (
-        "loader-resolution-pinning-0177.py" not in preflight
-        or "loader-resolution-pinning-0177.py" not in ci
+        "loader-resolution-pinning.py" not in preflight
+        or "loader-resolution-pinning.py" not in ci
     ):
         fail("Проверка «0.17.7 закрепление разрешённой версии загрузчика gate» не подключена к предварительным проверкам и CI")
 
@@ -4463,7 +4465,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     native_tests_0178 = read("cli/cmd/launcher/compatibility_release_test.go") + read(
         "scripts/compatibility/test_matrix.py"
     )
-    native_gate_0178 = read("scripts/smoke/offline/loader-native-e2e-0178.py")
+    native_gate_0178 = read("scripts/smoke/offline/loader-native-e2e.py")
     for required in [
         "loader-native:",
         "FABRIC_LOADER_VERSION",
@@ -4534,8 +4536,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Loader-native E2E 0.17.8 gate: OK" not in native_gate_0178:
         fail("Не завершена реализация «0.17.8 обязательная проверка: нативный сквозной тест загрузчика gate»")
     if (
-        "loader-native-e2e-0178.py" not in preflight
-        or "loader-native-e2e-0178.py" not in ci
+        "loader-native-e2e.py" not in preflight
+        or "loader-native-e2e.py" not in ci
     ):
         fail("Проверка «0.17.8 нативный сквозной тест загрузчика gate» не подключена к предварительным проверкам и CI")
 
@@ -4559,7 +4561,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         + read("scripts/compatibility/test_verify_loader_platform.py")
         + read("cli/cmd/launcher/compatibility_release_test.go")
     )
-    platform_gate_0179 = read("scripts/smoke/offline/cross-platform-loaders-0179.py")
+    platform_gate_0179 = read("scripts/smoke/offline/cross-platform-loaders.py")
     for required in [
         "linux|windows|macos",
         "x86_64|aarch64",
@@ -4627,8 +4629,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Cross-platform Loaders 0.17.9 gate: OK" not in platform_gate_0179:
         fail("Не завершена реализация «0.17.9 обязательная проверка: кроссплатформенный загрузчик gate»")
     if (
-        "cross-platform-loaders-0179.py" not in preflight
-        or "cross-platform-loaders-0179.py" not in ci
+        "cross-platform-loaders.py" not in preflight
+        or "cross-platform-loaders.py" not in ci
     ):
         fail("Проверка «0.17.9 кроссплатформенный загрузчик gate» не подключена к предварительным проверкам и CI")
 
@@ -4652,7 +4654,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         + read("cli/cmd/launcher/compatibility_release_test.go")
         + read("scripts/compatibility/test_matrix.py")
     )
-    hardening_gate_01710 = read("scripts/smoke/offline/loader-hardening-01710.py")
+    hardening_gate_01710 = read("scripts/smoke/offline/loader-hardening.py")
     for required in [
         "loaderPayloadCacheRecord",
         "loader-cache",
@@ -4714,8 +4716,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Loader Hardening 0.17.10 gate: OK" not in hardening_gate_01710:
         fail("Не завершена реализация «0.17.10 обязательная проверка: усиление защиты загрузчика gate»")
     if (
-        "loader-hardening-01710.py" not in preflight
-        or "loader-hardening-01710.py" not in ci
+        "loader-hardening.py" not in preflight
+        or "loader-hardening.py" not in ci
     ):
         fail("Проверка «0.17.10 усиление защиты загрузчика gate» не подключена к предварительным проверкам и CI")
 
@@ -4734,7 +4736,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         ".github/workflows/production-release-candidate.yml"
     )
     rc_tests_01711 = read("cli/cmd/launcher/compatibility_release_certificate_test.go")
-    rc_gate_01711 = read("scripts/smoke/offline/loader-compatibility-rc-01711.py")
+    rc_gate_01711 = read("scripts/smoke/offline/loader-compatibility-rc.py")
     rc_targets_01711 = json.loads(read("compatibility/targets.json"))["targets"]
     for required in [
         "LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json",
@@ -4838,8 +4840,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Loader Compatibility RC 0.17.11 gate: OK" not in rc_gate_01711:
         fail("Не завершена реализация «0.17.11 обязательная проверка: кандидат выпуска совместимости загрузчиков gate»")
     if (
-        "loader-compatibility-rc-01711.py" not in preflight
-        or "loader-compatibility-rc-01711.py" not in ci
+        "loader-compatibility-rc.py" not in preflight
+        or "loader-compatibility-rc.py" not in ci
     ):
         fail("Проверка «0.17.11 кандидат выпуска совместимости загрузчиков gate» не подключена к предварительным проверкам и CI")
 
@@ -4861,7 +4863,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ga_tests_0180 = read("cli/cmd/launcher/loader_ga_test.go") + read(
         "cli/cmd/launcher/compatibility_release_certificate_test.go"
     )
-    ga_gate_0180 = read("scripts/smoke/offline/loader-compatibility-ga-0180.py")
+    ga_gate_0180 = read("scripts/smoke/offline/loader-compatibility-ga.py")
     for required in [
         "loaderGASupport0180",
         "enforceLoaderGASupport0180",
@@ -4929,8 +4931,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Loader Compatibility GA 0.18.0 gate: OK" not in ga_gate_0180:
         fail("Не завершена реализация обязательной проверки совместимости загрузчиков 0.18.0")
     if (
-        "loader-compatibility-ga-0180.py" not in preflight
-        or "loader-compatibility-ga-0180.py" not in ci
+        "loader-compatibility-ga.py" not in preflight
+        or "loader-compatibility-ga.py" not in ci
     ):
         fail("Проверка совместимости загрузчиков 0.18.0 не подключена к предварительным проверкам релиза и CI")
 
@@ -4946,7 +4948,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     windows_policy_0181 = read("runtime/runtime/src/windows_policy.rs")
     windows_ipc_0181 = read("runtime/runtime/src/guard_ipc.rs")
     windows_test_0181 = read("runtime/runtime/tests/guard_windows.rs")
-    windows_gate_0181 = read("scripts/smoke/offline/windows-protection-core-II-0181.py")
+    windows_gate_0181 = read("scripts/smoke/offline/windows-protection-core-II.py")
     for required in [
         "WindowsProtectionProfile",
         "WindowsProtectionCapabilities",
@@ -4988,8 +4990,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Windows Protection Core II 0.18.1 gate: OK" not in windows_gate_0181:
         fail("Не завершена реализация «0.18.1 обязательная проверка: Windows Protection Core II gate»")
     if (
-        "windows-protection-core-II-0181.py" not in preflight
-        or "windows-protection-core-II-0181.py" not in ci
+        "windows-protection-core-II.py" not in preflight
+        or "windows-protection-core-II.py" not in ci
     ):
         fail("Проверка «0.18.1 Windows Protection Core II gate» не подключена к предварительным проверкам и CI")
     if "--test guard_windows" not in ci or "-D warnings" not in ci:
@@ -5012,7 +5014,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     sensor_ipc_0182 = read("runtime/runtime/src/guard_ipc.rs")
     sensor_build_0182 = read("scripts/release/build-windows-desktop.ps1")
     sensor_test_0182 = read("runtime/runtime/tests/guard_sensor_windows.rs")
-    sensor_gate_0182 = read("scripts/smoke/offline/guard-sensor-0182.py")
+    sensor_gate_0182 = read("scripts/smoke/offline/guard-sensor.py")
     sensor_updater_0182 = read("cli/cmd/launcher/component_update.go")
     sensor_signing_0182 = read("cli/cmd/launcher/windows_signing.go")
     for required in [
@@ -5093,7 +5095,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"В проверке «0.18.2 Guard Sensor регрессионная интеграционная проверка Java» отсутствует обязательный компонент: {required}")
     if "Guard Sensor 0.18.2 gate: OK" not in sensor_gate_0182:
         fail("Не завершена реализация «0.18.2 обязательная проверка: Guard Sensor gate»")
-    if "guard-sensor-0182.py" not in preflight or "guard-sensor-0182.py" not in ci:
+    if "guard-sensor.py" not in preflight or "guard-sensor.py" not in ci:
         fail("Проверка «0.18.2 Guard Sensor gate» не подключена к предварительным проверкам и CI")
     for required in [
         "cargo build --manifest-path runtime/guard-sensor/Cargo.toml",
@@ -5119,7 +5121,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     module_bootstrap_0183 = read("runtime/runtime/src/windows_sensor.rs")
     module_supervisor_0183 = read("runtime/runtime/src/supervisor.rs")
     module_test_0183 = read("runtime/runtime/tests/guard_sensor_windows.rs")
-    module_gate_0183 = read("scripts/smoke/offline/guard-module-guard-0183.py")
+    module_gate_0183 = read("scripts/smoke/offline/guard-module-guard.py")
     for required in [
         "LdrRegisterDllNotification",
         "LdrUnregisterDllNotification",
@@ -5179,8 +5181,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Module Guard 0.18.3 gate: OK" not in module_gate_0183:
         fail("Не завершена реализация «0.18.3 обязательная проверка: Module Guard gate»")
     if (
-        "guard-module-guard-0183.py" not in preflight
-        or "guard-module-guard-0183.py" not in ci
+        "guard-module-guard.py" not in preflight
+        or "guard-module-guard.py" not in ci
     ):
         fail("Проверка «0.18.3 Module Guard gate» не подключена к предварительным проверкам и CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
@@ -5201,7 +5203,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     hook_report_0184 = read("runtime/runtime/src/windows_hook_engine.rs")
     hook_bootstrap_0184 = read("runtime/runtime/src/windows_sensor.rs")
     hook_test_0184 = read("runtime/runtime/tests/guard_sensor_windows.rs")
-    hook_gate_0184 = read("scripts/smoke/offline/guard-aggressive-hook-engine-0184.py")
+    hook_gate_0184 = read("scripts/smoke/offline/guard-aggressive-hook-engine.py")
     for required in [
         "collect_hook_candidates",
         "IMAGE_DIRECTORY_ENTRY_IMPORT",
@@ -5268,8 +5270,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Aggressive Hook Engine I 0.18.4 gate: OK" not in hook_gate_0184:
         fail("Не завершена реализация «0.18.4 обязательная проверка: Hook Engine gate»")
     if (
-        "guard-aggressive-hook-engine-0184.py" not in preflight
-        or "guard-aggressive-hook-engine-0184.py" not in ci
+        "guard-aggressive-hook-engine.py" not in preflight
+        or "guard-aggressive-hook-engine.py" not in ci
     ):
         fail("Проверка «0.18.4 Hook Engine gate» не подключена к предварительным проверкам и CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
@@ -5291,7 +5293,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     memory_report_0185 = read("runtime/runtime/src/windows_memory_integrity.rs")
     memory_test_0185 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     memory_probe_0185 = read("runtime/guard-memory-probe/src/lib.rs")
-    memory_gate_0185 = read("scripts/smoke/offline/guard-memory-integrity-0185.py")
+    memory_gate_0185 = read("scripts/smoke/offline/guard-memory-integrity.py")
     for required in [
         "VirtualQuery",
         "MEM_IMAGE",
@@ -5366,8 +5368,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Memory Integrity 0.18.5 gate: OK" not in memory_gate_0185:
         fail("Не завершена реализация «0.18.5 обязательная проверка: Memory Integrity gate»")
     if (
-        "guard-memory-integrity-0185.py" not in preflight
-        or "guard-memory-integrity-0185.py" not in ci
+        "guard-memory-integrity.py" not in preflight
+        or "guard-memory-integrity.py" not in ci
     ):
         fail("Проверка «0.18.5 Memory Integrity gate» не подключена к предварительным проверкам и CI")
     if (
@@ -5394,7 +5396,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     thread_test_0186 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     thread_probe_0186 = read("runtime/guard-thread-probe/src/lib.rs")
     thread_gate_0186 = read(
-        "scripts/smoke/offline/guard-thread-process-integrity-0186.py"
+        "scripts/smoke/offline/guard-thread-process-integrity.py"
     )
     for required in [
         "NtQueryInformationThread",
@@ -5483,8 +5485,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Thread & Process Integrity 0.18.6 gate: OK" not in thread_gate_0186:
         fail("Не завершена реализация «0.18.6 обязательная проверка: Thread & Process Integrity gate»")
     if (
-        "guard-thread-process-integrity-0186.py" not in preflight
-        or "guard-thread-process-integrity-0186.py" not in ci
+        "guard-thread-process-integrity.py" not in preflight
+        or "guard-thread-process-integrity.py" not in ci
     ):
         fail("Проверка «0.18.6 Thread & Process Integrity gate» не подключена к предварительным проверкам и CI")
     if (
@@ -5512,7 +5514,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     debug_report_0187 = read("runtime/runtime/src/windows_debug_instrumentation.rs")
     debug_test_0187 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     debug_probe_0187 = read("runtime/guard-debug-probe/src/main.rs")
-    debug_gate_0187 = read("scripts/smoke/offline/guard-debug-instrumentation-0187.py")
+    debug_gate_0187 = read("scripts/smoke/offline/guard-debug-instrumentation.py")
     for required in [
         "IsDebuggerPresent",
         "CheckRemoteDebuggerPresent",
@@ -5596,8 +5598,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Debug & Instrumentation Guard 0.18.7 gate: OK" not in debug_gate_0187:
         fail("Не завершена реализация «0.18.7 обязательная проверка: Debug & Instrumentation Guard gate»")
     if (
-        "guard-debug-instrumentation-0187.py" not in preflight
-        or "guard-debug-instrumentation-0187.py" not in ci
+        "guard-debug-instrumentation.py" not in preflight
+        or "guard-debug-instrumentation.py" not in ci
     ):
         fail("Проверка «0.18.7 Debug Guard gate» не подключена к предварительным проверкам и CI")
     if (
@@ -5623,7 +5625,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     jvm_report_0188 = read("runtime/runtime/src/windows_jvm_aware.rs")
     jvm_test_0188 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     jvm_probe_0188 = read("runtime/guard-jvm-probe/src/lib.rs")
-    jvm_gate_0188 = read("scripts/smoke/offline/guard-jvm-aware-protection-0188.py")
+    jvm_gate_0188 = read("scripts/smoke/offline/guard-jvm-aware-protection.py")
     jvm_adversarial_ci_0188 = read("scripts/guard_ci/windows_adversarial.py")
     for required in [
         "CERTIFIED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25]",
@@ -5689,8 +5691,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "JVM-Aware Protection 0.18.8 gate: OK" not in jvm_gate_0188:
         fail("Не завершена реализация «0.18.8 обязательная проверка: JVM-Aware Protection gate»")
     if (
-        "guard-jvm-aware-protection-0188.py" not in preflight
-        or "guard-jvm-aware-protection-0188.py" not in ci
+        "guard-jvm-aware-protection.py" not in preflight
+        or "guard-jvm-aware-protection.py" not in ci
     ):
         fail("Проверка «0.18.8 JVM-Aware Protection gate» не подключена к предварительным проверкам и CI")
     for required in [
@@ -5722,7 +5724,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     continuous_parent_0189 = read("runtime/runtime/src/windows_module_guard.rs")
     continuous_report_0189 = read("runtime/runtime/src/windows_continuous_guard.rs")
     continuous_test_0189 = read("runtime/runtime/tests/guard_sensor_windows.rs")
-    continuous_gate_0189 = read("scripts/smoke/offline/guard-continuous-guard-0189.py")
+    continuous_gate_0189 = read("scripts/smoke/offline/guard-continuous-guard.py")
     for required in [
         "Launcher Continuous Guard sensor-event-chain v1",
         "NGCGAK01",
@@ -5774,8 +5776,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Continuous Guard 0.18.9 gate: OK" not in continuous_gate_0189:
         fail("Не завершена реализация «0.18.9 обязательная проверка: Continuous Guard gate»")
     if (
-        "guard-continuous-guard-0189.py" not in preflight
-        or "guard-continuous-guard-0189.py" not in ci
+        "guard-continuous-guard.py" not in preflight
+        or "guard-continuous-guard.py" not in ci
     ):
         fail("Проверка «0.18.9 Continuous Guard gate» не подключена к предварительным проверкам и CI")
     if "guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat" not in ci:
@@ -5789,7 +5791,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 adversarial_runner_01811 = read("scripts/guard_ci/windows_adversarial.py")
 adversarial_tests_01811 = read("scripts/guard_ci/test_windows_adversarial.py")
 adversarial_gate_01811 = read(
-    "scripts/smoke/offline/guard-windows-adversarial-ci-01811.py"
+    "scripts/smoke/offline/guard-windows-adversarial-ci.py"
 )
 for scenario_id, scenario_type in (
     ("sensor-early-load", "compatibility"),
@@ -5834,9 +5836,9 @@ for required in [
     if required not in ci:
         fail(f"В проверке «0.18.11 Windows Adversarial CI workflow» отсутствует обязательный компонент: {required}")
 if (
-    "guard-windows-adversarial-ci-01811.py" not in preflight
+    "guard-windows-adversarial-ci.py" not in preflight
     or "test_windows_adversarial.py" not in preflight
-    or "guard-windows-adversarial-ci-01811.py" not in ci
+    or "guard-windows-adversarial-ci.py" not in ci
 ):
     fail(
         "0.18.11 Обязательные проверки и самотестирование негативных испытаний Windows не подключены к предварительным проверкам или CI"
@@ -5851,20 +5853,20 @@ if (
 # В 0.18.12: Windows Protection RC должен связывать точную атакующую
 # сертификацию с опубликованными байтами x64/ARM64, подписанными Authenticode.
 windows_protection_rc_01812 = read(
-    "cli/cmd/launcher/windows_protection_release_01812.go"
+    "cli/cmd/launcher/windows_protection_release.go"
 )
 windows_protection_rc_tests_01812 = read(
-    "cli/cmd/launcher/windows_protection_release_01812_test.go"
+    "cli/cmd/launcher/windows_protection_release_test.go"
 )
 windows_protection_gate_01812 = read(
-    "scripts/smoke/offline/guard-windows-protection-rc-01812.py"
+    "scripts/smoke/offline/guard-windows-protection-rc.py"
 )
 release_commands_01812 = read("cli/cmd/launcher/release_commands.go")
 build_release_01812 = read("scripts/release/build-release.sh")
 production_candidate_01812 = read(
-    "cli/cmd/launcher/production_release_candidate_01511.go"
+    "cli/cmd/launcher/production_release_candidate.go"
 )
-production_delivery_01812 = read("cli/cmd/launcher/production_delivery_release_0160.go")
+production_delivery_01812 = read("cli/cmd/launcher/production_delivery_release.go")
 for required in [
     "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
     "WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json",
@@ -5934,8 +5936,8 @@ for required in [
             f"0.18.12 Подключение Windows Protection RC к процессу промышленного выпуска отсутствует: {required}"
         )
 if (
-    "guard-windows-protection-rc-01812.py" not in preflight
-    or "guard-windows-protection-rc-01812.py" not in ci
+    "guard-windows-protection-rc.py" not in preflight
+    or "guard-windows-protection-rc.py" not in ci
     or "TestWindowsProtection" not in ci
 ):
     fail(
@@ -5950,15 +5952,15 @@ if (
 
 # В 0.19.0: Guard Windows Protection GA переводит проверенный набор RC в производственную
 # защиту пользовательского режима со строгим отказом без добавления драйвера ядра.
-windows_protection_ga_0190 = read("cli/cmd/launcher/windows_protection_ga_0190.go")
+windows_protection_ga_0190 = read("cli/cmd/launcher/windows_protection_ga.go")
 windows_protection_ga_tests_0190 = read(
-    "cli/cmd/launcher/windows_protection_ga_0190_test.go"
+    "cli/cmd/launcher/windows_protection_ga_test.go"
 )
 windows_protection_ga_gate_0190 = read(
-    "scripts/smoke/offline/guard-windows-protection-ga-0190.py"
+    "scripts/smoke/offline/guard-windows-protection-ga.py"
 )
 attestation_v2_0190 = read(
-    "services/api/internal/httpapi/guard_attestation_v2_01810.go"
+    "services/api/internal/httpapi/guard_attestation_v2_.go"
 )
 server_bridge_0190 = read("services/api/internal/httpapi/server_bridge.go")
 for required in [
@@ -6043,8 +6045,8 @@ for required in [
     if required not in server_bridge_0190:
         fail(f"В проверке «0.19.0 непрерывная проверка билетов ServerBridge» отсутствует обязательный компонент: {required}")
 if (
-    "guard-windows-protection-ga-0190.py" not in preflight
-    or "guard-windows-protection-ga-0190.py" not in ci
+    "guard-windows-protection-ga.py" not in preflight
+    or "guard-windows-protection-ga.py" not in ci
     or "TestWindowsProtectionGA" not in ci
 ):
     fail(
@@ -6065,15 +6067,15 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     0,
 ):
     game_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
-    real_backup = read("e2e/scripts/verify-real-world-backup-0290.py")
-    certification = read("scripts/ga/verify_server_control_0290.py")
+    real_backup = read("e2e/scripts/verify-real-world-backup.py")
+    certification = read("scripts/ga/verify_server_control.py")
     pipeline = read(".github/workflows/ci.yml")
     release_pipeline = read(".github/workflows/production-release-candidate.yml")
     for required in [
-        "verify-real-world-backup-0290.py",
+        "verify-real-world-backup.py",
         "world-backup-0290.json",
         "realWorldBackupRestore",
-        "verify_server_control_0290.py",
+        "verify_server_control.py",
     ]:
         if required not in game_e2e:
             fail(f"0.29.0: реальный E2E-сценарий Minecraft не включает проверку восстановления мира: {required}")
@@ -6108,7 +6110,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in certification:
             fail(f"В проверке «0.29.0 обязательная сквозная проверка аттестации» отсутствует обязательный компонент: {required}")
     if (
-        "verify_server_control_0290.py" not in pipeline
+        "verify_server_control.py" not in pipeline
         or "world-backup-0290.json" not in pipeline
     ):
         fail("0.29.0: CI должен запускать реальную проверку восстановления мира Paper и сохранять её результаты")

@@ -3,25 +3,34 @@ on:
   push:
     paths:
       - 'sdk/java/**'
-      - 'scripts/ga/java_sdk_ga_0310.py'
-      - 'scripts/java/*04812.py'
+      - 'scripts/ga/java_sdk_ga.py'
+      - 'scripts/java/build_developer_package.py'
+      - 'scripts/java/compare_sdk_repos.py'
+      - 'scripts/java/developer_e2e.py'
+      - 'scripts/java/test_developer_e2e.py'
       - 'examples/extensions/java-developer-04812/**'
       - 'examples/extensions/java-ui/test-runner.py'
       - 'dist/java-sdk/**'
       - 'VERSION'
-      - '.github/workflows/java-developer-experience-04812.yml'
+      - '.github/workflows/java-developer-experience.yml'
   pull_request:
     paths:
       - 'sdk/java/**'
-      - 'scripts/ga/java_sdk_ga_0310.py'
-      - 'scripts/java/*04812.py'
+      - 'scripts/ga/java_sdk_ga.py'
+      - 'scripts/java/build_developer_package.py'
+      - 'scripts/java/compare_sdk_repos.py'
+      - 'scripts/java/developer_e2e.py'
+      - 'scripts/java/test_developer_e2e.py'
       - 'examples/extensions/java-developer-04812/**'
       - 'examples/extensions/java-ui/test-runner.py'
       - 'dist/java-sdk/**'
-      - '.github/workflows/java-developer-experience-04812.yml'
+      - '.github/workflows/java-developer-experience.yml'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   external-consumer:
     strategy:
@@ -51,12 +60,12 @@ jobs:
           sh sdk/java/http-client/build.sh test
       - name: "Пересобрать Maven-артефакты из SDK и проверить совместимость публичного ABI"
         shell: bash
-        run: python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output dist/java-sdk
+        run: python3 scripts/ga/java_sdk_ga.py --skip-build --output dist/java-sdk
       - name: "Проверить внешний клиент SDK и обратные вызовы настоящего JVM-хоста"
         shell: bash
         run: |
-          python3 scripts/java/test_developer_e2e_04812.py
-          python3 scripts/java/developer_e2e_04812.py --sdk-repo dist/java-sdk/maven --report java-developer-evidence.json
+          python3 scripts/java/test_developer_e2e.py
+          python3 scripts/java/developer_e2e.py --sdk-repo dist/java-sdk/maven --report java-developer-evidence.json
       - name: "Скомпилировать тот же клиент публичного SDK с помощью Maven"
         shell: bash
         run: mvn -B -ntp -f examples/extensions/java-developer-04812/pom.xml -Dlauncher.sdk.version="$(cat VERSION)" package
@@ -85,6 +94,6 @@ jobs:
       - name: "Проверить совпадение байтов опубликованного SDK из двух независимых промежуточных каталогов"
         shell: bash
         run: |
-          python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output sdk-staging-a
-          python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output sdk-staging-b
-          python3 scripts/java/compare_sdk_repos_04812.py sdk-staging-a/maven sdk-staging-b/maven
+          python3 scripts/ga/java_sdk_ga.py --skip-build --output sdk-staging-a
+          python3 scripts/ga/java_sdk_ga.py --skip-build --output sdk-staging-b
+          python3 scripts/java/compare_sdk_repos.py sdk-staging-a/maven sdk-staging-b/maven

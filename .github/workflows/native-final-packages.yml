@@ -28,6 +28,9 @@ concurrency:
   group: native-final-packages-0522-${{ github.sha }}
   cancel-in-progress: false
 
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   native-package:
     name: "Настоящий подписанный установщик для ${{ matrix.platform }}-${{ matrix.arch }}"
@@ -66,7 +69,7 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import importlib.util, os, pathlib
-          script=pathlib.Path('scripts/acceptance/native_packages_0522.py').resolve()
+          script=pathlib.Path('scripts/acceptance/native_packages.py').resolve()
           spec=importlib.util.spec_from_file_location('native_0522',script)
           m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
           print('Нативный исполнитель:',m.host_target())
@@ -105,7 +108,7 @@ jobs:
           set -euo pipefail
           test -n "$APPROVED_INDEX_SHA256" && test "$NATIVE_MANIFEST_SHA256" = "$APPROVED_INDEX_SHA256"
           test -n "$APPROVED_PROJECT" && test "$NATIVE_PROJECT" = "$APPROVED_PROJECT"
-          python scripts/acceptance/native_packages_0522.py run \
+          python scripts/acceptance/native_packages.py run \
             --manifest-url "$NATIVE_MANIFEST_URL" \
             --manifest-sha256 "$NATIVE_MANIFEST_SHA256" \
             --manifest-size "$NATIVE_MANIFEST_SIZE" \
@@ -167,7 +170,7 @@ jobs:
         run: |
           python - <<'PY'
           import importlib.util,os,pathlib
-          spec=importlib.util.spec_from_file_location('native_0522',pathlib.Path('scripts/acceptance/native_packages_0522.py').resolve())
+          spec=importlib.util.spec_from_file_location('native_0522',pathlib.Path('scripts/acceptance/native_packages.py').resolve())
           m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
           m.fetch(os.environ['INDEX_URL'],pathlib.Path(os.environ['RUNNER_TEMP'])/'native-final-sources-0522.json',
                   os.environ['INDEX_SHA256'],int(os.environ['INDEX_SIZE']))
@@ -182,7 +185,7 @@ jobs:
         run: |
           test -n "$APPROVED_INDEX_SHA256" && test "$INDEX_SHA256" = "$APPROVED_INDEX_SHA256"
           test -n "$APPROVED_PROJECT" && test "$PROJECT_ID" = "$APPROVED_PROJECT"
-          python scripts/acceptance/native_packages_0522.py aggregate \
+          python scripts/acceptance/native_packages.py aggregate \
             --results "$RUNNER_TEMP/native-package-receipts-0522" \
             --source-index "$RUNNER_TEMP/native-final-sources-0522.json" \
             --manifest-sha256 "$INDEX_SHA256" \

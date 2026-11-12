@@ -22,9 +22,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/release'))
 sys.path.insert(0, str(ROOT / 'scripts/ga'))
-from delivery_verify_0462 import verify_bundle
-from verify_six_native_game_0440 import verify as verify_native_game
-from adversarial_pilot_05012 import analyze_shadow, compare_performance, verify_game, file_hash
+from delivery_verify import verify_bundle
+from verify_six_native_game import verify as verify_native_game
+from adversarial_pilot import analyze_shadow, compare_performance, verify_game, file_hash
 
 VERSION = '0.51.0'
 SCHEMA = 'launcher.guard.ga0510.independent.v1'

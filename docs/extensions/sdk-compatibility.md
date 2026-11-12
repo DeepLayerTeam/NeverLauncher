@@ -42,7 +42,7 @@ sh examples/extensions/java-host/build.sh
 python3 examples/extensions/java-host/test-runner.py
 sh examples/extensions/java-runtime/build.sh
 python3 examples/extensions/java-runtime/test-runner.py
-python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release_0420.py'
+python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release.py'
 (cd services/api && go test ./internal/extensionhost ./internal/extensioncontract ./internal/extensionjava)
 ```
 

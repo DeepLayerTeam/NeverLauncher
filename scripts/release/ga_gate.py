@@ -20,8 +20,8 @@ from cryptography.exceptions import InvalidSignature
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/release'))
 sys.path.insert(0, str(ROOT / 'scripts/integration'))
-from delivery_verify_0462 import verify_bundle
-import verify_0478
+from delivery_verify import verify_bundle
+import verify
 from check_protected_run import check as check_protected_run
 
 DOMAIN = b'launcher.ga0480.independent-operator.v1\x00'
@@ -96,7 +96,7 @@ def gate(root: Path, approval: Path, signature: Path, key: Path, commit: str):
     verify_0478.minecraft(root/'full-game',VERSION,mc='1.21.1')
     verify_0478.minecraft(root/'matching-1.17.1',VERSION,matching=True,mc='1.17.1')
     verify_0478.minecraft(root/'matching-1.21.1',VERSION,matching=True,mc='1.21.1')
-    for name,workflow in (('staging_workflow','independent-migration-0480.yml'),('game_workflow','integration-matrix-0478.yml')):
+    for name,workflow in (('staging_workflow','independent-migration-0480.yml'),('game_workflow','integration-matrix.yml')):
         check_protected_run(report(root,name),VERSION,commit,workflow)
     delivery = verify_bundle(root/'signed',release_manifest=True)
     require(delivery.get('releaseManifestMatchesAssets') is True and delivery.get('version') == VERSION, 'Шесть подписанных пакетов выпуска не соответствуют описи поставки')

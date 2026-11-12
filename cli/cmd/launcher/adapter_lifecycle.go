@@ -18,7 +18,7 @@ import (
 // отпечаток намеренно меняется при изменении кода материализации исполняемых файлов
 // без соответствующего ручного обновления константы версии.
 //
-//go:embed adapter_lifecycle_02711.go client_factory_0271.go vanilla_runtime.go loader_runtime.go loader_resolution.go modern_loader_adapters_0272.go forge_runtime.go forge_processor_recovery.go isolated_build_worker_0273.go isolated_build_worker_0273_linux.go isolated_build_worker_0273_darwin.go isolated_build_worker_0273_windows.go isolated_build_worker_0273_other.go shared_artifacts_0277.go legacy_client_adapters_0278.go authlib_classloader_0279.go
+//go:embed adapter_lifecycle.go client_factory.go vanilla_runtime.go loader_runtime.go loader_resolution.go modern_loader_adapters.go forge_runtime.go forge_processor_recovery.go isolated_build_worker.go isolated_build_worker_linux.go isolated_build_worker_darwin.go isolated_build_worker_windows.go isolated_build_worker_other.go shared_artifacts.go legacy_client_adapters.go authlib_classloader.go
 var factoryAdapterSources02711 embed.FS
 
 type factoryAdapterPin02711 struct {
@@ -33,13 +33,13 @@ var factoryAdapterDefinitions02711 = map[string]struct {
 	version string
 	files   []string
 }{
-	"vanilla":        {"1.0.0", []string{"adapter_lifecycle_02711.go", "client_factory_0271.go", "vanilla_runtime.go", "shared_artifacts_0277.go", "legacy_client_adapters_0278.go"}},
-	"fabric":         {"1.0.0", []string{"adapter_lifecycle_02711.go", "client_factory_0271.go", "vanilla_runtime.go", "shared_artifacts_0277.go", "loader_runtime.go", "loader_resolution.go", "modern_loader_adapters_0272.go"}},
-	"quilt":          {"1.0.0", []string{"adapter_lifecycle_02711.go", "client_factory_0271.go", "vanilla_runtime.go", "shared_artifacts_0277.go", "loader_runtime.go", "loader_resolution.go", "modern_loader_adapters_0272.go"}},
-	"forge":          {"1.0.0", []string{"adapter_lifecycle_02711.go", "client_factory_0271.go", "vanilla_runtime.go", "shared_artifacts_0277.go", "forge_runtime.go", "forge_processor_recovery.go", "isolated_build_worker_0273.go", "isolated_build_worker_0273_linux.go", "isolated_build_worker_0273_darwin.go", "isolated_build_worker_0273_windows.go", "isolated_build_worker_0273_other.go", "legacy_client_adapters_0278.go", "authlib_classloader_0279.go"}},
-	"neoforge":       {"1.0.0", []string{"adapter_lifecycle_02711.go", "client_factory_0271.go", "vanilla_runtime.go", "shared_artifacts_0277.go", "forge_runtime.go", "forge_processor_recovery.go", "isolated_build_worker_0273.go", "isolated_build_worker_0273_linux.go", "isolated_build_worker_0273_darwin.go", "isolated_build_worker_0273_windows.go", "isolated_build_worker_0273_other.go", "authlib_classloader_0279.go"}},
-	"sha256-verify":  {"1.0.0", []string{"client_factory_0271.go"}},
-	"atomic-publish": {"1.0.0", []string{"client_factory_0271.go"}},
+	"vanilla":        {"1.0.0", []string{"adapter_lifecycle.go", "client_factory.go", "vanilla_runtime.go", "shared_artifacts.go", "legacy_client_adapters.go"}},
+	"fabric":         {"1.0.0", []string{"adapter_lifecycle.go", "client_factory.go", "vanilla_runtime.go", "shared_artifacts.go", "loader_runtime.go", "loader_resolution.go", "modern_loader_adapters.go"}},
+	"quilt":          {"1.0.0", []string{"adapter_lifecycle.go", "client_factory.go", "vanilla_runtime.go", "shared_artifacts.go", "loader_runtime.go", "loader_resolution.go", "modern_loader_adapters.go"}},
+	"forge":          {"1.0.0", []string{"adapter_lifecycle.go", "client_factory.go", "vanilla_runtime.go", "shared_artifacts.go", "forge_runtime.go", "forge_processor_recovery.go", "isolated_build_worker.go", "isolated_build_worker_linux.go", "isolated_build_worker_darwin.go", "isolated_build_worker_windows.go", "isolated_build_worker_other.go", "legacy_client_adapters.go", "authlib_classloader.go"}},
+	"neoforge":       {"1.0.0", []string{"adapter_lifecycle.go", "client_factory.go", "vanilla_runtime.go", "shared_artifacts.go", "forge_runtime.go", "forge_processor_recovery.go", "isolated_build_worker.go", "isolated_build_worker_linux.go", "isolated_build_worker_darwin.go", "isolated_build_worker_windows.go", "isolated_build_worker_other.go", "authlib_classloader.go"}},
+	"sha256-verify":  {"1.0.0", []string{"client_factory.go"}},
+	"atomic-publish": {"1.0.0", []string{"client_factory.go"}},
 }
 
 func factoryAdapterPinByID02711(id string) (factoryAdapterPin02711, error) {

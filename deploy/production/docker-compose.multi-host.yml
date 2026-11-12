@@ -163,7 +163,7 @@ services:
     ports:
       - '${LAUNCHER_INGRESS_BIND_IP:?требуется явно указанный адрес входящего интерфейса}:443:443'
     volumes:
-      - ./nginx.multi-host-0512.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx.multi-host.conf:/etc/nginx/conf.d/default.conf:ro
       - ${LAUNCHER_TLS_CERT_PATH:?требуется путь к сертификату TLS}:/etc/launcher/tls/fullchain.pem:ro
       - ${LAUNCHER_TLS_KEY_PATH:?требуется путь к закрытому ключу TLS}:/etc/launcher/tls/privkey.pem:ro
     cap_drop: ['ALL']

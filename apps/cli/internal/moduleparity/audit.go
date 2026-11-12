@@ -25,9 +25,9 @@ import (
 	"time"
 )
 
-const MatrixPath = "compatibility/gravit/module-parity-0301.json"
-const JavaContractPath = "sdk/api/java-extension-api-0301.json"
-const HistoricalPath = "compatibility/gravit/authorization-coverage-0211.json"
+const MatrixPath = "compatibility/gravit/module-parity.json"
+const JavaContractPath = "sdk/api/java-extension-api.json"
+const HistoricalPath = "compatibility/gravit/authorization-coverage.json"
 
 type Module struct {
 	ID             string   `json:"id"`
@@ -170,7 +170,7 @@ func validateJavaContract(root string) error {
 	if host.SchemaVersion != "1.0" || host.HostProtocolVersion != spec.HostProtocolVersion || host.ExtensionAPIVersion != spec.ExtensionAPIVersion {
 		return errors.New("Описание Java API расходится с используемым протоколом хоста")
 	}
-	astFile, e := parser.ParseFile(token.NewFileSet(), filepath.Join(root, "services/api/internal/extensioncontract/contract_0210.go"), nil, 0)
+	astFile, e := parser.ParseFile(token.NewFileSet(), filepath.Join(root, "services/api/internal/extensioncontract/contract.go"), nil, 0)
 	if e != nil {
 		return e
 	}
@@ -206,7 +206,7 @@ func validateJavaContract(root string) error {
 	if len(spec.TypeBindings) != len(host.Types) {
 		return errors.New("Привязки типов Java не охватывают существующие типы хоста")
 	}
-	hostSource, err := os.ReadFile(filepath.Join(root, "services/api/internal/extensionhost/host_0205.go"))
+	hostSource, err := os.ReadFile(filepath.Join(root, "services/api/internal/extensionhost/host.go"))
 	if err != nil {
 		return err
 	}

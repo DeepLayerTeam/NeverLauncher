@@ -2,26 +2,26 @@ name: Восстановление учётной записи и отозван
 on:
   push:
     paths:
-      - 'services/api/internal/httpapi/device_key_recovery_0128.go'
-      - 'services/api/internal/httpapi/account_recovery_0435_test.go'
-      - 'services/api/internal/repository/devices_0121.go'
+      - 'services/api/internal/httpapi/device_key_recovery.go'
+      - 'services/api/internal/httpapi/account_recovery_test.go'
+      - 'services/api/internal/repository/devices.go'
       - 'services/api/internal/repository/memory.go'
-      - 'services/api/internal/repository/sqlite_http_methods_0372.go'
-      - 'services/api/internal/repository/account_recovery_0435_integration_test.go'
-      - 'services/api/internal/repository/account_recovery_0435_test.go'
+      - 'services/api/internal/repository/sqlite_http_methods.go'
+      - 'services/api/internal/repository/account_recovery_integration_test.go'
+      - 'services/api/internal/repository/account_recovery_test.go'
       - 'services/api/internal/dbmigrate/**'
-      - '.github/workflows/account-device-recovery-0435.yml'
+      - '.github/workflows/account-device-recovery.yml'
   pull_request:
     paths:
-      - 'services/api/internal/httpapi/device_key_recovery_0128.go'
-      - 'services/api/internal/httpapi/account_recovery_0435_test.go'
-      - 'services/api/internal/repository/devices_0121.go'
+      - 'services/api/internal/httpapi/device_key_recovery.go'
+      - 'services/api/internal/httpapi/account_recovery_test.go'
+      - 'services/api/internal/repository/devices.go'
       - 'services/api/internal/repository/memory.go'
-      - 'services/api/internal/repository/sqlite_http_methods_0372.go'
-      - 'services/api/internal/repository/account_recovery_0435_integration_test.go'
-      - 'services/api/internal/repository/account_recovery_0435_test.go'
+      - 'services/api/internal/repository/sqlite_http_methods.go'
+      - 'services/api/internal/repository/account_recovery_integration_test.go'
+      - 'services/api/internal/repository/account_recovery_test.go'
       - 'services/api/internal/dbmigrate/**'
-      - '.github/workflows/account-device-recovery-0435.yml'
+      - '.github/workflows/account-device-recovery.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,7 +38,7 @@ jobs:
           POSTGRES_PASSWORD: integration-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U launcher_recovery -d launcher_recovery' --health-interval 5s --health-timeout 5s --health-retries 25
+          --health-cmd "pg_isready -U launcher_recovery -d launcher_recovery" --health-interval 5s --health-timeout 5s --health-retries 25
     env:
       LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_recovery:integration-only@127.0.0.1:5432/launcher_recovery?sslmode=disable
     steps:

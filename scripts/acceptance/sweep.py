@@ -29,10 +29,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/acceptance'))
 sys.path.insert(0, str(ROOT / 'scripts/release'))
 sys.path.insert(0, str(ROOT / 'scripts/ga'))
-import inventory_0521 as inventory
-import native_packages_0522 as native
-import independent_current_05211 as reproducible
-import verify_six_native_game_0440 as native_game
+import inventory as inventory
+import native_packages as native
+import independent_current as reproducible
+import verify_six_native_game as native_game
 
 SHA = re.compile(r'[a-f0-9]{64}\Z')
 COMMIT = re.compile(r'[a-f0-9]{40}\Z')

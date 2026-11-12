@@ -10,10 +10,10 @@
 # На доверенном Linux CI runner с реальным Docker, Java 21, Go, Gradle,
 # PostgreSQL и доступными исходными образами Minecraft и прокси:
 GITHUB_SHA="$(git rev-parse HEAD)" \
-  bash scripts/test/serverbridge-network-0420.sh
+  bash scripts/test/serverbridge-network.sh
 
 # После сборки конечного релиза (в build-release.sh выполняется автоматически):
-python3 scripts/ga/accept_network_release_0420.py \
+python3 scripts/ga/accept_network_release.py \
   --root . --release "dist/release-0.42.0" \
   --runtime "e2e/runtime" \
   --source-commit "$(git rev-parse HEAD)" \
@@ -33,10 +33,10 @@ python3 scripts/ga/accept_network_release_0420.py \
 При блокировке `SERVER_NETWORK_ACCEPTANCE_0420.json` не записывается; разрешение на подпись/публикацию не выдаётся. Для локальных негативных регрессий без Docker:
 
 ```bash
-python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release_0420.py' -v
+python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release.py' -v
 python3 -m unittest discover -s serverbridge/tests -p '*04113.py' -v
-python3 -m unittest discover -s e2e/scripts -p 'test_record_serverbridge_runtime_04113.py' -v
+python3 -m unittest discover -s e2e/scripts -p 'test_record_serverbridge_runtime.py' -v
 python3 scripts/version/manage.py check
 ```
 
-Никогда не используйте синтетические JSON/JAR из `test_accept_network_release_0420.py` в реальном сертификате. Неверифицированный исход опасного действия должен оставаться `indeterminate` и не запускаться заново.
+Никогда не используйте синтетические JSON/JAR из `test_accept_network_release.py` в реальном сертификате. Неверифицированный исход опасного действия должен оставаться `indeterminate` и не запускаться заново.

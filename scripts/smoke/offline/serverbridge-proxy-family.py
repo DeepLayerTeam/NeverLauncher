@@ -18,8 +18,8 @@ def require(text: str, needles: list[str], label: str) -> None:
         raise SystemExit(f"{label}: отсутствует {missing}")
 
 
-api_migration = read("services/api/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
-cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
+api_migration = read("services/api/internal/dbmigrate/sql/0025_proxy_family.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0025_proxy_family.sql")
 if api_migration != cli_migration:
     raise SystemExit("Миграции семейства прокси API/CLI 0.14.5 различаются")
 require(
@@ -142,7 +142,7 @@ for kind, class_name, expected in (
     )
 
 backend = read("services/api/internal/httpapi/server_bridge.go")
-integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
+integrity = read("services/api/internal/httpapi/serverbridge_integrity.go")
 manifest = read("services/api/internal/httpapi/bridge_plugins.go")
 require(
     backend,
@@ -210,7 +210,7 @@ require(
     "Перечень семейств прокси в OpenAPI",
 )
 
-tests = read("services/api/internal/httpapi/serverbridge_proxy_family_0145_test.go")
+tests = read("services/api/internal/httpapi/serverbridge_proxy_family_test.go")
 require(
     tests,
     [
@@ -287,7 +287,7 @@ ci = read(".github/workflows/ci.yml")
 for text, label in ((preflight, "preflight"), (ci, "CI")):
     require(
         text,
-        ["serverbridge-proxy-family-0145.py", "run-proxy-family-migration-e2e.sh"],
+        ["serverbridge-proxy-family.py", "run-proxy-family-migration-e2e.sh"],
         f"0.14.5 {label} wiring",
     )
 

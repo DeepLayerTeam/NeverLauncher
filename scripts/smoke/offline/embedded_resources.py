@@ -7,6 +7,7 @@
 from __future__ import annotations
 from pathlib import Path
 import zipfile
+import json
 
 SQL_ALIAS = 'cli/internal/dbmigrate/sql/'
 TEMPLATE_ALIAS = 'cli/cmd/launcher/templates/production/'
@@ -14,11 +15,12 @@ SQL_BUNDLE = 'cli/internal/dbmigrate/catalog.zip'
 TEMPLATE_BUNDLE = 'cli/cmd/launcher/templates/production.zip'
 
 
-def _entry(rel: str) -> tuple[str, str] | None:
+def _entry(root: Path, rel: str) -> tuple[str, str] | None:
     if rel.startswith(SQL_ALIAS):
         name = rel.removeprefix(SQL_ALIAS)
         if name.endswith('.sql') and name and '/' not in name and '..' not in name:
-            return SQL_BUNDLE, 'sql/' + name
+            names = json.loads((root / 'services/api/internal/dbmigrate/migration_names.json').read_text(encoding='utf-8'))
+            return SQL_BUNDLE, 'sql/' + names.get(name, name)
         raise ValueError(f'Некорректный путь к встроенному SQL: {rel}')
     if rel.startswith(TEMPLATE_ALIAS):
         name = rel.removeprefix(TEMPLATE_ALIAS)
@@ -29,7 +31,7 @@ def _entry(rel: str) -> tuple[str, str] | None:
 
 
 def resource_read_bytes(root: Path, rel: str) -> bytes:
-    entry = _entry(rel)
+    entry = _entry(root, rel)
     if entry is None:
         return (root / rel).read_bytes()
     archive, member = entry
@@ -42,7 +44,7 @@ def resource_read_text(root: Path, rel: str) -> str:
 
 
 def resource_exists(root: Path, rel: str) -> bool:
-    entry = _entry(rel)
+    entry = _entry(root, rel)
     if entry is None:
         return (root / rel).is_file()
     archive, member = entry
@@ -57,5 +59,7 @@ def resource_exists(root: Path, rel: str) -> bool:
 
 def migration_catalog(root: Path) -> dict[str, bytes]:
     with zipfile.ZipFile(root / SQL_BUNDLE) as payload:
-        return {entry.filename.removeprefix('sql/'): payload.read(entry)
+        names = json.loads((root / 'services/api/internal/dbmigrate/migration_names.json').read_text(encoding='utf-8'))
+        physical = {old: new for new, old in names.items()}
+        return {physical.get(entry.filename.removeprefix('sql/'), entry.filename.removeprefix('sql/')): payload.read(entry)
                 for entry in payload.infolist()}

@@ -113,7 +113,7 @@ require(
 
 ci = read(".github/workflows/ci.yml")
 for required in [
-    "unified-transactional-updater-core-0156.py",
+    "unified-transactional-updater-core.py",
     "update self-test",
     'launcher-cli-linux-${{ matrix.arch }}" update self-test',
 ]:
@@ -121,7 +121,7 @@ for required in [
         raise SystemExit(f"Отсутствует: «проверка обновления в CI»: {required}")
 
 preflight = read("scripts/release/preflight.sh")
-if "unified-transactional-updater-core-0156.py" not in preflight:
+if "unified-transactional-updater-core.py" not in preflight:
     raise SystemExit("Отсутствует: «предварительная проверка обновления»")
 
 subprocess.run(

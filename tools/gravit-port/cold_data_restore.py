@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Восстановление проверенных файлов миров и пользователей Minecraft, но не работающих БД.
 
-Допускается только после изоляции через operational_rollback_04912.py:
+Допускается только после изоляции через operational_rollback.py:
 обе службы записи игровых данных должны быть отключены, а входящий
 игровой трафик и авторизация через HAProxy — закрыты. Заменённый каталог
 сохраняется для ручного восстановления. Базы данных плагинов не согласуются.
@@ -20,8 +20,8 @@ import stat
 import sys
 import tempfile
 
-import operational_rollback_04912 as rb
-import production_cutover_04911 as co
+import operational_rollback as rb
+import production_cutover as co
 
 FORMAT = "launcher/gravit-file-backup/v1"
 MAX_ENTRIES = 150000

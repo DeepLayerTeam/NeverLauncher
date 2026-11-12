@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-LOCK = ROOT / "compatibility/gravit/authorization-coverage-0211.json"
+LOCK = ROOT / "compatibility/gravit/authorization-coverage.json"
 ALLOWED_LEVELS = {
     "source-reviewed",
     "contract-tested",
@@ -140,10 +140,10 @@ def validate_authorization_invariants() -> None:
     )
     migration = (
         ROOT
-        / "services/api/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql"
+        / "services/api/internal/dbmigrate/sql/0050_authorization_scopes_identity.sql"
     ).read_text(encoding="utf-8")
     with zipfile.ZipFile(ROOT / "cli/internal/dbmigrate/catalog.zip") as archive:
-        cli_migration = archive.read("sql/0050_authorization_scopes_identity_0211.sql").decode("utf-8")
+        cli_migration = archive.read("sql/0050_authorization_scopes_identity.sql").decode("utf-8")
     minecraft = (
         ROOT / "services/api/internal/httpapi/minecraft_auth_119.go"
     ).read_text(encoding="utf-8")

@@ -141,9 +141,9 @@ require(
 
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
-if "guard-process-policy-0133.py" not in ci:
+if "guard-process-policy.py" not in ci:
     raise SystemExit("Guard 0.13.3: проверка политики процессов не подключена к CI")
-if "guard-process-policy-0133.py" not in preflight:
+if "guard-process-policy.py" not in preflight:
     raise SystemExit(
         "Проверка политики процессов Guard 0.13.3: не подключена к предварительной проверке релиза"
     )

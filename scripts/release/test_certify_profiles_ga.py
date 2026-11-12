@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import importlib.util
 
-spec = importlib.util.spec_from_file_location("profiles_ga", Path(__file__).with_name("certify-profiles-ga-0230.py"))
+spec = importlib.util.spec_from_file_location("profiles_ga", Path(__file__).with_name("certify-profiles-ga.py"))
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 

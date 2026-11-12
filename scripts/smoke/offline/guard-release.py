@@ -37,7 +37,7 @@ for path, platform in [
     )
 
 require(
-    "services/api/internal/httpapi/guard_attestation_0134.go",
+    "services/api/internal/httpapi/guard_attestation.go",
     [
         'guardReleasePolicySchema0140      = "2.0"',
         "PlatformArtifacts",
@@ -54,11 +54,11 @@ require(
     ],
 )
 require(
-    "services/api/internal/httpapi/minecraft_serverbridge_integrity_0135.go",
+    "services/api/internal/httpapi/minecraft_serverbridge_integrity.go",
     ["policy.allowsArtifactPair0140(device.Platform"],
 )
 require(
-    "services/api/internal/httpapi/minecraft_serverbridge_integrity_0135_test.go",
+    "services/api/internal/httpapi/minecraft_serverbridge_integrity_test.go",
     [
         "TestMinecraftIntegrityV2RejectsCrossProductArtifactPair0140",
         "cross-product v2 artifact pair remained valid",
@@ -74,7 +74,7 @@ require(
     ],
 )
 require(
-    "services/api/internal/httpapi/guard_attestation_0134_test.go",
+    "services/api/internal/httpapi/guard_attestation_test.go",
     [
         "TestGuardReleasePolicyV2ExactPlatformPair0140",
         "cross-product artifact pair must not be accepted",
@@ -125,11 +125,11 @@ for target in targets.get("targets", []):
     if "GuardRelease0140" not in target.get("requiredChecks", []):
         raise SystemExit(f"{target.get('id')}: отсутствует проверка релиза Guard 0.14")
 
-require("scripts/release/preflight.sh", ["guard-release-0140.py"])
-require(".github/workflows/ci.yml", ["guard-release-0140.py"])
+require("scripts/release/preflight.sh", ["guard-release.py"])
+require(".github/workflows/ci.yml", ["guard-release.py"])
 require(
     "cli/cmd/launcher/release_commands.go",
-    ["guard-release-0140.py", '"guard-release"'],
+    ["guard-release.py", '"guard-release"'],
 )
 
 print(f"Launcher 0.14.0: проверка выпуска Guard: OK ({version})")

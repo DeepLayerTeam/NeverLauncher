@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {freshComponent0248,listAvailableFiles0248,lintCatalog0248,parseRelations0248,formatRelations0248,renameComponent0248,removeComponent0248} from '../src/admin/component-editor-model-0248.ts';
+import {freshComponent0248,listAvailableFiles0248,lintCatalog0248,parseRelations0248,formatRelations0248,renameComponent0248,removeComponent0248} from '../src/admin/component-editor-model.ts';
 const mk=()=>({schemaVersion:'5.0',revision:2,digest:'0'.repeat(64),components:[
  {...freshComponent0248('core',['mods/core.jar']),required:true},
  {...freshComponent0248('shaders',['mods/shaders.jar']),dependencies:[{id:'core',versionRange:'^1.0.0'}],conflicts:[{id:'core-opt'}]},

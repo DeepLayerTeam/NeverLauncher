@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 HERE=Path(__file__).resolve().parent
-spec=importlib.util.spec_from_file_location('ux_0351',HERE/'ux_0351.py')
+spec=importlib.util.spec_from_file_location('ux_0351',HERE/'ux.py')
 ux=importlib.util.module_from_spec(spec)
 sys.modules[spec.name]=ux
 spec.loader.exec_module(ux)

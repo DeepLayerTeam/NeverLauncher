@@ -8,9 +8,9 @@ from unittest.mock import patch
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from extension_release_0430 import certify, verify_matrix, PACKAGES, ROOT
+from extension_release import certify, verify_matrix, PACKAGES, ROOT
 sys.path.insert(0, str(ROOT / 'e2e/extensions'))
-from aggregate_04212 import TARGETS, CASES, validate
+from aggregate import TARGETS, CASES, validate
 
 
 class FinalExtensionReleaseTests(unittest.TestCase):
@@ -41,7 +41,7 @@ class FinalExtensionReleaseTests(unittest.TestCase):
                 'runAttempt': self.attempt, 'checks': checks,
                 'gravitMatrixAudit': {'status': 'source-verified-not-equivalent',
                   'modules': 19, 'sha256': hashlib.sha256(
-                    (ROOT / 'compatibility/gravit/module-parity-04211.json').read_bytes()).hexdigest()}}))
+                    (ROOT / 'compatibility/gravit/module-parity_variant5.json').read_bytes()).hexdigest()}}))
         self.certificate = self.evidence / 'extension-acceptance-certificate.json'
         self.certificate.write_text(json.dumps(validate(self.evidence, self.commit,
                                  self.version, self.run, self.attempt)))
@@ -59,7 +59,7 @@ class FinalExtensionReleaseTests(unittest.TestCase):
             return certify(evidence=self.evidence, bundle=self.bundle, cli=self.cli,
                            publisher_key=self.key, version=self.version, commit=self.commit,
                            run_id=self.run, attempt=self.attempt,
-                           matrix=ROOT/'compatibility/gravit/module-parity-04211.json')
+                           matrix=ROOT/'compatibility/gravit/module-parity_variant5.json')
 
     def test_successful_all_six_with_signed_package_verifier(self):
         result = self.check()
@@ -99,10 +99,10 @@ class FinalExtensionReleaseTests(unittest.TestCase):
                 certify(evidence=self.evidence, bundle=self.bundle, cli=self.cli,
                         publisher_key=self.key, version=self.version, commit=self.commit,
                         run_id=self.run, attempt=self.attempt,
-                        matrix=ROOT/'compatibility/gravit/module-parity-04211.json')
+                        matrix=ROOT/'compatibility/gravit/module-parity_variant5.json')
 
     def test_binary_parity_cannot_be_falsely_verified(self):
-        matrix = ROOT / 'compatibility/gravit/module-parity-04211.json'
+        matrix = ROOT / 'compatibility/gravit/module-parity_variant5.json'
         doc = json.loads(matrix.read_text())
         doc['modules'][0]['status'] = 'verified'
         path = self.base / 'fake-matrix.json'
@@ -111,7 +111,7 @@ class FinalExtensionReleaseTests(unittest.TestCase):
             verify_matrix(path)
 
     def test_module_limitations_must_be_explicit(self):
-        matrix = ROOT / 'compatibility/gravit/module-parity-04211.json'
+        matrix = ROOT / 'compatibility/gravit/module-parity_variant5.json'
         doc = json.loads(matrix.read_text())
         doc['modules'][1]['limitations'] = ''
         path = self.base / 'fake-matrix.json'

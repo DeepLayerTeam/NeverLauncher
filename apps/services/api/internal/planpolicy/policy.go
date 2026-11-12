@@ -1,4 +1,4 @@
-package planpolicy02412
+package planpolicy
 
 import (
 	"crypto/ed25519"

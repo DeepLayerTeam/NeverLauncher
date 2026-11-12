@@ -2,14 +2,14 @@ name: Контроллер поэтапного обновления 0.51.7
 on:
   push:
     paths:
-      - 'scripts/operations/rolling_update_0517.py'
-      - 'scripts/operations/test_rolling_update_0517.py'
-      - 'scripts/operations/nn1_compat_0516.py'
-      - 'scripts/operations/multi_host_0512.py'
-      - 'scripts/operations/ha_inventory_0511.py'
+      - 'scripts/operations/rolling_update.py'
+      - 'scripts/operations/test_rolling_update.py'
+      - 'scripts/operations/nn1_compat.py'
+      - 'scripts/operations/multi_host.py'
+      - 'scripts/operations/ha_inventory.py'
       - 'services/api/internal/dbmigrate/**'
       - 'docs/deployment/rolling-update.md'
-      - '.github/workflows/rolling-update-0517.yml'
+      - '.github/workflows/rolling-update.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -27,11 +27,11 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest \
-            scripts/operations/test_rolling_update_0517.py \
-            scripts/operations/test_nn1_compat_0516.py \
-            scripts/operations/test_multi_host_0512.py \
-            scripts/operations/test_ha_inventory_0511.py \
-            scripts/operations/test_dependency_ha_0513.py -v
+            scripts/operations/test_rolling_update.py \
+            scripts/operations/test_nn1_compat.py \
+            scripts/operations/test_multi_host.py \
+            scripts/operations/test_ha_inventory.py \
+            scripts/operations/test_dependency_ha.py -v
       - name: "Проверить неизменность каталога миграций PostgreSQL и версии релиза"
         run: |
           set -euo pipefail

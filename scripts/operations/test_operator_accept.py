@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location('operator_accept_04513', Path(__file__).with_name('operator_accept_04513.py'))
+spec = importlib.util.spec_from_file_location('operator_accept_04513', Path(__file__).with_name('operator_accept.py'))
 op = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(op)
 

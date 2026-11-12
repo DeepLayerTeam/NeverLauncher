@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -54,7 +55,11 @@ func TestLatest04211EvidenceAndStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.FullyCertified || got.ProductVersion != "0.43.0" || len(got.Results) != 19 {
+	versionBytes, err := os.ReadFile(filepath.Join(root, "VERSION"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.FullyCertified || got.ProductVersion != strings.TrimSpace(string(versionBytes)) || len(got.Results) != 19 {
 		t.Fatalf("Неверные результаты: %+v", got)
 	}
 	for i, r := range got.Results {

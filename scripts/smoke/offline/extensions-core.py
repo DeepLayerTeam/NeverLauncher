@@ -25,7 +25,7 @@ if schema.get("properties", {}).get("schemaVersion", {}).get("const") != "2.0":
     raise SystemExit("каноническая схема расширения: требуется «2.0»")
 
 require(
-    "services/api/internal/dbmigrate/sql/0042_extensions_core_0201.sql",
+    "services/api/internal/dbmigrate/sql/0042_extensions_core.sql",
     [
         "CREATE TABLE IF NOT EXISTS extensions",
         "CREATE TABLE IF NOT EXISTS extension_versions",
@@ -36,7 +36,7 @@ require(
     ],
 )
 require(
-    "services/api/internal/repository/extensions_0201.go",
+    "services/api/internal/repository/extensions.go",
     [
         "SaveExtensionVersion",
         "sql.LevelSerializable",
@@ -47,7 +47,7 @@ require(
     ],
 )
 require(
-    "services/api/internal/httpapi/extensions_0201.go",
+    "services/api/internal/httpapi/extensions.go",
     [
         "adminExtensionVersionRegister0201",
         "extension:version:register",
@@ -55,7 +55,7 @@ require(
     ],
 )
 require(
-    "cli/cmd/launcher/extension_commands_0201.go",
+    "cli/cmd/launcher/extension_commands.go",
     [
         "launcher-extension.json",
         "import-legacy",

@@ -4,16 +4,16 @@ on:
     paths:
       - 'sdk/java/core/**'
       - 'examples/extensions/java-ui/**'
-      - 'services/api/internal/extensionhost/java_ui_0489*'
-      - 'services/api/internal/httpapi/extension_java_ui_0489.go'
-      - '.github/workflows/java-ui-0489.yml'
+      - 'services/api/internal/extensionhost/java_ui*'
+      - 'services/api/internal/httpapi/extension_java_ui.go'
+      - '.github/workflows/java-ui.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
       - 'examples/extensions/java-ui/**'
-      - 'services/api/internal/extensionhost/java_ui_0489*'
-      - 'services/api/internal/httpapi/extension_java_ui_0489.go'
-      - '.github/workflows/java-ui-0489.yml'
+      - 'services/api/internal/extensionhost/java_ui*'
+      - 'services/api/internal/httpapi/extension_java_ui.go'
+      - '.github/workflows/java-ui.yml'
   workflow_dispatch:
 jobs:
   jvm:

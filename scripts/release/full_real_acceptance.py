@@ -25,8 +25,8 @@ from cryptography.hazmat.primitives import serialization
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / 'scripts/release'), str(ROOT / 'scripts/acceptance')]
-import defect_rehearsal_05212 as rehearsal
-import inventory_0521 as inventory
+import defect_rehearsal as rehearsal
+import inventory as inventory
 
 VERSION = (ROOT/'VERSION').read_text().strip()
 SCHEMA = 'launcher.full-real-user-acceptance/' + VERSION
@@ -39,20 +39,20 @@ FINAL_DOMAIN = ('launcher.independent-full-ga.'+VERSION+'\x00').encode()
 # Guard и HA, обязательные для 0.53. Скрипты ниже — существующие промышленные
 # исполнители, а не пути из ввода пользователя.
 SCENARIOS = {
- 'minimal': ('scripts/acceptance/minimal_live_e2e_0378.py', (), 'report'),
- 'standard': ('scripts/acceptance/owner_admin_real_0523.py', (), 'report'),
- 'auth': ('scripts/acceptance/auth_identity_real_0525.py', ('run',), 'output'),
- 'modpacks': ('scripts/acceptance/modpacks_textures_publication_0526.py', (), 'report'),
- 'install': ('scripts/acceptance/install_upgrade_repair_0527.py', (), 'output'),
- 'java': ('scripts/acceptance/java_sdk_migration_0528.py', ('live',), 'report'),
- 'guard': ('scripts/acceptance/guard_device_bridge_real_0529.py', ('live',), 'output'),
- 'sdk': ('scripts/acceptance/sdk_live_0530.py', (), 'output'),
- 'ha-host': ('scripts/operations/physical_ha_dr_05210.py', ('host',), 'report'),
- 'ha-partition': ('scripts/operations/physical_ha_dr_05210.py', ('partition',), 'report'),
- 'ha-postgresql': ('scripts/operations/physical_ha_dr_05210.py', ('dependency',), 'report'),
- 'ha-redis': ('scripts/operations/physical_ha_dr_05210.py', ('dependency',), 'report'),
- 'ha-s3': ('scripts/operations/physical_ha_dr_05210.py', ('dependency',), 'report'),
- 'ha-world': ('scripts/operations/physical_ha_dr_05210.py', ('world',), 'report'),
+ 'minimal': ('scripts/acceptance/minimal_live_e2e.py', (), 'report'),
+ 'standard': ('scripts/acceptance/owner_admin_real.py', (), 'report'),
+ 'auth': ('scripts/acceptance/auth_identity_real.py', ('run',), 'output'),
+ 'modpacks': ('scripts/acceptance/modpacks_textures_publication.py', (), 'report'),
+ 'install': ('scripts/acceptance/install_upgrade_repair.py', (), 'output'),
+ 'java': ('scripts/acceptance/java_sdk_migration.py', ('live',), 'report'),
+ 'guard': ('scripts/acceptance/guard_device_bridge_real.py', ('live',), 'output'),
+ 'sdk': ('scripts/acceptance/sdk_live.py', (), 'output'),
+ 'ha-host': ('scripts/operations/physical_ha_dr.py', ('host',), 'report'),
+ 'ha-partition': ('scripts/operations/physical_ha_dr.py', ('partition',), 'report'),
+ 'ha-postgresql': ('scripts/operations/physical_ha_dr.py', ('dependency',), 'report'),
+ 'ha-redis': ('scripts/operations/physical_ha_dr.py', ('dependency',), 'report'),
+ 'ha-s3': ('scripts/operations/physical_ha_dr.py', ('dependency',), 'report'),
+ 'ha-world': ('scripts/operations/physical_ha_dr.py', ('world',), 'report'),
 }
 
 # Полный охват E2E-01..18: группу нельзя считать пройденной по единственному

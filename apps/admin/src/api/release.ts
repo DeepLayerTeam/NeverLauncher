@@ -43,7 +43,7 @@ export class ReleaseApi {
   validations(id: string) { return this.get<ValidationReport>(`/api/v1/packages/${encodeURIComponent(id)}/validations`); }
   policy(id: string) { return this.get<ValidationReport['policy']>(`/api/v1/projects/${encodeURIComponent(id)}/validation-policy`); }
   evidence(id: string, payload: unknown) { return this.send<Record<string,unknown>>(`/api/v1/packages/${encodeURIComponent(id)}/runtime-validations/evidence`,'POST',payload); }
-  channelHead(projectId: string, profileId: string, channel: string) { return this.get<import('../admin/owner-lifecycle-03513.ts').ChannelHead>(`/api/v1/projects/${encodeURIComponent(projectId)}/profiles/${encodeURIComponent(profileId)}/channels/${encodeURIComponent(channel)}/head`); }
+  channelHead(projectId: string, profileId: string, channel: string) { return this.get<import('../admin/owner-lifecycle.ts').ChannelHead>(`/api/v1/projects/${encodeURIComponent(projectId)}/profiles/${encodeURIComponent(profileId)}/channels/${encodeURIComponent(channel)}/head`); }
   operation(id:string) { return this.get<Operation>(`/api/v1/operations/${encodeURIComponent(id)}`); }
   recoverOperation(projectId:string,kind:string,idempotencyKey:string) { return this.get<Operation>(`/api/v1/operations/recover?projectId=${encodeURIComponent(projectId)}&kind=${encodeURIComponent(kind)}&idempotencyKey=${encodeURIComponent(idempotencyKey)}`); }
   validateOperation(req: Record<string,unknown>) { return this.send<Preview>('/api/v1/operations/validate','POST',req); }

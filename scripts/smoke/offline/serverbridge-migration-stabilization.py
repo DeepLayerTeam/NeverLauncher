@@ -19,9 +19,9 @@ def require(text, needles, label):
 
 
 api = read(
-    "services/api/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization_01410.sql"
+    "services/api/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization.sql"
 )
-cli = resource_read_text(root, "cli/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization_01410.sql")
+cli = resource_read_text(root, "cli/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization.sql")
 if api != cli:
     raise SystemExit("Миграции API/CLI 0.14.10 отличаются")
 require(
@@ -38,7 +38,7 @@ require(
     "Миграция 0.14.10",
 )
 repo = read("services/api/internal/repository/server_bridge_v2.go") + read(
-    "services/api/internal/httpapi/server_bridge_ha_0149.go"
+    "services/api/internal/httpapi/server_bridge_ha.go"
 )
 require(
     repo,
@@ -62,13 +62,13 @@ require(
 )
 preflight = read("scripts/release/preflight.sh")
 require(
-    preflight, ["serverbridge-migration-stabilization-01410.py"], "Предварительная проверка релиза"
+    preflight, ["serverbridge-migration-stabilization.py"], "Предварительная проверка релиза"
 )
 ci = read(".github/workflows/ci.yml")
 require(
     ci,
     [
-        "serverbridge-migration-stabilization-01410.py",
+        "serverbridge-migration-stabilization.py",
         "run-serverbridge-migration-stabilization-e2e.sh",
     ],
     "Подключение проверок CI",

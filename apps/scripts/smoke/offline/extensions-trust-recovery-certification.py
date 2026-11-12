@@ -17,7 +17,7 @@ def require(cond, msg):
 version = tuple(int(x) for x in (ROOT / "VERSION").read_text().strip().split(".")[:3])
 require(version >= (0, 20, 12), "Требуется VERSION не ниже 0.20.12")
 mig = read(
-    "services/api/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification_02012.sql"
+    "services/api/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification.sql"
 )
 for token in [
     "extension_trust_policy",
@@ -27,7 +27,7 @@ for token in [
     "launcher_revoke_extension_key_02012",
 ]:
     require(token in mig, f"Отсутствует миграция: {token}")
-repo = read("services/api/internal/repository/extension_trust_02012.go")
+repo = read("services/api/internal/repository/extension_trust.go")
 for token in [
     "RevokeExtensionRegistryPublisherKey",
     "SaveExtensionQuarantine",
@@ -36,7 +36,7 @@ for token in [
     "ClearExtensionEmergencyDisable",
 ]:
     require(token in repo, f"Отсутствует репозиторий: {token}")
-trust = read("services/api/internal/extensiontrust/trust_02012.go")
+trust = read("services/api/internal/extensiontrust/trust.go")
 for token in [
     "EvaluatePublisher",
     "EvaluatePublication",
@@ -44,7 +44,7 @@ for token in [
     "Артефакт находится на карантине",
 ]:
     require(token in trust, f"отсутствует механизм проверки доверия {token}")
-host = read("services/api/internal/extensionhost/host_0205.go")
+host = read("services/api/internal/extensionhost/host.go")
 for token in [
     "GetExtensionEmergencyDisable",
     "IsExtensionPackageQuarantined",
@@ -60,7 +60,7 @@ for token in [
     "ExtensionSafeMode",
 ]:
     require(token in main, f"отсутствует интеграция Backend с безопасным режимом и обработкой повторных сбоев {token}")
-http = read("services/api/internal/httpapi/extension_trust_02012.go")
+http = read("services/api/internal/httpapi/extension_trust.go")
 for token in [
     "enforceExtensionTrustRuntime02012",
     "extensionRecoveryBackup02012",
@@ -78,16 +78,16 @@ for token in [
     "/extension-recovery/restore",
 ]:
     require(token in routes, f"Отсутствует маршрут: {token}")
-mal = read("services/api/internal/extensionpackage/malicious_02012_test.go")
+mal = read("services/api/internal/extensionpackage/malicious_test.go")
 for token in ["traversal", "windows-device", "symlink", "case-collision"]:
     require(token in mal, f"отсутствует тест вредоносного пакета {token}")
-targets = json.loads(read("extensions/trust-recovery-targets-02012.json"))
+targets = json.loads(read("extensions/trust-recovery-targets.json"))
 require(
     {x["os"] for x in targets["targets"] if x.get("required")}
     == {"linux", "windows", "macos"},
     "Набор целевых платформ неполный",
 )
-workflow = read(".github/workflows/extensions-trust-recovery-02012.yml")
+workflow = read(".github/workflows/extensions-trust-recovery.yml")
 for token in [
     "ubuntu-latest",
     "windows-latest",

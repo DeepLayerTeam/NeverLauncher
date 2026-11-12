@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).parent
-spec = importlib.util.spec_from_file_location("required_jobs_0363", HERE / "required_jobs_0363.py")
+spec = importlib.util.spec_from_file_location("required_jobs_0363", HERE / "required_jobs.py")
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 SHA = "a" * 40
@@ -78,7 +78,7 @@ class RequiredJobsTests(unittest.TestCase):
         (repo / "VERSION").write_text("0.36.3\n", encoding="utf-8")
         needs_file = repo / "needs.json"
         output = repo / "result.json"
-        command = [sys.executable, str(HERE / "required_jobs_0363.py"), "--workflow", str(self.workflow), "--gate", "gate", "--needs-json", str(needs_file), "--source-sha", commit, "--version-file", "VERSION", "--run-id", "23", "--run-attempt", "2", "--output", str(output)]
+        command = [sys.executable, str(HERE / "required_jobs.py"), "--workflow", str(self.workflow), "--gate", "gate", "--needs-json", str(needs_file), "--source-sha", commit, "--version-file", "VERSION", "--run-id", "23", "--run-attempt", "2", "--output", str(output)]
         needs_file.write_text(json.dumps({"go": {"result": "success"}, "rust": {"result": "success"}}), encoding="utf-8")
         result = subprocess.run(command, cwd=repo, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)

@@ -9,9 +9,9 @@ on:
       - 'cli/cmd/launcher/migration_cutover*'
       - 'cli/cmd/launcher/migration_fence*'
       - 'docs/migration/gravit-cutover-rollback.md'
-      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'apps/admin/src/admin/MigrationCenter.tsx'
       - 'schemas/openapi*'
-      - '.github/workflows/gravit-cutover-03311.yml'
+      - '.github/workflows/gravit-cutover.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -28,7 +28,7 @@ jobs:
           POSTGRES_PASSWORD: test_only_not_production
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U launcher_test -d launcher_test'
+          --health-cmd "pg_isready -U launcher_test -d launcher_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20

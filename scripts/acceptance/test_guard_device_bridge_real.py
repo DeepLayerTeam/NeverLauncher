@@ -12,8 +12,8 @@ import threading
 import unittest
 from unittest.mock import patch
 
-import guard_device_bridge_real_0529 as suite
-import vanilla_sidecar_live_0529 as vanilla
+import guard_device_bridge_real as suite
+import vanilla_sidecar_live as vanilla
 
 class Acceptance0529(unittest.TestCase):
     def setUp(self):

@@ -8,9 +8,9 @@ on:
       - 'services/api/internal/httpapi/package_product.go'
       - 'services/api/internal/dbmigrate/sql/0095*'
       - 'cli/cmd/launcher/migration_content*'
-      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'apps/admin/src/admin/MigrationCenter.tsx'
       - 'schemas/openapi*'
-      - '.github/workflows/gravit-content-migration-0337.yml'
+      - '.github/workflows/gravit-content-migration.yml'
   pull_request:
   workflow_dispatch:
 permissions:

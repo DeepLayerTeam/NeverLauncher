@@ -3,12 +3,12 @@ on:
   push:
     paths:
       - 'services/api/internal/texturegravit/**'
-      - 'services/api/internal/repository/textures_gravit_02510.go'
-      - 'services/api/internal/repository/textures_0252.go'
-      - 'services/api/internal/storage/gravit_source_02510.go'
-      - 'services/api/cmd/gravit-textures-import-02510/**'
-      - 'services/api/internal/dbmigrate/sql/0073_texture_gravit_import_02510.sql'
-      - '.github/workflows/gravit-textures-02510.yml'
+      - 'services/api/internal/repository/textures_gravit.go'
+      - 'services/api/internal/repository/textures_variant2.go'
+      - 'services/api/internal/storage/gravit_source.go'
+      - 'services/api/cmd/gravit-textures-import/**'
+      - 'services/api/internal/dbmigrate/sql/0073_texture_gravit_import.sql'
+      - '.github/workflows/gravit-textures.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -26,6 +26,6 @@ jobs:
       - name: "Собрать CLI миграции и запустить регрессионные тесты текстур"
         working-directory: services/api
         run: |
-          go test -race -count=1 ./internal/texturegravit ./cmd/gravit-textures-import-02510 ./internal/texturepng ./internal/storage ./internal/dbmigrate ./internal/repository
-          go vet ./internal/texturegravit ./cmd/gravit-textures-import-02510 ./internal/repository
-          go build ./cmd/gravit-textures-import-02510
+          go test -race -count=1 ./internal/texturegravit ./cmd/gravit-textures-import ./internal/texturepng ./internal/storage ./internal/dbmigrate ./internal/repository
+          go vet ./internal/texturegravit ./cmd/gravit-textures-import ./internal/repository
+          go build ./cmd/gravit-textures-import

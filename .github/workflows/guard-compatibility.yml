@@ -2,22 +2,22 @@ name: Guard 0.50.2 — подписанная политика совмести�
 on:
   push:
     paths:
-      - 'cli/cmd/launcher/guard_compat_policy_0502*'
-      - 'cli/cmd/launcher/trusted_jvm_0306.go'
-      - 'cli/cmd/launcher/legacy_client_adapters_0278.go'
+      - 'cli/cmd/launcher/guard_compat_policy*'
+      - 'cli/cmd/launcher/trusted_jvm.go'
+      - 'cli/cmd/launcher/legacy_client_adapters.go'
       - 'cli/cmd/guard-policy-sign/**'
       - 'sdk/java/trusted-agent/**'
       - 'runtime/runtime/**'
-      - '.github/workflows/guard-compatibility-0502.yml'
+      - '.github/workflows/guard-compatibility.yml'
   pull_request:
     paths:
-      - 'cli/cmd/launcher/guard_compat_policy_0502*'
-      - 'cli/cmd/launcher/trusted_jvm_0306.go'
-      - 'cli/cmd/launcher/legacy_client_adapters_0278.go'
+      - 'cli/cmd/launcher/guard_compat_policy*'
+      - 'cli/cmd/launcher/trusted_jvm.go'
+      - 'cli/cmd/launcher/legacy_client_adapters.go'
       - 'cli/cmd/guard-policy-sign/**'
       - 'sdk/java/trusted-agent/**'
       - 'runtime/runtime/**'
-      - '.github/workflows/guard-compatibility-0502.yml'
+      - '.github/workflows/guard-compatibility.yml'
   workflow_dispatch:
 permissions:
   contents: read

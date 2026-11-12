@@ -7,20 +7,20 @@ on:
       - 'docs/releases/0.45.3-standard-backup-restore.md'
       - 'docs/releases/0.45.4-network-ha-recovery.md'
       - 'docs/releases/0.45.6-chaos-disaster-recovery.md'
-      - 'deploy/production/docker-compose.chaos-0456.yml'
+      - 'deploy/production/docker-compose.chaos.yml'
       - 'services/api/internal/httpapi/operations_backup.go'
       - 'services/api/internal/httpapi/operations_backup_test.go'
-      - '.github/workflows/chaos-dr-03512.yml'
+      - '.github/workflows/chaos-dr.yml'
   pull_request:
     paths:
       - 'scripts/operations/**'
       - 'docs/releases/0.45.3-standard-backup-restore.md'
       - 'docs/releases/0.45.4-network-ha-recovery.md'
       - 'docs/releases/0.45.6-chaos-disaster-recovery.md'
-      - 'deploy/production/docker-compose.chaos-0456.yml'
+      - 'deploy/production/docker-compose.chaos.yml'
       - 'services/api/internal/httpapi/operations_backup.go'
       - 'services/api/internal/httpapi/operations_backup_test.go'
-      - '.github/workflows/chaos-dr-03512.yml'
+      - '.github/workflows/chaos-dr.yml'
 permissions:
   contents: read
 jobs:
@@ -33,17 +33,17 @@ jobs:
           python-version: '3.12'
       - name: Выполнить негативные проверки безопасности и целостности архивов
         run: |
-          python -m unittest discover -s scripts/operations -p 'test_dr_03512.py' -v
-          python -m unittest discover -s scripts/operations -p 'test_standard_backup_0453.py' -v
-          python -m unittest discover -s scripts/operations -p 'test_network_ha_recovery_0454.py' -v
-          python -m unittest discover -s scripts/operations -p 'test_chaos_0456.py' -v
-          python -m unittest discover -s scripts/operations -p 'test_restore_accept_0456.py' -v
+          python -m unittest discover -s scripts/operations -p 'test_dr.py' -v
+          python -m unittest discover -s scripts/operations -p 'test_standard_backup.py' -v
+          python -m unittest discover -s scripts/operations -p 'test_network_ha_recovery.py' -v
+          python -m unittest discover -s scripts/operations -p 'test_chaos.py' -v
+          python -m unittest discover -s scripts/operations -p 'test_restore_accept.py' -v
       - name: Проверить агент CLI и синтаксис исходников
         run: |
-          python -m py_compile scripts/operations/dr_03512.py scripts/operations/chaos_0456.py scripts/operations/restore_accept_0456.py
-          python scripts/operations/chaos_0456.py --help
-          python scripts/operations/restore_accept_0456.py --help
-          python scripts/operations/dr_03512.py --help
+          python -m py_compile scripts/operations/dr.py scripts/operations/chaos.py scripts/operations/restore_accept.py
+          python scripts/operations/chaos.py --help
+          python scripts/operations/restore_accept.py --help
+          python scripts/operations/dr.py --help
   world-backup-native:
     runs-on: ubuntu-24.04
     steps:
@@ -61,7 +61,7 @@ jobs:
           go build -o "$RUNNER_TEMP/nl" ./cmd/launcher
           go test -count=1 ./cmd/launcher -run '^TestWorldBackup'
           cd ..
-          NL_WORLD_CLI="$RUNNER_TEMP/nl" python -m unittest discover -s scripts/operations -p 'test_network_ha_recovery_0454.py' -v
+          NL_WORLD_CLI="$RUNNER_TEMP/nl" python -m unittest discover -s scripts/operations -p 'test_network_ha_recovery.py' -v
   api-storage-restore:
     runs-on: ubuntu-24.04
     steps:

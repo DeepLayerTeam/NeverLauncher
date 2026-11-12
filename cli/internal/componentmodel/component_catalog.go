@@ -37,11 +37,11 @@ type CatalogPreset0242 struct {
 	Components  []string `json:"components"`
 }
 
-// ComponentCatalog0241 — неизменяемый список компонентов одного подписанного выпуска с
-// адресацией по содержимому. Схема v1 устанавливает все компоненты. Схема v2 поддерживает
-// подписанную топологию; v3 связывает исполняемые ограничения зависимостей и конфликтов
-// для нативного и Go-разрешителей. Никогда не принимайте произвольные файловые пути и
-// действия из локального выбора.
+// ComponentCatalog0241 — неизменяемый список компонентов с адресацией по содержимому,
+// принадлежащих ОДНОМУ подписанному выпуску. Схема v1 устанавливает все компоненты.
+// Схема v2 поддерживает подписанную топологию; схема v3 связывает исполняемые ограничения
+// зависимостей и конфликтов для нативного резолвера и резолвера Go.
+// Никогда не принимайте произвольные пути и исполняемые действия из локального выбора.
 type ComponentCatalog0241 struct {
 	SchemaVersion string                 `json:"schemaVersion"`
 	Revision      uint64                 `json:"revision"`
@@ -77,9 +77,9 @@ type CatalogComponent0241 struct {
 	Metadata       map[string]string          `json:"metadata,omitempty"`
 }
 
-// Каноническое представление одинаково для Go и Rust и однозначно: префикс,
-// число компонентов u32be, UTF-8 строки с длинами, число файлов u32be и пути с
-// длинами. Порядок массивов значим и подписан.
+// Каноническое кодирование независимо от языка (Go/Rust) и однозначно:
+// префикс, количество компонентов u32be, UTF-8 строки с префиксом длины,
+// количество файлов u32be и пути с префиксом длины. Порядок массивов значим и подписывается.
 func ComponentCatalogDigest0241(components []CatalogComponent0241) string {
 	h := sha256.New()
 	h.Write([]byte("launcher.component-catalog.v1\x00"))
@@ -121,14 +121,14 @@ func validComponentID0241(id string) bool {
 func ValidateComponentCatalog0241(m Manifest) error {
 	if m.SchemaVersion != ManifestSchemaV3 {
 		if m.ComponentCatalog != nil {
-			return errors.New("Поле componentCatalog допустимо только в манифесте версии 3")
+			return errors.New("componentCatalog допустим только в манифесте v3")
 		}
 		return nil
 	}
 	cat := m.ComponentCatalog
 	if cat == nil || (cat.SchemaVersion != ComponentCatalogSchema0241 && cat.SchemaVersion != ComponentCatalogSchema0242 && cat.SchemaVersion != ComponentCatalogSchema0243 && cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245) || cat.Revision == 0 ||
 		len(cat.Components) > 4096 || len(cat.Digest) != 64 || cat.Digest != ComponentCatalogDigest0245(*cat) {
-		return errors.New("Недопустимый снимок или хеш каталога компонентов версии 3")
+		return errors.New("Недопустимый снимок каталога компонентов v3 или его хеш")
 	}
 	if err := ValidateCatalogActions0245(*cat); err != nil {
 		return err
@@ -149,12 +149,12 @@ func ValidateComponentCatalog0241(m Manifest) error {
 		if !validComponentID0241(c.ID) || ids[c.ID] ||
 			strings.TrimSpace(c.Name) == "" || len(c.Name) > 256 || strings.ContainsAny(c.Name, "\x00\r\n") ||
 			len(c.Files) == 0 || len(c.Files) > 8192 {
-			return fmt.Errorf("Некорректный или повторяющийся идентификатор, имя или файлы компонента v3: %q", c.ID)
+			return fmt.Errorf("Недопустимый либо повторяющийся идентификатор, название или файлы компонента v3: %q", c.ID)
 		}
 		ids[c.ID] = true
 		for _, path := range c.Files {
 			if !validFilePolicyPath0224(path, false) {
-				return fmt.Errorf("Небезопасный путь компонента %q", path)
+				return fmt.Errorf("Небезопасный путь компонента: %q", path)
 			}
 			key := strings.ToLower(path)
 			if owner, exists := owners[key]; exists {
@@ -169,14 +169,14 @@ func ValidateComponentCatalog0241(m Manifest) error {
 	}
 	for _, f := range m.Files {
 		if FileOwnership0224(f) == "optional" && owners[strings.ToLower(f.Path)] == "" {
-			return fmt.Errorf("У необязательного файла версии 3 нет компонента-владельца: %q", f.Path)
+			return fmt.Errorf("У необязательного файла v3 отсутствует владелец-компонент: %q", f.Path)
 		}
 	}
 	return nil
 }
 
-// В v2 вся топология имеет явное фреймирование: порядок сериализации, правила omitempty
-// и локальное состояние UI не должны менять дайджест каталога.
+// В v2 для ВСЕХ метаданных топологии используется явное кодирование: порядок
+// сериализации, правила omitempty и локальное состояние UI не меняют дайджест каталога.
 func ComponentCatalogDigest0242(cat ComponentCatalog0241) string {
 	if cat.SchemaVersion == ComponentCatalogSchema0241 {
 		return ComponentCatalogDigest0241(cat.Components)
@@ -267,11 +267,11 @@ func validDisplay0242(name, description string) bool {
 func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 	if cat.SchemaVersion == ComponentCatalogSchema0241 {
 		if len(cat.Categories) > 0 || len(cat.Groups) > 0 || len(cat.Presets) > 0 || cat.DefaultPreset != "" {
-			return errors.New("Каталог версии 1 не может содержать топологию версии 2")
+			return errors.New("Каталог v1 не может содержать топологию v2")
 		}
 		for _, c := range cat.Components {
 			if c.Version != "" || len(c.Dependencies) > 0 || len(c.Conflicts) > 0 || c.ExclusiveGroup != "" || c.Description != "" || c.CategoryID != "" || c.GroupID != "" || c.Required || c.Default || c.Visible != nil || c.Limited || len(c.Metadata) > 0 {
-				return fmt.Errorf("Компонент версии v1 %q содержит поля версии v2", c.ID)
+				return fmt.Errorf("Компонент v1 %q содержит поля v2", c.ID)
 			}
 		}
 		return nil
@@ -279,12 +279,12 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 	if cat.SchemaVersion == ComponentCatalogSchema0242 {
 		for _, c := range cat.Components {
 			if c.Version != "" || len(c.Dependencies) > 0 || len(c.Conflicts) > 0 || c.ExclusiveGroup != "" {
-				return fmt.Errorf("Компонент %q версии 2 содержит неподписанные ограничения версии 3", c.ID)
+				return fmt.Errorf("Компонент v2 %q содержит неподписанные ограничения v3", c.ID)
 			}
 		}
 	}
 	if len(cat.Categories) > 256 || len(cat.Groups) > 1024 || len(cat.Presets) > 128 {
-		return errors.New("Топология каталога превышает установленные ограничения")
+		return errors.New("Топология каталога превышает ограничения")
 	}
 	categories := make(map[string]CatalogCategory0242)
 	for _, v := range cat.Categories {
@@ -306,13 +306,13 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 		}
 		groups[v.ID] = v
 	}
-	// Следуйте родительским ссылкам, ограничивая глубину и обнаруживая циклы, не доверяйте входному порядку.
+	// Переходить по родительским ссылкам с ограничением глубины и поиском циклов; не доверять порядку входных данных.
 	for id := range categories {
 		seen := map[string]bool{}
 		cur := id
 		for depth := 0; cur != ""; depth++ {
 			if depth >= 9 || seen[cur] {
-				return fmt.Errorf("Категория %q содержит цикл или превышает допустимую глубину", id)
+				return fmt.Errorf("Циклическая или слишком глубокая вложенность категории %q", id)
 			}
 			seen[cur] = true
 			v, ok := categories[cur]
@@ -328,7 +328,7 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 		var category string
 		for depth := 0; cur != ""; depth++ {
 			if depth >= 9 || seen[cur] {
-				return fmt.Errorf("Группа %q содержит цикл или превышает допустимую глубину", id)
+				return fmt.Errorf("Циклическая или слишком глубокая вложенность группы %q", id)
 			}
 			seen[cur] = true
 			v, ok := groups[cur]
@@ -350,28 +350,28 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 	ids := make(map[string]bool)
 	for _, c := range cat.Components {
 		if c.Visible == nil {
-			return fmt.Errorf("Для компонента %q требуется явное логическое значение visible", c.ID)
+			return fmt.Errorf("Для компонента %q необходимо явное логическое поле visible", c.ID)
 		}
 		if !validDisplay0242(c.Name, c.Description) || len(c.Metadata) > 32 {
 			return fmt.Errorf("Недопустимые метаданные компонента %q", c.ID)
 		}
 		if c.CategoryID != "" {
 			if _, ok := categories[c.CategoryID]; !ok {
-				return fmt.Errorf("Компонент %q: неизвестная категория", c.ID)
+				return fmt.Errorf("У компонента %q неизвестная категория", c.ID)
 			}
 		}
 		if c.GroupID != "" {
 			g, ok := groups[c.GroupID]
 			if !ok {
-				return fmt.Errorf("Компонент %q: неизвестная группа", c.ID)
+				return fmt.Errorf("У компонента %q неизвестная группа", c.ID)
 			}
 			if g.CategoryID != "" && c.CategoryID != "" && g.CategoryID != c.CategoryID {
-				return fmt.Errorf("Компонент %q: несовпадение категории группы", c.ID)
+				return fmt.Errorf("Категория группы компонента %q не совпадает", c.ID)
 			}
 		}
 		for k, v := range c.Metadata {
 			if !validComponentID0241(k) || len(k) > 64 || len(v) > 1024 || strings.ContainsAny(v, "\x00\r") {
-				return fmt.Errorf("Компонент %q: недопустимый ключ или значение метаданных", c.ID)
+				return fmt.Errorf("У компонента %q недопустимый ключ или значение метаданных", c.ID)
 			}
 		}
 		ids[c.ID] = true
@@ -379,19 +379,19 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 	presets := make(map[string]bool)
 	for _, p := range cat.Presets {
 		if !validComponentID0241(p.ID) || !validDisplay0242(p.Name, p.Description) || presets[p.ID] || len(p.Components) > 4096 {
-			return fmt.Errorf("Недопустимый или повторяющийся набор настроек %q", p.ID)
+			return fmt.Errorf("Недопустимый или повторяющийся пресет %q", p.ID)
 		}
 		presets[p.ID] = true
 		seen := make(map[string]bool)
 		for _, id := range p.Components {
 			if !ids[id] || seen[id] {
-				return fmt.Errorf("Набор настроек %q: недопустимый или повторяющийся компонент %q", p.ID, id)
+				return fmt.Errorf("Пресет %q содержит недопустимый или повторяющийся компонент %q", p.ID, id)
 			}
 			seen[id] = true
 		}
 	}
 	if cat.DefaultPreset != "" && !presets[cat.DefaultPreset] {
-		return fmt.Errorf("Неизвестный набор настроек по умолчанию %q", cat.DefaultPreset)
+		return fmt.Errorf("Неизвестный пресет по умолчанию %q", cat.DefaultPreset)
 	}
 	if cat.SchemaVersion == ComponentCatalogSchema0243 || cat.SchemaVersion == ComponentCatalogSchema0244 || cat.SchemaVersion == ComponentCatalogSchema0245 {
 		if err := ValidateCatalogRules0243(cat); err != nil {
@@ -402,7 +402,7 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 	return nil
 }
 
-// ResolveCatalogPreset0242 сохраняет прежний API и одновременно применяет разрешение
+// ResolveCatalogPreset0242 сохраняет прежний API, применяя резолвер
 // зависимостей и конфликтов к подписанной схеме каталога v3.
 func ResolveCatalogPreset0242(cat ComponentCatalog0241, preset string) ([]string, error) {
 	if err := ValidateCatalogTopology0242(cat); err != nil {
@@ -437,7 +437,7 @@ func ResolveCatalogPreset0242(cat ComponentCatalog0241, preset string) ([]string
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("Неизвестный набор настроек компонентов %q", preset)
+			return nil, fmt.Errorf("Неизвестный пресет компонентов %q", preset)
 		}
 	} else {
 		for _, c := range cat.Components {

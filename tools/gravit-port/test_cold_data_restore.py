@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import cold_data_restore_04912 as cold
-import test_operational_rollback_04912 as earlier
+import cold_data_restore as cold
+import test_operational_rollback as earlier
 
 
 class ColdRestoreTests(unittest.TestCase):

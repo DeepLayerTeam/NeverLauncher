@@ -11,9 +11,9 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-import legacy_upgrade_real_0528 as legacy
-import java_sdk_migration_0528 as suite
-import java_host_real_0528 as host
+import legacy_upgrade_real as legacy
+import java_sdk_migration as suite
+import java_host_real as host
 
 
 class Acceptance0528(unittest.TestCase):

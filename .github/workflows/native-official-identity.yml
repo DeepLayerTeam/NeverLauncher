@@ -4,16 +4,16 @@ on:
     paths:
       - 'apps/desktop/src/**'
       - 'apps/desktop/src-tauri/**'
-      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
+      - 'apps/desktop/tests/official_minecraft.test.mjs'
       - 'apps/desktop/package*.json'
-      - '.github/workflows/native-official-identity-0262.yml'
+      - '.github/workflows/native-official-identity.yml'
   pull_request:
     paths:
       - 'apps/desktop/src/**'
       - 'apps/desktop/src-tauri/**'
-      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
+      - 'apps/desktop/tests/official_minecraft.test.mjs'
       - 'apps/desktop/package*.json'
-      - '.github/workflows/native-official-identity-0262.yml'
+      - '.github/workflows/native-official-identity.yml'
   workflow_dispatch:
 permissions:
   contents: read

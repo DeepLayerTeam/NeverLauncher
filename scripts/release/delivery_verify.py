@@ -17,7 +17,7 @@ import sys
 import tarfile
 import zipfile
 
-from check_payload_0461 import inventory, inspect, secure_name
+from check_payload import inventory, inspect, secure_name
 
 EXPECTED = {
     'windows': ('launcher-desktop.exe','guard.exe','runtime.exe','guard-sensor.dll','launcher-cli.exe'),

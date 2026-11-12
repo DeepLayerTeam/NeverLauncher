@@ -20,9 +20,9 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 
 api_migration = read(
-    "services/api/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization_01310.sql"
+    "services/api/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization.sql"
 )
-cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization_01310.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization.sql")
 if api_migration != cli_migration:
     raise SystemExit("Миграции API/CLI 0.13.10 различаются")
 require(
@@ -40,7 +40,7 @@ require(
 )
 
 integrity = read(
-    "services/api/internal/httpapi/minecraft_serverbridge_integrity_0135.go"
+    "services/api/internal/httpapi/minecraft_serverbridge_integrity.go"
 )
 require(
     integrity,
@@ -53,7 +53,7 @@ require(
 )
 
 tests = read(
-    "services/api/internal/httpapi/minecraft_serverbridge_integrity_0135_test.go"
+    "services/api/internal/httpapi/minecraft_serverbridge_integrity_test.go"
 )
 require(
     tests,
@@ -116,7 +116,7 @@ preflight = read("scripts/release/preflight.sh")
 require(
     preflight,
     [
-        "guard-migration-compatibility-stabilization-01310.py",
+        "guard-migration-compatibility-stabilization.py",
         "run-guard-migration-e2e.sh",
     ],
     "Предварительная проверка релиза",
@@ -125,7 +125,7 @@ ci = read(".github/workflows/ci.yml")
 require(
     ci,
     [
-        "guard-migration-compatibility-stabilization-01310.py",
+        "guard-migration-compatibility-stabilization.py",
         "run-guard-migration-e2e.sh",
         "launcher-guard-migration-e2e-evidence",
     ],

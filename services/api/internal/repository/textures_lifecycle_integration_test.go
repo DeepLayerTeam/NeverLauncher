@@ -53,9 +53,9 @@ func TestTextureLifecyclePostgres02511(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, filename := range []string{
-		"0067_texture_identity_0251.sql", "0068_texture_upload_0252.sql", "0069_texture_storage_0253.sql",
-		"0070_texture_fetch_0254.sql", "0071_texture_service_0255.sql", "0072_texture_admin_0259.sql",
-		"0073_texture_gravit_import_02510.sql", "0074_texture_lifecycle_recovery_02511.sql",
+		"0067_texture_identity.sql", "0068_texture_upload.sql", "0069_texture_storage.sql",
+		"0070_texture_fetch.sql", "0071_texture_service.sql", "0072_texture_admin.sql",
+		"0073_texture_gravit_import.sql", "0074_texture_lifecycle_recovery.sql",
 	} {
 		content, e := os.ReadFile("../dbmigrate/sql/" + filename)
 		if e != nil {

@@ -4,7 +4,7 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-mod = Path(__file__).parents[2] / "e2e/scripts/owner-cycle-0390-browser.py"
+mod = Path(__file__).parents[2] / "e2e/scripts/owner-cycle-browser.py"
 spec = importlib.util.spec_from_file_location("ownercycle0390", mod)
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)

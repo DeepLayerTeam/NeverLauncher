@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import zipfile
-import check_payload_0461 as payload
+import check_payload as payload
 
 class PayloadChecks(unittest.TestCase):
     def test_missing_target_blocks_production_instead_of_issuing_fictional_receipt(self):

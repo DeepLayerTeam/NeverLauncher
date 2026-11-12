@@ -31,7 +31,7 @@ certification_live_start() {
   [[ ! -e "$root/live-server-ready.json" && ! -e "$root/live-server-witness.json" && ! -e "$root/live-server-stopped.json" && ! -e "$root/live-server-stop.request" && ! -e "$root/live-join.json" ]] || {
     echo '[live-join] устаревшая квитанция подходящего сервера' >&2; return 2;
   }
-  python3 "$ROOT/e2e/scripts/live_join_0524.py" "${args[@]}" > "$root/live-server-execution.log" 2>&1 &
+  python3 "$ROOT/e2e/scripts/live_join.py" "${args[@]}" > "$root/live-server-execution.log" 2>&1 &
   LIVE_JOIN_DAEMON_PID=$!
   trap certification_live_cleanup EXIT
   local attempt
@@ -78,7 +78,7 @@ certification_live_finish() {
     echo '[live-join] выделенная JVM не работала в момент штатного завершения' >&2
     return 3
   }
-  python3 "$ROOT/e2e/scripts/live_join_0524.py" verify \
+  python3 "$ROOT/e2e/scripts/live_join.py" verify \
     --runtime "$root" --target "$TARGET_ID" --minecraft "$MINECRAFT_VERSION" \
     --loader "$loader" --loader-version "$resolved" \
     --profile "$profile" --java-major "$JAVA_MAJOR" || {

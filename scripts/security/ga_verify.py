@@ -20,7 +20,7 @@ import sys
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-import certify_03114 as prior
+import certify as prior
 
 ROOT = Path(__file__).resolve().parents[2]
 DOMAIN = b"Launcher-0.32.0-security-evidence-v1\n"

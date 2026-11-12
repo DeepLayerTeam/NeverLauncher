@@ -3,12 +3,12 @@ on:
   push:
     paths:
       - 'cli/cmd/launcher/**'
-      - '.github/workflows/modpack-import-engine-0275.yml'
+      - '.github/workflows/modpack-import-engine.yml'
       - 'VERSION'
   pull_request:
     paths:
       - 'cli/cmd/launcher/**'
-      - '.github/workflows/modpack-import-engine-0275.yml'
+      - '.github/workflows/modpack-import-engine.yml'
       - 'VERSION'
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
       - name: Проверка форматирования
         if: runner.os == 'Linux'
         shell: bash
-        run: test -z "$(gofmt -l cli/cmd/launcher/modpack_import_0275*.go cli/cmd/launcher/client_factory_0271.go cli/cmd/launcher/mirror_helper_parity_0274.go)"
+        run: test -z "$(gofmt -l cli/cmd/launcher/modpack_import*.go cli/cmd/launcher/client_factory.go cli/cmd/launcher/mirror_helper_parity.go)"
       - name: "Проверить реальный HTTP-импорт модпаков и регрессионные сценарии"
         working-directory: cli
         shell: bash

@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 
-NAME = Path(__file__).with_name('minimal_live_e2e_0378.py')
+NAME = Path(__file__).with_name('minimal_live_e2e.py')
 SPEC = importlib.util.spec_from_file_location('minimal_live_e2e_0378', NAME)
 mod = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mod)

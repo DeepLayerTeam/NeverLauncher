@@ -17,9 +17,9 @@
 cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
 cargo test --manifest-path runtime/runtime/Cargo.toml --lib linux_runtime_guard_0508 -- --nocapture
 cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_linux -- --nocapture
-python3 scripts/tests/linux_runtime_guard_0508.py
-python3 scripts/tests/guard_runtime_integrity_0505.py
-python3 scripts/tests/continuous_game_protection_0506.py
+python3 scripts/tests/linux_runtime_guard.py
+python3 scripts/tests/guard_runtime_integrity.py
+python3 scripts/tests/continuous_game_protection.py
 ```
 
 Отдельные запуски CI на нативных узлах — `linux-x64` и `linux-arm64`. `XDG_RUNTIME_DIR` должен быть каталогом текущего UID с разрешениями `0700`, выпускаемый `guard` должен находиться рядом с запускающим Runtime/Desktop и быть частью проверенного подписанного манифеста пакета Linux. Установка без полного релизного пакета не считается подтверждённой.

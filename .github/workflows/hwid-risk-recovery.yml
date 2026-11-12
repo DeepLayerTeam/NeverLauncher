@@ -7,7 +7,7 @@ on:
       - 'services/api/internal/dbmigrate/**'
       - 'cli/internal/dbmigrate/**'
       - 'apps/desktop/**'
-      - '.github/workflows/hwid-risk-recovery-0299.yml'
+      - '.github/workflows/hwid-risk-recovery.yml'
   pull_request:
     paths:
       - 'services/api/internal/httpapi/**'
@@ -15,7 +15,7 @@ on:
       - 'services/api/internal/dbmigrate/**'
       - 'cli/internal/dbmigrate/**'
       - 'apps/desktop/**'
-      - '.github/workflows/hwid-risk-recovery-0299.yml'
+      - '.github/workflows/hwid-risk-recovery.yml'
 permissions:
   contents: read
 jobs:
@@ -31,7 +31,7 @@ jobs:
           POSTGRES_PASSWORD: test-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U launcher -d launcher' --health-interval 5s --health-timeout 5s --health-retries 20
+          --health-cmd "pg_isready -U launcher -d launcher" --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable
     steps:

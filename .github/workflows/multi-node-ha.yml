@@ -3,12 +3,12 @@ on:
   push:
     paths:
       - 'services/api/cmd/launcher-api/**'
-      - 'services/api/internal/httpapi/durable_control_0213.go'
+      - 'services/api/internal/httpapi/durable_control.go'
       - 'deploy/production/**'
-      - 'scripts/operations/test_multi_node_ha_0455.py'
-      - 'scripts/operations/dr_03512.py'
-      - 'scripts/operations/test_multi_node_recovery_0455.py'
-      - '.github/workflows/multi-node-ha-0455.yml'
+      - 'scripts/operations/test_multi_node_ha.py'
+      - 'scripts/operations/dr.py'
+      - 'scripts/operations/test_multi_node_recovery.py'
+      - '.github/workflows/multi-node-ha.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -47,7 +47,7 @@ jobs:
           docker compose --project-name launcher-ha-ci --profile network-ha --env-file "$RUNNER_TEMP/ha.env" \
             -f deploy/production/docker-compose.yml \
             -f deploy/production/docker-compose.network-ha.yml config --format json > "$RUNNER_TEMP/ha-compose.json"
-          python3 scripts/operations/test_multi_node_ha_0455.py "$RUNNER_TEMP/ha-compose.json"
+          python3 scripts/operations/test_multi_node_ha.py "$RUNNER_TEMP/ha-compose.json"
       - name: "Проверка конфигурации Nginx HA в промышленном образе"
         run: |
           set -euo pipefail
@@ -63,8 +63,8 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest \
-            scripts/operations/test_dr_03512.py \
-            scripts/operations/test_network_ha_recovery_0454.py \
-            scripts/operations/test_multi_node_recovery_0455.py -v
+            scripts/operations/test_dr.py \
+            scripts/operations/test_network_ha_recovery.py \
+            scripts/operations/test_multi_node_recovery.py -v
       - name: "Проверка канонической версии"
         run: python3 scripts/version/manage.py check

@@ -14,7 +14,7 @@ from pathlib import Path
 import re
 import sys
 
-from verify_game_cycle_0364 import verify as verify_game_cycle
+from verify_game_cycle import verify as verify_game_cycle
 
 CASES = {
     'uuid-mismatch': ('uuid', 'serverbridge_player_uuid_mismatch'),

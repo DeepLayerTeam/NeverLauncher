@@ -2,12 +2,12 @@ name: Независимая приёмка HA 0.52.0 — проверки ко�
 on:
   push:
     paths:
-      - 'scripts/operations/independent_ha_ga_0520.py'
-      - 'scripts/operations/test_independent_ha_ga_0520.py'
-      - 'scripts/operations/rolling_update_0520.py'
-      - 'scripts/operations/test_rolling_update_0520.py'
+      - 'scripts/operations/independent_ha_ga.py'
+      - 'scripts/operations/test_independent_ha_ga.py'
+      - 'scripts/operations/rolling_update_variant2.py'
+      - 'scripts/operations/test_rolling_update_variant2.py'
       - 'docs/operations/independent-ha-ga.md'
-      - '.github/workflows/independent-ha-ga-0520.yml'
+      - '.github/workflows/independent-ha-ga.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -26,18 +26,18 @@ jobs:
           set -euo pipefail
           python3 -m pip install 'PyYAML==6.0.3'
           PYTHONPATH=scripts/operations python3 -m unittest -v \
-            scripts/operations/test_independent_ha_ga_0520.py \
-            scripts/operations/test_rolling_update_0520.py \
-            scripts/operations/test_rolling_update_0517.py \
-            scripts/operations/test_multi_host_chaos_05110.py \
-            scripts/operations/test_cross_host_recovery_0519.py
-          python3 -m py_compile scripts/operations/independent_ha_ga_0520.py scripts/operations/rolling_update_0520.py
+            scripts/operations/test_independent_ha_ga.py \
+            scripts/operations/test_rolling_update_variant2.py \
+            scripts/operations/test_rolling_update.py \
+            scripts/operations/test_multi_host_chaos.py \
+            scripts/operations/test_cross_host_recovery.py
+          python3 -m py_compile scripts/operations/independent_ha_ga.py scripts/operations/rolling_update_variant2.py
           python3 scripts/version/manage.py check
       - name: "Проверка невозможности ложного успешного прохождения GA в CI"
         run: |
           set -euo pipefail
           set +e
-          PYTHONPATH=scripts/operations python3 scripts/operations/independent_ha_ga_0520.py gate \
+          PYTHONPATH=scripts/operations python3 scripts/operations/independent_ha_ga.py gate \
             --publisher primary --commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
             > "$RUNNER_TEMP/ha-gate.json" 2>/dev/null
           status=$?

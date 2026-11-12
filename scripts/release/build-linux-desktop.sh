@@ -42,7 +42,7 @@ cat > "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" <<EOF
 }
 EOF
 chmod 0600 "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json"
-python3 "${ROOT_DIR}/scripts/release/guard_manifest_sign_0437.py" --manifest "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json"
+python3 "${ROOT_DIR}/scripts/release/guard_manifest_sign.py" --manifest "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json"
 cp "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json.ed25519" "${OUT_DIR}/LINUX_PACKAGE_MANIFEST.json.ed25519"
 cat > "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json" <<EOF
 {"schemaVersion":"2.0","releases":{"${VERSION}":{"protocolVersion":4,"platforms":{"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"${GUARD_HASH}","launcherSha256":"${DESKTOP_HASH}"}]}}}}}

@@ -31,7 +31,7 @@ jobs:
           - {os: windows, arch: arm64}
           - {os: macos, arch: amd64}
           - {os: macos, arch: arm64}
-    uses: ./.github/workflows/native-runtime-v10-03410.yml
+    uses: ./.github/workflows/native-runtime-v10.yml
     with:
       package_id: ${{ inputs.package_id }}
       os: ${{ matrix.os }}
@@ -63,7 +63,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/ga/verify_six_native_game_0440.py \
+          python3 scripts/ga/verify_six_native_game.py \
             --artifacts "$RUNNER_TEMP/native-observations" \
             --package-id "$PACKAGE_ID" --version "$(cat VERSION)" \
             --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \

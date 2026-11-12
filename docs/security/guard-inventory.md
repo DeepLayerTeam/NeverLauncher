@@ -13,7 +13,7 @@ cargo build --manifest-path runtime/runtime/Cargo.toml --bins
 Linux/macOS (в Windows используйте суффикс `.exe`):
 
 ```sh
-python3 scripts/guard_ci/inventory_0501.py local \
+python3 scripts/guard_ci/inventory.py local \
   --runtime runtime/runtime/target/debug/runtime \
   --guard runtime/runtime/target/debug/guard \
   --java /path/to/java \
@@ -30,7 +30,7 @@ python3 scripts/guard_ci/inventory_0501.py local \
 
 ## Матрица исходных нативных возможностей
 
-Процесс CI `.github/workflows/guard-inventory-0501.yml` независимо собирает и запускает нативные отчёты на следующих платформах:
+Процесс CI `.github/workflows/guard-inventory.yml` независимо собирает и запускает нативные отчёты на следующих платформах:
 
 - Linux x86_64 / aarch64;
 - Windows x86_64 / aarch64;
@@ -39,7 +39,7 @@ python3 scripts/guard_ci/inventory_0501.py local \
 Каждый отчёт хранится как отдельный скачиваемый артефакт CI. Объединение:
 
 ```sh
-python3 scripts/guard_ci/inventory_0501.py matrix \
+python3 scripts/guard_ci/inventory.py matrix \
   --output guard-inventory-matrix-0501.json guard-inventory-*.json
 ```
 
@@ -66,7 +66,7 @@ python3 scripts/guard_ci/inventory_0501.py matrix \
 ## Регрессионные проверки
 
 ```sh
-python3 scripts/guard_ci/test_inventory_0501.py
+python3 scripts/guard_ci/test_inventory.py
 cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_inventory_0501
 cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_inventory_0501
 ```

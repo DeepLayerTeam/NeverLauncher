@@ -2,13 +2,13 @@ name: Эксплуатация политики Guard 0.50.11
 on:
   push:
     paths:
-      - 'cli/cmd/launcher/guard_compat_policy_0502.go'
-      - 'cli/cmd/launcher/guard_policy_operations_05011*'
+      - 'cli/cmd/launcher/guard_compat_policy.go'
+      - 'cli/cmd/launcher/guard_policy_operations*'
       - 'cli/cmd/guard-policy-sign/**'
-      - 'apps/admin/src/admin/GuardPolicyOperations05011.tsx'
-      - 'apps/admin/src/admin/guard_policy_offline_05011.ts'
-      - 'apps/admin/tests/guard_policy_05011.test.mjs'
-      - '.github/workflows/guard-policy-operations-05011.yml'
+      - 'apps/admin/src/admin/GuardPolicyOperations.tsx'
+      - 'apps/admin/src/admin/guard_policy_offline.ts'
+      - 'apps/admin/tests/guard_policy.test.mjs'
+      - '.github/workflows/guard-policy-operations.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -45,7 +45,7 @@ jobs:
           cache-dependency-path: apps/admin/package-lock.json
       - name: "Проверить политику операций Runtime с использованием WebCrypto"
         working-directory: apps/admin
-        run: node --experimental-strip-types --test tests/guard_policy_05011.test.mjs
+        run: node --experimental-strip-types --test tests/guard_policy.test.mjs
       - name: Выполнить промышленную сборку Admin
         working-directory: apps/admin
         run: |

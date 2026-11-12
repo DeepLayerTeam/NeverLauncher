@@ -14,8 +14,8 @@ import sys
 import tempfile
 import hashlib
 import re
-from process_group_03410 import group_flags, kill_tree
-from runtime_capabilities_03410 import host_identity
+from process_group import group_flags, kill_tree
+from runtime_capabilities import host_identity
 
 def requires_adversarial_acceptance(version: str) -> bool:
     match = re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?', version)
@@ -156,7 +156,7 @@ def main():
     try:
         with tempfile.TemporaryDirectory(prefix='nl-validation-v10-') as root:
             work=Path(root)/'execution'
-            invocation=[sys.executable,str(Path(__file__).parent/'run-staged-package-0342.py'),
+            invocation=[sys.executable,str(Path(__file__).parent/'run-staged-package.py'),
                         *remainder,'--execution-mode',args.mode,'--output',str(work)]
             # Рабочий процесс наследует только окружение текущего задания. На общих хостах запускайте
             # его под отдельной учётной записью ОС или в VM без производственных секретов.

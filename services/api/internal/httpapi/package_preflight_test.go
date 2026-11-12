@@ -9,7 +9,7 @@ import (
 )
 
 func TestPublicationCandidate0526UsesActualUploadedBytesAndGraph(t *testing.T) {
-	raw, err := os.ReadFile("../../../../runtime/runtime/tests/fixtures/catalog_manifest_v3_go_signed_0242.json")
+	raw, err := os.ReadFile("../../../../runtime/runtime/tests/fixtures/catalog_manifest_v3_go_signed.json")
 	if err != nil {
 		t.Fatal(err)
 	}

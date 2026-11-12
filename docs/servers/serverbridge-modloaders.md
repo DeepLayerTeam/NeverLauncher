@@ -12,8 +12,8 @@
 ## Локально выполненная проверка
 
 ```
-e2e/scripts/test-serverbridge-control-0416.sh
-python3 e2e/scripts/test-bukkit-control-0415.py
+e2e/scripts/test-serverbridge-control.sh
+python3 e2e/scripts/test-bukkit-control.py
 ```
 
 Первая команда компилирует все исходники рабочей версии Java 21 из `plugins/bridge-common` и `plugins/vanilla-bridge`, затем проверяет повторное считывание состояния, точное соответствие UUID в событиях и настоящий TCP-RCON через localhost. Вторая запускает существующие регрессионные тесты семейства Bukkit. Ни одна из проверок не заменяет испытания с настоящими JAR игрового сервера.

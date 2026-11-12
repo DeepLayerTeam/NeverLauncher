@@ -10,7 +10,7 @@ from unittest.mock import patch
 from importlib.machinery import SourceFileLoader
 
 MODULE = SourceFileLoader(
-    "staged0342", str(Path(__file__).with_name("run-staged-package-0342.py"))
+    "staged0342", str(Path(__file__).with_name("run-staged-package.py"))
 ).load_module()
 
 
@@ -84,7 +84,7 @@ class StagedRunnerTests(unittest.TestCase):
         self.assertIsInstance(observer.root_pid, int)
         self.assertEqual(json.loads(output.read_text()), result)
         # Само наблюдение не может сертифицировать запуск или готовность главного меню.
-        from staged_readiness_0343 import StartupObserver
+        from staged_readiness import StartupObserver
 
         with patch.dict(__import__("os").environ, {"DISPLAY": ""}):
             probe = StartupObserver(

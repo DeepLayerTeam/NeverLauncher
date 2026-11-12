@@ -3,25 +3,28 @@ on:
   push:
     paths:
       - 'sdk/java/trusted-agent/**'
-      - 'runtime/runtime/src/guard_compatibility_0502.rs'
-      - 'runtime/runtime/src/guarded_trusted_launch_0503.rs'
-      - 'cli/cmd/launcher/guard_loader_0504*'
-      - 'cli/cmd/launcher/guard_compat_policy_0502*'
-      - 'cli/cmd/launcher/trusted_jvm_0306.go'
-      - 'scripts/tests/guard_loader_0504.py'
-      - '.github/workflows/authorized-jvm-transformations-0504.yml'
+      - 'runtime/runtime/src/guard_compatibility.rs'
+      - 'runtime/runtime/src/guarded_trusted_launch.rs'
+      - 'cli/cmd/launcher/guard_loader*'
+      - 'cli/cmd/launcher/guard_compat_policy*'
+      - 'cli/cmd/launcher/trusted_jvm.go'
+      - 'scripts/tests/guard_loader.py'
+      - '.github/workflows/authorized-jvm-transformations.yml'
   pull_request:
     paths:
       - 'sdk/java/trusted-agent/**'
-      - 'runtime/runtime/src/guard_compatibility_0502.rs'
-      - 'runtime/runtime/src/guarded_trusted_launch_0503.rs'
-      - 'cli/cmd/launcher/guard_loader_0504*'
-      - 'cli/cmd/launcher/guard_compat_policy_0502*'
-      - 'cli/cmd/launcher/trusted_jvm_0306.go'
-      - 'scripts/tests/guard_loader_0504.py'
+      - 'runtime/runtime/src/guard_compatibility.rs'
+      - 'runtime/runtime/src/guarded_trusted_launch.rs'
+      - 'cli/cmd/launcher/guard_loader*'
+      - 'cli/cmd/launcher/guard_compat_policy*'
+      - 'cli/cmd/launcher/trusted_jvm.go'
+      - 'scripts/tests/guard_loader.py'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   real-jvm-loader-guard:
     strategy:
@@ -53,7 +56,7 @@ jobs:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
       - name: Проверить источники загрузчиков классов JVM и негативные сценарии (без сквозного теста Minecraft)
-        run: python scripts/tests/guard_loader_0504.py
+        run: python scripts/tests/guard_loader.py
       - name: Проверить интеграцию Go с подписанной политикой и доверенными JVM
         working-directory: cli
         run: go test ./cmd/launcher -run '^(TestGuardLoader0504|TestGuardCompatibility0502|TestTrustedJVM0306)' -count=1 -timeout 12m

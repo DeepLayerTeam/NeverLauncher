@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 
 from verified_targets import TARGETS, checks_for, verify
-from security_capabilities_0431 import checks as security_checks, expected_scope
+from security_capabilities import checks as security_checks, expected_scope
 
 NAME = 'GA_VERIFIED_SUPPORT_0440.json'
 SCHEMA = 'launcher.ga.verified-support.0440.v1'

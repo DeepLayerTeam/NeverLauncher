@@ -4,12 +4,12 @@ on:
     paths:
       - 'services/api/internal/extensionhost/**'
       - 'sdk/java/core/**'
-      - '.github/workflows/java-security-isolation-04811.yml'
+      - '.github/workflows/java-security-isolation.yml'
   pull_request:
     paths:
       - 'services/api/internal/extensionhost/**'
       - 'sdk/java/core/**'
-      - '.github/workflows/java-security-isolation-04811.yml'
+      - '.github/workflows/java-security-isolation.yml'
   workflow_dispatch:
 
 jobs:

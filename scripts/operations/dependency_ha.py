@@ -32,8 +32,8 @@ import subprocess
 import sys
 import time
 
-import multi_host_0512 as multi
-import ha_inventory_0511 as inventory
+import multi_host as multi
+import ha_inventory as inventory
 
 VERSION = '0.51.3'
 SCHEMA = 'launcher.dependency-ha.0.51.3'
@@ -182,7 +182,7 @@ def generate_haproxy(cfg):
     redis = cfg['redis_name']
     s3 = cfg['s3_name']
     lines = [
-        '# Создано из закрытой конфигурации скриптом dependency_ha_0513.py; права 0600.',
+        '# Создано из закрытой конфигурации скриптом dependency_ha.py; права 0600.',
         'global',
         '    log /dev/log local0',
         '    maxconn 20000',
@@ -397,7 +397,7 @@ def perform_verification(sock, edge_url, nodes, *, redundant, cfg=None, creds=No
         if redundant and not proof['crossGatewayReadBack']:
             observed['healthy'] = False
     if nodes:
-        ok, state = cluster_ready(nodes, '/opt/launcher/scripts/operations/multi_host_0512.py',
+        ok, state = cluster_ready(nodes, '/opt/launcher/scripts/operations/multi_host.py',
                                   '/opt/launcher/deploy/production', 'launcher', edge_url)
         observed['applicationDependencyRoundTrips'] = state
         observed['healthy'] = observed['healthy'] and ok
@@ -677,7 +677,7 @@ def edge_drill(sock, edge_url, nodes, cfg, target, deadline):
             app_ok = True
             if nodes:
                 app_ok, _ = cluster_ready(nodes,
-                    '/opt/launcher/scripts/operations/multi_host_0512.py',
+                    '/opt/launcher/scripts/operations/multi_host.py',
                     '/opt/launcher/deploy/production', 'launcher', edge_url)
             checks.append({'publicAndDependencyVIPMoved': vip_here, 'edgeReady': edge_ok,
                            'dependencyRoutingHealthy': gateway_health, 'applicationReady': app_ok})

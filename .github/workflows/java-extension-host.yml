@@ -7,7 +7,7 @@ on:
       - 'examples/extensions/java-host/**'
       - 'examples/extensions/java-runtime/**'
       - 'examples/extensions/java-lifecycle/**'
-      - '.github/workflows/java-extension-host-0304.yml'
+      - '.github/workflows/java-extension-host.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
@@ -15,10 +15,13 @@ on:
       - 'examples/extensions/java-host/**'
       - 'examples/extensions/java-runtime/**'
       - 'examples/extensions/java-lifecycle/**'
-      - '.github/workflows/java-extension-host-0304.yml'
+      - '.github/workflows/java-extension-host.yml'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   java-host-cross-platform:
     strategy:

@@ -22,10 +22,10 @@
       "status": "partial",
       "equivalent": "Проверка устаревших хешей, двойных хешей и PHPass, а также политика повторного хеширования в SQL-коннекторе; параметры модуля не соответствуют один к одному.",
       "sourceRefs": [
-        "services/api/internal/sqlconnector/password_gravit_0294.go"
+        "services/api/internal/sqlconnector/password_gravit.go"
       ],
       "testRefs": [
-        "services/api/internal/sqlconnector/legacy_gravit_0294_test.go"
+        "services/api/internal/sqlconnector/legacy_gravit_test.go"
       ],
       "limitations": "Соответствие всем алгоритмам AdditionalHash и форматам хранимых учётных данных исходного проекта не подтверждено."
     },
@@ -36,7 +36,7 @@
       "equivalent": "Discord IPC SET_ACTIVITY (вход/профиль/игра) и необязательная кнопка активности HTTPS; клиент не зависит от Discord",
       "sourceRefs": [
         "cli/internal/discordrpc/client.go",
-        "cli/cmd/launcher/lan_discord_0308.go"
+        "cli/cmd/launcher/lan_discord.go"
       ],
       "testRefs": [
         "cli/internal/discordrpc/client_test.go"
@@ -49,11 +49,11 @@
       "status": "partial",
       "equivalent": "Миграция FileAuth JSON и локальная авторизация с поддержкой Argon2id.",
       "sourceRefs": [
-        "services/api/internal/fileauth/database_0295.go",
-        "services/api/internal/repository/local_auth_0295.go"
+        "services/api/internal/fileauth/database.go",
+        "services/api/internal/repository/local_auth.go"
       ],
       "testRefs": [
-        "services/api/internal/fileauth/database_0295_test.go"
+        "services/api/internal/fileauth/database_test.go"
       ],
       "limitations": "Однократный импорт, а не действующий файловый провайдер авторизации."
     },
@@ -63,12 +63,12 @@
       "status": "partial",
       "equivalent": "Ленивая загрузка модулей Desktop Vite с разделением кода, предварительный прогрев при простое и детерминированный индекс SHA-256 ресурсов, проверяемый перед упаковкой",
       "sourceRefs": [
-        "apps/desktop/src/startup_optimizer_03011.ts",
-        "scripts/desktop/prebuild_assets_03011.mjs"
+        "apps/desktop/src/startup_optimizer.ts",
+        "scripts/desktop/prebuild_assets.mjs"
       ],
       "testRefs": [
-        "scripts/desktop/prebuild_assets_03011.test.mjs",
-        "scripts/desktop/startup_prewarmer_03011.test.mjs"
+        "scripts/desktop/prebuild_assets.test.mjs",
+        "scripts/desktop/startup_prewarmer.test.mjs"
       ],
       "limitations": "Преобразование JavaFX CSS в BSS отсутствует. Замеры холодного старта и нативные сквозные проверки платформ не аттестованы."
     },
@@ -91,10 +91,10 @@
       "status": "partial",
       "equivalent": "Аттестация и интеграция Guard для защиты лаунчера.",
       "sourceRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810.go"
+        "services/api/internal/httpapi/guard_attestation_v2_.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810_test.go"
+        "services/api/internal/httpapi/guard_attestation_v2__test.go"
       ],
       "limitations": "Не подтверждены все платформы LauncherGuard и сценарии устойчивости к обходу защиты."
     },
@@ -105,10 +105,10 @@
       "equivalent": "Нативный запуск Desktop, авторизация и интерфейс профилей.",
       "sourceRefs": [
         "apps/desktop/src/main.tsx",
-        "apps/desktop/src/desktop_experience_0229.ts"
+        "apps/desktop/src/desktop_experience.ts"
       ],
       "testRefs": [
-        "apps/desktop/tests/desktop_experience_0229.test.mjs"
+        "apps/desktop/tests/desktop_experience.test.mjs"
       ],
       "limitations": "Хуки JavaFX API не поддерживаются; сквозные проверки интерфейса запуска, входа и старта игры ещё необходимы."
     },
@@ -118,10 +118,10 @@
       "status": "partial",
       "equivalent": "Аналоги MirrorHelper для проверенных операций с ресурсами, объединения модов и изменения authlib.",
       "sourceRefs": [
-        "cli/cmd/launcher/mirror_helper_parity_0274.go"
+        "cli/cmd/launcher/mirror_helper_parity.go"
       ],
       "testRefs": [
-        "cli/cmd/launcher/mirror_helper_parity_0274_test.go"
+        "cli/cmd/launcher/mirror_helper_parity_test.go"
       ],
       "limitations": "Полная проверка каждой команды исходного проекта для всех версий загрузчиков отсутствует."
     },
@@ -131,11 +131,11 @@
       "status": "partial",
       "equivalent": "Официальный вход Minecraft и интеграция профилей Mojang.",
       "sourceRefs": [
-        "apps/desktop/src/official_minecraft_0257.ts",
-        "cli/cmd/launcher/official_ga_release_0270.go"
+        "apps/desktop/src/official_minecraft.ts",
+        "cli/cmd/launcher/official_ga_release.go"
       ],
       "testRefs": [
-        "cli/cmd/launcher/official_ga_release_0270_test.go"
+        "cli/cmd/launcher/official_ga_release_test.go"
       ],
       "limitations": "Локальный тест сам по себе не подтверждает работу реальной учётной записи с онлайн-сервисом и запуск JVM."
     },
@@ -171,10 +171,10 @@
       "status": "partial",
       "equivalent": "HTTPS RemoteControl с ограниченными полномочиями для хоста сервера через ServerBridge.",
       "sourceRefs": [
-        "cli/cmd/launcher/serverbridge_host_remote_0284.go"
+        "cli/cmd/launcher/serverbridge_host_remote.go"
       ],
       "testRefs": [
-        "cli/cmd/launcher/serverbridge_host_remote_0284_test.go"
+        "cli/cmd/launcher/serverbridge_host_remote_test.go"
       ],
       "limitations": "Произвольный доступ через рефлексию к внутренним компонентам Java LaunchServer не предусмотрен."
     },
@@ -184,10 +184,10 @@
       "status": "partial",
       "equivalent": "Загрузка карт обфускации с привязкой к релизу, проверкой UUID и защитой карт исходного кода",
       "sourceRefs": [
-        "scripts/diagnostics/upload_release_0309.py"
+        "scripts/diagnostics/upload_release.py"
       ],
       "testRefs": [
-        "scripts/diagnostics/uploader_03011.test.mjs"
+        "scripts/diagnostics/uploader.test.mjs"
       ],
       "limitations": "Производственные учётные данные Sentry Cloud и успешная фактическая загрузка карт не проверены."
     },
@@ -197,11 +197,11 @@
       "status": "partial",
       "equivalent": "Необязательная диагностика Desktop JS/JVM через Sentry с удалением чувствительных данных",
       "sourceRefs": [
-        "apps/desktop/src/sentry_diagnostics_0309.ts",
+        "apps/desktop/src/sentry_diagnostics.ts",
         "sdk/java/core/src/main/java/ru/launcher/sdk/core/SentryDiagnostics.java"
       ],
       "testRefs": [
-        "scripts/desktop/desktop_diagnostics_03011.test.mjs"
+        "scripts/desktop/desktop_diagnostics.test.mjs"
       ],
       "limitations": "Необходимо проверить сквозные тесты производственного Rust Desktop, сохранение согласия и получение подтверждения от облака."
     },
@@ -224,10 +224,10 @@
       "status": "partial",
       "equivalent": "Уведомления systemd, контроль работоспособности и жизненный цикл служб хоста Linux.",
       "sourceRefs": [
-        "cli/cmd/launcher/serverbridge_host_systemd_linux_02811.go"
+        "cli/cmd/launcher/serverbridge_host_systemd_linux.go"
       ],
       "testRefs": [
-        "cli/cmd/launcher/serverbridge_host_systemd_linux_02811_test.go"
+        "cli/cmd/launcher/serverbridge_host_systemd_linux_test.go"
       ],
       "limitations": "Поддержка systemd ограничена хостом; универсального Java-модуля LaunchServer нет."
     },

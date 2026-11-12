@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import dr_03512 as dr
+import dr as dr
 
 
 class MultiNodeRecovery0455(unittest.TestCase):

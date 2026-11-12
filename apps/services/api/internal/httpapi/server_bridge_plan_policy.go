@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
-	"gitflic.ru/skif4er/launcher/services/api/internal/planpolicy02412"
+	"gitflic.ru/skif4er/launcher/services/api/internal/planpolicy"
 	"net/http"
 	"strconv"
 	"strings"

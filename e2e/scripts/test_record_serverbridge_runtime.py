@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-SOURCE = Path(__file__).with_name("record-serverbridge-runtime-04113.py")
+SOURCE = Path(__file__).with_name("record-serverbridge-runtime.py")
 spec = importlib.util.spec_from_file_location(
     "record_serverbridge_runtime_04113", SOURCE
 )

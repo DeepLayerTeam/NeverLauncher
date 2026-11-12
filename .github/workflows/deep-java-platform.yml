@@ -8,7 +8,7 @@ on:
       - 'examples/extensions/java-spi/**'
       - 'examples/extensions/java-content-spi/**'
       - 'examples/extensions/java-developer-04812/**'
-      - '.github/workflows/deep-java-platform-0490.yml'
+      - '.github/workflows/deep-java-platform.yml'
       - 'VERSION'
   pull_request:
     paths:
@@ -18,7 +18,7 @@ on:
       - 'examples/extensions/java-spi/**'
       - 'examples/extensions/java-content-spi/**'
       - 'examples/extensions/java-developer-04812/**'
-      - '.github/workflows/deep-java-platform-0490.yml'
+      - '.github/workflows/deep-java-platform.yml'
       - 'VERSION'
   workflow_dispatch:
 permissions:
@@ -49,14 +49,14 @@ jobs:
           sh sdk/java/http-client/build.sh test
       - name: "Публикация двоичных артефактов SDK"
         shell: bash
-        run: python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output dist/java-sdk
+        run: python3 scripts/ga/java_sdk_ga.py --skip-build --output dist/java-sdk
       - name: Проверить опубликованные артефакты на возможные обходы
         shell: bash
-        run: python3 scripts/java/test_developer_e2e_04812.py
+        run: python3 scripts/java/test_developer_e2e.py
       - name: "Проверить три независимых Java-расширения на опубликованном SDK и настоящие дочерние процессы JVM"
         shell: bash
         run: |
-          python3 scripts/java/deep_java_e2e_0490.py \
+          python3 scripts/java/deep_java_e2e.py \
             --sdk-repo dist/java-sdk/maven --report deep-java-0490-report.json
           python3 scripts/version/manage.py check
       - name: Опубликовать результаты с явной отметкой об имитации хоста

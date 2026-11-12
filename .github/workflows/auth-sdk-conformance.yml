@@ -8,7 +8,7 @@ on:
       - 'services/api/internal/oidcconnector/**'
       - 'services/api/internal/microsoftconnector/**'
       - 'services/api/internal/sqlconnector/**'
-      - '.github/workflows/auth-sdk-conformance-0292.yml'
+      - '.github/workflows/auth-sdk-conformance.yml'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
   pull_request:
@@ -19,7 +19,7 @@ on:
       - 'services/api/internal/oidcconnector/**'
       - 'services/api/internal/microsoftconnector/**'
       - 'services/api/internal/sqlconnector/**'
-      - '.github/workflows/auth-sdk-conformance-0292.yml'
+      - '.github/workflows/auth-sdk-conformance.yml'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
 permissions:

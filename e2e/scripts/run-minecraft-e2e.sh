@@ -241,7 +241,7 @@ record_live_serverbridge_04113() {
   [[ -n "$cid" ]] || { echo "[e2e] для службы нет работающего контейнера: $service" >&2; return 1; }
   local -a extra=()
   [[ "$service" == "paper" ]] && extra+=(--require-real-join)
-  python3 "$ROOT/e2e/scripts/record-serverbridge-runtime-04113.py" \
+  python3 "$ROOT/e2e/scripts/record-serverbridge-runtime.py" \
     --service "$service" --node "$node" --port "$port" --container "$cid" \
     --player "$PLAYER_USERNAME" --version "$VERSION" --runtime "$RUNTIME_DIR" \
     --artifact "$ROOT/artifacts/plugins/launcher-${service}-bridge-${VERSION}.jar" \
@@ -948,7 +948,7 @@ wait_log paper "$PLAYER_USERNAME joined the game"
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head -1)" == "0.36.4" ]]; then
   printf '[e2e] выполнение реального промышленного жизненного цикла клиента 0.36.4 на файлах Mojang\n'
   cycle_args=(--root "$ROOT" --work "$RUNTIME_DIR" --package "$CLIENT_PACKAGE" --cli "$RUNTIME_DIR/nl" --version "$VERSION" --profile "$PROFILE_ID")
-  python3 "$ROOT/e2e/scripts/game_cycle_0364.py" prepare "${cycle_args[@]}" \
+  python3 "$ROOT/e2e/scripts/game_cycle.py" prepare "${cycle_args[@]}" \
     --source "$RUNTIME_DIR/materialized-client" --release "$RELEASE_VERSION"
   python3 "$ROOT/e2e/scripts/publish-client-package.py" \
     --api "$API" --token "$ACCESS_TOKEN" \
@@ -1025,9 +1025,9 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
       > "$RUNTIME_DIR/cycle-join-${stage}.json"
   }
   cycle_launch_and_join update "$RUNTIME_DIR/cycle-manifest-update.json"
-  python3 "$ROOT/e2e/scripts/game_cycle_0364.py" rollback "${cycle_args[@]}"
+  python3 "$ROOT/e2e/scripts/game_cycle.py" rollback "${cycle_args[@]}"
   cycle_launch_and_join rollback "$RUNTIME_DIR/manifest.json"
-  python3 "$ROOT/e2e/scripts/game_cycle_0364.py" finalize \
+  python3 "$ROOT/e2e/scripts/game_cycle.py" finalize \
     --root "$ROOT" --work "$RUNTIME_DIR" --version "$VERSION" \
     --profile "$PROFILE_ID" --player "$PLAYER_USERNAME" \
     --java "$JAVA_BIN" --runtime "$ROOT/runtime/runtime/target/debug/runtime" \
@@ -1160,7 +1160,7 @@ fi
 # затем независимо проверьте восстановление. Только для версии от 0.29.0.
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.29.0' "$VERSION" | sort -V | head -1)" == "0.29.0" ]]; then
   (cd "$ROOT/cli" && go build -trimpath -ldflags "-X main.version=${VERSION}" -o "$RUNTIME_DIR/nl-server-control-0290" ./cmd/launcher)
-  python3 "$ROOT/e2e/scripts/verify-real-world-backup-0290.py" \
+  python3 "$ROOT/e2e/scripts/verify-real-world-backup.py" \
     --cli "$RUNTIME_DIR/nl-server-control-0290" \
     --compose-file "$COMPOSE_FILE" --override-file "$GUARD_POLICY_OVERRIDE" \
     --env-file "$ENV_FILE" --version "$VERSION" --source-commit "${GITHUB_SHA:-}" \
@@ -1219,14 +1219,14 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
   mv "$RUNTIME_DIR/result-0364-tmp.json" "$RUNTIME_DIR/result.json"
 fi
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.29.0' "$VERSION" | sort -V | head -1)" == "0.29.0" ]]; then
-  python3 "$ROOT/scripts/ga/verify_server_control_0290.py" \
+  python3 "$ROOT/scripts/ga/verify_server_control.py" \
     --e2e-dir "$RUNTIME_DIR" --version "$VERSION" --source-commit "${GITHUB_SHA:-}"
   jq -c '.checks.realWorldBackupRestore=true | .evidence += ["world-backup-0290.json"]' \
     "$RUNTIME_DIR/result.json" > "$RUNTIME_DIR/result-0290-tmp.json"
   mv "$RUNTIME_DIR/result-0290-tmp.json" "$RUNTIME_DIR/result.json"
 fi
 if [[ "$MODE" == "full" ]]; then
-  python3 "$ROOT/serverbridge/live_matrix_04113.py" --scope core --root "$ROOT" \
+  python3 "$ROOT/serverbridge/live_matrix.py" --scope core --root "$ROOT" \
     --runtime "$RUNTIME_DIR" --out "$RUNTIME_DIR/live-matrix-core-04113.json" >/dev/null
   jq -c '.checks.liveServerBridgeCore = true | .evidence += ["live-matrix-core-04113.json"]' \
     "$RUNTIME_DIR/result.json" > "$RUNTIME_DIR/result-04113-tmp.json"
@@ -1238,7 +1238,7 @@ fi
 # Minecraft; одного результата main-class клиента или фикстуры недостаточно.
 compose logs --no-color paper > "$RUNTIME_DIR/paper-live-05012.log"
 chmod 0600 "$RUNTIME_DIR/paper-live-05012.log"
-python3 "$ROOT/scripts/guard_ci/adversarial_pilot_05012.py" verify-game \
+python3 "$ROOT/scripts/guard_ci/adversarial_pilot.py" verify-game \
   --work "$RUNTIME_DIR" \
   --paper-log "$RUNTIME_DIR/paper-live-05012.log" \
   --username "$PLAYER_USERNAME" \

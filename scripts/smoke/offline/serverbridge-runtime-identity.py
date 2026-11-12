@@ -44,7 +44,7 @@ require(
     ],
 )
 require(
-    "services/api/internal/httpapi/server_bridge_runtime_0192.go",
+    "services/api/internal/httpapi/server_bridge_runtime.go",
     [
         "bridgeRuntimeID0192",
         "ed25519.Verify",
@@ -63,7 +63,7 @@ require(
     ],
 )
 require(
-    "services/api/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql",
+    "services/api/internal/dbmigrate/sql/0033_serverbridge_runtime_identity.sql",
     [
         "runtime_identity_signature",
         "runtime_process_id",
@@ -72,8 +72,8 @@ require(
     ],
 )
 if read(
-    "services/api/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql"
-) != resource_read_text(root, "cli/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql"):
+    "services/api/internal/dbmigrate/sql/0033_serverbridge_runtime_identity.sql"
+) != resource_read_text(root, "cli/internal/dbmigrate/sql/0033_serverbridge_runtime_identity.sql"):
     raise SystemExit("Миграции Runtime ServerBridge API/CLI 0.19.2 различаются")
 
 for path, platform in [
@@ -131,7 +131,7 @@ require(
     ],
 )
 require(
-    "services/api/internal/httpapi/server_bridge_runtime_0192_test.go",
+    "services/api/internal/httpapi/server_bridge_runtime_test.go",
     ["VerifiesNodeBoundProcessIdentity", "DetectsReplacementAndRestart"],
 )
 print(f"Launcher {version}: проверка обнаружения узлов ServerBridge и идентичности Runtime: OK")

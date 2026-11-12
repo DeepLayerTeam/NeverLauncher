@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"gitflic.ru/skif4er/launcher/services/api/internal/planpolicy02412"
+	"gitflic.ru/skif4er/launcher/services/api/internal/planpolicy"
 	"os"
 	"strings"
 )
@@ -21,7 +21,7 @@ func main() {
 	flag.StringVar(&out, "out", "", "выходной JSON с подписанной оболочкой")
 	flag.Parse()
 	if payloadPath == "" || keyPath == "" || out == "" {
-		fmt.Fprintln(os.Stderr, "Использование: planpolicy-02412 -policy policy.json -key private.hex -out signed.json")
+		fmt.Fprintln(os.Stderr, "Использование: planpolicy -policy policy.json -key private.hex -out signed.json")
 		os.Exit(2)
 	}
 	raw, err := os.ReadFile(payloadPath)

@@ -59,9 +59,9 @@ jobs:
           if [[ '${{ inputs.os }}' == macos ]]; then python -m pip install 'pyobjc-framework-Quartz>=10,<14'; fi
           # Агенты Linux с GUI требуют заранее установленных xwininfo, xprop,
           # scrot, identify, tesseract, glxinfo, xdotool и работающей переменной DISPLAY.
-          python e2e/scripts/test_runtime_capabilities_03410.py
-          python e2e/scripts/test_staged_readiness_0343.py
-          python e2e/scripts/test_staged_matching_0344.py
+          python e2e/scripts/test_runtime_capabilities.py
+          python e2e/scripts/test_staged_readiness.py
+          python e2e/scripts/test_staged_matching.py
       - name: "Собрать промышленные CLI и Runtime (без сборки игры)"
         shell: bash
         run: |
@@ -125,7 +125,7 @@ jobs:
             echo "$PREVIOUS_SHA  $RUNNER_TEMP/previous-release.zip" | sha256sum -c -
           fi
           set +e
-          python e2e/scripts/run_native_validation_03410.py --mode '${{ inputs.mode }}' \
+          python e2e/scripts/run_native_validation.py --mode '${{ inputs.mode }}' \
             --expected-os '${{ inputs.os }}' --expected-arch '${{ inputs.arch }}' \
             --expected-version "$(cat VERSION)" \
             --report-dir "$RUNNER_TEMP/nl-v10-reports" -- "${ARGS[@]}"

@@ -2,8 +2,8 @@
   "schemaVersion": "launcher.user-journeys.v1",
   "productVersion": "0.35.1",
   "baseline": {
-    "G": "compatibility/gravit/authorization-coverage-0211.json",
-    "M": "compatibility/gravit/module-parity-0310.json"
+    "G": "compatibility/gravit/authorization-coverage.json",
+    "M": "compatibility/gravit/module-parity_variant4.json"
   },
   "policy": {
     "notRun": "Каталог не подтверждает выполнение приёмочных испытаний",
@@ -28,7 +28,7 @@
       ],
       "testRefs": [
         "services/api/internal/authorization/service_test.go",
-        "services/api/internal/httpapi/authorization_0211_test.go"
+        "services/api/internal/httpapi/authorization_test.go"
       ],
       "acceptanceScope": "local-plus-target",
       "verification": "not-run",
@@ -173,8 +173,8 @@
       "legacyStatus": "gap",
       "implementationRefs": [],
       "testRefs": [
-        "services/api/internal/httpapi/gravit_optional_02411_test.go",
-        "apps/desktop/tests/component_selection_0247.test.mjs"
+        "services/api/internal/httpapi/gravit_optional_test.go",
+        "apps/desktop/tests/component_selection.test.mjs"
       ],
       "acceptanceScope": "local-plus-target",
       "verification": "not-run",
@@ -192,8 +192,8 @@
       "legacyStatus": "gap",
       "implementationRefs": [],
       "testRefs": [
-        "apps/desktop/tests/component_selection_0247.test.mjs",
-        "services/api/internal/httpapi/component_editor_0248_test.go"
+        "apps/desktop/tests/component_selection.test.mjs",
+        "services/api/internal/httpapi/component_editor_test.go"
       ],
       "acceptanceScope": "local-plus-target",
       "verification": "not-run",
@@ -363,11 +363,11 @@
       "legacyStatus": "implemented",
       "implementationRefs": [
         "services/api/internal/httpapi/server_bridge.go",
-        "services/api/internal/httpapi/server_bridge_identity_0142.go"
+        "services/api/internal/httpapi/server_bridge_identity.go"
       ],
       "testRefs": [
         "services/api/internal/httpapi/server_bridge_test.go",
-        "services/api/internal/httpapi/server_bridge_identity_0142_test.go"
+        "services/api/internal/httpapi/server_bridge_identity_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -384,12 +384,12 @@
       "operatorStep": "advanced: подготовить сервер",
       "legacyStatus": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/minecraft_serverbridge_trust_0127.go",
-        "services/api/internal/httpapi/server_bridge_join_tickets_0143.go"
+        "services/api/internal/httpapi/minecraft_serverbridge_trust.go",
+        "services/api/internal/httpapi/server_bridge_join_tickets.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/minecraft_serverbridge_trust_0127_test.go",
-        "services/api/internal/httpapi/server_bridge_join_tickets_0143_test.go"
+        "services/api/internal/httpapi/minecraft_serverbridge_trust_test.go",
+        "services/api/internal/httpapi/server_bridge_join_tickets_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -406,11 +406,11 @@
       "operatorStep": "advanced: подготовить сервер",
       "legacyStatus": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/server_bridge_control_0195.go"
+        "services/api/internal/httpapi/server_bridge_control.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/server_bridge_control_0195_test.go",
-        "services/api/internal/repository/server_bridge_control_0195_integration_test.go"
+        "services/api/internal/httpapi/server_bridge_control_test.go",
+        "services/api/internal/repository/server_bridge_control_integration_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -427,11 +427,11 @@
       "operatorStep": "advanced: подготовить сервер",
       "legacyStatus": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/server_bridge_events_0194.go",
-        "services/api/internal/repository/extension_events_0206.go"
+        "services/api/internal/httpapi/server_bridge_events.go",
+        "services/api/internal/repository/extension_events.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/server_bridge_events_0194_test.go"
+        "services/api/internal/httpapi/server_bridge_events_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -493,7 +493,7 @@
       "legacyStatus": "gap",
       "implementationRefs": [],
       "testRefs": [
-        "cli/cmd/launcher/mirror_helper_parity_0274_test.go"
+        "cli/cmd/launcher/mirror_helper_parity_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -551,12 +551,12 @@
       "operatorStep": "none",
       "legacyStatus": "implemented",
       "implementationRefs": [
-        "services/api/internal/extensionlifecycle/lifecycle_0204.go",
-        "services/api/internal/httpapi/extensions_0201.go"
+        "services/api/internal/extensionlifecycle/lifecycle.go",
+        "services/api/internal/httpapi/extensions.go"
       ],
       "testRefs": [
-        "services/api/internal/extensionlifecycle/lifecycle_0204_test.go",
-        "services/api/internal/httpapi/extensions_0201_test.go"
+        "services/api/internal/extensionlifecycle/lifecycle_test.go",
+        "services/api/internal/httpapi/extensions_test.go"
       ],
       "acceptanceScope": "local-plus-target",
       "verification": "not-run",
@@ -573,10 +573,10 @@
       "operatorStep": "advanced: испытательный хост расширений",
       "legacyStatus": "implemented",
       "implementationRefs": [
-        "services/api/internal/extensionhost/host_0205.go"
+        "services/api/internal/extensionhost/host.go"
       ],
       "testRefs": [
-        "services/api/internal/extensionhost/host_0205_test.go"
+        "services/api/internal/extensionhost/host_variant2_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -593,12 +593,12 @@
       "operatorStep": "advanced: платформа с ключами устройства",
       "legacyStatus": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/device_trust_0121.go",
-        "services/api/internal/httpapi/device_attestation_0124.go"
+        "services/api/internal/httpapi/device_trust.go",
+        "services/api/internal/httpapi/device_attestation.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/device_trust_0121_test.go",
-        "services/api/internal/httpapi/device_attestation_0124_test.go"
+        "services/api/internal/httpapi/device_trust_test.go",
+        "services/api/internal/httpapi/device_attestation_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -615,10 +615,10 @@
       "operatorStep": "advanced: реальная целевая среда Guard",
       "legacyStatus": "implemented",
       "implementationRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810.go"
+        "services/api/internal/httpapi/guard_attestation_v2_.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810_test.go"
+        "services/api/internal/httpapi/guard_attestation_v2__test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -659,7 +659,7 @@
       ],
       "testRefs": [
         "e2e/scripts/run-minecraft-e2e.sh",
-        "apps/desktop/tests/desktop_experience_0229.test.mjs"
+        "apps/desktop/tests/desktop_experience.test.mjs"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -680,7 +680,7 @@
         "services/api/internal/httpapi/admin_handlers.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/authorization_0211_test.go"
+        "services/api/internal/httpapi/authorization_test.go"
       ],
       "acceptanceScope": "local-plus-target",
       "verification": "not-run",
@@ -761,10 +761,10 @@
       "operatorStep": "advanced: тестовые данные старых учётных записей",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "services/api/internal/sqlconnector/password_gravit_0294.go"
+        "services/api/internal/sqlconnector/password_gravit.go"
       ],
       "testRefs": [
-        "services/api/internal/sqlconnector/legacy_gravit_0294_test.go"
+        "services/api/internal/sqlconnector/legacy_gravit_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -782,7 +782,7 @@
       "legacyStatus": "partial",
       "implementationRefs": [
         "cli/internal/discordrpc/client.go",
-        "cli/cmd/launcher/lan_discord_0308.go"
+        "cli/cmd/launcher/lan_discord.go"
       ],
       "testRefs": [
         "cli/internal/discordrpc/client_test.go"
@@ -802,11 +802,11 @@
       "operatorStep": "advanced: тестовые данные старых учётных записей",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "services/api/internal/fileauth/database_0295.go",
-        "services/api/internal/repository/local_auth_0295.go"
+        "services/api/internal/fileauth/database.go",
+        "services/api/internal/repository/local_auth.go"
       ],
       "testRefs": [
-        "services/api/internal/fileauth/database_0295_test.go"
+        "services/api/internal/fileauth/database_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -823,12 +823,12 @@
       "operatorStep": "advanced: машина для измерений производительности",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "apps/desktop/src/startup_optimizer_03011.ts",
-        "scripts/desktop/prebuild_assets_03011.mjs"
+        "apps/desktop/src/startup_optimizer.ts",
+        "scripts/desktop/prebuild_assets.mjs"
       ],
       "testRefs": [
-        "scripts/desktop/prebuild_assets_03011.test.mjs",
-        "scripts/desktop/startup_prewarmer_03011.test.mjs"
+        "scripts/desktop/prebuild_assets.test.mjs",
+        "scripts/desktop/startup_prewarmer.test.mjs"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -865,10 +865,10 @@
       "operatorStep": "advanced: реальная целевая среда Guard",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810.go"
+        "services/api/internal/httpapi/guard_attestation_v2_.go"
       ],
       "testRefs": [
-        "services/api/internal/httpapi/guard_attestation_v2_01810_test.go"
+        "services/api/internal/httpapi/guard_attestation_v2__test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -886,10 +886,10 @@
       "legacyStatus": "partial",
       "implementationRefs": [
         "apps/desktop/src/main.tsx",
-        "apps/desktop/src/desktop_experience_0229.ts"
+        "apps/desktop/src/desktop_experience.ts"
       ],
       "testRefs": [
-        "apps/desktop/tests/desktop_experience_0229.test.mjs"
+        "apps/desktop/tests/desktop_experience.test.mjs"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -906,10 +906,10 @@
       "operatorStep": "advanced: тестовое зеркало",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "cli/cmd/launcher/mirror_helper_parity_0274.go"
+        "cli/cmd/launcher/mirror_helper_parity.go"
       ],
       "testRefs": [
-        "cli/cmd/launcher/mirror_helper_parity_0274_test.go"
+        "cli/cmd/launcher/mirror_helper_parity_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -926,11 +926,11 @@
       "operatorStep": "advanced: действующая официальная учётная запись",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "apps/desktop/src/official_minecraft_0257.ts",
-        "cli/cmd/launcher/official_ga_release_0270.go"
+        "apps/desktop/src/official_minecraft.ts",
+        "cli/cmd/launcher/official_ga_release.go"
       ],
       "testRefs": [
-        "cli/cmd/launcher/official_ga_release_0270_test.go"
+        "cli/cmd/launcher/official_ga_release_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -987,10 +987,10 @@
       "operatorStep": "advanced: работающий ServerBridge",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "cli/cmd/launcher/serverbridge_host_remote_0284.go"
+        "cli/cmd/launcher/serverbridge_host_remote.go"
       ],
       "testRefs": [
-        "cli/cmd/launcher/serverbridge_host_remote_0284_test.go"
+        "cli/cmd/launcher/serverbridge_host_remote_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -1007,10 +1007,10 @@
       "operatorStep": "advanced: тестовая учётная запись Sentry",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "scripts/diagnostics/upload_release_0309.py"
+        "scripts/diagnostics/upload_release.py"
       ],
       "testRefs": [
-        "scripts/diagnostics/uploader_03011.test.mjs"
+        "scripts/diagnostics/uploader.test.mjs"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -1027,11 +1027,11 @@
       "operatorStep": "advanced: приёмник сетевых событий",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "apps/desktop/src/sentry_diagnostics_0309.ts",
+        "apps/desktop/src/sentry_diagnostics.ts",
         "sdk/java/core/src/main/java/ru/launcher/sdk/core/SentryDiagnostics.java"
       ],
       "testRefs": [
-        "scripts/desktop/desktop_diagnostics_03011.test.mjs"
+        "scripts/desktop/desktop_diagnostics.test.mjs"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",
@@ -1068,10 +1068,10 @@
       "operatorStep": "advanced: Linux-хост с systemd",
       "legacyStatus": "partial",
       "implementationRefs": [
-        "cli/cmd/launcher/serverbridge_host_systemd_linux_02811.go"
+        "cli/cmd/launcher/serverbridge_host_systemd_linux.go"
       ],
       "testRefs": [
-        "cli/cmd/launcher/serverbridge_host_systemd_linux_02811_test.go"
+        "cli/cmd/launcher/serverbridge_host_systemd_linux_test.go"
       ],
       "acceptanceScope": "target-required",
       "verification": "not-run",

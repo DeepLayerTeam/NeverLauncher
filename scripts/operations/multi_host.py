@@ -23,7 +23,7 @@ import sys
 import time
 from urllib.parse import parse_qs, urlsplit
 
-import ha_inventory_0511 as inventory
+import ha_inventory as inventory
 
 VERSION = "0.51.2"
 SCHEMA = "launcher.multi-host.0.51.2"
@@ -85,7 +85,7 @@ def resolved_compose(directory, project, *, env_file=None):
         raise DeploymentError("Некорректное имя проекта Docker Compose")
     check_secure_file(env_file if env_file is not None else directory / ".env", strict=True)
     check_secure_file(directory / "docker-compose.multi-host.yml")
-    check_secure_file(directory / "nginx.multi-host-0512.conf")
+    check_secure_file(directory / "nginx.multi-host.conf")
     raw = run(compose_command(directory, project, "config", "--format", "json", env_file=env_file), cwd=directory, timeout=20)
     try:
         data = json.loads(raw)
@@ -492,7 +492,7 @@ def main(argv=None):
     parser.add_argument("--directory", default="/opt/launcher/deploy/production")
     parser.add_argument("--project", default="launcher")
     parser.add_argument("--node", action="append", default=[], help="label=ssh-user@host (повторяемый параметр)")
-    parser.add_argument("--remote-script", default="/opt/launcher/scripts/operations/multi_host_0512.py")
+    parser.add_argument("--remote-script", default="/opt/launcher/scripts/operations/multi_host.py")
     parser.add_argument("--edge-url", help="Внешний адрес HTTPS-балансировщика или /ready")
     parser.add_argument("--failed-node", help="Метка узла для отключения во время cluster-drill")
     parser.add_argument("--allow-disruption", action="store_true", help="Обязательно для cluster-drill")

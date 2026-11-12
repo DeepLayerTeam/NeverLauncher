@@ -79,7 +79,7 @@ require(
     ],
     "Принудительное применение политик Linux в Desktop",
 )
-backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
+backend = read("services/api/internal/httpapi/guard_attestation.go")
 require(
     backend,
     [
@@ -108,10 +108,10 @@ require(
     [
         "guard_linux",
         "build-linux-desktop.sh",
-        "linux-production-implementation-0137.py",
+        "linux-production-implementation.py",
     ],
     "Обязательная проверка Linux в CI",
 )
 preflight = read("scripts/release/preflight.sh")
-require(preflight, ["linux-production-implementation-0137.py"], "Предварительная обязательная проверка Linux")
+require(preflight, ["linux-production-implementation.py"], "Предварительная обязательная проверка Linux")
 print("Launcher 0.13.7: проверка готовности Linux: OK")

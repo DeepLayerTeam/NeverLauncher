@@ -5,14 +5,14 @@ on:
     paths:
       - 'macos/sandbox-helper/**'
       - 'services/api/internal/macossandbox/**'
-      - 'scripts/security/build-macos-sandbox-helper-03112.sh'
-      - 'scripts/security/testdata/macos_extension_probe_04311.c'
-      - '.github/workflows/macos-sandbox-native-04311.yml'
+      - 'scripts/security/build-macos-sandbox-helper.sh'
+      - 'scripts/security/testdata/macos_extension_probe.c'
+      - '.github/workflows/macos-sandbox-native.yml'
   pull_request:
     paths:
       - 'macos/sandbox-helper/**'
       - 'services/api/internal/macossandbox/**'
-      - '.github/workflows/macos-sandbox-native-04311.yml'
+      - '.github/workflows/macos-sandbox-native.yml'
 
 permissions:
   contents: read
@@ -73,11 +73,11 @@ jobs:
           # Помощник должен находиться в доверенном дереве без прав записи для группы и остальных пользователей.
           DEST="$HOME/Library/Application Support/Launcher/SandboxHelpers/LauncherExtensionSandbox"
           LAUNCHER_MACOS_SANDBOX_TEAM_ID="$TEAM_ID" LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY="$SIGN_IDENTITY" \
-            bash scripts/security/build-macos-sandbox-helper-03112.sh "$DEST"
+            bash scripts/security/build-macos-sandbox-helper.sh "$DEST"
           echo "LAUNCHER_MACOS_SANDBOX_HELPER=$DEST" >> "$GITHUB_ENV"
           echo "LAUNCHER_MACOS_SANDBOX_TEAM_ID=$TEAM_ID" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/nl-mac-fixture"
-          clang -O2 scripts/security/testdata/macos_extension_probe_04311.c -o "$RUNNER_TEMP/nl-mac-fixture/probe"
+          clang -O2 scripts/security/testdata/macos_extension_probe.c -o "$RUNNER_TEMP/nl-mac-fixture/probe"
           codesign --force --sign - "$RUNNER_TEMP/nl-mac-fixture/probe"
           codesign --verify --strict "$RUNNER_TEMP/nl-mac-fixture/probe"
           echo "LAUNCHER_MACOS_SANDBOX_LIVE_FIXTURE=$RUNNER_TEMP/nl-mac-fixture/probe" >> "$GITHUB_ENV"

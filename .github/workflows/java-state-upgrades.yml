@@ -4,18 +4,18 @@ on:
     paths:
       - 'sdk/java/core/**'
       - 'services/api/internal/extensionupdates/**'
-      - 'services/api/internal/extensionhost/state_checkpoint_04810*'
-      - 'services/api/internal/extensionhost/java_host_0304.go'
-      - 'services/api/internal/model/extension_updates_02011.go'
-      - '.github/workflows/java-state-upgrades-04810.yml'
+      - 'services/api/internal/extensionhost/state_checkpoint*'
+      - 'services/api/internal/extensionhost/java_host.go'
+      - 'services/api/internal/model/extension_updates.go'
+      - '.github/workflows/java-state-upgrades.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
       - 'services/api/internal/extensionupdates/**'
-      - 'services/api/internal/extensionhost/state_checkpoint_04810*'
-      - 'services/api/internal/extensionhost/java_host_0304.go'
-      - 'services/api/internal/model/extension_updates_02011.go'
-      - '.github/workflows/java-state-upgrades-04810.yml'
+      - 'services/api/internal/extensionhost/state_checkpoint*'
+      - 'services/api/internal/extensionhost/java_host.go'
+      - 'services/api/internal/model/extension_updates.go'
+      - '.github/workflows/java-state-upgrades.yml'
   workflow_dispatch:
 
 jobs:

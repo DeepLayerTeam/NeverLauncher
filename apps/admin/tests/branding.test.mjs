@@ -14,7 +14,7 @@ import {
   validateBrand0355,
   verifyBootstrap0355,
   signBranding0355,
-} from "../src/admin/branding_0355.ts";
+} from "../src/admin/branding.ts";
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
 const enc = new TextEncoder();
 function toHex(bytes) {

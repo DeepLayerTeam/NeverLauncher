@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   cross-platform-e2e:
     strategy:
@@ -38,7 +41,7 @@ jobs:
           python-version: '3.x'
       - name: Проверить определение целевой сертификации
         shell: bash
-        run: python3 scripts/compatibility/extensions_trust_02012.py validate
+        run: python3 scripts/compatibility/extensions_trust.py validate
       - name: Проверить доверие, вредоносные пакеты и циклы аварийных перезапусков
         shell: bash
         run: |
@@ -77,7 +80,7 @@ jobs:
           merge-multiple: true
       - name: Сформировать публичную матрицу с блокировкой при ошибках
         run: |
-          python3 scripts/compatibility/extensions_trust_02012.py aggregate --evidence-dir evidence-raw --out-json EXTENSIONS_TRUST_COMPATIBILITY.json --out-md EXTENSIONS_TRUST_COMPATIBILITY.md
+          python3 scripts/compatibility/extensions_trust.py aggregate --evidence-dir evidence-raw --out-json EXTENSIONS_TRUST_COMPATIBILITY.json --out-md EXTENSIONS_TRUST_COMPATIBILITY.md
       - uses: actions/upload-artifact@v4
         with:
           name: extensions-0.20.12-public-compatibility-matrix

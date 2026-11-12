@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 BASE = Path(__file__).resolve().parent
-spec = importlib.util.spec_from_file_location('trust_certificates_0496', BASE / 'trust_certificates_0496.py')
+spec = importlib.util.spec_from_file_location('trust_certificates_0496', BASE / 'trust_certificates.py')
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 

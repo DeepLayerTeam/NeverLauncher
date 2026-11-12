@@ -16,7 +16,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/certification"))
-from review_integration_0310 import review, REVISION
+from review_integration_variant2 import review, REVISION
 
 
 def verify(evidence: Path, revision: str, public_key: Path, signature: Path) -> dict:

@@ -5,14 +5,14 @@ on:
       - 'macos/sandbox-helper/**'
       - 'services/api/internal/macossandbox/**'
       - 'services/api/internal/extensionhost/**'
-      - 'scripts/security/build-macos-sandbox-helper-03112.sh'
-      - '.github/workflows/macos-signed-sandbox-helper-03112.yml'
+      - 'scripts/security/build-macos-sandbox-helper.sh'
+      - '.github/workflows/macos-signed-sandbox-helper.yml'
   pull_request:
     paths:
       - 'macos/sandbox-helper/**'
       - 'services/api/internal/macossandbox/**'
       - 'services/api/internal/extensionhost/**'
-      - '.github/workflows/macos-signed-sandbox-helper-03112.yml'
+      - '.github/workflows/macos-signed-sandbox-helper.yml'
   workflow_dispatch:
 jobs:
   build:
@@ -47,4 +47,4 @@ jobs:
         run: |
           test -n "$SIGN_IDENTITY" && test -n "$TEAM_ID" || { echo 'Сертификат релиза отсутствует: изолированный артефакт отклонён' >&2; exit 1; }
           LAUNCHER_MACOS_SANDBOX_TEAM_ID="$TEAM_ID" LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY="$SIGN_IDENTITY" \
-            ../../scripts/security/build-macos-sandbox-helper-03112.sh /tmp/LauncherExtensionSandbox-signed
+            ../../scripts/security/build-macos-sandbox-helper.sh /tmp/LauncherExtensionSandbox-signed

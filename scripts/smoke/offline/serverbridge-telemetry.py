@@ -10,9 +10,9 @@ required_files = [
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeTelemetrySnapshot.java",
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgePlatformTelemetry.java",
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeTickSampler.java",
-    "services/api/internal/httpapi/server_bridge_telemetry_0193.go",
-    "services/api/internal/dbmigrate/sql/0034_serverbridge_telemetry_0193.sql",
-    "cli/internal/dbmigrate/sql/0034_serverbridge_telemetry_0193.sql",
+    "services/api/internal/httpapi/server_bridge_telemetry.go",
+    "services/api/internal/dbmigrate/sql/0034_serverbridge_telemetry.sql",
+    "cli/internal/dbmigrate/sql/0034_serverbridge_telemetry.sql",
 ]
 for rel in required_files:
     if not resource_exists(ROOT, rel):
@@ -57,7 +57,7 @@ checks = {
         "getOnlineCount",
         "recordPlatformTelemetry",
     ],
-    "services/api/internal/httpapi/server_bridge_protocol_0191.go": [
+    "services/api/internal/httpapi/server_bridge_protocol.go": [
         "telemetry.server-v1",
         "bridgeServerTelemetryV3Contract0193",
     ],

@@ -18,10 +18,10 @@ from unittest import mock
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-import guard_ga_0510 as gate
-import native_signed_0510 as native
-import capture_game_0510 as capture
-import reviewer_sign_0510 as signhelper
+import guard_ga as gate
+import native_signed as native
+import capture_game as capture
+import reviewer_sign as signhelper
 from cryptography.hazmat.primitives.serialization import PrivateFormat, NoEncryption
 
 SHA = 'a' * 64

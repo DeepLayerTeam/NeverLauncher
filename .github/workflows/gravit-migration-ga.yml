@@ -13,13 +13,16 @@ on:
       - 'services/api/internal/dbmigrate/sql/010*'
       - 'apps/admin/**'
       - 'apps/desktop/**'
-      - '.github/workflows/gravit-migration-ga-0340.yml'
+      - '.github/workflows/gravit-migration-ga.yml'
   push:
     tags: ['v0.45.0', '0.45.0']
   workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  PYTHONUTF8: "1"
 
 jobs:
   migrate-api:
@@ -34,7 +37,7 @@ jobs:
           POSTGRES_PASSWORD: test_only_not_production
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U launcher_test -d launcher_test'
+          --health-cmd "pg_isready -U launcher_test -d launcher_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20

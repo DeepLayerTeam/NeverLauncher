@@ -19,9 +19,9 @@ def require(text, needles, label):
 
 
 api = read(
-    "services/api/internal/dbmigrate/sql/0028_zero_patch_topology_handoff_0148.sql"
+    "services/api/internal/dbmigrate/sql/0028_zero_patch_topology_handoff.sql"
 )
-cli = resource_read_text(root, "cli/internal/dbmigrate/sql/0028_zero_patch_topology_handoff_0148.sql")
+cli = resource_read_text(root, "cli/internal/dbmigrate/sql/0028_zero_patch_topology_handoff.sql")
 if api != cli:
     raise SystemExit("Миграции API/CLI 0.14.8 отличаются")
 require(
@@ -53,7 +53,7 @@ require(
     "Хранилище передачи управления в PostgreSQL",
 )
 http = (
-    read("services/api/internal/httpapi/server_bridge_topology_handoff_0148.go")
+    read("services/api/internal/httpapi/server_bridge_topology_handoff.go")
     + read("services/api/internal/httpapi/bridge_plugins.go")
     + read("services/api/internal/httpapi/routes_bridge.go")
 )

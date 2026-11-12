@@ -4,12 +4,12 @@ on:
     paths:
       - 'apps/desktop/**'
       - 'services/api/internal/httpapi/extension_*'
-      - '.github/workflows/security-sandbox-0356.yml'
+      - '.github/workflows/security-sandbox.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
       - 'services/api/internal/httpapi/extension_*'
-      - '.github/workflows/security-sandbox-0356.yml'
+      - '.github/workflows/security-sandbox.yml'
 permissions:
   contents: read
 jobs:
@@ -26,7 +26,7 @@ jobs:
         working-directory: apps/desktop
       - run: npm run test:extension-security
         working-directory: apps/desktop
-      - run: node --test tests/security_policy_0356.test.mjs
+      - run: node --test tests/security_policy.test.mjs
         working-directory: apps/desktop
       - run: npm run build
         working-directory: apps/desktop

@@ -19,7 +19,7 @@
 
 ```sh
 python3 scripts/contracts/validate-openapi.py
-python3 scripts/contracts/compatibility_04512.py
+python3 scripts/contracts/compatibility.py
 python3 scripts/sdk/generate-http-operations.py --check
 ```
 

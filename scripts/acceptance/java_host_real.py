@@ -28,7 +28,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
 from urllib.request import Request, build_opener, HTTPSHandler, HTTPRedirectHandler, ProxyHandler
 
-from legacy_upgrade_real_0528 import private_json, sha_file, require, Blocked
+from legacy_upgrade_real import private_json, sha_file, require, Blocked
 from sqlite3 import DatabaseError
 
 SCHEMA = 'launcher.java-host-live-0528/v1'
@@ -105,7 +105,7 @@ def observed_join(cfg):
     sys.path.insert(0, str(root / 'scripts/compatibility'))
     sys.path.insert(0, str(root / 'scripts/acceptance'))
     import matrix
-    import inventory_0521 as inv
+    import inventory as inv
     result_path = Path(cfg['gameCompatibilityResult'])
     require(result_path.is_absolute() and result_path.name == 'compatibility-result.json',
             'Требуется результат реального игрового запуска на нативной платформе')

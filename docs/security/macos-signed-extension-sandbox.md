@@ -9,7 +9,7 @@
    ```sh
    export LAUNCHER_MACOS_SANDBOX_TEAM_ID='YOURTEAMID'
    export LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY='Developer ID Application: Example (YOURTEAMID)'
-   ./scripts/security/build-macos-sandbox-helper-03112.sh /opt/launcher/libexec/LauncherExtensionSandbox
+   ./scripts/security/build-macos-sandbox-helper.sh /opt/launcher/libexec/LauncherExtensionSandbox
    ```
 
 2. Укажите для сервиса API параметры `LAUNCHER_MACOS_SANDBOX_HELPER` и `LAUNCHER_MACOS_SANDBOX_TEAM_ID`. Вспомогательная программа должна находиться в доверенном каталоге без группового доступа на запись. Никогда не распространяйте неподписанный резервный вариант.

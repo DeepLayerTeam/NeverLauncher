@@ -5,13 +5,13 @@ on:
       - 'sdk/java/core/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionsecurity/**'
-      - '.github/workflows/java-backend-services-0484.yml'
+      - '.github/workflows/java-backend-services.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionsecurity/**'
-      - '.github/workflows/java-backend-services-0484.yml'
+      - '.github/workflows/java-backend-services.yml'
   workflow_dispatch:
 permissions:
   contents: read

@@ -6,7 +6,7 @@ on:
       - 'services/api/**'
       - 'cli/**'
       - 'scripts/certification/**'
-      - '.github/workflows/certification-02413.yml'
+      - '.github/workflows/certification.yml'
   workflow_dispatch:
     inputs:
       actual_minecraft:
@@ -16,6 +16,9 @@ on:
         default: false
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   component-e2e:
     strategy:
@@ -62,7 +65,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          (cd services/api && go test -count=1 ./internal/model ./internal/planpolicy02412)
+          (cd services/api && go test -count=1 ./internal/model ./internal/planpolicy)
           (cd services/api && go test -count=1 ./internal/httpapi -run '^TestVerifiedPlanHardwareDeviceSignatureAndBinding02412$')
           (cd cli && go test -count=1 ./cmd/launcher -run 'Test.*Components.*0249|TestComponent.*02310')
       - name: Проверить Runtime на Rust, транзакции и защиту от обходов
@@ -76,7 +79,7 @@ jobs:
         run: |
           set -euo pipefail
           suffix=""; if [[ '${{ matrix.os }}' == windows ]]; then suffix=.exe; fi
-          python3 scripts/certification/components_02413.py \
+          python3 scripts/certification/components.py \
             --runtime "runtime/runtime/target/debug/runtime${suffix}" \
             --signer "runtime/runtime/target/debug/examples/cert_sign_fixture${suffix}" \
             --output "dist/02413/component-${{ matrix.os }}-${{ matrix.arch }}.json"
@@ -118,7 +121,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/certification/record_02413.py \
+          python3 scripts/certification/record.py \
             --component "dist/02413/component-${{ matrix.os }}-${{ matrix.arch }}.json" \
             --minecraft e2e/runtime/result.json \
             --guard "dist/02413/guard-${{ matrix.os }}-${{ matrix.arch }}.json" \
@@ -167,7 +170,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -d '' reports < <(find dist/platform-evidence-02413 -type f -name 'report-*.json' -print0)
-          python3 scripts/certification/gate_02413.py --commit "$GITHUB_SHA" \
+          python3 scripts/certification/gate.py --commit "$GITHUB_SHA" \
             --output dist/certification-02413-aggregate.json "${reports[@]}"
       - name: Сохранить итоговый вердикт ошибки или неполного выполнения для аудита
         if: always()

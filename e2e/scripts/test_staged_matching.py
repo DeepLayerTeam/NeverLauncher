@@ -14,7 +14,7 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
-from staged_matching_0344 import (
+from staged_matching import (
     MatchingServer,
     GameplayObserver,
     Rcon,

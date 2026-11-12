@@ -19,9 +19,9 @@ def require(text, needles, label):
 
 
 api = read(
-    "services/api/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening_0149.sql"
+    "services/api/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening.sql"
 )
-cli = resource_read_text(root, "cli/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening_0149.sql")
+cli = resource_read_text(root, "cli/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening.sql")
 if api != cli:
     raise SystemExit("Миграции API/CLI 0.14.9 различаются")
 require(
@@ -53,7 +53,7 @@ consume = repo[
 if "DELETE FROM server_bridge_node_nonces_v2" in consume:
     raise SystemExit("Критический участок обработки одноразовых значений по-прежнему выполняет глобальную очистку")
 public = read(
-    "services/api/internal/httpapi/server_bridge_public_matrix_0149.go"
+    "services/api/internal/httpapi/server_bridge_public_matrix.go"
 ) + read("services/api/internal/httpapi/routes_public.go")
 require(
     public,
@@ -67,8 +67,8 @@ require(
     "Точка доступа к публичной матрице",
 )
 hardening = (
-    read("services/api/internal/httpapi/server_bridge_http_hardening_0149.go")
-    + read("services/api/internal/httpapi/server_bridge_identity_0142.go")
+    read("services/api/internal/httpapi/server_bridge_http_hardening.go")
+    + read("services/api/internal/httpapi/server_bridge_identity.go")
     + read("services/api/internal/httpapi/rate_limit.go")
     + read("services/api/internal/config/config.go")
 )
@@ -111,7 +111,7 @@ require(
     "Источник публичной матрицы",
 )
 e2e = read("e2e/scripts/run-serverbridge-ha-hardening-migration-e2e.sh") + read(
-    "services/api/internal/repository/server_bridge_ha_0149_integration_test.go"
+    "services/api/internal/repository/server_bridge_ha_integration_test.go"
 )
 require(
     e2e,
@@ -125,13 +125,13 @@ require(
 )
 preflight = read("scripts/release/preflight.sh")
 require(
-    preflight, ["serverbridge-public-matrix-ha-hardening-0149.py"], "Предварительная проверка релиза"
+    preflight, ["serverbridge-public-matrix-ha-hardening.py"], "Предварительная проверка релиза"
 )
 ci = read(".github/workflows/ci.yml")
 require(
     ci,
     [
-        "serverbridge-public-matrix-ha-hardening-0149.py",
+        "serverbridge-public-matrix-ha-hardening.py",
         "scripts/serverbridge/matrix.py validate",
         "run-serverbridge-ha-hardening-migration-e2e.sh",
     ],

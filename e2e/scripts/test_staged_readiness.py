@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from staged_readiness_0343 import (
+from staged_readiness import (
     StartupObserver,
     capture_menu,
     find_window,

@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import dependency_ha_0513 as ha
+import dependency_ha as ha
 
 
 class DependencyHATests(unittest.TestCase):

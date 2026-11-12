@@ -16,7 +16,7 @@ Main-Class: ru.launcher.sdk.host.JavaExtensionHost
 Launcher-Extension-Class: example.spi.GreetingExtension
 MANIFEST
 "$jar" --create --file "$work/build/host.jar" --manifest "$work/build/manifest.txt" -C sdk/java/core/build/classes . -C "$work/build/extension" .
-python3 scripts/java/package_dependencies_0482.py --host "$work/build/host.jar" \
+python3 scripts/java/package_dependencies.py --host "$work/build/host.jar" \
   --output "$work/build/package/backend/java-spi.jar" \
   --library "org.example:spi-terms@1.0.0@>=1.0.0 <2.0.0@$work/build/terms.jar"
 cp "$work/build/package/backend/java-spi.jar" "$work/build/package/cli/java-spi.jar"

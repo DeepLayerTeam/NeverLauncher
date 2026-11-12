@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import restore_accept_0456 as recover
-import dr_03512 as dr
+import restore_accept as recover
+import dr as dr
 
 
 class Recovery0456(unittest.TestCase):

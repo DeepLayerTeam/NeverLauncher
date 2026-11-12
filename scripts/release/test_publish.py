@@ -16,9 +16,9 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import publish_0370 as p
-from required_jobs_0363 import declared_jobs
-import test_rehearsal_0365 as base
+import publish as p
+from required_jobs import declared_jobs
+import test_rehearsal as base
 from verified_targets import Blocked
 
 VERSION = "0.37.0"

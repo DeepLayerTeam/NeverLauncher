@@ -5,13 +5,13 @@ on:
     paths:
       - 'services/api/**'
       - 'scripts/security/**'
-      - '.github/workflows/device-guard-os-isolation-ga-0320.yml'
+      - '.github/workflows/device-guard-os-isolation-ga.yml'
       - 'VERSION'
   pull_request:
     paths:
       - 'services/api/**'
       - 'scripts/security/**'
-      - '.github/workflows/device-guard-os-isolation-ga-0320.yml'
+      - '.github/workflows/device-guard-os-isolation-ga.yml'
       - 'VERSION'
   workflow_dispatch:
     inputs:
@@ -30,6 +30,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  PYTHONUTF8: "1"
 
 jobs:
   source-and-offline:
@@ -52,9 +55,9 @@ jobs:
           test -z "$(git status --porcelain)"
           python3 scripts/version/manage.py check
       - name: Провести негативные тесты криптографического GA-верификатора
-        run: python3 -m unittest discover -s scripts/security -p 'test_ga_verify_0320.py' -v
+        run: python3 -m unittest discover -s scripts/security -p 'test_ga_verify.py' -v
       - name: Проверить попытки обхода автономными тестами с детектором гонок
-        run: python3 scripts/security/certify_0320.py --tier offline --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-offline-0320.json"
+        run: python3 scripts/security/certify_variant2.py --tier offline --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-offline-0320.json"
       - name: "Промышленная сборка Backend"
         working-directory: services/api
         run: |
@@ -80,7 +83,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
       - name: Проверить привязку сеанса Runtime, отзыв политик и подключения ServerBridge
-        run: python3 scripts/security/certify_0320.py --tier backend-security --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-backend-0320.json"
+        run: python3 scripts/security/certify_variant2.py --tier backend-security --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-backend-0320.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -127,7 +130,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
       - name: Обеспечить изоляцию потомков посредством namespaces, mounts, seccomp и cgroup.kill
-        run: python3 scripts/security/certify_0320.py --tier linux-live --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-linux-0320.json"
+        run: python3 scripts/security/certify_variant2.py --tier linux-live --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-linux-0320.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -148,7 +151,7 @@ jobs:
           go-version-file: services/api/go.mod
       - name: Проверить ограничения токена AppContainer, списка разрешённых дескрипторов, ACL, брокера и Job
         shell: pwsh
-        run: python scripts/security/certify_0320.py --tier windows-live --commit "$env:GITHUB_SHA" --output "$env:RUNNER_TEMP/security-windows-0320.json"
+        run: python scripts/security/certify_variant2.py --tier windows-live --commit "$env:GITHUB_SHA" --output "$env:RUNNER_TEMP/security-windows-0320.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -191,7 +194,7 @@ jobs:
           paths=sorted(root.glob('*.json'))
           if len(paths)!=7:
               raise SystemExit('ЗАБЛОКИРОВАНО: требуются семь независимо подписанных отчётов с подтверждениями')
-          cmd=[sys.executable, 'scripts/security/ga_verify_0320.py', '--commit', os.environ['GITHUB_SHA'], '--source-sha256', source_fingerprint(), '--trusted-public-key', os.environ.get('TRUSTED_KEY',''), '--output', 'dist/security-0320-GA-verdict.json', '--evidence', *map(str,paths)]
+          cmd=[sys.executable, 'scripts/security/ga_verify.py', '--commit', os.environ['GITHUB_SHA'], '--source-sha256', source_fingerprint(), '--trusted-public-key', os.environ.get('TRUSTED_KEY',''), '--output', 'dist/security-0320-GA-verdict.json', '--evidence', *map(str,paths)]
           raise SystemExit(subprocess.call(cmd))
           PY
       - name: Опубликовать аутентифицированный вердикт

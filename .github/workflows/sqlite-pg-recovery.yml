@@ -2,11 +2,11 @@ name: Восстановление при сбое миграции SQLite → P
 on:
   push:
     paths:
-      - 'scripts/operations/sqlite_pg_cutover_0475.py'
-      - 'scripts/operations/test_sqlite_pg_cutover_0475.py'
-      - 'scripts/operations/test_sqlite_pg_recovery_0477.py'
+      - 'scripts/operations/sqlite_pg_cutover.py'
+      - 'scripts/operations/test_sqlite_pg_cutover.py'
+      - 'scripts/operations/test_sqlite_pg_recovery.py'
       - 'services/api/internal/sqlitepg/**'
-      - '.github/workflows/sqlite-pg-recovery-0477.yml'
+      - '.github/workflows/sqlite-pg-recovery.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -28,8 +28,8 @@ jobs:
             scripts.operations.test_sqlite_pg_recovery_0477 \
             scripts.operations.test_legacy_upgrade_0476 -v
           python3 -m py_compile \
-            scripts/operations/sqlite_pg_cutover_0475.py \
-            scripts/operations/test_sqlite_pg_recovery_0477.py
+            scripts/operations/sqlite_pg_cutover.py \
+            scripts/operations/test_sqlite_pg_recovery.py
           python3 scripts/version/manage.py check
   sqlrepository-import-integration:
     runs-on: ubuntu-24.04

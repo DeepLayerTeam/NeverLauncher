@@ -10,9 +10,9 @@ import types
 import unittest
 from unittest.mock import patch
 
-import ha_inventory_0511 as inv
-import multi_host_0512 as mh
-import nn1_compat_0516 as nn
+import ha_inventory as inv
+import multi_host as mh
+import nn1_compat as nn
 
 
 def report(label, version):
@@ -60,7 +60,7 @@ class NN1Admission(unittest.TestCase):
         reports = {"a": report("a", "0.51.5"), "b": report("b", "0.51.6")}
         argv = types.SimpleNamespace(node=[k + "=" + v for k,v in nodes.items()],
                                      directory="/opt/launcher/deploy/production", project="launcher",
-                                     edge_url="https://edge.example", remote_script="/opt/launcher/scripts/operations/multi_host_0512.py",
+                                     edge_url="https://edge.example", remote_script="/opt/launcher/scripts/operations/multi_host.py",
                                      pg_dsn_file=Path("/run/secrets/primary"), require_mixed=True)
         with patch.object(mh, "remote_call", side_effect=lambda target, *a, **kw: reports[target.split("@")[1][0]]), \
              patch.object(mh, "edge_ready", return_value=(True,{"success":3,"sampled":3})), \

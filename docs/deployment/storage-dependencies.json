@@ -724,7 +724,7 @@
       ]
     },
     {
-      "path": ".github/workflows/admin-hardening-02112.yml",
+      "path": ".github/workflows/admin-hardening.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -739,7 +739,7 @@
       ]
     },
     {
-      "path": ".github/workflows/auth-migration-compat-02911.yml",
+      "path": ".github/workflows/auth-migration-compat.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -804,7 +804,7 @@
       ]
     },
     {
-      "path": ".github/workflows/auth-platform-protection-ga-0300.yml",
+      "path": ".github/workflows/auth-platform-protection-ga.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -849,7 +849,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 107,
-          "evidence": "python3 ../../scripts/ga/assert_go_test_0300.py \"$RUNNER_TEMP/auth-postgres.json\" \\"
+          "evidence": "python3 ../../scripts/ga/assert_go_test.py \"$RUNNER_TEMP/auth-postgres.json\" \\"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -864,7 +864,7 @@
       ]
     },
     {
-      "path": ".github/workflows/auth-provider-wizard-02910.yml",
+      "path": ".github/workflows/auth-provider-wizard.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -889,7 +889,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 49,
-          "evidence": "psql 'postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql"
+          "evidence": "psql 'postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard.sql"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1029,7 +1029,7 @@
       ]
     },
     {
-      "path": ".github/workflows/global-session-revocation-0297.yml",
+      "path": ".github/workflows/global-session-revocation.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1049,7 +1049,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-auth-migration-0335.yml",
+      "path": ".github/workflows/gravit-auth-migration.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1074,7 +1074,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-compatibility-0332.yml",
+      "path": ".github/workflows/gravit-compatibility.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1094,7 +1094,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-content-migration-0337.yml",
+      "path": ".github/workflows/gravit-content-migration.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1119,7 +1119,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-cutover-03311.yml",
+      "path": ".github/workflows/gravit-cutover.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1144,7 +1144,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-identity-0334.yml",
+      "path": ".github/workflows/gravit-identity.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1169,7 +1169,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-migration-ga-0340.yml",
+      "path": ".github/workflows/gravit-migration-ga.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1199,7 +1199,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-migration-reports-03313.yml",
+      "path": ".github/workflows/gravit-migration-reports.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1224,7 +1224,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-modules-0338.yml",
+      "path": ".github/workflows/gravit-modules.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1244,7 +1244,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-operational-rollback-03312.yml",
+      "path": ".github/workflows/gravit-operational-rollback.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1264,7 +1264,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-rehearsal-03310.yml",
+      "path": ".github/workflows/gravit-rehearsal.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1289,7 +1289,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-security-migration-0336.yml",
+      "path": ".github/workflows/gravit-security-migration.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1319,7 +1319,7 @@
       ]
     },
     {
-      "path": ".github/workflows/gravit-source-inventory-0333.yml",
+      "path": ".github/workflows/gravit-source-inventory.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1344,7 +1344,7 @@
       ]
     },
     {
-      "path": ".github/workflows/hwid-risk-recovery-0299.yml",
+      "path": ".github/workflows/hwid-risk-recovery.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1369,7 +1369,7 @@
       ]
     },
     {
-      "path": ".github/workflows/local-auth-fileauth-rehash-0295.yml",
+      "path": ".github/workflows/local-auth-fileauth-rehash.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1394,7 +1394,7 @@
       ]
     },
     {
-      "path": ".github/workflows/migration-center-0331.yml",
+      "path": ".github/workflows/migration-center.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1419,7 +1419,7 @@
       ]
     },
     {
-      "path": ".github/workflows/official-linking-0268.yml",
+      "path": ".github/workflows/official-linking.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1439,7 +1439,7 @@
       ]
     },
     {
-      "path": ".github/workflows/extensions-ga-0210.yml",
+      "path": ".github/workflows/extensions-ga.yml",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -1449,7 +1449,7 @@
       ]
     },
     {
-      "path": ".github/workflows/extensions-trust-recovery-02012.yml",
+      "path": ".github/workflows/extensions-trust-recovery.yml",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -1459,7 +1459,7 @@
       ]
     },
     {
-      "path": ".github/workflows/production-rc-03216.yml",
+      "path": ".github/workflows/production-rc.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1544,7 +1544,7 @@
       ]
     },
     {
-      "path": ".github/workflows/protection-sdk-policy-0298.yml",
+      "path": ".github/workflows/protection-sdk-policy.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1564,7 +1564,7 @@
       ]
     },
     {
-      "path": ".github/workflows/provider-routing-linking-0293.yml",
+      "path": ".github/workflows/provider-routing-linking.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1584,7 +1584,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 55,
-          "evidence": "run: test -z \"$(gofmt -l internal/federation internal/repository/auth_conflict_0293.go internal/repository/memory.go internal/repository/postgres.go internal/config/config.go inter"
+          "evidence": "run: test -z \"$(gofmt -l internal/federation internal/repository/auth_conflict.go internal/repository/memory.go internal/repository/postgres.go internal/config/config.go inter"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1594,7 +1594,7 @@
       ]
     },
     {
-      "path": ".github/workflows/provider-runtime-parity-0296.yml",
+      "path": ".github/workflows/provider-runtime-parity.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1619,7 +1619,7 @@
       ]
     },
     {
-      "path": ".github/workflows/release-candidate-03514.yml",
+      "path": ".github/workflows/release-candidate.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1649,7 +1649,7 @@
       ]
     },
     {
-      "path": ".github/workflows/runtime-acceptance-0350.yml",
+      "path": ".github/workflows/runtime-acceptance.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1684,7 +1684,7 @@
       ]
     },
     {
-      "path": ".github/workflows/scoped-extension-brokers-03110.yml",
+      "path": ".github/workflows/scoped-extension-brokers.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1694,7 +1694,7 @@
       ]
     },
     {
-      "path": ".github/workflows/security-real-auth-e2e-02912.yml",
+      "path": ".github/workflows/security-real-auth-e2e.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1729,7 +1729,7 @@
       ]
     },
     {
-      "path": ".github/workflows/sql-mapping-legacy-hash-0294.yml",
+      "path": ".github/workflows/sql-mapping-legacy-hash.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1754,7 +1754,7 @@
       ]
     },
     {
-      "path": ".github/workflows/sqlite-postgresql-transfer-03211.yml",
+      "path": ".github/workflows/sqlite-postgresql-transfer.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1764,7 +1764,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 11,
-          "evidence": "- '.github/workflows/sqlite-postgresql-transfer-03211.yml'"
+          "evidence": "- '.github/workflows/sqlite-postgresql-transfer.yml'"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1809,7 +1809,7 @@
       ]
     },
     {
-      "path": ".github/workflows/stable-runtime-gate-0341.yml",
+      "path": ".github/workflows/stable-runtime-gate.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1829,7 +1829,7 @@
       ]
     },
     {
-      "path": ".github/workflows/standard-network-growth-03212.yml",
+      "path": ".github/workflows/standard-network-growth.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1859,7 +1859,7 @@
       ]
     },
     {
-      "path": ".github/workflows/texture-certification-02512.yml",
+      "path": ".github/workflows/texture-certification.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1929,7 +1929,7 @@
       ]
     },
     {
-      "path": ".github/workflows/texture-lifecycle-02511.yml",
+      "path": ".github/workflows/texture-lifecycle.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1999,7 +1999,7 @@
       ]
     },
     {
-      "path": "cli/cmd/launcher/auth_upgrade_02911.go",
+      "path": "cli/cmd/launcher/auth_upgrade.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2014,7 +2014,7 @@
       ]
     },
     {
-      "path": "cli/cmd/launcher/authlib_classloader_0279_test.go",
+      "path": "cli/cmd/launcher/authlib_classloader_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -2054,7 +2054,7 @@
       ]
     },
     {
-      "path": "cli/cmd/launcher/extension_sdk_02010_test.go",
+      "path": "cli/cmd/launcher/extension_sdk_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2074,7 +2074,7 @@
       ]
     },
     {
-      "path": "cli/cmd/launcher/legacy_client_adapters_0278_test.go",
+      "path": "cli/cmd/launcher/legacy_client_adapters_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -2119,7 +2119,7 @@
       ]
     },
     {
-      "path": "cli/cmd/launcher/release_single_node_ga_0330.go",
+      "path": "cli/cmd/launcher/release_single_node_ga.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2134,7 +2134,7 @@
       ]
     },
     {
-      "path": "cli/cmd/launcher/release_single_node_ga_0330_test.go",
+      "path": "cli/cmd/launcher/release_single_node_ga_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2154,7 +2154,7 @@
       ]
     },
     {
-      "path": "cli/cmd/launcher/runtime_certification_02712_test.go",
+      "path": "cli/cmd/launcher/runtime_certification_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -2234,7 +2234,7 @@
       ]
     },
     {
-      "path": "cli/cmd/launcher/trusted_jvm_0306_test.go",
+      "path": "cli/cmd/launcher/trusted_jvm_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -2964,7 +2964,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0004_auth_core_0111.sql",
+      "path": "cli/internal/dbmigrate/sql/0004_auth_core.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3179,7 +3179,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0005_federation_core_0112.sql",
+      "path": "cli/internal/dbmigrate/sql/0005_federation_core.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3209,7 +3209,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0006_microsoft_connector_0116.sql",
+      "path": "cli/internal/dbmigrate/sql/0006_microsoft_connector.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3254,7 +3254,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0007_passkeys_mfa2_0117.sql",
+      "path": "cli/internal/dbmigrate/sql/0007_passkeys_mfa2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3379,7 +3379,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0008_session_management_2_0118.sql",
+      "path": "cli/internal/dbmigrate/sql/0008_session_management_2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3419,7 +3419,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0009_minecraft_auth_compat_2_0119.sql",
+      "path": "cli/internal/dbmigrate/sql/0009_minecraft_auth_compat_2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3509,7 +3509,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0010_federation_stabilization_01110.sql",
+      "path": "cli/internal/dbmigrate/sql/0010_federation_stabilization.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3519,7 +3519,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0011_auth_federation_release_0120.sql",
+      "path": "cli/internal/dbmigrate/sql/0011_auth_federation_release.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3539,7 +3539,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0012_device_trust_core_0121.sql",
+      "path": "cli/internal/dbmigrate/sql/0012_device_trust_core.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3649,7 +3649,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql",
+      "path": "cli/internal/dbmigrate/sql/0013_hardware_bound_identities.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3659,7 +3659,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql",
+      "path": "cli/internal/dbmigrate/sql/0014_challenge_response_attestation.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3689,7 +3689,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0015_session_device_risk_0126.sql",
+      "path": "cli/internal/dbmigrate/sql/0015_session_device_risk.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3709,7 +3709,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0016_minecraft_serverbridge_trust_0127.sql",
+      "path": "cli/internal/dbmigrate/sql/0016_minecraft_serverbridge_trust.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3719,7 +3719,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql",
+      "path": "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3739,7 +3739,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql",
+      "path": "cli/internal/dbmigrate/sql/0018_device_trust_stabilization.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3759,7 +3759,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql",
+      "path": "cli/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3779,7 +3779,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization_01310.sql",
+      "path": "cli/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3789,7 +3789,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_0141.sql",
+      "path": "cli/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -3944,7 +3944,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql",
+      "path": "cli/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -3989,7 +3989,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql",
+      "path": "cli/internal/dbmigrate/sql/0023_one_time_join_tickets.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4009,7 +4009,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0024_bukkit_family_0144.sql",
+      "path": "cli/internal/dbmigrate/sql/0024_bukkit_family.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4019,7 +4019,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0025_proxy_family_0145.sql",
+      "path": "cli/internal/dbmigrate/sql/0025_proxy_family.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4029,7 +4029,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql",
+      "path": "cli/internal/dbmigrate/sql/0026_fabric_server_bridge.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4039,7 +4039,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql",
+      "path": "cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4049,7 +4049,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0028_zero_patch_topology_handoff_0148.sql",
+      "path": "cli/internal/dbmigrate/sql/0028_zero_patch_topology_handoff.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4124,7 +4124,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening_0149.sql",
+      "path": "cli/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4139,7 +4139,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization_01410.sql",
+      "path": "cli/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4149,7 +4149,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql",
+      "path": "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4164,7 +4164,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0031_serverbridge_protocol_v3_0191.sql",
+      "path": "cli/internal/dbmigrate/sql/0031_serverbridge_protocol_v3_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4174,7 +4174,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql",
+      "path": "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4184,7 +4184,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql",
+      "path": "cli/internal/dbmigrate/sql/0033_serverbridge_runtime_identity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4284,7 +4284,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0034_serverbridge_telemetry_0193.sql",
+      "path": "cli/internal/dbmigrate/sql/0034_serverbridge_telemetry.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4354,7 +4354,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0035_serverbridge_event_stream_0194.sql",
+      "path": "cli/internal/dbmigrate/sql/0035_serverbridge_event_stream.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4404,7 +4404,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0036_serverbridge_control_api_0195.sql",
+      "path": "cli/internal/dbmigrate/sql/0036_serverbridge_control_api.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4504,7 +4504,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0037_serverbridge_topology_routing2_0196.sql",
+      "path": "cli/internal/dbmigrate/sql/0037_serverbridge_topology_routing2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4524,7 +4524,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_0197.sql",
+      "path": "cli/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4594,7 +4594,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0039_universal_server_adapters_0198.sql",
+      "path": "cli/internal/dbmigrate/sql/0039_universal_server_adapters.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4604,7 +4604,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0040_serverbridge_ha_control_plane_01911.sql",
+      "path": "cli/internal/dbmigrate/sql/0040_serverbridge_ha_control_plane.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4624,7 +4624,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0041_serverbridge3_ga_0200.sql",
+      "path": "cli/internal/dbmigrate/sql/0041_serverbridge3_ga.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4634,7 +4634,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0042_extensions_core_0201.sql",
+      "path": "cli/internal/dbmigrate/sql/0042_extensions_core.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4724,7 +4724,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0043_extensions_registry_0203.sql",
+      "path": "cli/internal/dbmigrate/sql/0043_extensions_registry.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4844,7 +4844,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0044_extensions_install_lifecycle_0204.sql",
+      "path": "cli/internal/dbmigrate/sql/0044_extensions_install_lifecycle.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4884,7 +4884,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0045_extensions_events_hooks_0206.sql",
+      "path": "cli/internal/dbmigrate/sql/0045_extensions_events_hooks.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5044,7 +5044,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0046_extensions_capability_security_0207.sql",
+      "path": "cli/internal/dbmigrate/sql/0046_extensions_capability_security.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5094,7 +5094,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql",
+      "path": "cli/internal/dbmigrate/sql/0047_extensions_dependencies_updates.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5194,7 +5194,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification_02012.sql",
+      "path": "cli/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5274,7 +5274,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0049_extensions_ga_0210.sql",
+      "path": "cli/internal/dbmigrate/sql/0049_extensions_ga.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5314,7 +5314,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql",
+      "path": "cli/internal/dbmigrate/sql/0050_authorization_scopes_identity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5419,7 +5419,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0051_honest_validation_trust_0212.sql",
+      "path": "cli/internal/dbmigrate/sql/0051_honest_validation_trust.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5499,7 +5499,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0052_durable_boundaries_0213.sql",
+      "path": "cli/internal/dbmigrate/sql/0052_durable_boundaries.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5754,7 +5754,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0053_release_workspace_0218.sql",
+      "path": "cli/internal/dbmigrate/sql/0053_release_workspace.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5784,7 +5784,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0054_serverbridge_operator_0219.sql",
+      "path": "cli/internal/dbmigrate/sql/0054_serverbridge_operator.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5804,7 +5804,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0055_config_audit_02111.sql",
+      "path": "cli/internal/dbmigrate/sql/0055_config_audit.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5849,7 +5849,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0056_profile_manifest_schema_evolution_0221.sql",
+      "path": "cli/internal/dbmigrate/sql/0056_profile_manifest_schema_evolution.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -5894,7 +5894,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0057_schema_evolution_integrity_0222.sql",
+      "path": "cli/internal/dbmigrate/sql/0057_schema_evolution_integrity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5929,7 +5929,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0058_file_ownership_0224.sql",
+      "path": "cli/internal/dbmigrate/sql/0058_file_ownership.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5939,7 +5939,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0059_build_workspaces_0226.sql",
+      "path": "cli/internal/dbmigrate/sql/0059_build_workspaces.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5974,7 +5974,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0060_transactional_channel_heads_0228.sql",
+      "path": "cli/internal/dbmigrate/sql/0060_transactional_channel_heads.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5994,7 +5994,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0061_signed_component_catalog_0241.sql",
+      "path": "cli/internal/dbmigrate/sql/0061_signed_component_catalog.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6029,7 +6029,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0062_component_topology_presets_0242.sql",
+      "path": "cli/internal/dbmigrate/sql/0062_component_topology_presets.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6064,7 +6064,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0063_dependency_conflict_resolver_0243.sql",
+      "path": "cli/internal/dbmigrate/sql/0063_dependency_conflict_resolver.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6099,7 +6099,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0064_conditional_components_0244.sql",
+      "path": "cli/internal/dbmigrate/sql/0064_conditional_components.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6134,7 +6134,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0065_signed_optional_actions_0245.sql",
+      "path": "cli/internal/dbmigrate/sql/0065_signed_optional_actions.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6169,7 +6169,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0066_serverbridge_verified_plan_02412.sql",
+      "path": "cli/internal/dbmigrate/sql/0066_serverbridge_verified_plan.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -6184,7 +6184,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0067_texture_identity_0251.sql",
+      "path": "cli/internal/dbmigrate/sql/0067_texture_identity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6319,7 +6319,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0068_texture_upload_0252.sql",
+      "path": "cli/internal/dbmigrate/sql/0068_texture_upload.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6329,7 +6329,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0069_texture_storage_0253.sql",
+      "path": "cli/internal/dbmigrate/sql/0069_texture_storage.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6369,7 +6369,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0070_texture_fetch_0254.sql",
+      "path": "cli/internal/dbmigrate/sql/0070_texture_fetch.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6379,7 +6379,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0071_texture_service_0255.sql",
+      "path": "cli/internal/dbmigrate/sql/0071_texture_service.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6414,7 +6414,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0072_texture_admin_0259.sql",
+      "path": "cli/internal/dbmigrate/sql/0072_texture_admin.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6459,7 +6459,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0073_texture_gravit_import_02510.sql",
+      "path": "cli/internal/dbmigrate/sql/0073_texture_gravit_import.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6479,7 +6479,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0074_texture_lifecycle_recovery_02511.sql",
+      "path": "cli/internal/dbmigrate/sql/0074_texture_lifecycle_recovery.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6509,7 +6509,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0075_official_identity_0268.sql",
+      "path": "cli/internal/dbmigrate/sql/0075_official_identity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6549,7 +6549,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0076_official_provider_management_02611.sql",
+      "path": "cli/internal/dbmigrate/sql/0076_official_provider_management.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6579,7 +6579,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0077_control_domains_rbac_0281.sql",
+      "path": "cli/internal/dbmigrate/sql/0077_control_domains_rbac.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6609,7 +6609,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0078_control_ha_fencing_0285.sql",
+      "path": "cli/internal/dbmigrate/sql/0078_control_ha_fencing.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6619,7 +6619,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0079_serverbridge_network_admission_0288.sql",
+      "path": "cli/internal/dbmigrate/sql/0079_serverbridge_network_admission.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6639,7 +6639,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0080_backend_restart_0289.sql",
+      "path": "cli/internal/dbmigrate/sql/0080_backend_restart.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6689,7 +6689,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0081_auth_canonical_issuer_0291.sql",
+      "path": "cli/internal/dbmigrate/sql/0081_auth_canonical_issuer.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6699,7 +6699,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0082_global_session_revocation_0297.sql",
+      "path": "cli/internal/dbmigrate/sql/0082_global_session_revocation.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -6784,7 +6784,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0083_protection_policy_0298.sql",
+      "path": "cli/internal/dbmigrate/sql/0083_protection_policy.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6829,7 +6829,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0084_hwid_risk_recovery_0299.sql",
+      "path": "cli/internal/dbmigrate/sql/0084_hwid_risk_recovery.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6879,7 +6879,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql",
+      "path": "cli/internal/dbmigrate/sql/0085_auth_provider_wizard.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6914,7 +6914,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql",
+      "path": "cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6924,7 +6924,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0087_tpm_hardware_evidence_0312.sql",
+      "path": "cli/internal/dbmigrate/sql/0087_tpm_hardware_evidence.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -6959,7 +6959,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0101_stable_runtime_gate_0341.sql",
+      "path": "cli/internal/dbmigrate/sql/0101_stable_runtime_gate.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -6969,7 +6969,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0102_staged_runtime_execution_0342.sql",
+      "path": "cli/internal/dbmigrate/sql/0102_staged_runtime_execution.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -7019,7 +7019,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0103_trusted_validation_attestation_0345.sql",
+      "path": "cli/internal/dbmigrate/sql/0103_trusted_validation_attestation.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -7049,7 +7049,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0104_validation_freshness_0346.sql",
+      "path": "cli/internal/dbmigrate/sql/0104_validation_freshness.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -7089,7 +7089,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0107_ga_stable_snapshot_0350.sql",
+      "path": "cli/internal/dbmigrate/sql/0107_ga_stable_snapshot.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -7284,7 +7284,7 @@
       ]
     },
     {
-      "path": "e2e/scripts/game_cycle_0364.py",
+      "path": "e2e/scripts/game_cycle.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -7329,7 +7329,7 @@
       ]
     },
     {
-      "path": "e2e/scripts/run-admin-hardening-02112-e2e.sh",
+      "path": "e2e/scripts/run-admin-hardening-e2e.sh",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -7734,7 +7734,7 @@
       ]
     },
     {
-      "path": "e2e/scripts/run-durable-boundaries-0213-e2e.sh",
+      "path": "e2e/scripts/run-durable-boundaries-e2e.sh",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -8859,7 +8859,7 @@
       ]
     },
     {
-      "path": "scripts/acceptance/run_owner_player_0351.sh",
+      "path": "scripts/acceptance/run_owner_player.sh",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -8869,7 +8869,7 @@
       ]
     },
     {
-      "path": "scripts/compatibility/authorization_frozen_coverage_0211.py",
+      "path": "scripts/compatibility/authorization_frozen_coverage.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -8889,7 +8889,7 @@
       ]
     },
     {
-      "path": "scripts/compatibility/durable_boundaries_0213.py",
+      "path": "scripts/compatibility/durable_boundaries.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -8929,7 +8929,7 @@
       ]
     },
     {
-      "path": "scripts/desktop/build_signed_0352.sh",
+      "path": "scripts/desktop/build_signed.sh",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -8984,7 +8984,7 @@
       ]
     },
     {
-      "path": "scripts/ga/runtime_acceptance_0350.py",
+      "path": "scripts/ga/runtime_acceptance.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -8999,7 +8999,7 @@
       ]
     },
     {
-      "path": "scripts/ga/single_node_ga_0330.py",
+      "path": "scripts/ga/single_node_ga.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9019,7 +9019,7 @@
       ]
     },
     {
-      "path": "scripts/ga/test_single_node_ga_0330.py",
+      "path": "scripts/ga/test_single_node_ga.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9184,7 +9184,7 @@
       ]
     },
     {
-      "path": "scripts/operations/dr_03512.py",
+      "path": "scripts/operations/dr.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9234,7 +9234,7 @@
       ]
     },
     {
-      "path": "scripts/operations/test_dr_03512.py",
+      "path": "scripts/operations/test_dr.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9244,7 +9244,7 @@
       ]
     },
     {
-      "path": "scripts/rc/operations_03514.py",
+      "path": "scripts/rc/operations.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9434,7 +9434,7 @@
       ]
     },
     {
-      "path": "scripts/release/certify-admin-ga-0220.sh",
+      "path": "scripts/release/certify-admin-ga.sh",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9454,7 +9454,7 @@
       ]
     },
     {
-      "path": "scripts/release/certify-profiles-ga-0230.py",
+      "path": "scripts/release/certify-profiles-ga.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9494,7 +9494,7 @@
       ]
     },
     {
-      "path": "scripts/release/test_rehearsal_0365.py",
+      "path": "scripts/release/test_rehearsal.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9544,7 +9544,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/cross-platform-key-recovery-0128.py",
+      "path": "scripts/smoke/offline/cross-platform-key-recovery.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9574,7 +9574,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/device-trust-e2e-matrix-0129.py",
+      "path": "scripts/smoke/offline/device-trust-e2e-matrix.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9604,7 +9604,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/device-trust-migration-stabilization-01210.py",
+      "path": "scripts/smoke/offline/device-trust-migration-stabilization.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9619,7 +9619,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/minecraft-serverbridge-trust-0127.py",
+      "path": "scripts/smoke/offline/minecraft-serverbridge-trust.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9629,7 +9629,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/extensions-events-0206.py",
+      "path": "scripts/smoke/offline/extensions-events.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9654,7 +9654,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/extensions-install-lifecycle-0204.py",
+      "path": "scripts/smoke/offline/extensions-install-lifecycle.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9669,7 +9669,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/guard-guard-attestation-0134.py",
+      "path": "scripts/smoke/offline/guard-guard-attestation.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9859,7 +9859,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-bukkit-family-0144.py",
+      "path": "scripts/smoke/offline/serverbridge-bukkit-family.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9874,7 +9874,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-control-api-0195.py",
+      "path": "scripts/smoke/offline/serverbridge-control-api.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9884,7 +9884,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py",
+      "path": "scripts/smoke/offline/serverbridge-crypto-node-identities.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9914,7 +9914,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-fabric-0146.py",
+      "path": "scripts/smoke/offline/serverbridge-fabric.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9929,7 +9929,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-forge-neoforge-0147.py",
+      "path": "scripts/smoke/offline/serverbridge-forge-neoforge.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -9939,7 +9939,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-ha-control-plane-01911.py",
+      "path": "scripts/smoke/offline/serverbridge-ha-control-plane.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9969,7 +9969,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-migration-stabilization-01410.py",
+      "path": "scripts/smoke/offline/serverbridge-migration-stabilization.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9984,7 +9984,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-one-time-join-tickets-0143.py",
+      "path": "scripts/smoke/offline/serverbridge-one-time-join-tickets.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -10024,7 +10024,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-protocol-v2-0141.py",
+      "path": "scripts/smoke/offline/serverbridge-protocol-v2-.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -10064,7 +10064,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-proxy-family-0145.py",
+      "path": "scripts/smoke/offline/serverbridge-proxy-family.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10079,7 +10079,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-public-matrix-ha-hardening-0149.py",
+      "path": "scripts/smoke/offline/serverbridge-public-matrix-ha-hardening.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10089,7 +10089,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-runtime-identity-0192.py",
+      "path": "scripts/smoke/offline/serverbridge-runtime-identity.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -10099,7 +10099,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/serverbridge-zero-patch-topology-handoff-0148.py",
+      "path": "scripts/smoke/offline/serverbridge-zero-patch-topology-handoff.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10119,7 +10119,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/session-device-risk-0126.py",
+      "path": "scripts/smoke/offline/session-device-risk.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -10264,7 +10264,7 @@
       ]
     },
     {
-      "path": "scripts/test/world-backup-host-e2e-02810.py",
+      "path": "scripts/test/world-backup-host-e2e.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -10284,7 +10284,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/gravit-textures-import-02510/main.go",
+      "path": "services/api/cmd/gravit-textures-import/main.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10329,7 +10329,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/local-auth-0295/main.go",
+      "path": "services/api/cmd/local-auth/main.go",
       "findings": [
         {
           "category": "postgres-driver-import",
@@ -10464,7 +10464,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/launcher-sqlite/minimal_pg_0377.go",
+      "path": "services/api/cmd/launcher-sqlite/minimal_pg.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10489,7 +10489,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/launcher-sqlite/postgres_export_0377.go",
+      "path": "services/api/cmd/launcher-sqlite/postgres_export.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10544,7 +10544,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/texture-maintenance-0253/main.go",
+      "path": "services/api/cmd/texture-maintenance/main.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10854,7 +10854,7 @@
       ]
     },
     {
-      "path": "services/api/internal/config/sqlite_single_node_0327_test.go",
+      "path": "services/api/internal/config/sqlite_single_node_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -11609,7 +11609,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0004_auth_core_0111.sql",
+      "path": "services/api/internal/dbmigrate/sql/0004_auth_core.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -11824,7 +11824,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0005_federation_core_0112.sql",
+      "path": "services/api/internal/dbmigrate/sql/0005_federation_core.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -11854,7 +11854,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0006_microsoft_connector_0116.sql",
+      "path": "services/api/internal/dbmigrate/sql/0006_microsoft_connector.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -11899,7 +11899,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0007_passkeys_mfa2_0117.sql",
+      "path": "services/api/internal/dbmigrate/sql/0007_passkeys_mfa2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12024,7 +12024,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0008_session_management_2_0118.sql",
+      "path": "services/api/internal/dbmigrate/sql/0008_session_management_2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12064,7 +12064,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0009_minecraft_auth_compat_2_0119.sql",
+      "path": "services/api/internal/dbmigrate/sql/0009_minecraft_auth_compat_2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12154,7 +12154,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0010_federation_stabilization_01110.sql",
+      "path": "services/api/internal/dbmigrate/sql/0010_federation_stabilization.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12164,7 +12164,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0011_auth_federation_release_0120.sql",
+      "path": "services/api/internal/dbmigrate/sql/0011_auth_federation_release.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12184,7 +12184,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0012_device_trust_core_0121.sql",
+      "path": "services/api/internal/dbmigrate/sql/0012_device_trust_core.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12294,7 +12294,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql",
+      "path": "services/api/internal/dbmigrate/sql/0013_hardware_bound_identities.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12304,7 +12304,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0014_challenge_response_attestation_0124.sql",
+      "path": "services/api/internal/dbmigrate/sql/0014_challenge_response_attestation.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12334,7 +12334,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0015_session_device_risk_0126.sql",
+      "path": "services/api/internal/dbmigrate/sql/0015_session_device_risk.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12354,7 +12354,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0016_minecraft_serverbridge_trust_0127.sql",
+      "path": "services/api/internal/dbmigrate/sql/0016_minecraft_serverbridge_trust.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12364,7 +12364,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql",
+      "path": "services/api/internal/dbmigrate/sql/0017_device_key_recovery_rotation.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12384,7 +12384,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql",
+      "path": "services/api/internal/dbmigrate/sql/0018_device_trust_stabilization.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12404,7 +12404,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql",
+      "path": "services/api/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12424,7 +12424,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization_01310.sql",
+      "path": "services/api/internal/dbmigrate/sql/0020_guard_migration_compatibility_stabilization.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12434,7 +12434,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_0141.sql",
+      "path": "services/api/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -12589,7 +12589,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql",
+      "path": "services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12634,7 +12634,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql",
+      "path": "services/api/internal/dbmigrate/sql/0023_one_time_join_tickets.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12654,7 +12654,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0024_bukkit_family_0144.sql",
+      "path": "services/api/internal/dbmigrate/sql/0024_bukkit_family.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12664,7 +12664,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0025_proxy_family_0145.sql",
+      "path": "services/api/internal/dbmigrate/sql/0025_proxy_family.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12674,7 +12674,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql",
+      "path": "services/api/internal/dbmigrate/sql/0026_fabric_server_bridge.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12684,7 +12684,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql",
+      "path": "services/api/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12694,7 +12694,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0028_zero_patch_topology_handoff_0148.sql",
+      "path": "services/api/internal/dbmigrate/sql/0028_zero_patch_topology_handoff.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12769,7 +12769,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening_0149.sql",
+      "path": "services/api/internal/dbmigrate/sql/0029_serverbridge_public_matrix_ha_hardening.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12784,7 +12784,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization_01410.sql",
+      "path": "services/api/internal/dbmigrate/sql/0030_serverbridge_migration_stabilization.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12794,7 +12794,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql",
+      "path": "services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12809,7 +12809,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0031_serverbridge_protocol_v3_0191.sql",
+      "path": "services/api/internal/dbmigrate/sql/0031_serverbridge_protocol_v3_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12819,7 +12819,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql",
+      "path": "services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12829,7 +12829,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0033_serverbridge_runtime_identity_0192.sql",
+      "path": "services/api/internal/dbmigrate/sql/0033_serverbridge_runtime_identity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12929,7 +12929,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0034_serverbridge_telemetry_0193.sql",
+      "path": "services/api/internal/dbmigrate/sql/0034_serverbridge_telemetry.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -12999,7 +12999,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0035_serverbridge_event_stream_0194.sql",
+      "path": "services/api/internal/dbmigrate/sql/0035_serverbridge_event_stream.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13049,7 +13049,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0036_serverbridge_control_api_0195.sql",
+      "path": "services/api/internal/dbmigrate/sql/0036_serverbridge_control_api.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13149,7 +13149,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0037_serverbridge_topology_routing2_0196.sql",
+      "path": "services/api/internal/dbmigrate/sql/0037_serverbridge_topology_routing2_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13169,7 +13169,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_0197.sql",
+      "path": "services/api/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13239,7 +13239,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0039_universal_server_adapters_0198.sql",
+      "path": "services/api/internal/dbmigrate/sql/0039_universal_server_adapters.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13249,7 +13249,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0040_serverbridge_ha_control_plane_01911.sql",
+      "path": "services/api/internal/dbmigrate/sql/0040_serverbridge_ha_control_plane.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13269,7 +13269,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0041_serverbridge3_ga_0200.sql",
+      "path": "services/api/internal/dbmigrate/sql/0041_serverbridge3_ga.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13279,7 +13279,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0042_extensions_core_0201.sql",
+      "path": "services/api/internal/dbmigrate/sql/0042_extensions_core.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13369,7 +13369,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0043_extensions_registry_0203.sql",
+      "path": "services/api/internal/dbmigrate/sql/0043_extensions_registry.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13489,7 +13489,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0044_extensions_install_lifecycle_0204.sql",
+      "path": "services/api/internal/dbmigrate/sql/0044_extensions_install_lifecycle.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13529,7 +13529,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0045_extensions_events_hooks_0206.sql",
+      "path": "services/api/internal/dbmigrate/sql/0045_extensions_events_hooks.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13689,7 +13689,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0046_extensions_capability_security_0207.sql",
+      "path": "services/api/internal/dbmigrate/sql/0046_extensions_capability_security.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13739,7 +13739,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql",
+      "path": "services/api/internal/dbmigrate/sql/0047_extensions_dependencies_updates.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13839,7 +13839,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification_02012.sql",
+      "path": "services/api/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13919,7 +13919,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0049_extensions_ga_0210.sql",
+      "path": "services/api/internal/dbmigrate/sql/0049_extensions_ga.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13959,7 +13959,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0050_authorization_scopes_identity_0211.sql",
+      "path": "services/api/internal/dbmigrate/sql/0050_authorization_scopes_identity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14064,7 +14064,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0051_honest_validation_trust_0212.sql",
+      "path": "services/api/internal/dbmigrate/sql/0051_honest_validation_trust.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14144,7 +14144,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0052_durable_boundaries_0213.sql",
+      "path": "services/api/internal/dbmigrate/sql/0052_durable_boundaries.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14399,7 +14399,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0053_release_workspace_0218.sql",
+      "path": "services/api/internal/dbmigrate/sql/0053_release_workspace.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14429,7 +14429,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0054_serverbridge_operator_0219.sql",
+      "path": "services/api/internal/dbmigrate/sql/0054_serverbridge_operator.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14449,7 +14449,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0055_config_audit_02111.sql",
+      "path": "services/api/internal/dbmigrate/sql/0055_config_audit.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14494,7 +14494,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0056_profile_manifest_schema_evolution_0221.sql",
+      "path": "services/api/internal/dbmigrate/sql/0056_profile_manifest_schema_evolution.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -14539,7 +14539,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0057_schema_evolution_integrity_0222.sql",
+      "path": "services/api/internal/dbmigrate/sql/0057_schema_evolution_integrity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14574,7 +14574,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0058_file_ownership_0224.sql",
+      "path": "services/api/internal/dbmigrate/sql/0058_file_ownership.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14584,7 +14584,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0059_build_workspaces_0226.sql",
+      "path": "services/api/internal/dbmigrate/sql/0059_build_workspaces.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14619,7 +14619,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0060_transactional_channel_heads_0228.sql",
+      "path": "services/api/internal/dbmigrate/sql/0060_transactional_channel_heads.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14639,7 +14639,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0061_signed_component_catalog_0241.sql",
+      "path": "services/api/internal/dbmigrate/sql/0061_signed_component_catalog.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14674,7 +14674,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0062_component_topology_presets_0242.sql",
+      "path": "services/api/internal/dbmigrate/sql/0062_component_topology_presets.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14709,7 +14709,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0063_dependency_conflict_resolver_0243.sql",
+      "path": "services/api/internal/dbmigrate/sql/0063_dependency_conflict_resolver.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14744,7 +14744,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0064_conditional_components_0244.sql",
+      "path": "services/api/internal/dbmigrate/sql/0064_conditional_components.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14779,7 +14779,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0065_signed_optional_actions_0245.sql",
+      "path": "services/api/internal/dbmigrate/sql/0065_signed_optional_actions.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14814,7 +14814,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0066_serverbridge_verified_plan_02412.sql",
+      "path": "services/api/internal/dbmigrate/sql/0066_serverbridge_verified_plan.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -14829,7 +14829,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0067_texture_identity_0251.sql",
+      "path": "services/api/internal/dbmigrate/sql/0067_texture_identity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14964,7 +14964,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0068_texture_upload_0252.sql",
+      "path": "services/api/internal/dbmigrate/sql/0068_texture_upload.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -14974,7 +14974,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0069_texture_storage_0253.sql",
+      "path": "services/api/internal/dbmigrate/sql/0069_texture_storage.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15014,7 +15014,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0070_texture_fetch_0254.sql",
+      "path": "services/api/internal/dbmigrate/sql/0070_texture_fetch.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15024,7 +15024,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0071_texture_service_0255.sql",
+      "path": "services/api/internal/dbmigrate/sql/0071_texture_service.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15059,7 +15059,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0072_texture_admin_0259.sql",
+      "path": "services/api/internal/dbmigrate/sql/0072_texture_admin.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15104,7 +15104,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0073_texture_gravit_import_02510.sql",
+      "path": "services/api/internal/dbmigrate/sql/0073_texture_gravit_import.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15124,7 +15124,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0074_texture_lifecycle_recovery_02511.sql",
+      "path": "services/api/internal/dbmigrate/sql/0074_texture_lifecycle_recovery.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15154,7 +15154,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0075_official_identity_0268.sql",
+      "path": "services/api/internal/dbmigrate/sql/0075_official_identity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15194,7 +15194,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0076_official_provider_management_02611.sql",
+      "path": "services/api/internal/dbmigrate/sql/0076_official_provider_management.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15224,7 +15224,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0077_control_domains_rbac_0281.sql",
+      "path": "services/api/internal/dbmigrate/sql/0077_control_domains_rbac.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15254,7 +15254,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0078_control_ha_fencing_0285.sql",
+      "path": "services/api/internal/dbmigrate/sql/0078_control_ha_fencing.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15264,7 +15264,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0079_serverbridge_network_admission_0288.sql",
+      "path": "services/api/internal/dbmigrate/sql/0079_serverbridge_network_admission.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15284,7 +15284,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0080_backend_restart_0289.sql",
+      "path": "services/api/internal/dbmigrate/sql/0080_backend_restart.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15334,7 +15334,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0081_auth_canonical_issuer_0291.sql",
+      "path": "services/api/internal/dbmigrate/sql/0081_auth_canonical_issuer.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15344,7 +15344,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0082_global_session_revocation_0297.sql",
+      "path": "services/api/internal/dbmigrate/sql/0082_global_session_revocation.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -15429,7 +15429,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0083_protection_policy_0298.sql",
+      "path": "services/api/internal/dbmigrate/sql/0083_protection_policy.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15474,7 +15474,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0084_hwid_risk_recovery_0299.sql",
+      "path": "services/api/internal/dbmigrate/sql/0084_hwid_risk_recovery.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15524,7 +15524,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql",
+      "path": "services/api/internal/dbmigrate/sql/0085_auth_provider_wizard.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15559,7 +15559,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql",
+      "path": "services/api/internal/dbmigrate/sql/0086_auth_upgrade_integrity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15569,7 +15569,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0087_tpm_hardware_evidence_0312.sql",
+      "path": "services/api/internal/dbmigrate/sql/0087_tpm_hardware_evidence.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -15604,7 +15604,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0088_measured_boot_pcr_0315.sql",
+      "path": "services/api/internal/dbmigrate/sql/0088_measured_boot_pcr.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15634,7 +15634,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0089_migration_workflow_0331.sql",
+      "path": "services/api/internal/dbmigrate/sql/0089_migration_workflow.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15704,7 +15704,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0090_gravit_compat_0332.sql",
+      "path": "services/api/internal/dbmigrate/sql/0090_gravit_compat.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15734,7 +15734,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0091_gravit_inventory_0333.sql",
+      "path": "services/api/internal/dbmigrate/sql/0091_gravit_inventory.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15769,7 +15769,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0092_gravit_identity_0334.sql",
+      "path": "services/api/internal/dbmigrate/sql/0092_gravit_identity.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15799,7 +15799,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0093_gravit_auth_0335.sql",
+      "path": "services/api/internal/dbmigrate/sql/0093_gravit_auth.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15829,7 +15829,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0094_gravit_security_0336.sql",
+      "path": "services/api/internal/dbmigrate/sql/0094_gravit_security.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15859,7 +15859,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0095_gravit_content_0337.sql",
+      "path": "services/api/internal/dbmigrate/sql/0095_gravit_content.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15894,7 +15894,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0096_gravit_modules_0338.sql",
+      "path": "services/api/internal/dbmigrate/sql/0096_gravit_modules.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15934,7 +15934,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0097_gravit_rehearsal_03310.sql",
+      "path": "services/api/internal/dbmigrate/sql/0097_gravit_rehearsal.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15964,7 +15964,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0098_gravit_staged_cutover_03311.sql",
+      "path": "services/api/internal/dbmigrate/sql/0098_gravit_staged_cutover.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -16004,7 +16004,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0099_gravit_operational_rollback_03312.sql",
+      "path": "services/api/internal/dbmigrate/sql/0099_gravit_operational_rollback.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -16029,7 +16029,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0100_migration_reports_03313.sql",
+      "path": "services/api/internal/dbmigrate/sql/0100_migration_reports.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -16059,7 +16059,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0101_stable_runtime_gate_0341.sql",
+      "path": "services/api/internal/dbmigrate/sql/0101_stable_runtime_gate.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -16069,7 +16069,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0102_staged_runtime_execution_0342.sql",
+      "path": "services/api/internal/dbmigrate/sql/0102_staged_runtime_execution.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -16119,7 +16119,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0103_trusted_validation_attestation_0345.sql",
+      "path": "services/api/internal/dbmigrate/sql/0103_trusted_validation_attestation.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -16149,7 +16149,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0104_validation_freshness_0346.sql",
+      "path": "services/api/internal/dbmigrate/sql/0104_validation_freshness.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -16189,7 +16189,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0105_production_runtime_gate_03411.sql",
+      "path": "services/api/internal/dbmigrate/sql/0105_production_runtime_gate.sql",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -16309,7 +16309,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0106_validation_audit_03412.sql",
+      "path": "services/api/internal/dbmigrate/sql/0106_validation_audit.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -16339,7 +16339,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0107_ga_stable_snapshot_0350.sql",
+      "path": "services/api/internal/dbmigrate/sql/0107_ga_stable_snapshot.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -16439,7 +16439,7 @@
       ]
     },
     {
-      "path": "services/api/internal/deployment/minimal_0375_test.go",
+      "path": "services/api/internal/deployment/minimal_test.go",
       "findings": [
         {
           "category": "storage-configuration-read",
@@ -16584,7 +16584,7 @@
       ]
     },
     {
-      "path": "services/api/internal/extensionhost/cli_0209_test.go",
+      "path": "services/api/internal/extensionhost/cli_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -16599,7 +16599,7 @@
       ]
     },
     {
-      "path": "services/api/internal/extensionhost/host_0205_test.go",
+      "path": "services/api/internal/extensionhost/host_variant2_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -16619,7 +16619,7 @@
       ]
     },
     {
-      "path": "services/api/internal/fileauth/database_0295.go",
+      "path": "services/api/internal/fileauth/database.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -16629,7 +16629,7 @@
       ]
     },
     {
-      "path": "services/api/internal/fileauth/database_0295_test.go",
+      "path": "services/api/internal/fileauth/database_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -16674,7 +16674,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/admin_textures_0259.go",
+      "path": "services/api/internal/httpapi/admin_textures.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -16969,7 +16969,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/auth_provider_wizard_02910_test.go",
+      "path": "services/api/internal/httpapi/auth_provider_wizard_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -16984,7 +16984,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/backend_operations_0289.go",
+      "path": "services/api/internal/httpapi/backend_operations.go",
       "findings": [
         {
           "category": "storage-configuration-read",
@@ -17024,7 +17024,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/client_factory_builder_02710_test.go",
+      "path": "services/api/internal/httpapi/client_factory_builder_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -17034,7 +17034,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/device_attestation_0124_test.go",
+      "path": "services/api/internal/httpapi/device_attestation_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17059,7 +17059,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/guard_attestation_0134_test.go",
+      "path": "services/api/internal/httpapi/guard_attestation_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17274,7 +17274,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_0331.go",
+      "path": "services/api/internal/httpapi/migration.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17284,7 +17284,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_auth_0335.go",
+      "path": "services/api/internal/httpapi/migration_auth.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17299,7 +17299,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_compat_0332.go",
+      "path": "services/api/internal/httpapi/migration_compat.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17309,7 +17309,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_content_0337.go",
+      "path": "services/api/internal/httpapi/migration_content.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17319,7 +17319,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_cutover_03311.go",
+      "path": "services/api/internal/httpapi/migration_cutover.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17329,7 +17329,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_identity_0334.go",
+      "path": "services/api/internal/httpapi/migration_identity.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17339,7 +17339,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_inventory_0333.go",
+      "path": "services/api/internal/httpapi/migration_inventory.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17349,7 +17349,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_modules_0338.go",
+      "path": "services/api/internal/httpapi/migration_modules.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17359,7 +17359,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_rehearsal_03310.go",
+      "path": "services/api/internal/httpapi/migration_rehearsal.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17374,7 +17374,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_report_03313.go",
+      "path": "services/api/internal/httpapi/migration_report.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17384,7 +17384,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_rollback_03312.go",
+      "path": "services/api/internal/httpapi/migration_rollback.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17394,7 +17394,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/migration_security_0336.go",
+      "path": "services/api/internal/httpapi/migration_security.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17869,7 +17869,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/security_real_auth_postgres_02912_test.go",
+      "path": "services/api/internal/httpapi/security_real_auth_postgres_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -17924,7 +17924,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/server_bridge_public_matrix_0149.go",
+      "path": "services/api/internal/httpapi/server_bridge_public_matrix.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -17944,7 +17944,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/server_bridge_topology_handoff_0148.go",
+      "path": "services/api/internal/httpapi/server_bridge_topology_handoff.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -18124,7 +18124,7 @@
       ]
     },
     {
-      "path": "services/api/internal/httpapi/sqlite_coordinator_0374_test.go",
+      "path": "services/api/internal/httpapi/sqlite_coordinator_test.go",
       "findings": [
         {
           "category": "storage-configuration-read",
@@ -18239,7 +18239,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/audit_query_02111.go",
+      "path": "services/api/internal/repository/audit_query.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -18259,7 +18259,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/auth_conflict_0293_integration_test.go",
+      "path": "services/api/internal/repository/auth_conflict_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -18304,7 +18304,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/auth_identity_0291_integration_test.go",
+      "path": "services/api/internal/repository/auth_identity_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -18354,7 +18354,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/auth_provider_wizard_02910.go",
+      "path": "services/api/internal/repository/auth_provider_wizard.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -18399,7 +18399,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/auth_provider_wizard_02910_integration_test.go",
+      "path": "services/api/internal/repository/auth_provider_wizard_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -18414,7 +18414,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/backend_clients_0289.go",
+      "path": "services/api/internal/repository/backend_clients.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -18424,7 +18424,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/backend_notices_0289.go",
+      "path": "services/api/internal/repository/backend_notices.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -18449,7 +18449,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/backend_restart_0289.go",
+      "path": "services/api/internal/repository/backend_restart.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -18464,7 +18464,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/build_workspaces_0226.go",
+      "path": "services/api/internal/repository/build_workspaces.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -18504,7 +18504,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/channel_head_0228.go",
+      "path": "services/api/internal/repository/channel_head.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -18514,7 +18514,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/component_editor_0248.go",
+      "path": "services/api/internal/repository/component_editor.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -18529,7 +18529,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/devices_0121.go",
+      "path": "services/api/internal/repository/devices.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -18719,7 +18719,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/durable_0213.go",
+      "path": "services/api/internal/repository/durable.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -18979,7 +18979,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/durable_0213_integration_test.go",
+      "path": "services/api/internal/repository/durable_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -19004,7 +19004,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/extension_events_0206.go",
+      "path": "services/api/internal/repository/extension_events.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -19104,7 +19104,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/extension_lifecycle_0204.go",
+      "path": "services/api/internal/repository/extension_lifecycle.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -19154,7 +19154,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/extension_registry_0203.go",
+      "path": "services/api/internal/repository/extension_registry.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -19334,7 +19334,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/extension_security_0207.go",
+      "path": "services/api/internal/repository/extension_security.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -19374,7 +19374,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/extension_trust_02012.go",
+      "path": "services/api/internal/repository/extension_trust.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -19434,7 +19434,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/extension_updates_02011.go",
+      "path": "services/api/internal/repository/extension_updates.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -19489,7 +19489,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/extensions_0201.go",
+      "path": "services/api/internal/repository/extensions.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -19579,7 +19579,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/extensions_0201_test.go",
+      "path": "services/api/internal/repository/extensions_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -19619,7 +19619,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/global_revocation_0297_integration_test.go",
+      "path": "services/api/internal/repository/global_revocation_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -19869,7 +19869,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/gravit_import_02210.go",
+      "path": "services/api/internal/repository/gravit_import.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -19899,7 +19899,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/hardening_02112_integration_test.go",
+      "path": "services/api/internal/repository/hardening_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -19919,7 +19919,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/hardware_attestation_0312.go",
+      "path": "services/api/internal/repository/hardware_attestation.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -19934,7 +19934,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/hwid_risk_0299.go",
+      "path": "services/api/internal/repository/hwid_risk.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -20044,7 +20044,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/hwid_risk_0299_integration_test.go",
+      "path": "services/api/internal/repository/hwid_risk_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -20084,7 +20084,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/local_auth_0295.go",
+      "path": "services/api/internal/repository/local_auth.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -20139,7 +20139,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/local_auth_0295_integration_test.go",
+      "path": "services/api/internal/repository/local_auth_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -20159,7 +20159,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/measured_boot_0315.go",
+      "path": "services/api/internal/repository/measured_boot.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -20174,7 +20174,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_0331.go",
+      "path": "services/api/internal/repository/migration.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -20259,7 +20259,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_0331_integration_test.go",
+      "path": "services/api/internal/repository/migration_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -20339,7 +20339,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_auth_0335.go",
+      "path": "services/api/internal/repository/migration_auth.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -20434,7 +20434,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_auth_0335_integration_test.go",
+      "path": "services/api/internal/repository/migration_auth_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -20504,7 +20504,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_compat_0332.go",
+      "path": "services/api/internal/repository/migration_compat.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -20559,7 +20559,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_compat_0332_integration_test.go",
+      "path": "services/api/internal/repository/migration_compat_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -20604,7 +20604,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_content_0337.go",
+      "path": "services/api/internal/repository/migration_content.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -20669,7 +20669,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_content_0337_integration_test.go",
+      "path": "services/api/internal/repository/migration_content_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -20734,7 +20734,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_content_sign_0337.go",
+      "path": "services/api/internal/repository/migration_content_sign.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -20749,7 +20749,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_cutover_03311.go",
+      "path": "services/api/internal/repository/migration_cutover.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -20919,7 +20919,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_cutover_03311_integration_test.go",
+      "path": "services/api/internal/repository/migration_cutover_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -21184,7 +21184,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_identity_0334.go",
+      "path": "services/api/internal/repository/migration_identity.go",
       "findings": [
         {
           "category": "database-sql-handle",
@@ -21279,7 +21279,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_identity_0334_integration_test.go",
+      "path": "services/api/internal/repository/migration_identity_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -21339,7 +21339,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_inventory_0333.go",
+      "path": "services/api/internal/repository/migration_inventory.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -21389,7 +21389,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_inventory_0333_integration_test.go",
+      "path": "services/api/internal/repository/migration_inventory_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -21439,7 +21439,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_modules_0338.go",
+      "path": "services/api/internal/repository/migration_modules.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -21504,7 +21504,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_modules_0338_integration_test.go",
+      "path": "services/api/internal/repository/migration_modules_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -21544,7 +21544,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_rehearsal_03310.go",
+      "path": "services/api/internal/repository/migration_rehearsal.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -21629,7 +21629,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_rehearsal_03310_integration_test.go",
+      "path": "services/api/internal/repository/migration_rehearsal_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -21774,7 +21774,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_report_03313.go",
+      "path": "services/api/internal/repository/migration_report.go",
       "findings": [
         {
           "category": "database-sql-handle",
@@ -21884,7 +21884,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_report_03313_integration_test.go",
+      "path": "services/api/internal/repository/migration_report_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -21934,7 +21934,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_rollback_03312.go",
+      "path": "services/api/internal/repository/migration_rollback.go",
       "findings": [
         {
           "category": "database-sql-handle",
@@ -22069,7 +22069,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_security_0336.go",
+      "path": "services/api/internal/repository/migration_security.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -22189,7 +22189,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/migration_security_0336_integration_test.go",
+      "path": "services/api/internal/repository/migration_security_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -22289,7 +22289,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/official_links_0268.go",
+      "path": "services/api/internal/repository/official_links.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -22309,7 +22309,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/official_links_0268_integration_test.go",
+      "path": "services/api/internal/repository/official_links_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -22339,7 +22339,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/official_provider_02611.go",
+      "path": "services/api/internal/repository/official_provider.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -22364,7 +22364,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/operational_config_02111.go",
+      "path": "services/api/internal/repository/operational_config.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -22389,7 +22389,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/operations_0217.go",
+      "path": "services/api/internal/repository/operations.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -22444,7 +22444,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/operations_list_02110.go",
+      "path": "services/api/internal/repository/operations_list.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -22999,7 +22999,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/profile_management_0225.go",
+      "path": "services/api/internal/repository/profile_management.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -23019,7 +23019,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/protection_0298.go",
+      "path": "services/api/internal/repository/protection.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -23044,7 +23044,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/protection_0298_integration_test.go",
+      "path": "services/api/internal/repository/protection_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -23104,7 +23104,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/release_certification_postgres_0230_test.go",
+      "path": "services/api/internal/repository/release_certification_postgres_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -23119,7 +23119,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/release_drafts_0218.go",
+      "path": "services/api/internal/repository/release_drafts.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -23149,7 +23149,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/server_bridge_control_0195_integration_test.go",
+      "path": "services/api/internal/repository/server_bridge_control_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -23174,7 +23174,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/server_bridge_event_stream_0194_integration_test.go",
+      "path": "services/api/internal/repository/server_bridge_event_stream_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -23194,7 +23194,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/server_bridge_ha_0149_integration_test.go",
+      "path": "services/api/internal/repository/server_bridge_ha_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -23224,7 +23224,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/server_bridge_ha_control_plane_01911_integration_test.go",
+      "path": "services/api/internal/repository/server_bridge_ha_control_plane_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -23259,7 +23259,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/server_bridge_network_0288.go",
+      "path": "services/api/internal/repository/server_bridge_network.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -23294,7 +23294,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/server_bridge_network_0288_integration_test.go",
+      "path": "services/api/internal/repository/server_bridge_network_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -23324,7 +23324,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/server_bridge_player_sessions_0197.go",
+      "path": "services/api/internal/repository/server_bridge_player_sessions.go",
       "findings": [
         {
           "category": "database-sql-handle",
@@ -23509,7 +23509,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/server_bridge_routing_0196.go",
+      "path": "services/api/internal/repository/server_bridge_routing.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -23559,7 +23559,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/server_bridge_topology_nullability_0215_integration_test.go",
+      "path": "services/api/internal/repository/server_bridge_topology_nullability_integration_test.go",
       "findings": [
         {
           "category": "postgres-repository-construction",
@@ -24209,7 +24209,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/stable_runtime_gate_03411.go",
+      "path": "services/api/internal/repository/stable_runtime_gate.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -24224,7 +24224,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/stable_runtime_gate_03411_integration_test.go",
+      "path": "services/api/internal/repository/stable_runtime_gate_integration_variant2_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -24294,7 +24294,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/stable_runtime_gate_0341_integration_test.go",
+      "path": "services/api/internal/repository/stable_runtime_gate_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -24364,7 +24364,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/stable_snapshot_0350_integration_test.go",
+      "path": "services/api/internal/repository/stable_snapshot_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -24479,7 +24479,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/staged_runtime_0342.go",
+      "path": "services/api/internal/repository/staged_runtime.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -24499,7 +24499,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_0251.go",
+      "path": "services/api/internal/repository/textures.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -24594,7 +24594,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_0251_integration_test.go",
+      "path": "services/api/internal/repository/textures_integration_test.go",
       "findings": [
         {
           "category": "direct-sql-open",
@@ -24639,7 +24639,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_0252.go",
+      "path": "services/api/internal/repository/textures_variant2.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -24739,7 +24739,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_0252_integration_test.go",
+      "path": "services/api/internal/repository/textures_integration_variant2_test.go",
       "findings": [
         {
           "category": "direct-sql-open",
@@ -24764,7 +24764,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_0253.go",
+      "path": "services/api/internal/repository/textures_variant3.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -24789,7 +24789,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_0253_integration_test.go",
+      "path": "services/api/internal/repository/textures_integration_variant3_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -24824,7 +24824,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_0254_integration_test.go",
+      "path": "services/api/internal/repository/textures_integration_variant4_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -24859,7 +24859,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_0255.go",
+      "path": "services/api/internal/repository/textures_variant4.go",
       "findings": [
         {
           "category": "database-sql-handle",
@@ -24989,7 +24989,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_0255_integration_test.go",
+      "path": "services/api/internal/repository/textures_integration_variant5_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -25029,7 +25029,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_admin_0259.go",
+      "path": "services/api/internal/repository/textures_admin.go",
       "findings": [
         {
           "category": "database-sql-handle",
@@ -25144,7 +25144,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_admin_0259_integration_test.go",
+      "path": "services/api/internal/repository/textures_admin_integration_test.go",
       "findings": [
         {
           "category": "direct-sql-open",
@@ -25179,7 +25179,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_certification_02512.go",
+      "path": "services/api/internal/repository/textures_certification.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -25199,7 +25199,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_gravit_02510.go",
+      "path": "services/api/internal/repository/textures_gravit.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -25219,7 +25219,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_gravit_02510_integration_test.go",
+      "path": "services/api/internal/repository/textures_gravit_integration_test.go",
       "findings": [
         {
           "category": "direct-sql-open",
@@ -25244,7 +25244,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_lifecycle_02511.go",
+      "path": "services/api/internal/repository/textures_lifecycle.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -25284,7 +25284,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_lifecycle_02511_integration_test.go",
+      "path": "services/api/internal/repository/textures_lifecycle_integration_test.go",
       "findings": [
         {
           "category": "direct-sql-open",
@@ -25349,7 +25349,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/textures_stage_0253.go",
+      "path": "services/api/internal/repository/textures_stage.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -25404,7 +25404,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/validation_0212.go",
+      "path": "services/api/internal/repository/validation.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -25469,7 +25469,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/validation_attestation_0345.go",
+      "path": "services/api/internal/repository/validation_attestation.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -25489,7 +25489,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/validation_audit_03412.go",
+      "path": "services/api/internal/repository/validation_audit.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -25504,7 +25504,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/validation_audit_03412_integration_test.go",
+      "path": "services/api/internal/repository/validation_audit_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -25534,7 +25534,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/validation_freshness_0346.go",
+      "path": "services/api/internal/repository/validation_freshness.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -25564,7 +25564,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/validation_freshness_0346_integration_test.go",
+      "path": "services/api/internal/repository/validation_freshness_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -25614,7 +25614,7 @@
       ]
     },
     {
-      "path": "services/api/internal/repository/validation_history_03412.go",
+      "path": "services/api/internal/repository/validation_history.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -25864,7 +25864,7 @@
       ]
     },
     {
-      "path": "services/api/internal/sqlconnector/legacy_gravit_0294_test.go",
+      "path": "services/api/internal/sqlconnector/legacy_gravit_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -25879,7 +25879,7 @@
       ]
     },
     {
-      "path": "services/api/internal/sqlconnector/live_sql_0294_integration_test.go",
+      "path": "services/api/internal/sqlconnector/live_sql_integration_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -25899,7 +25899,7 @@
       ]
     },
     {
-      "path": "services/api/internal/sqlconnector/mapping_0294.go",
+      "path": "services/api/internal/sqlconnector/mapping.go",
       "findings": [
         {
           "category": "database-sql-handle",
@@ -25979,7 +25979,7 @@
       ]
     },
     {
-      "path": "services/api/internal/sqlitepg/export_0377.go",
+      "path": "services/api/internal/sqlitepg/export.go",
       "findings": [
         {
           "category": "postgres-driver-import",
@@ -26034,7 +26034,7 @@
       ]
     },
     {
-      "path": "services/api/internal/sqlitepg/minimal_bundle_0377.go",
+      "path": "services/api/internal/sqlitepg/minimal_bundle.go",
       "findings": [
         {
           "category": "postgres-driver-import",
@@ -26154,7 +26154,7 @@
       ]
     },
     {
-      "path": "services/api/internal/sqlitepg/minimal_bundle_0377_test.go",
+      "path": "services/api/internal/sqlitepg/minimal_bundle_test.go",
       "findings": [
         {
           "category": "postgres-driver-import",

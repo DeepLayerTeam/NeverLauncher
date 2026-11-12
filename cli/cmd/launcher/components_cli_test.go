@@ -18,7 +18,7 @@ import (
 
 func fixtureComponents0249(t *testing.T) string {
 	t.Helper()
-	return "../../../runtime/runtime/tests/fixtures/catalog_actions_0245_go_signed.json"
+	return "../../../runtime/runtime/tests/fixtures/catalog_actions_go_signed.json"
 }
 func trustedFixtureKey0249(t *testing.T) string {
 	t.Helper()
@@ -187,7 +187,7 @@ func TestCLIComponentsRejectTamperingAndDiff0249(t *testing.T) {
 }
 
 func TestCLIComponentsEngineParity0249(t *testing.T) {
-	for _, name := range []string{"component_catalog_0241.go", "component_resolver_0243.go", "component_conditions_0244.go", "component_actions_0245.go"} {
+	for _, name := range []string{"component_catalog.go", "component_resolver.go", "component_conditions.go", "component_actions.go"} {
 		original, e := os.ReadFile("../../../services/api/internal/model/" + name)
 		if e != nil {
 			t.Fatal(e)

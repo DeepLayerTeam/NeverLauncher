@@ -1,5 +1,5 @@
 import type { ReleaseApi, Operation } from "../api/release.ts";
-import type { OwnerPending } from "./owner-lifecycle-03513.ts";
+import type { OwnerPending } from "./owner-lifecycle.ts";
 
 /** Учётные данные здесь не записываются. Область определяется проверенным пользователем
  * после входа, а не временным ID сеанса; аутентификация и права остаются в API. */

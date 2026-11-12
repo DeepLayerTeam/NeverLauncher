@@ -7,8 +7,8 @@ on:
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionlifecycle/**'
       - 'services/api/internal/extensionupdates/**'
-      - 'services/api/internal/repository/extensions_0201.go'
-      - '.github/workflows/signed-extension-sandbox-policy-0318.yml'
+      - 'services/api/internal/repository/extensions.go'
+      - '.github/workflows/signed-extension-sandbox-policy.yml'
   pull_request:
     paths:
       - 'services/api/internal/extensionpolicy/**'
@@ -16,7 +16,7 @@ on:
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionlifecycle/**'
       - 'services/api/internal/extensionupdates/**'
-      - 'services/api/internal/repository/extensions_0201.go'
+      - 'services/api/internal/repository/extensions.go'
   workflow_dispatch:
 permissions:
   contents: read

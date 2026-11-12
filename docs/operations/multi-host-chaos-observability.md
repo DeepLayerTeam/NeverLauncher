@@ -4,8 +4,8 @@
 
 ## Предварительные условия (запрет при ошибке)
 
-1. Разверните `deploy/production/docker-compose.multi-host.yml` как минимум на двух разных Docker-хостах; заранее выполните проверки работоспособности и инвентаризации 0.51.2/0.51.7. Никогда не используйте CLI хаос-тестов с однохостовым Compose Network-HA. Перед воздействием средство через `multi_host_0512.py` проверяет неизменяемые образы, разные ID машин, готовность API и рабочих процессов и реальные обращения к общим внешним PG/Redis/S3.
-2. Установите **оба** скрипта `scripts/operations/multi_host_chaos_05110.py` и `scripts/operations/multi_host_0512.py` с одинаковыми файлами/путями на компьютере оператора и каждом Docker-хосте. Разрешите SSH-оператору только нужные Docker-операции. Обязательны строгая проверка `known_hosts`, неинтерактивный SSH и явный токен `I-ACCEPT-REAL-OUTAGE`. Используйте отдельных SSH-пользователей для каждого хоста. Не выполняйте одновременно учения и посторонние выпуски приложения или миграции БД.
+1. Разверните `deploy/production/docker-compose.multi-host.yml` как минимум на двух разных Docker-хостах; заранее выполните проверки работоспособности и инвентаризации 0.51.2/0.51.7. Никогда не используйте CLI хаос-тестов с однохостовым Compose Network-HA. Перед воздействием средство через `multi_host.py` проверяет неизменяемые образы, разные ID машин, готовность API и рабочих процессов и реальные обращения к общим внешним PG/Redis/S3.
+2. Установите **оба** скрипта `scripts/operations/multi_host_chaos.py` и `scripts/operations/multi_host.py` с одинаковыми файлами/путями на компьютере оператора и каждом Docker-хосте. Разрешите SSH-оператору только нужные Docker-операции. Обязательны строгая проверка `known_hosts`, неинтерактивный SSH и явный токен `I-ACCEPT-REAL-OUTAGE`. Используйте отдельных SSH-пользователей для каждого хоста. Не выполняйте одновременно учения и посторонние выпуски приложения или миграции БД.
 3. Размещайте `--state` и `--report` в заранее созданном закрытом каталоге оператора (`0700`), например `/var/lib/launcher-chaos`; не используйте имена файлов повторно. Сохраняйте закрытые журналы восстановления до полного подтверждённого исправления. Ошибка или SIGKILL могут оставить удалённый узел изолированным. **До новых учений выполните `recover`.**
 4. На каждом потенциально изолируемом узле создайте *закрытый обычный файл `0600`* `/opt/launcher/deploy/production/.chaos-approval-05110.json`, ограниченный настоящим ID узла и текущим проектом:
 
@@ -20,7 +20,7 @@
 Запускайте с доверенного хоста оператора (обязательны абсолютные удалённые пути):
 
 ```bash
-python3 scripts/operations/multi_host_chaos_05110.py run \
+python3 scripts/operations/multi_host_chaos.py run \
   --project launcher --directory /opt/launcher/deploy/production \
   --node a=ops@node-a.example.org --node b=ops@node-b.example.org \
   --failed-node a --fault network-partition \
@@ -33,7 +33,7 @@ python3 scripts/operations/multi_host_chaos_05110.py run \
 Для **повторяемого набора E2E из четырёх случаев на итерацию** создайте заранее **пустой закрытый** каталог (`mkdir -m 700 /var/lib/launcher-chaos/suite-01`). Затем выполните:
 
 ```bash
-python3 scripts/operations/multi_host_chaos_05110.py suite \
+python3 scripts/operations/multi_host_chaos.py suite \
   --project launcher --directory /opt/launcher/deploy/production \
   --node a=ops@node-a.example.org --node b=ops@node-b.example.org \
   --edge-url https://launcher.example.org/ready \
@@ -50,7 +50,7 @@ python3 scripts/operations/multi_host_chaos_05110.py suite \
 Если SSH или процесс оператора завершился во время внедрения сбоя, выполните:
 
 ```bash
-python3 scripts/operations/multi_host_chaos_05110.py recover \
+python3 scripts/operations/multi_host_chaos.py recover \
   --project launcher --directory /opt/launcher/deploy/production \
   --node a=ops@node-a.example.org --node b=ops@node-b.example.org \
   --edge-url https://launcher.example.org/ready \
@@ -65,14 +65,14 @@ python3 scripts/operations/multi_host_chaos_05110.py recover \
 
 ```bash
 mkdir -m 700 -p /opt/launcher/deploy/production/monitoring/ha-05110
-python3 scripts/operations/multi_host_chaos_05110.py monitor-config \
+python3 scripts/operations/multi_host_chaos.py monitor-config \
   --node-url a=https://node-a.example.org/ready \
   --node-url b=https://node-b.example.org/ready \
   --edge-url https://launcher.example.org/ready \
   --output-directory /opt/launcher/deploy/production/monitoring/ha-05110
 ```
 
-Полученные файлы — JSON-документы с расширением `.yml` (строго корректный YAML); используйте их напрямую в Prometheus. Установите `LAUNCHER_PROMETHEUS_CONFIG=./monitoring/ha-05110/prometheus-05110.yml` и `LAUNCHER_PROMETHEUS_ALERT_RULES=./monitoring/ha-05110/alerts-05110.yml` **в окружении оператора Compose**. Сохраните существующий Blackbox exporter из Compose-надстройки наблюдаемости. Строгий модуль `https_2xx_strict` проверяет TLS, принимает только HTTP 200 и отвергает перенаправления. Настройте HTTPS webhook-получатель Alertmanager через существующую `observability_0459.py configure` в закрытом файле. Убедитесь, что Alertmanager действительно доставляет тестовое уведомление получателю оператора: HTTP 200 от API Alertmanager **не** доказывает доставку.
+Полученные файлы — JSON-документы с расширением `.yml` (строго корректный YAML); используйте их напрямую в Prometheus. Установите `LAUNCHER_PROMETHEUS_CONFIG=./monitoring/ha-05110/prometheus-05110.yml` и `LAUNCHER_PROMETHEUS_ALERT_RULES=./monitoring/ha-05110/alerts-05110.yml` **в окружении оператора Compose**. Сохраните существующий Blackbox exporter из Compose-надстройки наблюдаемости. Строгий модуль `https_2xx_strict` проверяет TLS, принимает только HTTP 200 и отвергает перенаправления. Настройте HTTPS webhook-получатель Alertmanager через существующую `observability.py configure` в закрытом файле. Убедитесь, что Alertmanager действительно доставляет тестовое уведомление получателю оператора: HTTP 200 от API Alertmanager **не** доказывает доставку.
 
 Формируются три настоящих правила: недоступен ingress отдельного хоста; исправны менее двух ingress-хостов; недоступен публичный входной HTTPS-шлюз. Они срабатывают после настоящего 30-секундного отказа; стандартная проверка Alertmanager ожидает не более 100 секунд. Чтобы требовать наблюдения активного оповещения в тесте, добавьте `--alertmanager-url https://alerts.example.org --alert-name LauncherHostIngressDown`. Без этих аргументов поле отчёта `alertState=UNVERIFIED` не заявляет о доставке. Наблюдаемый тест не может получить PASS, если ожидаемое оповещение не обнаружено.
 

@@ -6,16 +6,22 @@ on:
       - 'sdk/java/**'
       - 'sdk/api/**'
       - 'tools/gravit-port/**'
-      - 'scripts/acceptance/*0528.py'
-      - '.github/workflows/java-sdk-migration-real-0528.yml'
+      - 'scripts/acceptance/java_host_real.py'
+      - 'scripts/acceptance/java_sdk_migration.py'
+      - 'scripts/acceptance/legacy_upgrade_real.py'
+      - 'scripts/acceptance/test_java_sdk_migration.py'
+      - '.github/workflows/java-sdk-migration-real.yml'
   pull_request:
     paths:
       - 'VERSION'
       - 'sdk/java/**'
       - 'sdk/api/**'
       - 'tools/gravit-port/**'
-      - 'scripts/acceptance/*0528.py'
-      - '.github/workflows/java-sdk-migration-real-0528.yml'
+      - 'scripts/acceptance/java_host_real.py'
+      - 'scripts/acceptance/java_sdk_migration.py'
+      - 'scripts/acceptance/legacy_upgrade_real.py'
+      - 'scripts/acceptance/test_java_sdk_migration.py'
+      - '.github/workflows/java-sdk-migration-real.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -49,7 +55,7 @@ jobs:
           set -euo pipefail
           umask 077
           python3 scripts/version/manage.py check
-          python3 scripts/acceptance/java_sdk_migration_0528.py local \
+          python3 scripts/acceptance/java_sdk_migration.py local \
             --report "$RUNNER_TEMP/local-0528.json"
           python3 - "$RUNNER_TEMP/local-0528.json" <<'PY'
           import json,sys
@@ -98,7 +104,7 @@ jobs:
           set -euo pipefail
           umask 077
           mkdir -m 0700 "$RUNNER_TEMP/nl0528-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          python3 scripts/acceptance/java_sdk_migration_0528.py live \
+          python3 scripts/acceptance/java_sdk_migration.py live \
             --config "$NL0528_CONFIG" \
             --report "$RUNNER_TEMP/nl0528-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/live-0528.json"
       # Закрытые отчёты о миграциях, UUID игроков, исходные архивы и токены Host

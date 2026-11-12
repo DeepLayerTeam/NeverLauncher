@@ -79,21 +79,21 @@ HAProxy VIP должен перейти второму узлу, который 
 
 ```bash
 sudo install -d -m 0700 /etc/launcher/secrets
-sudo install -m 0600 deploy/production/dependency-ha-0513.example.env /etc/launcher/ha-0513.env
+sudo install -m 0600 deploy/production/dependency-ha.example.env /etc/launcher/ha-0513.env
 sudo install -m 0600 /dev/null /etc/launcher/secrets/redis-ha-health-password
 sudo install -m 0600 /dev/null /etc/launcher/secrets/s3-ha-probe-access-key
 sudo install -m 0600 /dev/null /etc/launcher/secrets/s3-ha-probe-secret-key
 # Безопасно заполнить секреты напрямую на хосте (НЕ в истории команд оболочки).
 # Заполнить фактические IP/DNS и CA, на LB-2 поменять LOCAL/PEER и PRIORITY.
 sudo install -d -m 0700 /var/lib/launcher/ha-0513-render
-sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py render \
+sudo python3 /opt/launcher/scripts/operations/dependency_ha.py render \
   --env-file /etc/launcher/ha-0513.env \
   --output-dir /var/lib/launcher/ha-0513-render
 sudo install -m 0600 /var/lib/launcher/ha-0513-render/haproxy.launcher-0513.cfg /etc/haproxy/haproxy.cfg
 sudo install -m 0644 /var/lib/launcher/ha-0513-render/keepalived.launcher-0513.conf /etc/keepalived/keepalived.conf
 sudo install -m 0644 /var/lib/launcher/ha-0513-render/99-launcher-ha-nonlocal-bind.conf /etc/sysctl.d/99-launcher-ha-nonlocal-bind.conf
 sudo sysctl --system
-sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py check \
+sudo python3 /opt/launcher/scripts/operations/dependency_ha.py check \
   --haproxy-config /etc/haproxy/haproxy.cfg \
   --output /var/lib/launcher/haproxy-check-0513.json
 sudo systemctl enable --now haproxy keepalived
@@ -126,7 +126,7 @@ PostgreSQL/Redis и ручной запуск необслуживаемых о�
 На LB с работающим HAProxy (отчёты строго приватны, без секретов):
 
 ```bash
-sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py verify \
+sudo python3 /opt/launcher/scripts/operations/dependency_ha.py verify \
   --env-file /etc/launcher/ha-0513.env \
   --edge-url https://launcher.example \
   --node a=operator@api-a.internal --node b=operator@api-b.internal \
@@ -153,7 +153,7 @@ sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py verify \
 После перезапуска снова ждёт базового здоровья.
 
 ```bash
-sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py drill \
+sudo python3 /opt/launcher/scripts/operations/dependency_ha.py drill \
   --env-file /etc/launcher/ha-0513.env --edge-url https://launcher.example \
   --node a=operator@api-a.internal --node b=operator@api-b.internal \
   --service patroni --backend-server pg-a --target operator@pg-a.internal \
@@ -175,7 +175,7 @@ sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py drill \
 маршрутов dependencies и дополнительные проверки роста нагрузки API и рабочих процессов.
 
 ```bash
-sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py edge-drill \
+sudo python3 /opt/launcher/scripts/operations/dependency_ha.py edge-drill \
   --env-file /etc/launcher/ha-0513.env --edge-url https://launcher.example \
   --node a=operator@api-a.internal --node b=operator@api-b.internal \
   --target operator@lb-active.internal --allow-disruption \

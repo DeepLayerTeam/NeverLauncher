@@ -6,9 +6,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-import test_reproducible_0470 as fixture
-from unsigned_package_0470 import make_package
-from reproducible_0470 import EXPECTED, visit_archive
+import test_reproducible as fixture
+from unsigned_package import make_package
+from reproducible import EXPECTED, visit_archive
 
 
 class PackerTests(unittest.TestCase):

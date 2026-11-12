@@ -3,20 +3,23 @@ on:
   push:
     paths:
       - 'runtime/runtime/**'
-      - 'scripts/guard_ci/inventory_0501.py'
-      - 'scripts/guard_ci/test_inventory_0501.py'
-      - '.github/workflows/guard-inventory-0501.yml'
+      - 'scripts/guard_ci/inventory.py'
+      - 'scripts/guard_ci/test_inventory.py'
+      - '.github/workflows/guard-inventory.yml'
       - 'VERSION'
   pull_request:
     paths:
       - 'runtime/runtime/**'
-      - 'scripts/guard_ci/inventory_0501.py'
-      - 'scripts/guard_ci/test_inventory_0501.py'
-      - '.github/workflows/guard-inventory-0501.yml'
+      - 'scripts/guard_ci/inventory.py'
+      - 'scripts/guard_ci/test_inventory.py'
+      - '.github/workflows/guard-inventory.yml'
       - 'VERSION'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   native-inventory:
     name: '${{ matrix.target }} / реальная диагностика IPC Guard'
@@ -52,13 +55,13 @@ jobs:
         if: runner.os == 'Linux'
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_inventory_0501 -- --nocapture
       - name: Проверка принципа запрета при ошибке при обработке матрицы
-        run: python scripts/guard_ci/test_inventory_0501.py
+        run: python scripts/guard_ci/test_inventory.py
       - name: Проверка аутентифицированного IPC Guard и экспорт фактического результата
         shell: bash
         run: |
           suffix=''
           if [[ "$RUNNER_OS" == 'Windows' ]]; then suffix='.exe'; fi
-          python scripts/guard_ci/inventory_0501.py local \
+          python scripts/guard_ci/inventory.py local \
             --runtime "runtime/runtime/target/debug/runtime${suffix}" \
             --guard "runtime/runtime/target/debug/guard${suffix}" \
             --output "guard-inventory-${{ matrix.target }}.json"
@@ -90,7 +93,7 @@ jobs:
           from pathlib import Path
           import subprocess, sys
           reports = sorted(Path('guard-inventory-native').glob('guard-inventory-*.json'))
-          sys.exit(subprocess.call([sys.executable, 'scripts/guard_ci/inventory_0501.py', 'matrix', '--output', 'guard-inventory-matrix-0501.json', *map(str, reports)]))
+          sys.exit(subprocess.call([sys.executable, 'scripts/guard_ci/inventory.py', 'matrix', '--output', 'guard-inventory-matrix-0501.json', *map(str, reports)]))
           PY
       - name: Публикация матрицы без статуса сертификации
         if: always()

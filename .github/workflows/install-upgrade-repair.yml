@@ -4,23 +4,26 @@ on:
   push:
     paths:
       - 'prestarter/installer/**'
-      - 'prestarter/network_fault_0527_test.go'
+      - 'prestarter/network_fault_test.go'
       - 'prestarter/cmd/installer/**'
       - 'cli/cmd/launcher/transactional_updater*'
       - 'scripts/acceptance/*0527*'
-      - '.github/workflows/install-upgrade-repair-0527.yml'
+      - '.github/workflows/install-upgrade-repair.yml'
   pull_request:
     paths:
       - 'prestarter/installer/**'
-      - 'prestarter/network_fault_0527_test.go'
+      - 'prestarter/network_fault_test.go'
       - 'prestarter/cmd/installer/**'
       - 'cli/cmd/launcher/transactional_updater*'
       - 'scripts/acceptance/*0527*'
-      - '.github/workflows/install-upgrade-repair-0527.yml'
+      - '.github/workflows/install-upgrade-repair.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  PYTHONUTF8: "1"
 
 jobs:
   native-integration-regressions:
@@ -63,7 +66,7 @@ jobs:
       - name: Проверить физический агент отклоняет некорректные входные данные
         if: runner.os == 'Linux'
         run: |
-          python3 -m unittest scripts/acceptance/test_install_upgrade_repair_0527.py -v
+          python3 -m unittest scripts/acceptance/test_install_upgrade_repair.py -v
           python3 scripts/version/manage.py check
 
   real-linux-enospc-and-network-isolation:
@@ -103,7 +106,7 @@ jobs:
           : "${NL_SCRATCH:?требуется отдельный временный каталог}"
           : "${NL_TMPFS_MIB:?требуется явно заданная ёмкость изолированного tmpfs}"
           umask 077
-          python3 scripts/acceptance/install_upgrade_repair_0527.py \
+          python3 scripts/acceptance/install_upgrade_repair.py \
             --installer "$NL_INSTALLER" --installer-sha256 "$NL_INSTALLER_SHA256" \
             --old-bundle "$NL_BUNDLE_OLD" --old-config-sha256 "$NL_BUNDLE_OLD_SHA256" \
             --new-bundle "$NL_BUNDLE_NEW" --new-config-sha256 "$NL_BUNDLE_NEW_SHA256" \

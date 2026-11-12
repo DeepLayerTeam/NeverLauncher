@@ -8,7 +8,7 @@ on:
       - 'services/api/cmd/launcher-sqlite/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
-      - '.github/workflows/sqlite-postgresql-transfer-03211.yml'
+      - '.github/workflows/sqlite-postgresql-transfer.yml'
   pull_request:
   workflow_dispatch:
 permissions:

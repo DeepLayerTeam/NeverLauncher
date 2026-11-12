@@ -452,7 +452,7 @@ def compose_args(env, mode):
             if not value or not Path(value).is_absolute():
                 fail("Отсутствует файл доверия управления хостом 0523 с абсолютным путём: " + key)
             safe_file(value, private=True)
-        args += ["-f", str(ROOT / "deploy/production/docker-compose.owner-e2e-0523.yml")]
+        args += ["-f", str(ROOT / "deploy/production/docker-compose.owner-e2e.yml")]
     return args
 
 

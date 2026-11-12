@@ -11,8 +11,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import independent_ha_ga_0520 as ga
-import rolling_update_0520 as rolling
+import independent_ha_ga as ga
+import rolling_update_variant2 as rolling
 
 
 def receipt(path, doc):

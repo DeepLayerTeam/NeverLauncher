@@ -27,7 +27,7 @@ from certification_run import identity, CertificationBlocked
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "performance"))
-from benchmark_03511 import (
+from benchmark import (
     RepeatingRangeServer,
     file_entry,
     hash_file,

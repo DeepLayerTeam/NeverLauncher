@@ -19,7 +19,7 @@ version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 4), "Требуется VERSION не ниже 0.20.4")
 
 migration = read(
-    "services/api/internal/dbmigrate/sql/0044_extensions_install_lifecycle_0204.sql"
+    "services/api/internal/dbmigrate/sql/0044_extensions_install_lifecycle.sql"
 )
 for token in (
     "desired_version",
@@ -34,7 +34,7 @@ for token in (
 ):
     require(token in migration, f"Отсутствует миграция жизненного цикла расширений {token}")
 
-repo = read("services/api/internal/repository/extension_lifecycle_0204.go")
+repo = read("services/api/internal/repository/extension_lifecycle.go")
 for token in (
     "TransitionExtensionInstall",
     "sql.LevelSerializable",
@@ -45,7 +45,7 @@ for token in (
 ):
     require(token in repo, f"Отсутствует репозиторий жизненного цикла расширений {token}")
 
-manager = read("services/api/internal/extensionlifecycle/lifecycle_0204.go")
+manager = read("services/api/internal/extensionlifecycle/lifecycle.go")
 for token in (
     "ExtractPayloadFile",
     "VerifyFile",
@@ -67,7 +67,7 @@ for token in (
 ):
     require(token in manager, f"Отсутствует менеджер жизненного цикла расширений {token}")
 
-http = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
+http = read("services/api/internal/httpapi/extension_lifecycle.go")
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for token in (
     "extensionInstall0204",
@@ -85,7 +85,7 @@ for suffix in ("/install", "/enable", "/disable", "/uninstall", "/update", "/rol
         f"Отсутствует маршрут жизненного цикла расширений {suffix}",
     )
 
-cli = read("cli/cmd/launcher/extension_lifecycle_0204.go")
+cli = read("cli/cmd/launcher/extension_lifecycle.go")
 for token in (
     'case "installed", "installations"',
     'case "status"',

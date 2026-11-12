@@ -7,11 +7,11 @@ on:
       - 'services/api/internal/repository/**'
       - 'services/api/internal/dbmigrate/**'
       - 'cli/internal/dbmigrate/catalog.zip'
-      - 'e2e/scripts/run-staged-package-0342.py'
-      - 'e2e/scripts/test_run_staged_package_0342.py'
-      - '.github/workflows/staged-package-runtime-0342.yml'
+      - 'e2e/scripts/run-staged-package.py'
+      - 'e2e/scripts/test_run_staged_package.py'
+      - '.github/workflows/staged-package-runtime.yml'
       - 'apps/admin/**'
-      - '.github/workflows/stable-runtime-gate-0341.yml'
+      - '.github/workflows/stable-runtime-gate.yml'
   push:
     tags: ['v0.34.1', '0.34.1', 'v0.34.2', '0.34.2']
   workflow_dispatch:
@@ -58,4 +58,4 @@ jobs:
           npm ci --ignore-scripts
           npm run build
       - name: Выполнить отрицательные тесты целостности загруженных подготовленных пакетов
-        run: python3 -m unittest e2e/scripts/test_run_staged_package_0342.py -v
+        run: python3 -m unittest e2e/scripts/test_run_staged_package.py -v

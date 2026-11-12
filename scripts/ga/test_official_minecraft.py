@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
 
 spec = importlib.util.spec_from_file_location(
-    "official_ga_gate", Path(__file__).with_name("official_minecraft_0270.py")
+    "official_ga_gate", Path(__file__).with_name("official_minecraft.py")
 )
 gate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gate)
@@ -243,7 +243,7 @@ class OfficialGATest(unittest.TestCase):
 
         signer_spec = spec_from_file_location(
             "operator_signer",
-            Path(__file__).with_name("sign_official_minecraft_0270.py"),
+            Path(__file__).with_name("sign_official_minecraft.py"),
         )
         import sys
 

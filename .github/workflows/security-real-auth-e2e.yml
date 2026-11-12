@@ -4,12 +4,12 @@ on:
     paths:
       - 'services/api/**'
       - 'cli/**'
-      - '.github/workflows/security-real-auth-e2e-02912.yml'
+      - '.github/workflows/security-real-auth-e2e.yml'
   pull_request:
     paths:
       - 'services/api/**'
       - 'cli/**'
-      - '.github/workflows/security-real-auth-e2e-02912.yml'
+      - '.github/workflows/security-real-auth-e2e.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,7 +26,7 @@ jobs:
           POSTGRES_PASSWORD: integration-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U auth -d auth' --health-interval 5s --health-timeout 5s --health-retries 25
+          --health-cmd "pg_isready -U auth -d auth" --health-interval 5s --health-timeout 5s --health-retries 25
       mysql:
         image: mysql:8.4
         env:
@@ -36,7 +36,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: integration-root-only
         ports: ['3306:3306']
         options: >-
-          --health-cmd 'mysqladmin ping -h 127.0.0.1 --silent' --health-interval 5s --health-timeout 5s --health-retries 30
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent" --health-interval 5s --health-timeout 5s --health-retries 30
       mariadb:
         image: mariadb:11.4
         env:
@@ -46,7 +46,7 @@ jobs:
           MARIADB_ROOT_PASSWORD: integration-root-only
         ports: ['3307:3306']
         options: >-
-          --health-cmd 'healthcheck.sh --connect --innodb_initialized' --health-interval 5s --health-timeout 5s --health-retries 30
+          --health-cmd "healthcheck.sh --connect --innodb_initialized" --health-interval 5s --health-timeout 5s --health-retries 30
     defaults:
       run:
         working-directory: services/api

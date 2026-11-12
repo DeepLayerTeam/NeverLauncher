@@ -196,7 +196,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
     # файлов, одноразовые билеты, идентичности игроков и восстановление.
     checks_to_run = (
         (
-            "scripts/ga/verify_server_control_0290.py",
+            "scripts/ga/verify_server_control.py",
             [
                 "--e2e-dir",
                 str(runtime),
@@ -207,7 +207,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
             ],
         ),
         (
-            "scripts/ga/verify_game_cycle_0364.py",
+            "scripts/ga/verify_game_cycle.py",
             [
                 "--e2e-dir",
                 str(runtime),
@@ -218,7 +218,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
             ],
         ),
         (
-            "scripts/ga/verify_player_cycle_0398.py",
+            "scripts/ga/verify_player_cycle.py",
             [
                 "--e2e-dir",
                 str(runtime),

@@ -18,21 +18,21 @@
 
 ```bash
 # Детерминированные регрессионные тесты атак, включая -race:
-python3 scripts/security/certify_03114.py --tier offline --output /tmp/nl-offline.json
+python3 scripts/security/certify.py --tier offline --output /tmp/nl-offline.json
 
 # Проверки политики среды выполнения Guard, постоянных билетов/сеансов и разрешённых выпусков
 # (требуют ВСЕ зависимости Go Backend, а не только тег сборки nopgx):
-python3 scripts/security/certify_03114.py --tier backend-security --output /tmp/nl-backend.json
+python3 scripts/security/certify.py --tier backend-security --output /tmp/nl-backend.json
 
 # На отдельном НЕПРИВИЛЕГИРОВАННОМ Linux-исполнителе с делегированной доступной для записи cgroup v2,
 # включёнными непривилегированными пространствами имён пользователя и поддерживаемым seccomp:
-python3 scripts/security/certify_03114.py --tier linux-live --output /tmp/nl-linux-live.json
+python3 scripts/security/certify.py --tier linux-live --output /tmp/nl-linux-live.json
 
 # На подготовленном нативном Windows-исполнителе с поддержкой AppContainer/Jobs:
-python scripts/security/certify_03114.py --tier windows-live --output C:\\Temp\\nl-windows-live.json
+python scripts/security/certify.py --tier windows-live --output C:\\Temp\\nl-windows-live.json
 
 # Отсутствие доказательств не означает PASS. Выпуск отклоняется, если не пройдены ВСЕ уровни:
-python3 scripts/security/certify_03114.py --tier release --output /tmp/nl-gate.json --evidence /tmp/nl-offline.json /tmp/nl-backend.json /tmp/nl-linux-live.json /tmp/nl-windows-live.json
+python3 scripts/security/certify.py --tier release --output /tmp/nl-gate.json --evidence /tmp/nl-offline.json /tmp/nl-backend.json /tmp/nl-linux-live.json /tmp/nl-windows-live.json
 ```
 
 Проверка Linux в реальной среде устанавливает фактическое создание пространств имён (не только ответ `Available()`), отсутствие секретов бэкенда, неизменность пакета, `NoNewPrivs`, режим seccomp, снятие эффективных привилегий и завершение дочерних процессов в новой группе через `cgroup.kill`. Проверка Windows проверяет настоящий токен AppContainer, недоступность приватного файла бэкенда, пакет только для чтения, запрет прямого доступа в интернет, брокер именованных каналов и ограничение количества процессов через Job.

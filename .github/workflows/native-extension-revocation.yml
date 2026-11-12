@@ -5,13 +5,13 @@ on:
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionsecurity/**'
       - 'services/api/internal/extensionpolicy/**'
-      - '.github/workflows/native-extension-revocation-04312.yml'
+      - '.github/workflows/native-extension-revocation.yml'
   pull_request:
     paths:
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionsecurity/**'
       - 'services/api/internal/extensionpolicy/**'
-      - '.github/workflows/native-extension-revocation-04312.yml'
+      - '.github/workflows/native-extension-revocation.yml'
   workflow_dispatch:
 
 permissions:

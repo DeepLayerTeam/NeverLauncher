@@ -44,7 +44,7 @@ func TestLoaderGASupport0180ExactCertifiedSurface(t *testing.T) {
 }
 
 func TestLoaderGASupport0180RejectsJavaDrift(t *testing.T) {
-	if _, err := enforceLoaderGASupport0180("forge", "1.7.10", 17); err == nil || !strings.Contains(err.Error(), "requires Java 8") {
+	if _, err := enforceLoaderGASupport0180("forge", "1.7.10", 17); err == nil || !strings.Contains(err.Error(), "требуется Java 8") {
 		t.Fatalf("неподходящая Java должна блокироваться, получено: %v", err)
 	}
 	if _, err := enforceLoaderGASupport0180("neoforge", "26.3", 25); err == nil || !strings.Contains(err.Error(), "не входит в сертифицированный набор GA") {

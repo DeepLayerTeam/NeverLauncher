@@ -14,7 +14,7 @@ on:
       - 'services/api/cmd/launcher-capacity-bench/**'
       - 'scripts/rc/**'
       - 'VERSION'
-      - '.github/workflows/production-rc-03216.yml'
+      - '.github/workflows/production-rc.yml'
   pull_request:
     paths:
       - 'services/api/internal/sqlitecore/**'
@@ -26,7 +26,7 @@ on:
       - 'services/api/cmd/launcher-capacity-bench/**'
       - 'scripts/rc/**'
       - 'VERSION'
-      - '.github/workflows/production-rc-03216.yml'
+      - '.github/workflows/production-rc.yml'
 
 permissions:
   contents: read
@@ -45,13 +45,13 @@ jobs:
           POSTGRES_DB: launcher_rc
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U launcher_rc -d launcher_rc'
+          --health-cmd "pg_isready -U launcher_rc -d launcher_rc"
           --health-interval 5s --health-timeout 5s --health-retries 30
       redis:
         image: redis:7
         ports: ['6379:6379']
         options: >-
-          --health-cmd 'redis-cli ping | grep -q PONG'
+          --health-cmd "redis-cli ping | grep -q PONG"
           --health-interval 5s --health-timeout 5s --health-retries 30
     env:
       LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'

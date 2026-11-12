@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import dr_03512 as dr
+import dr as dr
 
 
 class DR03512Tests(unittest.TestCase):

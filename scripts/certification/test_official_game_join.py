@@ -6,7 +6,7 @@ import unittest
 
 from importlib.util import module_from_spec, spec_from_file_location
 
-SCRIPT = Path(__file__).with_name("official-game-join-02612.py")
+SCRIPT = Path(__file__).with_name("official-game-join.py")
 spec = spec_from_file_location("live_join", SCRIPT)
 module = module_from_spec(spec)
 spec.loader.exec_module(module)

@@ -24,7 +24,7 @@ from urllib.parse import quote, urlsplit, parse_qs, unquote
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "operations"))
-from sqlite_pg_cutover_0475 import (
+from sqlite_pg_cutover import (
     STAGES, CutoverError, private_file, storage_fingerprint, sqlite_backup,
     validate_sqlite_backup, write_secure, parse_env,
 )

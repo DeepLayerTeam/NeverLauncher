@@ -23,9 +23,9 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-from legacy_upgrade_real_0528 import private_json, sha_file, require, Blocked
-from java_host_real_0528 import run as java_host_run
-import legacy_upgrade_real_0528 as legacy
+from legacy_upgrade_real import private_json, sha_file, require, Blocked
+from java_host_real import run as java_host_run
+import legacy_upgrade_real as legacy
 
 SCHEMA='launcher.java-sdk-migration-0528/v1'
 SOURCE_RE=re.compile('[0-9a-f]{40}\\Z')
@@ -62,21 +62,21 @@ def command(args, *, timeout, cwd=ROOT):
 def local():
     checks={}
     checks['five-real-jvm-customizations'] = command(
-        ['sh','examples/extensions/gravit-five-0495/build.sh','test'], timeout=150)
+        ['sh','examples/extensions/gravit-five/build.sh','test'], timeout=150)
     checks['java-http-client'] = command(['sh','sdk/java/http-client/build.sh','test'],timeout=110)
     checks['go-http-client'] = command(['go','test','-count=1','./...'], timeout=90, cwd=ROOT/'sdk/api/go')
     checks['typescript-build'] = command(['tsc','-p','tsconfig.json'], timeout=60, cwd=ROOT/'sdk/api/typescript')
     checks['typescript-http-client'] = command(
-        ['node','--test','test/client.test.mjs','test/binary_0461.test.mjs'], timeout=75, cwd=ROOT/'sdk/api/typescript')
+        ['node','--test','test/client.test.mjs','test/binary.test.mjs'], timeout=75, cwd=ROOT/'sdk/api/typescript')
     checks['gravit-three-project-negative-regression'] = command(
         [sys.executable,'-m','unittest','discover','-s','tools/gravit-port',
-         '-p','test_rehearse_cohort_04910.py'], timeout=75)
+         '-p','test_rehearse_cohort.py'], timeout=75)
     checks['gravit-live-verifier-negative-regression'] = command(
         [sys.executable,'-m','unittest','discover','-s','tools/gravit-port',
-         '-p','test_ga_acceptance_0500.py'], timeout=120)
+         '-p','test_ga_acceptance.py'], timeout=120)
     checks['legacy-and-java-negative-regression'] = command(
         [sys.executable,'-m','unittest','discover','-s','scripts/acceptance',
-         '-p','test_java_sdk_migration_0528.py'], timeout=75)
+         '-p','test_java_sdk_migration.py'], timeout=75)
     return {'format':SCHEMA, 'productVersion':(ROOT/'VERSION').read_text().strip(), 'status':'LOCAL_REGRESSIONS_NOT_GA',
             'checks':checks, 'gaCertified':False}
 
@@ -111,7 +111,7 @@ def live_run(cfg):
     require(grav_dir.is_absolute() and grav_dir.is_dir() and grav_dir.stat().st_mode & 0o077 == 0
             and not any(grav_dir.iterdir()), 'Каталог реальных свидетельств Gravit должен быть новым, закрытым и пустым')
     try:
-        subprocess.run([sys.executable,str(ROOT/'tools/gravit-port/ga_acceptance_0500.py'),
+        subprocess.run([sys.executable,str(ROOT/'tools/gravit-port/ga_acceptance.py'),
                         '--config',str(grav_cfg),'--evidence-dir',str(grav_dir)],
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL, timeout=4200, check=True)

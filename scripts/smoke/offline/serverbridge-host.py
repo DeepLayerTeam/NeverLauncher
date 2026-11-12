@@ -19,11 +19,11 @@ parts = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if parts < (0, 19, 10):
     raise SystemExit(f"Хост ServerBridge: требуется версия не ниже 0.19.10, получено {version}")
 
-provision = read("cli/cmd/launcher/serverbridge_provisioning_0199.go")
-host = read("cli/cmd/launcher/serverbridge_host_01910.go")
-unix = read("cli/cmd/launcher/serverbridge_host_process_unix_01910.go")
-windows = read("cli/cmd/launcher/serverbridge_host_process_windows_01910.go")
-tests = read("cli/cmd/launcher/serverbridge_host_01910_test.go")
+provision = read("cli/cmd/launcher/serverbridge_provisioning.go")
+host = read("cli/cmd/launcher/serverbridge_host.go")
+unix = read("cli/cmd/launcher/serverbridge_host_process_unix.go")
+windows = read("cli/cmd/launcher/serverbridge_host_process_windows.go")
+tests = read("cli/cmd/launcher/serverbridge_host_test.go")
 main = read("cli/cmd/launcher/main.go")
 preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
@@ -126,8 +126,8 @@ for forbidden in [
             f"ServerBridge Host содержит запрещённое изменение authlib или ядра: {forbidden}"
         )
 for text, needle, label in [
-    (preflight, "serverbridge-host-01910.py", "preflight"),
-    (ci, "serverbridge-host-01910.py", "CI"),
+    (preflight, "serverbridge-host.py", "preflight"),
+    (ci, "serverbridge-host.py", "CI"),
 ]:
     if needle not in text:
         raise SystemExit(f"{label}: отсутствует {needle!r}")

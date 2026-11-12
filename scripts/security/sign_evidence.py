@@ -13,7 +13,7 @@ import stat
 import sys
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-import ga_verify_0320 as ga
+import ga_verify as ga
 
 
 def main():

@@ -24,7 +24,7 @@ def require(rel: str, needles: list[str]) -> None:
 
 
 require(
-    "services/api/internal/httpapi/minecraft_serverbridge_trust_0127.go",
+    "services/api/internal/httpapi/minecraft_serverbridge_trust.go",
     [
         'gameplayTrustPolicy0127 = "session-device-risk-v1"',
         "evaluateGameplayTrust0127",
@@ -89,8 +89,8 @@ require(
     ],
 )
 for migration in [
-    "services/api/internal/dbmigrate/sql/0016_minecraft_serverbridge_trust_0127.sql",
-    "cli/internal/dbmigrate/sql/0016_minecraft_serverbridge_trust_0127.sql",
+    "services/api/internal/dbmigrate/sql/0016_minecraft_serverbridge_trust.sql",
+    "cli/internal/dbmigrate/sql/0016_minecraft_serverbridge_trust.sql",
 ]:
     require(
         migration,
@@ -102,7 +102,7 @@ for migration in [
         ],
     )
 require(
-    "services/api/internal/httpapi/minecraft_serverbridge_trust_0127_test.go",
+    "services/api/internal/httpapi/minecraft_serverbridge_trust_test.go",
     [
         "TestMinecraftTrust0127RequiresBoundDeviceAndInvalidatesTokenAfterRebind",
         "unbound minecraft exchange was not denied",

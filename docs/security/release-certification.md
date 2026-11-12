@@ -23,10 +23,10 @@ python3 scripts/smoke/offline/repository-policy.py
 
 ## Принцип достоверной сертификации
 
-Отсутствующее, просроченное, подменённое, не соответствующее SHA или неуспешное подтверждение **запрещает** помечать выпуск как сертифицированный. Результат PASS нельзя получать путём исключения обязательных тестов или отключения Guard. Особое внимание уделяйте `.github/workflows/compatibility.yml`, `.github/workflows/device-trust.yml`, `.github/workflows/extensions-ga-0210.yml`, `.github/workflows/production-release-candidate.yml`.
+Отсутствующее, просроченное, подменённое, не соответствующее SHA или неуспешное подтверждение **запрещает** помечать выпуск как сертифицированный. Результат PASS нельзя получать путём исключения обязательных тестов или отключения Guard. Особое внимание уделяйте `.github/workflows/compatibility.yml`, `.github/workflows/device-trust.yml`, `.github/workflows/extensions-ga.yml`, `.github/workflows/production-release-candidate.yml`.
 
 См. [устранение неполадок CI](../troubleshooting/ci.md) и [матрицу совместимости](../../COMPATIBILITY.md).
 
 ## Проверка допуска профиля и рабочего пространства 0.23.0
 
-`python3 scripts/release/certify-profiles-ga-0230.py` запускает реальные модульные, HTTP- и PostgreSQL E2E-тесты с детектором гонок Go и отклоняет результат при отсутствующих или пропущенных сценариях. Необходимы `LAUNCHER_TEST_POSTGRES_DSN` и точный SHA исходного кода. Для кандидата в рабочий релиз обязателен успешно пройденный сертификат, привязанный к текущему коммиту. См. [приёмку профилей и рабочих областей](../releases/profile-workspaces-0230.md).
+`python3 scripts/release/certify-profiles-ga.py` запускает реальные модульные, HTTP- и PostgreSQL E2E-тесты с детектором гонок Go и отклоняет результат при отсутствующих или пропущенных сценариях. Необходимы `LAUNCHER_TEST_POSTGRES_DSN` и точный SHA исходного кода. Для кандидата в рабочий релиз обязателен успешно пройденный сертификат, привязанный к текущему коммиту. См. [приёмку профилей и рабочих областей](../releases/profile-workspaces-0230.md).

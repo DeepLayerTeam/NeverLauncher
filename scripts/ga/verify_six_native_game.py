@@ -17,7 +17,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'e2e/scripts'))
-from run_native_validation_03410 import verify_game_observations_04314
+from run_native_validation import verify_game_observations_04314
 sys.path.insert(0, str(ROOT / 'scripts/release'))
 
 TARGETS = {

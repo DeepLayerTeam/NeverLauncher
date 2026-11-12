@@ -19,9 +19,9 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 
 api_migration = read(
-    "services/api/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql"
+    "services/api/internal/dbmigrate/sql/0026_fabric_server_bridge.sql"
 )
-cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0026_fabric_server_bridge_0146.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0026_fabric_server_bridge.sql")
 if api_migration != cli_migration:
     raise SystemExit("Миграции Fabric API/CLI 0.14.6 отличаются")
 require(
@@ -119,7 +119,7 @@ require(
 )
 
 backend = read("services/api/internal/httpapi/server_bridge.go")
-integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
+integrity = read("services/api/internal/httpapi/serverbridge_integrity.go")
 manifest = read("services/api/internal/httpapi/bridge_plugins.go")
 config = read("services/api/internal/config/config.go")
 require(backend, ['"folia", "fabric"'], "Проверка типа Fabric на Backend")
@@ -198,7 +198,7 @@ require(
 openapi_gen = read("scripts/contracts/generate_openapi.py")
 require(openapi_gen, ['"folia","fabric"'], "Тип Fabric в OpenAPI")
 
-tests = read("services/api/internal/httpapi/serverbridge_fabric_0146_test.go")
+tests = read("services/api/internal/httpapi/serverbridge_fabric_test.go")
 require(
     tests,
     [
@@ -253,7 +253,7 @@ ci = read(".github/workflows/ci.yml")
 for text, label in ((preflight, "preflight"), (ci, "CI")):
     require(
         text,
-        ["serverbridge-fabric-0146.py", "run-fabric-server-bridge-migration-e2e.sh"],
+        ["serverbridge-fabric.py", "run-fabric-server-bridge-migration-e2e.sh"],
         f"0.14.6 {label} wiring",
     )
 

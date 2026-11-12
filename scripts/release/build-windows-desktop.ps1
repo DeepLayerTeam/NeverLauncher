@@ -271,7 +271,7 @@ try {
         if (($Version -eq "0.47.0") -or $UnsignedOnly) {
             $UnsignedRoot = [Environment]::GetEnvironmentVariable("LAUNCHER_UNSIGNED_OUTPUT_DIR")
             if ([string]::IsNullOrWhiteSpace($UnsignedRoot)) { $UnsignedRoot = Join-Path $Root "dist\unsigned-$Version" }
-            $UnsignedPacker = Join-Path $Root "scripts\release\unsigned_package_0470.py"
+            $UnsignedPacker = Join-Path $Root "scripts\release\unsigned_package.py"
             Invoke-Checked {
                 python $UnsignedPacker --platform windows --arch $Arch --out-dir $UnsignedRoot `
                     --file "launcher-desktop.exe=$DesktopPackagePath" `

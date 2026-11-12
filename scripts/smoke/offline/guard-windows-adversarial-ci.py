@@ -101,7 +101,7 @@ require(
         "guard-windows-adversarial-certificate:",
         "scripts/guard_ci/windows_adversarial.py aggregate",
         "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
-        "guard-windows-adversarial-ci-01811.py",
+        "guard-windows-adversarial-ci.py",
     ],
 )
 for manifest in [
@@ -118,7 +118,7 @@ for manifest in [
 
 preflight = read("scripts/release/preflight.sh")
 if (
-    "guard-windows-adversarial-ci-01811.py" not in preflight
+    "guard-windows-adversarial-ci.py" not in preflight
     or "test_windows_adversarial.py" not in preflight
 ):
     raise SystemExit(

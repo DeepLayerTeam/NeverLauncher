@@ -21,7 +21,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/operations'))
-import legacy_upgrade_0476 as upgrade
+import legacy_upgrade as upgrade
 
 VERSIONS = ('0.45.14',) + tuple(f'0.46.{n}' for n in range(4)) + tuple(f'0.47.{n}' for n in range(9))
 MAX_BYTES = 4 * 1024**3
@@ -120,7 +120,7 @@ def run_one(row, current, workdir):
     before = inventory(install, protected)
     require(any(k.startswith('profiles/') for k in before) and any(k.startswith('settings/') for k in before), 'Эталонная сборка содержит пустые демонстрационные каталоги')
     backup = folder / 'backup'
-    cmd = [sys.executable, str(ROOT/'scripts/operations/legacy_upgrade_0476.py'), 'host',
+    cmd = [sys.executable, str(ROOT/'scripts/operations/legacy_upgrade.py'), 'host',
            '--root', str(install), '--backup', str(backup), '--component', 'cli',
            '--from-version', version, '--install', str(binary),
            '--executable', str(current), '--sha256', digest(current)]

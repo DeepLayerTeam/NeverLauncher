@@ -15,12 +15,12 @@
 ### Запуск автоматической проверки
 
 ```sh
-python3 scripts/operations/operator_accept_04513.py docs-check
+python3 scripts/operations/operator_accept.py docs-check
 python3 scripts/version/manage.py check
 python3 scripts/contracts/validate-openapi.py
 ```
 
-`docs-check` проверяет локальные ссылки и существование используемых операционных скриптов; **не выполняет установку и не выдаёт сертификат**. Для проверки реально запущенного backend выполните команду `operator_accept_04513.py live` из [раздела установки](installation.md). Результат (`0600` JSON) содержит проверенные сервисы и состояние `/ready`, но не полный пользовательский цикл или проверки failover.
+`docs-check` проверяет локальные ссылки и существование используемых операционных скриптов; **не выполняет установку и не выдаёт сертификат**. Для проверки реально запущенного backend выполните команду `operator_accept.py live` из [раздела установки](installation.md). Результат (`0600` JSON) содержит проверенные сервисы и состояние `/ready`, но не полный пользовательский цикл или проверки failover.
 
 ### Границы и роли
 

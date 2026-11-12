@@ -146,14 +146,14 @@ require(
     ci,
     ".github/workflows/ci.yml",
     [
-        "guard-debug-instrumentation-0187.py",
+        "guard-debug-instrumentation.py",
         "runtime/guard-debug-probe/Cargo.toml",
         "GUARD_DEBUG_PROBE_EXE",
         "cargo clippy --manifest-path runtime/guard-debug-probe/Cargo.toml --all-targets -- -D warnings",
         "--test guard_sensor_windows",
     ],
 )
-if "guard-debug-instrumentation-0187.py" not in preflight:
+if "guard-debug-instrumentation.py" not in preflight:
     raise SystemExit(
         "[Launcher] Debug & Instrumentation Guard 0.18.7: не настроен запуск в предварительных проверках"
     )

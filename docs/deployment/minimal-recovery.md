@@ -10,7 +10,7 @@
 
 ## Резервирование на исходном хосте
 
-Установить `Python 3.12+` и зависимость из `scripts/install/requirements-portable-0452.txt` **в доверенном окружении**, используя зафиксированный источник пакетов. Создать независимый длинный случайный passphrase в приватном файле (не пересылать рядом со снимком):
+Установить `Python 3.12+` и зависимость из `scripts/install/requirements-portable.txt` **в доверенном окружении**, используя зафиксированный источник пакетов. Создать независимый длинный случайный passphrase в приватном файле (не пересылать рядом со снимком):
 
 ```sh
 umask 077
@@ -73,4 +73,4 @@ python3 scripts/install/minimal-install.py check \
 
 ## CI и границы подтверждения
 
-Тесты: `python3 -m unittest discover -s scripts/install -p 'test_minimal_portable_0452.py' -v`. В обязательной CI-зависимости `minimal-live-e2e-0378` продолжает запускаться настоящая серверная часть на Go; теперь добавлены `authenticated_offhost_transfer_and_deployment_check`, `offhost_recovered_backend_start`, `offhost_recovered_owner_project_bootstrap` и проверка отклонения подделанного пакета. Успех тестов локального Python не доказывает, что CI реально запущен или что два физических хоста протестированы. Нельзя объявлять эксплуатационную приёмку пройденной без успешного подтверждения выполнения, настоящего переноса на независимый хост и проверки инфраструктуры TLS/DNS.
+Тесты: `python3 -m unittest discover -s scripts/install -p 'test_minimal_portable.py' -v`. В обязательной CI-зависимости `minimal-live-e2e-0378` продолжает запускаться настоящая серверная часть на Go; теперь добавлены `authenticated_offhost_transfer_and_deployment_check`, `offhost_recovered_backend_start`, `offhost_recovered_owner_project_bootstrap` и проверка отклонения подделанного пакета. Успех тестов локального Python не доказывает, что CI реально запущен или что два физических хоста протестированы. Нельзя объявлять эксплуатационную приёмку пройденной без успешного подтверждения выполнения, настоящего переноса на независимый хост и проверки инфраструктуры TLS/DNS.

@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import legacy_upgrade_0476 as u
+import legacy_upgrade as u
 
 
 class UpgradeTests(unittest.TestCase):

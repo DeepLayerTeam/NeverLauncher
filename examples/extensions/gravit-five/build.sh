@@ -2,7 +2,7 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 cd "$root"
-work=examples/extensions/gravit-five-0495
+work=examples/extensions/gravit-five
 sh sdk/java/core/build.sh
 sh sdk/java/trusted-agent/build.sh
 mkdir -p "$work/build/classes" "$work/build/agent-classes" "$work/build/game-classes" "$work/build/package/backend" "$work/build/package/cli"

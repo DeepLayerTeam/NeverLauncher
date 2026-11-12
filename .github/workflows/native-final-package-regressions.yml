@@ -3,13 +3,13 @@ name: Нативные итоговые пакеты 0.52.2 — регресси
 on:
   push:
     paths:
-      - 'scripts/acceptance/native_packages_0522.py'
-      - 'scripts/acceptance/test_native_packages_0522.py'
+      - 'scripts/acceptance/native_packages.py'
+      - 'scripts/acceptance/test_native_packages.py'
       - 'scripts/release/build-branded-installers.py'
       - 'scripts/release/test_build_branded_installers.py'
       - '.github/workflows/native-installers.yml'
-      - '.github/workflows/native-final-packages-0522.yml'
-      - '.github/workflows/native-final-package-regressions-0522.yml'
+      - '.github/workflows/native-final-packages.yml'
+      - '.github/workflows/native-final-package-regressions.yml'
       - 'docs/operations/native-final-package-acceptance.md'
       - 'VERSION'
   pull_request:
@@ -37,9 +37,9 @@ jobs:
       - name: Проверить версию исходников и синтаксис
         run: |
           python3 scripts/version/manage.py check
-          python3 -m py_compile scripts/acceptance/native_packages_0522.py scripts/release/build-branded-installers.py
+          python3 -m py_compile scripts/acceptance/native_packages.py scripts/release/build-branded-installers.py
       - name: Проверить контрольные суммы, повторное воспроизведение, ложный успех, платформы и сокрытие секретов
-        run: python3 -m unittest scripts/acceptance/test_native_packages_0522.py -v
+        run: python3 -m unittest scripts/acceptance/test_native_packages.py -v
       - name: Проверить настоящий сборщик .deb с подписанными тестовыми исходниками (только неподписанный результат)
         run: python3 scripts/release/test_build_branded_installers.py -v
       - name: Отклонить поддельный запуск для шести нативных платформ на агенте Ubuntu
@@ -47,7 +47,7 @@ jobs:
           GITHUB_ACTIONS: 'false'
         run: |
           set -euo pipefail
-          if python3 scripts/acceptance/native_packages_0522.py run \
+          if python3 scripts/acceptance/native_packages.py run \
              --manifest-url https://example.invalid/release.json --manifest-sha256 "$(printf 'a%.0s' {1..64})" \
              --manifest-size 100 --version "$(cat VERSION)" \
              --commit "$GITHUB_SHA" --project test-project \

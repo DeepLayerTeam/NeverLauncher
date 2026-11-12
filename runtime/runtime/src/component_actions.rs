@@ -160,7 +160,7 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
         assert!(safe_argument("ClientArgs","--optional-debug=1"));
     }
     #[test] fn signed_go_actions_fixture_and_signature(){
-        let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+        let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
         let cat=m.component_catalog.as_ref().unwrap();
         assert_eq!(cat.schema_version,"5.0");
         assert_eq!(cat.digest,digest_v5(cat));
@@ -172,7 +172,7 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
         assert!(crate::verify_manifest_signature(&tampered,&public_key).is_err());
     }
     #[test] fn action_changes_real_launch_plan(){
-        let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+        let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
         let cat=m.component_catalog.as_ref().unwrap();
         let mut plan=LaunchPlan{java_executable:"java".into(),working_directory:"/client".into(),main_class:"net.demo.Main".into(),
             classpath_entries:vec!["/client/libraries/core.jar".into()],modulepath_entries:vec![],main_module:String::new(),

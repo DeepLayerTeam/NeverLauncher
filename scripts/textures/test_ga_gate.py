@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from ga_gate_0260 import DOMAIN, TARGETS, REQUIRED_REPORTS, GateError, verify
+from ga_gate import DOMAIN, TARGETS, REQUIRED_REPORTS, GateError, verify
 
 COMMIT = "a" * 40
 

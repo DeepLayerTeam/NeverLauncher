@@ -12,7 +12,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import multi_host_0512 as mh
+import multi_host as mh
 
 DIGEST = "@sha256:" + "a" * 64
 
@@ -50,7 +50,7 @@ def tmp_config():
     (directory / ".env").write_text("PRIVATE_KEY=never-share\n")
     (directory / ".env").chmod(0o600)
     (directory / "docker-compose.multi-host.yml").write_text("services: {}\n")
-    (directory / "nginx.multi-host-0512.conf").write_text("server {}\n")
+    (directory / "nginx.multi-host.conf").write_text("server {}\n")
     return d, directory
 
 
@@ -84,7 +84,7 @@ class MultiHostExecutorTest(unittest.TestCase):
         self.assertNotIn("ports", data["services"]["worker"])
 
     def test_baseline_inventory_understands_new_worker_and_ingress_services(self):
-        import ha_inventory_0511 as ha
+        import ha_inventory as ha
         def item(service, replica):
             return {"service": service, "containerId": service+replica,
                     "environment": {"LAUNCHER_REPLICA_ID": replica},
@@ -165,7 +165,7 @@ class MultiHostExecutorTest(unittest.TestCase):
             mh.resolved_compose(directory, "launcher")
         (directory / ".env").chmod(0o600)
         (directory / ".env").unlink()
-        (directory / ".env").symlink_to(directory / "nginx.multi-host-0512.conf")
+        (directory / ".env").symlink_to(directory / "nginx.multi-host.conf")
         with self.assertRaisesRegex(mh.DeploymentError, "символической ссылкой"):
             mh.resolved_compose(directory, "launcher")
 

@@ -16,7 +16,7 @@ import re
 import sys
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from guard_ga_0510 import DOMAIN, SCHEMA, VERSION, evidence_inventory, require, IDENTITY, COMMIT
+from guard_ga import DOMAIN, SCHEMA, VERSION, evidence_inventory, require, IDENTITY, COMMIT
 
 
 def sign(root: Path, key_path: Path, reviewer: str, publisher: str, commit: str,

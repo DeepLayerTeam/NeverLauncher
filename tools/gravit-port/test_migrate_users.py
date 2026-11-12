@@ -12,7 +12,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-spec = importlib.util.spec_from_file_location("migrate_users_0494", Path(__file__).with_name("migrate_users_0494.py"))
+spec = importlib.util.spec_from_file_location("migrate_users_0494", Path(__file__).with_name("migrate_users.py"))
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {startupStatus0427} from '../src/startup_screen_0427.ts';
+import {startupStatus0427} from '../src/startup_screen.ts';
 
 test('Экран запуска показывает реальное состояние без выдуманного прогресса',()=>{
   const waiting = startupStatus0427('java','ru');

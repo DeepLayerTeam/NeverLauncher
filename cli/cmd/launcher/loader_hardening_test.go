@@ -20,7 +20,7 @@ func TestLoaderPayloadCacheRejectsAndQuarantinesCorruptPayload(t *testing.T) {
 	if err := os.WriteFile(payloadPath, []byte("87654321"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := loadLoaderPayloadCacheBytes(root, "fabric", "26.3", "https://meta.fabricmc.net/test", sha, maxCompatibilityArtifact); err == nil || !strings.Contains(err.Error(), "SHA-256 mismatch") {
+	if _, err := loadLoaderPayloadCacheBytes(root, "fabric", "26.3", "https://meta.fabricmc.net/test", sha, maxCompatibilityArtifact); err == nil || !strings.Contains(err.Error(), "Несоответствие: SHA-256 кеша данных загрузчика") {
 		t.Fatalf("Повреждение кеша загрузчика должно блокировать операцию, получено %v", err)
 	}
 	if _, err := os.Stat(payloadPath); !os.IsNotExist(err) {

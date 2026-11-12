@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// Схема каталога компонентов 3 расширяет подписанный снимок v2, а не локальный выбор.
-// Каждая зависимость, конфликт, ограничение и исключение подписаны.
+// Схема каталога компонентов v3 расширяет подписанный снимок v2, а не локальный
+// выбор. Каждая зависимость, конфликт, ограничение и исключение подписываются.
 func ComponentCatalogDigest0243(c ComponentCatalog0241) string {
 	if c.SchemaVersion != ComponentCatalogSchema0243 && c.SchemaVersion != ComponentCatalogSchema0244 && c.SchemaVersion != ComponentCatalogSchema0245 {
 		return ComponentCatalogDigest0242(c)
@@ -20,7 +20,7 @@ func ComponentCatalogDigest0243(c ComponentCatalog0241) string {
 	var buf [4]byte
 	count := func(n int) { binary.BigEndian.PutUint32(buf[:], uint32(n)); _, _ = h.Write(buf[:]) }
 	write := func(s string) { count(len(s)); _, _ = h.Write([]byte(s)) }
-	// Дайджест всей топологии v2 с разделением доменов включается во фрейм v3.
+	// Дайджест всей топологии v2 с разделением доменов включается в формат v3.
 	write(ComponentCatalogDigest0242(c))
 	count(len(c.Components))
 	for _, component := range c.Components {
@@ -55,8 +55,8 @@ func NewComponentCatalog0243(c ComponentCatalog0241, revision uint64) ComponentC
 	return c
 }
 
-// ResolutionError0243 предоставляет устойчивую машиночитаемую категорию и понятную человеку
-// цепочку. Ошибка возвращается до подготовки файлов и создания заданий.
+// ResolutionError0243 содержит стабильную машинно-читаемую категорию и понятную
+// человеку цепочку причин. Ошибка возвращается до подготовки файлов и создания заданий.
 type ResolutionError0243 struct {
 	Code      string
 	Component string
@@ -79,31 +79,31 @@ type semver0243 struct {
 func parseSemver0243(source string) (semver0243, error) {
 	var result semver0243
 	if len(source) == 0 || len(source) > 128 || strings.ContainsAny(source, " \t\r\n") {
-		return result, fmt.Errorf("Недопустимая семантическая версия %q", source)
+		return result, fmt.Errorf("Некорректная семантическая версия: %q", source)
 	}
 	raw := strings.SplitN(source, "+", 2)
 	if len(raw) == 2 && !semverIdentifiers0243(raw[1], false) {
-		return result, fmt.Errorf("Недопустимые метаданные сборки SemVer %q", source)
+		return result, fmt.Errorf("Некорректное значение: «метаданные сборки семантической версии» %q", source)
 	}
 	pre := strings.SplitN(raw[0], "-", 2)
 	if len(pre) == 2 {
 		if !semverIdentifiers0243(pre[1], true) {
-			return result, fmt.Errorf("Недопустимый предварительный выпуск SemVer %q", source)
+			return result, fmt.Errorf("Некорректное значение: предварительная версия SemVer %q", source)
 		}
 		result.pre = strings.Split(pre[1], ".")
 	}
 	parts := strings.Split(pre[0], ".")
 	if len(parts) != 3 {
-		return result, fmt.Errorf("Семантическая версия должна иметь формат MAJOR.MINOR.PATCH: %q", source)
+		return result, fmt.Errorf("Семантическая версия: требуется «MAJOR.MINOR.PATCH:» %q", source)
 	}
 	nums := []*uint64{&result.major, &result.minor, &result.patch}
 	for i, part := range parts {
 		if part == "" || (len(part) > 1 && part[0] == '0') {
-			return result, fmt.Errorf("Недопустимая семантическая версия %q", source)
+			return result, fmt.Errorf("Некорректная семантическая версия: %q", source)
 		}
 		for _, b := range []byte(part) {
 			if b < '0' || b > '9' {
-				return result, fmt.Errorf("Недопустимая семантическая версия %q", source)
+				return result, fmt.Errorf("Некорректная семантическая версия: %q", source)
 			}
 		}
 		v, e := strconv.ParseUint(part, 10, 64)
@@ -201,13 +201,13 @@ func matchRange0243(actual, expr string) (bool, error) {
 		return true, nil
 	}
 	if len(expr) > 256 {
-		return false, fmt.Errorf("Длина диапазона превышает 256 байт")
+		return false, fmt.Errorf("Диапазон превышает 256 байт")
 	}
 	anyMatched := false
 	for _, alternative := range strings.Split(expr, "||") {
 		tokens := strings.Fields(alternative)
 		if len(tokens) == 0 || len(tokens) > 16 {
-			return false, fmt.Errorf("Недопустимый диапазон версий %q", expr)
+			return false, fmt.Errorf("Некорректное значение: диапазон версий %q", expr)
 		}
 		ok := true
 		for _, token := range tokens {
@@ -280,8 +280,8 @@ func matchRange0243(actual, expr string) (bool, error) {
 	return anyMatched, nil
 }
 
-// ValidateCatalogRules0243 проверяет весь подписанный граф, не только выбранные компоненты. При
-// публикации каждый объявленный пресет должен иметь разрешимое состояние.
+// ValidateCatalogRules0243 проверяет весь подписанный граф, а не только
+// выбранные компоненты. При публикации все объявленные пресеты должны быть выполнимы.
 func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 	items := make(map[string]CatalogComponent0241, len(cat.Components))
 	for _, c := range cat.Components {
@@ -316,7 +316,7 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 			}
 		}
 	}
-	// Глобальная проверка ориентированных циклов, включая необязательные ветви вне пресетов.
+	// Глобальный поиск направленных циклов, включая необязательные ветви вне пресетов.
 	state := map[string]uint8{}
 	stack := []string{}
 	var visit func(string) error
@@ -350,11 +350,13 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 			return err
 		}
 	}
-	if cat.SchemaVersion == ComponentCatalogSchema0244 || cat.SchemaVersion == ComponentCatalogSchema0245 {
-		return nil
-	}
-	if _, err := resolveCatalogGraph0243(cat, ""); err != nil {
-		return err
+	// Условия могут по-разному отфильтровывать неявные значения по умолчанию
+	// на разных ОС игроков, но именованный пресет явно выбирает все корневые компоненты.
+	// Подписанный пресет с несовместимыми зависимостями не станет корректным на другом хосте.
+	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
+		if _, err := resolveCatalogGraph0243(cat, ""); err != nil {
+			return err
+		}
 	}
 	for _, p := range cat.Presets {
 		if _, err := resolveCatalogGraph0243(cat, p.ID); err != nil {
@@ -365,8 +367,8 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 }
 
 // resolveCatalogGraph0243 детерминирован: порядок компонентов соответствует
-// подписанному каталогу, обход зависимостей — подписанным ссылкам, результаты выдаются
-// в порядке каталога. Подписанный манифест не изменяется.
+// подписанному каталогу, обход зависимостей — подписанному порядку ссылок,
+// результат возвращается в порядке каталога. Подписанный манифест не изменяется.
 func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string, error) {
 	components := make(map[string]CatalogComponent0241, len(cat.Components))
 	for _, c := range cat.Components {
@@ -468,9 +470,9 @@ func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string,
 	return result, nil
 }
 
-// PreviewCatalogGraph0248 использует тот же разрешитель подписанного графа, что и установщик,
-// но не выдаёт симуляцию ОС/Java/разрешений за настоящую авторизацию. Проверяет статические
-// конфликты пресетов, циклы и диапазоны версий зависимостей.
+// PreviewCatalogGraph0248 использует тот же резолвер подписанного графа, что и
+// установщик, но не считает симуляцию ОС/Java/разрешений настоящей авторизацией.
+// Проверяются статические конфликты пресетов, циклы и диапазоны версий зависимостей.
 func PreviewCatalogGraph0248(cat ComponentCatalog0241, preset string) ([]string, error) {
 	if err := ValidateCatalogTopology0242(cat); err != nil {
 		return nil, err

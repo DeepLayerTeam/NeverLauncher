@@ -13,7 +13,7 @@ TARGET_ARCH="${LAUNCHER_COMPAT_ARCH:-x86_64}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
 source "$ROOT/e2e/scripts/lib/certification-platform.sh"
-source "$ROOT/e2e/scripts/lib/live-join-0524.sh"
+source "$ROOT/e2e/scripts/lib/live-join.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[neoforge-cert] неверная версия Minecraft" >&2; exit 2; }
 [[ "$LOADER_SELECTOR" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[neoforge-cert] неверно выбран загрузчик NeoForge" >&2; exit 2; }

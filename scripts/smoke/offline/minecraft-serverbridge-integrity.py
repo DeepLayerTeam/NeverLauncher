@@ -30,9 +30,9 @@ if version_tuple(version) < (0, 13, 5):
     )
 
 api_mig = read(
-    "services/api/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql"
+    "services/api/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity.sql"
 )
-cli_mig = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity_0135.sql")
+cli_mig = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0019_minecraft_serverbridge_integrity.sql")
 if api_mig != cli_mig:
     raise SystemExit("Миграции 0019 API/CLI 0.13.5 различаются")
 require(
@@ -65,7 +65,7 @@ require(
 )
 
 minecraft = read(
-    "services/api/internal/httpapi/minecraft_serverbridge_integrity_0135.go"
+    "services/api/internal/httpapi/minecraft_serverbridge_integrity.go"
 )
 require(
     minecraft,
@@ -121,7 +121,7 @@ require(
     "Обязательная проверка артефактов ServerBridge на Backend",
 )
 
-plugin_policy = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
+plugin_policy = read("services/api/internal/httpapi/serverbridge_integrity.go")
 require(
     plugin_policy,
     [
@@ -246,7 +246,7 @@ require(
 )
 
 tests = read(
-    "services/api/internal/httpapi/minecraft_serverbridge_integrity_0135_test.go"
+    "services/api/internal/httpapi/minecraft_serverbridge_integrity_test.go"
 )
 require(
     tests,
@@ -263,9 +263,9 @@ require(
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
-if "minecraft-serverbridge-integrity-0135.py" not in ci:
+if "minecraft-serverbridge-integrity.py" not in ci:
     raise SystemExit("0.13.5: проверка целостности не подключена к CI")
-if "minecraft-serverbridge-integrity-0135.py" not in preflight:
+if "minecraft-serverbridge-integrity.py" not in preflight:
     raise SystemExit("0.13.5: проверка целостности не подключена к предварительной проверке")
 
 print(

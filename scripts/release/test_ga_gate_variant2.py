@@ -9,7 +9,7 @@ from unittest.mock import patch
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
-import ga_gate_0500 as gate
+import ga_gate_variant2 as gate
 
 
 def write(path, value):

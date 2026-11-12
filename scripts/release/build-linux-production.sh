@@ -76,7 +76,7 @@ chmod 0755 \
 # каталога.
 if [[ "${VERSION}" == "0.47.0" || "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
   UNSIGNED_DIR="${LAUNCHER_UNSIGNED_OUTPUT_DIR:-${ROOT_DIR}/dist/unsigned-${VERSION}}"
-  python3 "${ROOT_DIR}/scripts/release/unsigned_package_0470.py" \
+  python3 "${ROOT_DIR}/scripts/release/unsigned_package.py" \
     --platform linux --arch "${ARCH}" --out-dir "${UNSIGNED_DIR}" \
     --file "launcher/launcher-cli=${OUT_DIR}/launcher-cli-linux-${ARCH}" \
     --file "launcher/launcher-api=${OUT_DIR}/launcher-api-linux-${ARCH}" \

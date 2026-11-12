@@ -17,7 +17,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-import certify_03114 as previous
+import certify as previous
 
 TIERS = ("offline", "backend-security", "linux-live", "windows-live")
 

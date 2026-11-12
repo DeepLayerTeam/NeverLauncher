@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validProviderPolicy02611 } from "../src/admin/official-provider-model-02611.ts";
+import { validProviderPolicy02611 } from "../src/admin/official-provider-model.ts";
 import { canSeeSection } from "../src/admin/permissions.ts";
 import { endpointForSection } from "../src/admin/sections.ts";
 import { requestJSON, ApiError } from "../src/api/client.ts";

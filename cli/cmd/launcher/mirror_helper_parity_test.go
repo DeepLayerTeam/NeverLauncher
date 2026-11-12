@@ -80,7 +80,7 @@ func TestMirrorPortablePathCollision0497(t *testing.T) {
 		{Path: "mods/mod.jar", File: source, SHA256: mirrorSHA0274(bytes)},
 	}
 	_, err := mirrorAddArtifacts0274(context.Background(), stage, entries, "install-mods")
-	if err == nil || !strings.Contains(err.Error(), "collision") {
+	if err == nil || !strings.Contains(err.Error(), "Конфликт путей артефактов без учёта регистра") {
 		t.Fatalf("Ожидалось совпадение имён без учёта регистра: %v", err)
 	}
 }

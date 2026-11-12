@@ -25,10 +25,10 @@
 Перед началом создайте `/secure/checkpoints` как специальный закрытый/зашифрованный каталог с правами `0700`. Операция остановит API и рабочие процессы на каждом узле, вызовет настоящий протокол остановки/копирования Minecraft через диспетчер хоста на игровых узлах, затем выполнит физическую копию PostgreSQL и проверку WAL, логический дамп, архивы всех десяти локальных томов состояния каждого хоста, опись версий S3, загрузку и обратное чтение с проверкой хешей файлов. **Игровые JVM не перезапускаются автоматически**: оператор должен допустить их после проверки готовой контрольной точки. CLI Go для мира теперь принимает `--hold-id RUN_ID`: шлюз Host Supervisor остаётся атомарно занятым с момента успешной копии мира до явной соответствующей команды `world-backup release`, предотвращая перезапуск игры между снимком мира и контрольной точкой PostgreSQL.
 
 ```sh
-python3 scripts/operations/consistent_backup_0518.py backup \
+python3 scripts/operations/consistent_backup.py backup \
   --node a=deployer@api-a.example --node b=deployer@api-b.example \
   --directory /opt/launcher/deploy/production --project launcher \
-  --remote-script /opt/launcher/scripts/operations/consistent_backup_0518.py \
+  --remote-script /opt/launcher/scripts/operations/consistent_backup.py \
   --run-id 1234567890abcdef1234567890abcdef \
   --pg-dsn-file /secure/launcher-writer.url --stanza launcher \
   --s3-bucket launcher-production --s3-endpoint https://s3.internal.example \
@@ -52,7 +52,7 @@ python3 scripts/operations/consistent_backup_0518.py backup \
 ## Проверка и подготовка восстановления на другом узле
 
 ```sh
-python3 scripts/operations/consistent_backup_0518.py verify \
+python3 scripts/operations/consistent_backup.py verify \
   --backup /secure/checkpoints/0518-first --stanza launcher
 ```
 
@@ -61,7 +61,7 @@ python3 scripts/operations/consistent_backup_0518.py verify \
 **Восстановление PG для согласованной группы** создаёт новый изолированный каталог данных PostgreSQL с `recovery_target_lsn`, равным запечатанному LSN контрольной точки. Табличные пространства также перенаправляются в новый соседний путь, и PostgreSQL никогда не запускается:
 
 ```sh
-python3 scripts/operations/consistent_backup_0518.py cohort-pg-restore-fresh \
+python3 scripts/operations/consistent_backup.py cohort-pg-restore-fresh \
   --backup /secure/checkpoints/0518-first --stanza launcher \
   --pgdata /srv/restore/new-pgdata --confirm 20261103-100000F
 ```
@@ -75,7 +75,7 @@ python3 scripts/operations/consistent_backup_0518.py cohort-pg-restore-fresh \
 При прерывании оператора или SSH журналы заморозки остаются в каждом каталоге развёртывания. Проверьте настоящее состояние API и рабочих процессов на каждой площадке; для возобновления точной операции выполните на ней:
 
 ```sh
-python3 /opt/launcher/scripts/operations/consistent_backup_0518.py local-thaw \
+python3 /opt/launcher/scripts/operations/consistent_backup.py local-thaw \
   --directory /opt/launcher/deploy/production --project launcher \
   --run-id 1234567890abcdef1234567890abcdef
 ```
@@ -83,11 +83,11 @@ python3 /opt/launcher/scripts/operations/consistent_backup_0518.py local-thaw \
 Если `local-thaw` не удался, сохраните журнал, восстановите связь с Backend, исследуйте здоровье Docker и повторите с **тем же** ID запуска. Если оператор/SSH прерывается, пока удерживается мир, проверьте точное состояние диспетчера хоста/JVM и снимите постоянный шлюз этого мира:
 
 ```sh
-python3 /opt/launcher/scripts/operations/consistent_backup_0518.py local-world-release \
+python3 /opt/launcher/scripts/operations/consistent_backup.py local-world-release \
   --server-root /srv/minecraft/survival --world-cli /opt/launcher/bin/nl \
   --run-id 1234567890abcdef1234567890abcdef
 ```
 
 Выполняется настоящая команда `nl server-bridge host world-backup release --hold-id RUN_ID`. Неизвестный/частичный шлюз, неверный ID, работающий Supervisor или JVM должны приводить к безопасному отказу и расследованию; нельзя принудительно удалять каталог шлюза. **Не удаляйте журналы восстановления и не запускайте игровые хосты, пока не согласованы устаревшие аренды и полномочия Bridge/мира.** Не считайте неполный подготовительный каталог резервной копией. Для каждой законченной контрольной точки вместе с репозиторием pgBackRest и цепочкой WAL создайте независимую зашифрованную внешнюю копию под отдельно защищёнными учётными данными.
 
-**Граница приёмки:** `test_consistent_backup_0518.py` проверяет настоящие байты файлов/архивов и имитируемые границы вызова команд; он не проверяет рабочий Docker на нескольких хостах, реальный PostgreSQL/pgBackRest, шифрование S3 или независимое восстановление миров Minecraft. Промышленная приёмка HA/PITR остаётся **BLOCKED** до внешней репетиции и проверок 0.51.9/0.52.0.
+**Граница приёмки:** `test_consistent_backup.py` проверяет настоящие байты файлов/архивов и имитируемые границы вызова команд; он не проверяет рабочий Docker на нескольких хостах, реальный PostgreSQL/pgBackRest, шифрование S3 или независимое восстановление миров Minecraft. Промышленная приёмка HA/PITR остаётся **BLOCKED** до внешней репетиции и проверок 0.51.9/0.52.0.

@@ -34,8 +34,8 @@ from certification_run import identity
 identity(sys.argv[1], sys.argv[2], root=pathlib.Path.cwd())
 PYRUN
 rm -f dist/ga-certification/admin-0220.json
-python3 scripts/release/check-admin-ga-0220.py
-python3 -m unittest scripts/release/test_owner_cycle_0390.py -v
+python3 scripts/release/check-admin-ga.py
+python3 -m unittest scripts/release/test_owner_cycle.py -v
 (
   cd apps/admin
   npm ci --no-audit --no-fund
@@ -56,8 +56,8 @@ python3 -m unittest scripts/release/test_owner_cycle_0390.py -v
 )
 # Охватывает живую миграцию pgx, CAS, устойчивую постановку задач/ServerBridge в очередь,
 # аренду и подписанный ACK.
-bash e2e/scripts/run-admin-hardening-02112-e2e.sh
-python3 e2e/scripts/admin-hardening-02112-browser.py
+bash e2e/scripts/run-admin-hardening-e2e.sh
+python3 e2e/scripts/admin-hardening-browser.py
 # С версии 0.39.0 обязателен НАСТОЯЩИЙ браузерный цикл владельца, а не квитанция
 # манифеста.
 if python3 - "$RELEASE_VERSION" <<'PYVERSION'
@@ -65,16 +65,16 @@ import sys
 raise SystemExit(0 if tuple(map(int,sys.argv[1].split('-',1)[0].split('+',1)[0].split('.')[:3])) >= (0,39,0) else 1)
 PYVERSION
 then
-  python3 e2e/scripts/owner-cycle-0390-browser.py
+  python3 e2e/scripts/owner-cycle-browser.py
   python3 - "$RELEASE_VERSION" "$COMMIT" <<'PYOWNER'
 import importlib.util,json,sys,pathlib
-p=pathlib.Path('e2e/scripts/owner-cycle-0390-browser.py')
+p=pathlib.Path('e2e/scripts/owner-cycle-browser.py')
 s=importlib.util.spec_from_file_location('owner0390',p);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
 r=pathlib.Path('dist/ga-certification/owner-cycle-0390.json')
 m.verify_receipt(json.loads(r.read_text()),version=sys.argv[1],commit=sys.argv[2])
 PYOWNER
 fi
-python3 e2e/scripts/admin-ga-0220-serverbridge.py
+python3 e2e/scripts/admin-ga-serverbridge.py
 
 # Формируйте доказательства ТОЛЬКО ПОСЛЕ успешного завершения всех процессов; неполный запуск не
 # имеет файла PASS.

@@ -115,14 +115,14 @@ def main() -> int:
     require(
         ci,
         [
-            "python scripts/smoke/offline/guard-module-guard-0183.py",
+            "python scripts/smoke/offline/guard-module-guard.py",
             "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
             "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         ],
         "Обязательная компиляция, интеграция и Clippy для Windows в CI",
     )
-    if "guard-module-guard-0183.py" not in preflight:
+    if "guard-module-guard.py" not in preflight:
         raise SystemExit(
             "[Launcher] Module Guard 0.18.3: не настроен запуск в предварительных проверках"
         )

@@ -38,7 +38,7 @@ test('Рабочий HTTP-клиент сохраняет двоичные от�
   assert.deepEqual(Array.from(result),[137,80,78,71,0,255,254]);
   assert.equal(await client.request('GET','/metrics',{responseType:'text'}), 'launcher_jobs_total 2\n');
   assert.deepEqual(await client.request('GET','/api/v1/test'),{ok:true});
-  await assert.rejects(client.request('GET','/api/v1/bytes'),/invalid JSON API response|encoded data/);
+  await assert.rejects(client.request('GET','/api/v1/bytes'),/Некорректный ответ API в формате JSON|encoded data/);
  });
 });
 
@@ -49,8 +49,8 @@ test('Потоковую загрузку можно читать постепе
   while(true){const {done,value}=await reader.read();if(done)break;total+=value.byteLength;}
   assert.equal(total,32*4096);
   const limited=await client.request('GET','/api/v1/stream',{responseType:'stream',maxResponseBytes:1024});
-  await assert.rejects(async()=>{for await(const _ of limited){}},/size limit/);
-  await assert.rejects(client.request('GET','/api/v1/stream',{responseType:'bytes',maxResponseBytes:1024}),/size limit/);
+  await assert.rejects(async()=>{for await(const _ of limited){}},/Ответ API превышает установленный лимит размера/);
+  await assert.rejects(client.request('GET','/api/v1/stream',{responseType:'bytes',maxResponseBytes:1024}),/Ответ API превышает установленный лимит размера/);
  });
 });
 
@@ -59,7 +59,7 @@ test('Защита сохраняется при ошибках HTTP, недоп
   await assert.rejects(client.request('GET','/api/v1/error',{responseType:'bytes'}),
     e=>e instanceof ApiError && e.status===403 && e.code==='denied' && e.requestId==='forbidden-1');
   await assert.rejects(client.request('GET','/api/v1/redirect',{responseType:'stream'}),e=>e instanceof ApiError && e.status===302);
-  await assert.rejects(client.request('GET','/api/v1/test',{maxResponseBytes:0}), /invalid response size/);
+  await assert.rejects(client.request('GET','/api/v1/test',{maxResponseBytes:0}), /Некорректный лимит размера ответа/);
   const ac=new AbortController();ac.abort();
   await assert.rejects(client.request('GET','/api/v1/test',{signal:ac.signal}));
  });

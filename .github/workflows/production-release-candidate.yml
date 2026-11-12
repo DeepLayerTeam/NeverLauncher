@@ -80,7 +80,7 @@ jobs:
   native-game-acceptance:
     name: Обязательные успешные и негативные сквозные тесты Minecraft на шести нативных платформах
     needs: [staged-package-runtime-0342]
-    uses: ./.github/workflows/native-game-acceptance-04314.yml
+    uses: ./.github/workflows/native-game-acceptance.yml
     with:
       package_id: ${{ inputs.staged_package_id }}
     secrets: inherit
@@ -88,12 +88,12 @@ jobs:
   extensions-acceptance:
     name: Обязательная приёмка Java-расширений для шести платформ и сквозных тестов Gravit
     needs: [validate-release-ref]
-    uses: ./.github/workflows/extension-real-acceptance-04212.yml
+    uses: ./.github/workflows/extension-real-acceptance.yml
 
   auth-platform-protection-ga:
     name: 0.30.0 — проверки реальной федеративной авторизации и защиты
     needs: [base-ci]
-    uses: ./.github/workflows/auth-platform-protection-ga-0300.yml
+    uses: ./.github/workflows/auth-platform-protection-ga.yml
 
   server-control-ga:
     name: Обязательная сертификация восстановления реального мира Minecraft 0.29.0 для точного коммита
@@ -110,14 +110,14 @@ jobs:
           path: real-minecraft-e2e
       - name: Проверить результаты реального подключения, повторного воспроизведения, передачи управления и восстановления мира
         run: |
-          python3 scripts/ga/verify_server_control_0290.py \
+          python3 scripts/ga/verify_server_control.py \
             --e2e-dir real-minecraft-e2e/runtime \
             --version "$(cat VERSION)" --source-commit "$GITHUB_SHA"
-          python3 scripts/ga/verify_game_cycle_0364.py \
+          python3 scripts/ga/verify_game_cycle.py \
             --e2e-dir real-minecraft-e2e/runtime \
             --version "$(cat VERSION)" --source-commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
-          python3 scripts/ga/verify_player_cycle_0398.py \
+          python3 scripts/ga/verify_player_cycle.py \
             --e2e-dir real-minecraft-e2e/runtime \
             --version "$(cat VERSION)" --source-commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
@@ -179,7 +179,7 @@ jobs:
           python3 -m pip install playwright==1.58.0
           python3 -m playwright install --with-deps chromium
       - name: Сертифицировать кандидата с реальными сборками, PostgreSQL и промежуточной средой
-        run: bash scripts/release/certify-admin-ga-0220.sh
+        run: bash scripts/release/certify-admin-ga.sh
       - uses: actions/upload-artifact@v4
         with:
           name: launcher-admin-ga-${{ github.sha }}
@@ -226,9 +226,9 @@ jobs:
               pass
           PYREADY
       - name: Проверить обработчик свидетельств релиза
-        run: python3 scripts/release/test_certify_profiles_ga_0230.py
+        run: python3 scripts/release/test_certify_profiles_ga.py
       - name: Запустить GA-сертификацию профилей, манифестов и рабочего пространства
-        run: python3 scripts/release/certify-profiles-ga-0230.py
+        run: python3 scripts/release/certify-profiles-ga.py
       - uses: actions/upload-artifact@v4
         with:
           name: launcher-profiles-ga-${{ github.sha }}
@@ -252,7 +252,7 @@ jobs:
   current-source-rc-03514:
     name: Обязательная регрессионная матрица текущей версии для нативных компонентов, Desktop и Backend
     needs: [base-ci]
-    uses: ./.github/workflows/release-candidate-03514.yml
+    uses: ./.github/workflows/release-candidate.yml
 
   protected-isolated-dr-03514:
     name: Обязательные реальные испытания восстановления на новом узле и отказов PostgreSQL/API в изолированном окружении
@@ -296,7 +296,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/rc/operations_03514.py \
+          python3 scripts/rc/operations.py \
             --source "$RC_DR_SOURCE" --target "$RC_DR_TARGET" \
             --env-file "$RUNNER_TEMP/rc-dr.env" \
             --snapshot "$RUNNER_TEMP/fresh-site-03514" \
@@ -317,7 +317,7 @@ jobs:
   production-rc-03216:
     name: Обязательные реальные проверки безопасности, сбоев, нагрузки и инфраструктуры 0.32.16
     needs: [base-ci]
-    uses: ./.github/workflows/production-rc-03216.yml
+    uses: ./.github/workflows/production-rc.yml
 
   single-node-ga-0330:
     name: 0.33.0 — независимо подписанные свидетельства GA установленной сборки только с SQLite
@@ -366,7 +366,7 @@ jobs:
           printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > "$RUNNER_TEMP/ga-trust.pub"
           cmp live-rc-03216/launcher-03216-rc.json single-node-ga-evidence/SINGLE_NODE_GA_RC.json
           python3 -m pip install 'cryptography>=43,<47'
-          python3 scripts/ga/single_node_ga_0330.py \
+          python3 scripts/ga/single_node_ga.py \
             --evidence-dir single-node-ga-evidence \
             --public-key "$RUNNER_TEMP/ga-trust.pub" \
             --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/SINGLE_NODE_GA_CERTIFICATION.json"
@@ -382,7 +382,7 @@ jobs:
   staged-package-runtime-0342:
     name: Фактический запуск подготовленного пакета точного коммита (V01/V02)
     needs: [base-ci]
-    uses: ./.github/workflows/staged-package-runtime-0342.yml
+    uses: ./.github/workflows/staged-package-runtime.yml
     with:
       package_id: ${{ inputs.staged_package_id }}
       runtime_seconds: 180
@@ -391,7 +391,7 @@ jobs:
   runtime-ga-0350:
     name: Проверка подписанной среды выполнения для всех платформ текущей версии и безопасности PostgreSQL
     needs: [base-ci, staged-package-runtime-0342]
-    uses: ./.github/workflows/runtime-acceptance-0350.yml
+    uses: ./.github/workflows/runtime-acceptance.yml
     with:
       package_id: ${{ inputs.staged_package_id }}
     secrets: inherit
@@ -417,7 +417,7 @@ jobs:
           path: extension-acceptance
       - name: Проверить сертификат E2E расширений для текущего запуска и попытки
         run: |
-          python3 e2e/extensions/aggregate_04212.py \
+          python3 e2e/extensions/aggregate.py \
             --evidence-dir extension-acceptance \
             --commit "$GITHUB_SHA" --version "$(cat VERSION)" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
@@ -443,10 +443,10 @@ jobs:
         run: python3 -m pip install 'cryptography>=43,<47'
       - name: Проверить независимое воспроизведение полной GA и защищённые байты публикации
         run: |
-          python3 -m unittest discover -s scripts/ga -p 'test_full_evidence_04315.py' -q
-          python3 -m unittest discover -s scripts/ga -p 'test_verified_support_0440.py' -q
-          python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game_0440.py' -q
-          python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_full_evidence.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_verified_support.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game.py' -q
+          python3 -m unittest discover -s scripts/release -p 'test_publish.py' -q
       - name: Потребовать новый независимый запуск официальной GA Minecraft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -478,7 +478,7 @@ jobs:
             test -d "$source"
             cp -a "$source" "official-minecraft-ga-0270/$target"
           done
-          python3 scripts/ga/official_minecraft_0270.py \
+          python3 scripts/ga/official_minecraft.py \
             --attestations official-minecraft-ga-0270 \
             --public-key "$APPROVED_OPERATOR_PUBLIC_KEY" \
             --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/official-minecraft-ga-0270.json"
@@ -511,7 +511,7 @@ jobs:
           set -euo pipefail
           test -n "$CLIENT_FACTORY_RUNTIME_PUBLIC_KEY"
           test -n "$CLIENT_FACTORY_JOIN_PUBLIC_KEY"
-          python3 scripts/ga/verify_client_factory_0280.py             --evidence client-factory-ga-0280-evidence             --runtime-public-key "$CLIENT_FACTORY_RUNTIME_PUBLIC_KEY"             --join-public-key "$CLIENT_FACTORY_JOIN_PUBLIC_KEY"             --commit "$GITHUB_SHA" --version 0.28.0
+          python3 scripts/ga/verify_client_factory.py             --evidence client-factory-ga-0280-evidence             --runtime-public-key "$CLIENT_FACTORY_RUNTIME_PUBLIC_KEY"             --join-public-key "$CLIENT_FACTORY_JOIN_PUBLIC_KEY"             --commit "$GITHUB_SHA" --version 0.28.0
       - name: Проверить результат GA Admin для точного коммита
         uses: actions/download-artifact@v4
         with:
@@ -819,9 +819,9 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(cat VERSION)"
-          python3 scripts/release/delivery_verify_0462.py \
+          python3 scripts/release/delivery_verify.py \
             --bundle "dist/release-${VERSION}" --release-manifest
-          python3 scripts/release/inputs_guard_0461.py verify
+          python3 scripts/release/inputs_guard.py verify
       # Запустить реальное минимальное развертывание для точного API Linux x64 внутри
       # окончательного независимо подписанного пакета — без пересборки и макета сервера.
       # Это дополняет независимые GA-свидетельства шести платформ и базовый CI.
@@ -853,7 +853,7 @@ jobs:
               fd=os.open(file,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
               with os.fdopen(fd,'w') as f: json.dump(document,f)
           PYCODE
-          python3 scripts/acceptance/final_bundle_e2e_0380.py \
+          python3 scripts/acceptance/final_bundle_e2e.py \
             --bundle "$DIR" --version "$VERSION" --commit "$GITHUB_SHA" \
             --guard-policy "$RUNNER_TEMP/nl-final-e2e-policies/guard.json" \
             --bridge-policy "$RUNNER_TEMP/nl-final-e2e-policies/bridge.json" \
@@ -1070,7 +1070,7 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s\n' "$CI_NEEDS_JSON" > "$RUNNER_TEMP/required-production-needs.json"
-          python3 scripts/ci/required_jobs_0363.py \
+          python3 scripts/ci/required_jobs.py \
             --workflow .github/workflows/production-release-candidate.yml \
             --gate required-production-ci \
             --needs-json "$RUNNER_TEMP/required-production-needs.json" \
@@ -1106,10 +1106,10 @@ jobs:
         run: python3 -m pip install cryptography==46.0.4
       - name: Проверить регрессии независимого воспроизведения и кода публикации точных байтов
         run: |
-          python3 -m unittest discover -s scripts/ga -p 'test_full_evidence_04315.py' -q
-          python3 -m unittest discover -s scripts/ga -p 'test_verified_support_0440.py' -q
-          python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game_0440.py' -q
-          python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_full_evidence.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_verified_support.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game.py' -q
+          python3 -m unittest discover -s scripts/release -p 'test_publish.py' -q
       - uses: actions/download-artifact@v4
         with:
           name: launcher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -1151,7 +1151,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/release/delivery_verify_0462.py \
+          python3 scripts/release/delivery_verify.py \
             --bundle signed-release --release-manifest
       - name: Получить независимо подписанные свидетельства GA 0.48.0 из защищённого запуска
         if: ${{ inputs.ga0480_evidence_run_id != '' }}
@@ -1207,8 +1207,8 @@ jobs:
           umask 077
           printf '%s' "$GUARD_REVIEWER_PUBLIC_KEY" | xxd -r -p > "$RUNNER_TEMP/guard-reviewer.key"
           printf '%s\n' "$GUARD_SHADOW_KEY" > "$RUNNER_TEMP/guard-shadow.key"
-          python3 -m unittest discover -s scripts/guard_ci -p 'test_guard_ga_0510.py' -q
-          python3 scripts/guard_ci/guard_ga_0510.py \
+          python3 -m unittest discover -s scripts/guard_ci -p 'test_guard_ga.py' -q
+          python3 scripts/guard_ci/guard_ga.py \
             --evidence-root guard-0510-independent/evidence \
             --approval guard-0510-independent/approval.json \
             --signature guard-0510-independent/approval.sig \
@@ -1249,7 +1249,7 @@ jobs:
           fi
           CLI="$PWD/signed-release/launcher-cli-linux-x64"
           test -s "$CLI"
-          python3 scripts/release/publish_0370.py publish \
+          python3 scripts/release/publish.py publish \
             --bundle signed-release \
             --ci required-production/required-production-evidence.json \
             --dryrun publication-dry-run/PUBLICATION_DRY_RUN_0365.json \

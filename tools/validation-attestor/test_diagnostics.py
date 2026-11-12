@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from diagnostics_03412 import redact, retain, prune
+from diagnostics import redact, retain, prune
 
 class DiagnosticPrivacyTests(unittest.TestCase):
     def test_privacy_digest_expiry_and_nofollow(self):

@@ -22,8 +22,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/gravit-port'))
 sys.path.insert(0, str(ROOT / 'scripts/release'))
-import ga_acceptance_0500 as ga
-from delivery_verify_0462 import verify_bundle
+import ga_acceptance as ga
+from delivery_verify import verify_bundle
 
 DOMAIN = b'launcher.gravit.ga0500.independent.v1\x00'
 VERSION = '0.50.0'

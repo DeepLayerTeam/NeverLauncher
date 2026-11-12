@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/compatibility'))
 sys.path.insert(0, str(ROOT / 'scripts/acceptance'))
 import test_matrix as fixture_matrix
-import inventory_0521 as inv
+import inventory as inv
 
 COMMIT = 'a' * 40
 RUN_ID = '12345'

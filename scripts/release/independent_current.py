@@ -18,7 +18,7 @@ import sys
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from reproducible_0470 import (TARGETS, contract, atomic_json, visit_archive, require_path,
+from reproducible import (TARGETS, contract, atomic_json, visit_archive, require_path,
     sha256_file, signed_json)
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,7 +28,7 @@ VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 SCHEMA = 'launcher.unsigned-build-current/' + VERSION
 LOCKS = ('services/api/go.mod', 'services/api/go.sum', 'apps/desktop/package-lock.json',
          'apps/desktop/src-tauri/Cargo.toml', 'runtime/runtime/Cargo.toml',
-         'scripts/release/unsigned_package_0470.py')
+         'scripts/release/unsigned_package.py')
 
 class Blocked(ValueError):
     pass

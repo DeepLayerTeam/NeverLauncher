@@ -6,12 +6,12 @@ on:
       - 'services/api/internal/officialminecraft/**'
       - 'services/api/cmd/official-provider-poc/**'
       - 'docs/authentication/official-provider-poc.md'
-      - '.github/workflows/official-provider-poc-0261.yml'
+      - '.github/workflows/official-provider-poc.yml'
   push:
     paths:
       - 'services/api/internal/officialminecraft/**'
       - 'services/api/cmd/official-provider-poc/**'
-      - '.github/workflows/official-provider-poc-0261.yml'
+      - '.github/workflows/official-provider-poc.yml'
 
 permissions:
   contents: read

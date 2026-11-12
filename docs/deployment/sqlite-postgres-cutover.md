@@ -4,7 +4,7 @@
 
 ## Что действительно делает оператор
 
-`python3 scripts/operations/sqlite_pg_cutover_0475.py` обеспечивает долговременный локальный сценарий оператора с приватными журналами, `flock` единственного владельца, проверкой источника, независимой резервной копией Core с доказательством восстановления, остановкой и проверкой неактивности служб-писателей, замороженной копией Core/HTTP/Coordinator, неизменяемым импортом SQLite Core в промежуточном окружении и действующей среде, проверенным переносом файлов и чтением PostgreSQL без записи. Backend также отклоняет запуск на PostgreSQL, где есть live/staging импорт SQLite без полного допуска к переключению. Проверка выполняется **до** инициализации приложения, расширений, рабочих процессов и обработчики HTTP-соединений. Посторонние PostgreSQL-установки без импорта не затрагиваются.
+`python3 scripts/operations/sqlite_pg_cutover.py` обеспечивает долговременный локальный сценарий оператора с приватными журналами, `flock` единственного владельца, проверкой источника, независимой резервной копией Core с доказательством восстановления, остановкой и проверкой неактивности служб-писателей, замороженной копией Core/HTTP/Coordinator, неизменяемым импортом SQLite Core в промежуточном окружении и действующей среде, проверенным переносом файлов и чтением PostgreSQL без записи. Backend также отклоняет запуск на PostgreSQL, где есть live/staging импорт SQLite без полного допуска к переключению. Проверка выполняется **до** инициализации приложения, расширений, рабочих процессов и обработчики HTTP-соединений. Посторонние PostgreSQL-установки без импорта не затрагиваются.
 
 Средство проверки сверяет SHA-256 квитанции, количество строк каждой отображённой таблицы (включая специальные преобразования), дайджест каталога и данные пользователей/проектов из действительной реализации SQLRepository. Старые квитанции копирования, содержащие только количества, должны быть пересозданы копировщиком 0.47.5. Несопоставленное исходное состояние **не удаляется**.
 
@@ -14,7 +14,7 @@
 # До выполнения разверните launcher-sqlite с изменениями 0.47.5 на Go 1.27.3,
 # примените все миграции PostgreSQL к пустому назначению и
 # безопасно задайте LAUNCHER_POSTGRES_DSN и секреты MFA.
-python3 scripts/operations/sqlite_pg_cutover_0475.py run \
+python3 scripts/operations/sqlite_pg_cutover.py run \
   --work-dir /private/launcher-cutover-0475 \
   --launcher-sqlite /usr/local/bin/launcher-sqlite \
   --source-env /etc/launcher/backend.env \
@@ -29,11 +29,11 @@ python3 scripts/operations/sqlite_pg_cutover_0475.py run \
   --owner-email original-owner@example.invalid
 
 # Проверьте состояние. Учётные данные и DSN в этом журнале не сохраняются.
-python3 scripts/operations/sqlite_pg_cutover_0475.py status \
+python3 scripts/operations/sqlite_pg_cutover.py status \
   --work-dir /private/launcher-cutover-0475
 
 # До запуска любых процессов записи PostgreSQL восстановите прежнее окружение/службу SQLite.
-python3 scripts/operations/sqlite_pg_cutover_0475.py rollback \
+python3 scripts/operations/sqlite_pg_cutover.py rollback \
   --work-dir /private/launcher-cutover-0475 \
   --source-env /etc/launcher/backend.env \
   --core-db /var/lib/launcher/core.sqlite \

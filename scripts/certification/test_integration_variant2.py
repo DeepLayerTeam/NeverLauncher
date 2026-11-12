@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from run_integration_0310 import CASES, run_cases
-from review_integration_0310 import REQUIRED, review
+from run_integration_variant2 import CASES, run_cases
+from review_integration_variant2 import REQUIRED, review
 
 SHA = 'a'*40
 

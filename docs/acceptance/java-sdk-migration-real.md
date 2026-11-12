@@ -6,7 +6,7 @@
 
 ```sh
 umask 077
-python3 scripts/acceptance/java_sdk_migration_0528.py local \
+python3 scripts/acceptance/java_sdk_migration.py local \
   --report /absolute/private-dir/0528-local.json
 ```
 
@@ -30,11 +30,11 @@ python3 scripts/acceptance/java_sdk_migration_0528.py local \
 
 ## Три разных реально работающих проекта Gravit
 
-Используйте существующий `tools/gravit-port/ga_acceptance_0500.py`, который обязан повторно запрашивать работающий Backend с PostgreSQL и подтверждать 36 отдельно подписанных реальных проверок трёх разных проектов: `fileauth-single`, `sql-modded`, `proxy-network`. Он также выполняет 19 поведенческих проверок модулей с закреплёнными хешами и повторно проверяет настоящее доверие после этих испытаний; каждое подтверждение, исходный ZIP, подписанное обновление и наблюдение Minecraft должны соответствовать точному запуску и проекту. Настройте исходную закрытую конфигурацию `launcher/gravit-acceptance-0500/v1` и **пустой независимый каталог `0700`** для доказательств. Новый исполнитель 0.52.8 вызывает инструмент напрямую; подтверждения всё равно требуют независимого рассмотрения, а `productionGA` остаётся false.
+Используйте существующий `tools/gravit-port/ga_acceptance.py`, который обязан повторно запрашивать работающий Backend с PostgreSQL и подтверждать 36 отдельно подписанных реальных проверок трёх разных проектов: `fileauth-single`, `sql-modded`, `proxy-network`. Он также выполняет 19 поведенческих проверок модулей с закреплёнными хешами и повторно проверяет настоящее доверие после этих испытаний; каждое подтверждение, исходный ZIP, подписанное обновление и наблюдение Minecraft должны соответствовать точному запуску и проекту. Настройте исходную закрытую конфигурацию `launcher/gravit-acceptance-0500/v1` и **пустой независимый каталог `0700`** для доказательств. Новый исполнитель 0.52.8 вызывает инструмент напрямую; подтверждения всё равно требуют независимого рассмотрения, а `productionGA` остаётся false.
 
 ## Миграции исторических версий Launcher
 
-Запускайте `legacy_upgrade_real_0528.py capture` для каждого **действительно работающего исходного** развёртывания 0.36.0 и 0.46.0 до остановки записывающих процессов. Закрытый JSON `0600` имеет вид:
+Запускайте `legacy_upgrade_real.py capture` для каждого **действительно работающего исходного** развёртывания 0.36.0 и 0.46.0 до остановки записывающих процессов. Закрытый JSON `0600` имеет вид:
 
 ```json
 {
@@ -54,10 +54,10 @@ python3 scripts/acceptance/java_sdk_migration_0528.py local \
 Для обоих путей:
 
 ```sh
-python3 scripts/acceptance/legacy_upgrade_real_0528.py capture \
+python3 scripts/acceptance/legacy_upgrade_real.py capture \
   --config /absolute/private/legacy-original.json --output /absolute/private/original-capture.json
 # Оператор останавливает запись, выполняет реальное переключение и обновляет baseUrl в ЗАКРЫТОЙ конфигурации на мигрированный сервер
-python3 scripts/acceptance/legacy_upgrade_real_0528.py verify \
+python3 scripts/acceptance/legacy_upgrade_real.py verify \
   --config /absolute/private/legacy-migrated.json \
   --source-capture /absolute/private/original-capture.json \
   --output /absolute/private/live-verify.json
@@ -65,7 +65,7 @@ python3 scripts/acceptance/legacy_upgrade_real_0528.py verify \
 
 ## Сводная внешняя приёмка
 
-Защищённый процесс `.github/workflows/java-sdk-migration-real-0528.yml` содержит обычную локальную задачу регрессий CI и ручную задачу реальных испытаний в изолированном окружении. Для последней нужен **закрытый файл конфигурации `0600`** `launcher.java-sdk-migration-0528/v1`:
+Защищённый процесс `.github/workflows/java-sdk-migration-real.yml` содержит обычную локальную задачу регрессий CI и ручную задачу реальных испытаний в изолированном окружении. Для последней нужен **закрытый файл конфигурации `0600`** `launcher.java-sdk-migration-0528/v1`:
 
 ```json
 {
@@ -80,4 +80,4 @@ python3 scripts/acceptance/legacy_upgrade_real_0528.py verify \
 }
 ```
 
-Запустите `python3 scripts/acceptance/java_sdk_migration_0528.py live --config /absolute/private/composite.json --report /absolute/private/final-0528.json`. Инструмент завершится ошибкой, если **любой** путь Java, Gravit или исторической миграции не имеет реальных доказательств, если изменился исполняемый файл инструмента или исходный файл, если проекты используют один исходник либо если коммиты Git различаются. Закрытый результат записывается только после успешного исполнения; статус — `LIVE_CHECKS_PASSED_REVIEW_REQUIRED`, а не `GA`. Для 0.53.0 по-прежнему требуются независимая проверка конечных подписанных пакетов, выполнение на Windows/macOS, откаты PostgreSQL и проверка аккаунтов/Minecraft.
+Запустите `python3 scripts/acceptance/java_sdk_migration.py live --config /absolute/private/composite.json --report /absolute/private/final-0528.json`. Инструмент завершится ошибкой, если **любой** путь Java, Gravit или исторической миграции не имеет реальных доказательств, если изменился исполняемый файл инструмента или исходный файл, если проекты используют один исходник либо если коммиты Git различаются. Закрытый результат записывается только после успешного исполнения; статус — `LIVE_CHECKS_PASSED_REVIEW_REQUIRED`, а не `GA`. Для 0.53.0 по-прежнему требуются независимая проверка конечных подписанных пакетов, выполнение на Windows/macOS, откаты PostgreSQL и проверка аккаунтов/Minecraft.

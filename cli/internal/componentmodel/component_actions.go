@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// Действие — данные, созданные владельцем, в подписанном выпуске. Пресет пользователя
-// выбирает действие; локальное предпочтение не может создавать или менять его. File и
-// ClassPath всегда ссылаются на файлы того же компонента.
+// Действие — данные автора релиза, входящие в подпись. Пресет пользователя
+// выбирает действие; локальные предпочтения не могут создавать или редактировать
+// действия. File и ClassPath всегда указывают на файлы того же компонента.
 type ComponentAction0245 struct {
 	Type string   `json:"type"`
 	Path string   `json:"path,omitempty"`
@@ -129,7 +129,7 @@ func ValidateCatalogActions0245(cat ComponentCatalog0241) error {
 		return nil
 	}
 	if len(cat.Components) > 4096 {
-		return fmt.Errorf("Превышено допустимое количество компонентов")
+		return fmt.Errorf("Слишком много компонентов")
 	}
 	for _, c := range cat.Components {
 		if len(c.Actions) > 64 {
@@ -144,10 +144,10 @@ func ValidateCatalogActions0245(cat ComponentCatalog0241) error {
 			switch a.Type {
 			case "File", "ClassPath":
 				if len(a.Args) != 0 || !owned[a.Path] || !validFilePolicyPath0224(a.Path, false) {
-					return fmt.Errorf("Компонент %s: действие %s ссылается на неподписанный файл %q без владельца", c.ID, a.Type, a.Path)
+					return fmt.Errorf("Компонент %s: действие %s ссылается на неподписанный или чужой файл %q", c.ID, a.Type, a.Path)
 				}
 				if a.Type == "ClassPath" && !strings.HasSuffix(strings.ToLower(a.Path), ".jar") {
-					return fmt.Errorf("Компонент %s: для действия classpath требуется JAR-файл", c.ID)
+					return fmt.Errorf("Компонент %s: для действия classpath требуется JAR", c.ID)
 				}
 				key := a.Type + ":" + strings.ToLower(a.Path)
 				if seen[key] {
@@ -156,7 +156,7 @@ func ValidateCatalogActions0245(cat ComponentCatalog0241) error {
 				seen[key] = true
 			case "JvmArgs", "ClientArgs":
 				if a.Path != "" || len(a.Args) == 0 || len(a.Args) > 32 {
-					return fmt.Errorf("Компонент %s: недопустимое действие с аргументами", c.ID)
+					return fmt.Errorf("Компонент %s: недопустимое действие с аргументом", c.ID)
 				}
 				for _, arg := range a.Args {
 					if !safeOptionalArgument0245(a.Type, arg) {

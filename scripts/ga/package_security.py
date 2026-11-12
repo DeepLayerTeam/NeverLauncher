@@ -14,7 +14,7 @@ import sys
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from security_capabilities_0431 import checks, required, verify_all
+from security_capabilities import checks, required, verify_all
 from verified_targets import approval_data, TARGETS
 
 

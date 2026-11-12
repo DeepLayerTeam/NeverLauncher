@@ -4,7 +4,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCOPE="${1:---all}"
-case "$SCOPE" in --all) target=all ;; --core) target=core ;; *) echo 'Использование: serverbridge-live-matrix-04113.sh [--core|--all]' >&2; exit 2 ;; esac
+case "$SCOPE" in --all) target=all ;; --core) target=core ;; *) echo 'Использование: serverbridge-live-matrix.sh [--core|--all]' >&2; exit 2 ;; esac
 for executable in docker java gradle go cargo jq psql mvn; do
   command -v "$executable" >/dev/null || {
     echo "[0.41.13] отсутствует обязательный исполняемый файл реального Runtime: $executable" >&2; exit 1;
@@ -17,6 +17,6 @@ docker info >/dev/null 2>&1 || { echo '[0.41.13] демон Docker недост�
 # 0.41.13 записывает процесс, образ и независимо хешированные сетевые/журнальные
 # доказательства по мере работы каждой службы.
 LAUNCHER_E2E_MODE=full bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
-python3 "$ROOT/serverbridge/live_matrix_04113.py" --root "$ROOT" \
+python3 "$ROOT/serverbridge/live_matrix.py" --root "$ROOT" \
   --runtime "$ROOT/e2e/runtime" --scope "$target" \
   --out "$ROOT/e2e/runtime/live-matrix-${target}-04113.json"

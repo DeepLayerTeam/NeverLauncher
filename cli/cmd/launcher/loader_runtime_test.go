@@ -328,7 +328,7 @@ func TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases(t *testing.
 		_, _ = w.Write(payload)
 	})
 
-	if _, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "latest-stable"); err == nil || !strings.Contains(err.Error(), "no compatible latest-stable loader") {
+	if _, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "latest-stable"); err == nil || !strings.Contains(err.Error(), "нет совместимого загрузчика latest-stable") {
 		t.Fatalf("Последняя стабильная версия должна отклонять метаданные Quilt только с предварительными релизами; получено: %v", err)
 	}
 	entry, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "0.32.0-beta.3")
@@ -346,7 +346,7 @@ func TestQuiltUnsupportedMinecraftVersion404StaysFailClosed(t *testing.T) {
 	}))
 	defer server.Close()
 	_, _, _, err := resolveMetaLoaderVersionWithEvidence(context.Background(), server.Client(), "quilt", server.URL, "1.14.3", "latest-stable")
-	if err == nil || !strings.Contains(err.Error(), "1.14.3") || !strings.Contains(err.Error(), "HTTP 404") || !strings.Contains(err.Error(), "compatibility index") {
+	if err == nil || !strings.Contains(err.Error(), "1.14.3") || !strings.Contains(err.Error(), "HTTP 404") || !strings.Contains(err.Error(), "индексе совместимости поставщика") {
 		t.Fatalf("Отсутствующий релиз Quilt должен давать понятную ошибку источника: %v", err)
 	}
 }

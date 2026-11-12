@@ -16,10 +16,10 @@
 
 ## Тесты
 
-- `python scripts/tests/continuous_game_protection_0506.py` — настоящий штатный запуск JVM и принудительное прерывание наблюдателя целостности Java.
-- `python scripts/tests/guard_runtime_integrity_0505.py` — семь прежних регрессионных проверок целостности файлов/нативных образов на реальной JVM.
+- `python scripts/tests/continuous_game_protection.py` — настоящий штатный запуск JVM и принудительное прерывание наблюдателя целостности Java.
+- `python scripts/tests/guard_runtime_integrity.py` — семь прежних регрессионных проверок целостности файлов/нативных образов на реальной JVM.
 - `cargo test --manifest-path runtime/runtime/Cargo.toml --lib continuous_game_protection_0506` — на Unix проверка изменения хеша и фактического завершения подпроцесса, на других узлах — проверка целостности файлов.
-- `.github/workflows/continuous-game-protection-0506.yml` — задания нативной компиляции и регрессии JVM на шести платформах.
+- `.github/workflows/continuous-game-protection.yml` — задания нативной компиляции и регрессии JVM на шести платформах.
 
 ## Ограничения и обязательный запрет при ошибке
 

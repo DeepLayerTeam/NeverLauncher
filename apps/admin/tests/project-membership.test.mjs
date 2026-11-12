@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {assignableRoles0387,membershipChange0387} from '../src/admin/project-membership-0387.ts';
+import {assignableRoles0387,membershipChange0387} from '../src/admin/project-membership.ts';
 const roles=[
   {id:'owner',name:'Owner',permissions:['*']},
   {id:'operator',name:'Operator',permissions:['project:read','project:write']},

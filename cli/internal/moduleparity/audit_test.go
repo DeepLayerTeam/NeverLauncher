@@ -19,7 +19,7 @@ func fixture(t *testing.T) string {
 	if err := readJSON(filepath.Join(original, MatrixPath), &m); err != nil {
 		t.Fatal(err)
 	}
-	refs := []string{"VERSION", MatrixPath, HistoricalPath, JavaContractPath, "sdk/api/extension-host-protocol.json", "services/api/internal/extensioncontract/contract_0210.go", "services/api/internal/extensionhost/host_0205.go"}
+	refs := []string{"VERSION", MatrixPath, HistoricalPath, JavaContractPath, "sdk/api/extension-host-protocol.json", "services/api/internal/extensioncontract/contract.go", "services/api/internal/extensionhost/host.go"}
 	for _, mod := range m.Modules {
 		refs = append(refs, mod.SourceRefs...)
 		refs = append(refs, mod.TestRefs...)

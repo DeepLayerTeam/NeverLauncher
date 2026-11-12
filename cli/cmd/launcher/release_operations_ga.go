@@ -145,7 +145,7 @@ func verifyOperationsGA0460(dir, version string, releasePublic ed25519.PublicKey
 	if apiEntries != 1 {
 		return errors.New("BOM релиза должен закреплять ровно один основной контракт API")
 	}
-	if a.Scope != "Фактическая независимая эксплуатационная приёмка; RPO проверен только на контрольных данных, без утверждений об отказоустойчивости физических узлов и неизмеренного RPO нагрузки" {
+	if a.Scope != "actual independent operational acceptance; canary RPO only; no assertion of physical host HA or unmeasured workload RPO" {
 		return errors.New("Неподдерживаемая область подтверждающих данных эксплуатационной проверки GA")
 	}
 	requiredStages := []string{"install-standard", "upgrade-standard", "restore-standard", "failover-network-ha"}

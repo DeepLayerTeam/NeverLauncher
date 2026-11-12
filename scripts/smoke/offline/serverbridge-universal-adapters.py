@@ -144,7 +144,7 @@ for forbidden in ["ProcessBuilder", "Runtime.getRuntime().exec", "/bin/sh", "cmd
             f"Вспомогательный процесс Vanilla содержит запрещённый запуск командной оболочки: {forbidden}"
         )
 migration = read(
-    "services/api/internal/dbmigrate/sql/0039_universal_server_adapters_0198.sql"
+    "services/api/internal/dbmigrate/sql/0039_universal_server_adapters.sql"
 )
 require(
     migration,

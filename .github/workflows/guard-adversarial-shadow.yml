@@ -2,16 +2,19 @@ name: Guard 0.50.12 — реальные атаки на JVM и подтверж
 on:
   push:
     paths:
-      - 'scripts/guard_ci/adversarial_pilot_05012.py'
-      - 'scripts/guard_ci/test_adversarial_pilot_05012.py'
-      - 'services/api/internal/httpapi/guard_shadow_05012*'
-      - 'services/api/internal/httpapi/server_bound_guard_0507.go'
+      - 'scripts/guard_ci/adversarial_pilot.py'
+      - 'scripts/guard_ci/test_adversarial_pilot.py'
+      - 'services/api/internal/httpapi/guard_shadow*'
+      - 'services/api/internal/httpapi/server_bound_guard.go'
       - 'sdk/java/trusted-agent/**'
-      - '.github/workflows/guard-adversarial-shadow-05012.yml'
+      - '.github/workflows/guard-adversarial-shadow.yml'
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   shadow-event-integrity:
     runs-on: ubuntu-24.04
@@ -24,13 +27,13 @@ jobs:
         with:
           python-version: '3.12'
       - name: "Регрессионные тесты реальной валидации и враждебных свидетельств"
-        run: python3 scripts/guard_ci/test_adversarial_pilot_05012.py
+        run: python3 scripts/guard_ci/test_adversarial_pilot.py
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
       - name: "Сборка и проверка теневого журнала сервера"
         working-directory: services/api/internal/httpapi
-        run: go test guard_shadow_05012.go guard_shadow_05012_test.go -count=1 -v
+        run: go test guard_shadow.go guard_shadow_test.go -count=1 -v
       - name: Собрать сервер и проверить сигналы активности через полный пакет API
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestGuardShadow05012|TestServerBoundGuard0507' -count=1 -timeout=15m
@@ -66,9 +69,9 @@ jobs:
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == "Linux" ]]; then
-            python3 scripts/guard_ci/adversarial_pilot_05012.py run-jvm --output guard-05012-result.json
+            python3 scripts/guard_ci/adversarial_pilot.py run-jvm --output guard-05012-result.json
           else
-            python3 scripts/guard_ci/adversarial_pilot_05012.py run-jvm \
+            python3 scripts/guard_ci/adversarial_pilot.py run-jvm \
               --only loader-transformations --only continuous-watchdog \
               --output guard-05012-result.json
           fi

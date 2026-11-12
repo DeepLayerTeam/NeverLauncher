@@ -2,13 +2,13 @@ name: Linux — аттестация TPM2 Certify 0.31.4
 on:
   push:
     paths:
-      - 'apps/desktop/src-tauri/src/tpm_linux_0314.rs'
-      - 'apps/desktop/src-tauri/src/tpm_wire_0313.rs'
+      - 'apps/desktop/src-tauri/src/tpm_linux.rs'
+      - 'apps/desktop/src-tauri/src/tpm_wire.rs'
       - 'apps/desktop/src-tauri/src/device_keys.rs'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src-tauri/Cargo.toml'
       - 'services/api/internal/attestverify/**'
-      - '.github/workflows/linux-tpm-attestation-0314.yml'
+      - '.github/workflows/linux-tpm-attestation.yml'
   pull_request:
   workflow_dispatch:
 permissions:

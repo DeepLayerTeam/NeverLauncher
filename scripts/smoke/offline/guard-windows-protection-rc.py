@@ -28,10 +28,10 @@ version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 12):
     raise SystemExit(f"Кандидат в выпуск защиты Windows: требуется версия не ниже 0.18.12, получено {version}")
 
-impl = read("cli/cmd/launcher/windows_protection_release_01812.go")
+impl = read("cli/cmd/launcher/windows_protection_release.go")
 require(
     impl,
-    "cli/cmd/launcher/windows_protection_release_01812.go",
+    "cli/cmd/launcher/windows_protection_release.go",
     [
         'windowsAdversarialCertificateFile01811 = "WINDOWS_ADVERSARIAL_CERTIFICATE.json"',
         'windowsProtectionReleaseFile01812      = "WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json"',
@@ -53,10 +53,10 @@ require(
     ],
 )
 
-tests = read("cli/cmd/launcher/windows_protection_release_01812_test.go")
+tests = read("cli/cmd/launcher/windows_protection_release_test.go")
 require(
     tests,
-    "cli/cmd/launcher/windows_protection_release_01812_test.go",
+    "cli/cmd/launcher/windows_protection_release_test.go",
     [
         "TestWindowsProtectionReleaseRequired01812",
         "TestValidateWindowsAdversarialCertificate01812",
@@ -80,23 +80,23 @@ require(
     ],
 )
 
-candidate = read("cli/cmd/launcher/production_release_candidate_01511.go")
-delivery = read("cli/cmd/launcher/production_delivery_release_0160.go")
+candidate = read("cli/cmd/launcher/production_release_candidate.go")
+delivery = read("cli/cmd/launcher/production_delivery_release.go")
 for path, text in [
-    ("cli/cmd/launcher/production_release_candidate_01511.go", candidate),
-    ("cli/cmd/launcher/production_delivery_release_0160.go", delivery),
+    ("cli/cmd/launcher/production_release_candidate.go", candidate),
+    ("cli/cmd/launcher/production_delivery_release.go", delivery),
 ]:
     require(
         text, path, ["windows-protection-rc-adversarial-signed-production-boundary"]
     )
 require(
     candidate,
-    "cli/cmd/launcher/production_release_candidate_01511.go",
+    "cli/cmd/launcher/production_release_candidate.go",
     ["verifyWindowsProtectionRelease01812(dir, ver)"],
 )
 require(
     delivery,
-    "cli/cmd/launcher/production_delivery_release_0160.go",
+    "cli/cmd/launcher/production_delivery_release.go",
     [
         "windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812",
     ],
@@ -133,7 +133,7 @@ for text, path in [
     (ci, ".github/workflows/ci.yml"),
     (preflight, "scripts/release/preflight.sh"),
 ]:
-    if "guard-windows-protection-rc-01812.py" not in text:
+    if "guard-windows-protection-rc.py" not in text:
         raise SystemExit(
             f"[Launcher] Проверка защиты Windows RC 0.18.12: обязательная проверка не подключена в {path}"
         )
@@ -146,7 +146,7 @@ lowered = impl.lower()
 for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
     if marker in lowered:
         raise SystemExit(
-            f"[Launcher] Проверка RC защиты Windows 0.18.12: заглушка {marker!r} в cli/cmd/launcher/windows_protection_release_01812.go"
+            f"[Launcher] Проверка RC защиты Windows 0.18.12: заглушка {marker!r} в cli/cmd/launcher/windows_protection_release.go"
         )
 
 print(

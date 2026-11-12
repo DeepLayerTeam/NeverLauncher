@@ -5,13 +5,13 @@ on:
       - 'services/api/internal/linuxsandbox/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionpolicy/**'
-      - '.github/workflows/linux-native-extension-sandbox-0319.yml'
+      - '.github/workflows/linux-native-extension-sandbox.yml'
   pull_request:
     paths:
       - 'services/api/internal/linuxsandbox/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/extensionpolicy/**'
-      - '.github/workflows/linux-native-extension-sandbox-0319.yml'
+      - '.github/workflows/linux-native-extension-sandbox.yml'
 jobs:
   unit:
     runs-on: ubuntu-24.04

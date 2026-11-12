@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-reader_source = ROOT / 'scripts/guard_ci/adversarial_pilot_05012.py'
+reader_source = ROOT / 'scripts/guard_ci/adversarial_pilot.py'
 spec = importlib.util.spec_from_file_location('reader0529', reader_source)
 reader = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(reader)
@@ -17,7 +17,7 @@ class CrossLanguage0529(unittest.TestCase):
     def test_production_go_writer_python_verifier_and_tampering(self):
         with tempfile.TemporaryDirectory() as tmp:
             env = dict(os.environ, GO111MODULE='off', GOTOOLCHAIN='local', NL0529_SHADOW_TEST_OUTPUT=tmp)
-            result = subprocess.run(['go','test','guard_shadow_05012.go','guard_shadow_05012_test.go',
+            result = subprocess.run(['go','test','guard_shadow.go','guard_shadow_test.go',
                                      '-run','TestGuardShadow0529WireFixture','-count=1'],
                                     cwd=ROOT/'services/api/internal/httpapi',env=env,
                                     stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=35)

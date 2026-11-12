@@ -19,7 +19,7 @@ export LAUNCHER_GUARD_SHADOW_KEY_FILE=/etc/launcher/guard-shadow-key.hex
 Значение `allowed` записывается **после** того, как подписанный сигнал активности ServerBridge привёл к успешной проверке сессии в PostgreSQL. Значение `revoked` записывается только после успешного аннулирования именно этой сессии и постановки в очередь связанной с ней команды `player.kick`. Это *наблюдение за существующим механизмом применения политики*: обязательные решения безопасности не отключаются, а новые датчики не считаются сертифицированными без отдельного пилота. Heartbeat сервера не заменяет новое измерение памяти клиентского процесса.
 
 ```sh
-python3 scripts/guard_ci/adversarial_pilot_05012.py analyze-shadow \
+python3 scripts/guard_ci/adversarial_pilot.py analyze-shadow \
   --journal-dir /var/lib/launcher/guard-shadow \
   --key-file /etc/launcher/guard-shadow-key.hex \
   --reviews /private/guard-incident-review.jsonl \
@@ -33,8 +33,8 @@ python3 scripts/guard_ci/adversarial_pilot_05012.py analyze-shadow \
 ## Запуск реальных JVM для испытаний обходов
 
 ```sh
-python3 scripts/guard_ci/test_adversarial_pilot_05012.py
-python3 scripts/guard_ci/adversarial_pilot_05012.py run-jvm --output /private/guard-adversarial-05012.json
+python3 scripts/guard_ci/test_adversarial_pilot.py
+python3 scripts/guard_ci/adversarial_pilot.py run-jvm --output /private/guard-adversarial-05012.json
 ```
 
 Исполнитель запускает промышленный агент Java в настоящих дочерних процессах Java и проверяет происхождение загрузчика, неразрешённый или изменённый путь классов Java и моды, нативные ELF, непрерывный сторожевой контроль JVM и ограничения процессов Linux. Исходный стандартный вывод тестов сохраняется приватно. Отчёт содержит длительность, код завершения, число тестов, SHA-256 журнала и состояние сценария. Отсутствующий исполняемый файл, недостающие или пропущенные обязательные тесты и тайм-ауты не считаются `PASS`. Нативный пробник Linux требует GCC и настроенной среды Java. Процесс CI выполняет эти сценарии для шести сочетаний ОС и архитектур CPU. Настоящий тестовый процесс JVM — **не настоящий клиент Minecraft** и не доказательство эффективности античита против любого привилегированного кода.
@@ -46,7 +46,7 @@ python3 scripts/guard_ci/adversarial_pilot_05012.py run-jvm --output /private/gu
 Выполните существующий `e2e/scripts/run-minecraft-e2e.sh` с разрешённой учётной записью Minecraft, настоящими исходными файлами, серверной частью, PostgreSQL, подписанным опубликованным пакетом и сервером Paper/загрузчика. Сохраните полный каталог результатов, исходный журнал сервера Paper и точный коммит релиза. Затем проверьте:
 
 ```sh
-python3 scripts/guard_ci/adversarial_pilot_05012.py verify-game \
+python3 scripts/guard_ci/adversarial_pilot.py verify-game \
   --work /private/live-minecraft-runtime --paper-log /private/paper-live.log \
   --username THE_AUTHORIZED_TEST_PLAYER \
   --output /private/real-game-05012.json
@@ -59,7 +59,7 @@ python3 scripts/guard_ci/adversarial_pilot_05012.py verify-game \
 Запишите одинаковые сцены с включённым и выключенным Guard на идентичном оборудовании, с той же JVM, версией Minecraft, загрузчиком, сборкой игры и настройками графики. Экспортируйте настоящие времена каждого кадра (`frameTimeMs`) из PresentMon, MangoHud, CapFrameX либо других перечисленных поддерживаемых профилировщиков; не менее 600 кадров на каждый замер. Каждый каталог замера содержит `frames.csv` и `capture.json` с полями `os`, `arch`, `cpu`, `gpu`, `minecraftVersion`, `loader`, `scene`, `buildSha256`, `sourceTool`. Значения обоих `capture.json` должны точно совпадать. Анализатор вычисляет эмпирический интерполированный p95 и относительное ухудшение; первоначальный ориентир дорожной карты — ухудшение не более 3%.
 
 ```sh
-python3 scripts/guard_ci/adversarial_pilot_05012.py compare-frame-times \
+python3 scripts/guard_ci/adversarial_pilot.py compare-frame-times \
   --baseline /private/frames/guard-off --guard /private/frames/guard-on \
   --output /private/guard-performance-05012.json
 ```

@@ -4,21 +4,24 @@ on:
     paths:
       - 'runtime/runtime/**'
       - 'apps/desktop/src-tauri/**'
-      - 'scripts/ga/security_capabilities_0431.py'
-      - 'scripts/ga/package_security_0431.py'
-      - 'scripts/release/publish_0370.py'
-      - '.github/workflows/guard-game-lifetime-0438.yml'
+      - 'scripts/ga/security_capabilities.py'
+      - 'scripts/ga/package_security.py'
+      - 'scripts/release/publish.py'
+      - '.github/workflows/guard-game-lifetime.yml'
   pull_request:
     paths:
       - 'runtime/runtime/**'
       - 'apps/desktop/src-tauri/**'
-      - 'scripts/ga/security_capabilities_0431.py'
-      - 'scripts/ga/package_security_0431.py'
-      - 'scripts/release/publish_0370.py'
-      - '.github/workflows/guard-game-lifetime-0438.yml'
+      - 'scripts/ga/security_capabilities.py'
+      - 'scripts/ga/package_security.py'
+      - 'scripts/release/publish.py'
+      - '.github/workflows/guard-game-lifetime.yml'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   native-guard-game:
     name: '${{ matrix.target }} — нативный контроль процессов на Rust'
@@ -64,4 +67,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Запустить прежние проверки безопасности и новые сценарии отказов 0.43.8
-        run: python3 -m unittest discover -s scripts/ga -p 'test_security_capabilities_0431.py' -v
+        run: python3 -m unittest discover -s scripts/ga -p 'test_security_capabilities.py' -v

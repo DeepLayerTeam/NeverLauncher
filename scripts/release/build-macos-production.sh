@@ -108,7 +108,7 @@ EOF_PLIST
   # Этот пакет имеет стабильный порядок и временные метки и сравнивается независимо.
   if [[ "${VERSION}" == "0.47.0" || "${LAUNCHER_UNSIGNED_ONLY:-}" == "1" ]]; then
     UNSIGNED_DIR="${LAUNCHER_UNSIGNED_OUTPUT_DIR:-${ROOT_DIR}/dist/unsigned-${VERSION}}"
-    python3 "${ROOT_DIR}/scripts/release/unsigned_package_0470.py" \
+    python3 "${ROOT_DIR}/scripts/release/unsigned_package.py" \
       --platform macos --arch "${arch}" --out-dir "${UNSIGNED_DIR}" \
       --file "Launcher.app/Contents/MacOS/launcher-desktop=${MACOS_DIR}/launcher-desktop" \
       --file "Launcher.app/Contents/Helpers/guard=${HELPERS_DIR}/guard" \

@@ -7,16 +7,19 @@ on:
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
       - 'runtime/runtime/**'
-      - '.github/workflows/performance-03511.yml'
+      - '.github/workflows/performance.yml'
   pull_request:
     paths:
       - 'scripts/performance/**'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
       - 'runtime/runtime/**'
-      - '.github/workflows/performance-03511.yml'
+      - '.github/workflows/performance.yml'
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   measurement-tests:
     strategy:
@@ -52,7 +55,7 @@ jobs:
         run: |
           ext=''
           if [[ '${{ runner.os }}' == 'Windows' ]]; then ext='.exe'; fi
-          python scripts/performance/benchmark_03511.py \
+          python scripts/performance/benchmark.py \
             --runtime "runtime/runtime/target/release/runtime${ext}" \
             --signer "runtime/runtime/target/release/examples/cert_sign_fixture${ext}" \
             --verify-files 10000 --download-mib 32 64 --repetitions 3 \
@@ -86,7 +89,7 @@ jobs:
       - name: Собрать реальные нативные исполняемые файлы Desktop
         run: cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Измерить первый и последующие запуски процесса в Xvfb
-        run: dbus-run-session -- xvfb-run -a python scripts/performance/benchmark_03511.py --desktop apps/desktop/src-tauri/target/release/launcher-desktop --download-mib --repetitions 3 --output performance-desktop-linux.json
+        run: dbus-run-session -- xvfb-run -a python scripts/performance/benchmark.py --desktop apps/desktop/src-tauri/target/release/launcher-desktop --download-mib --repetitions 3 --output performance-desktop-linux.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

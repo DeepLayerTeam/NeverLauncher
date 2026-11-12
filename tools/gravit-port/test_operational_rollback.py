@@ -10,9 +10,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import operational_rollback_04912 as rb
-import production_cutover_04911 as cut
-import test_production_cutover_04911 as prev
+import operational_rollback as rb
+import production_cutover as cut
+import test_production_cutover as prev
 
 UUID = prev.UUID
 

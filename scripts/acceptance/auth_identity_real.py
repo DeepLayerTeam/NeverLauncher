@@ -28,7 +28,7 @@ from urllib.request import HTTPSHandler, HTTPRedirectHandler, ProxyHandler, Requ
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'e2e' / 'scripts'))
-from staged_auth_0347 import official_probe, ProviderUnavailable, ProviderRejected, ProviderMisconfigured
+from staged_auth import official_probe, ProviderUnavailable, ProviderRejected, ProviderMisconfigured
 
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 HEXUUID = re.compile(r'^[0-9a-fA-F]{32}$')

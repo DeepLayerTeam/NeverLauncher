@@ -16,8 +16,8 @@ import tarfile
 import hashlib
 import re
 
-from canonical_zip_0461 import write_zip, safe_member, safe_file
-from reproducible_0470 import inspect_exe, contract, visit_archive
+from canonical_zip import write_zip, safe_member, safe_file
+from reproducible import inspect_exe, contract, visit_archive
 
 
 def make_package(platform: str, arch: str, out_dir: Path, mapping: dict[str,Path]) -> Path:

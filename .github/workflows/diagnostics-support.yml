@@ -5,13 +5,13 @@ on:
       - 'apps/desktop/**'
       - 'apps/admin/**'
       - 'services/api/internal/httpapi/**'
-      - '.github/workflows/diagnostics-support-03510.yml'
+      - '.github/workflows/diagnostics-support.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
       - 'apps/admin/**'
       - 'services/api/internal/httpapi/**'
-      - '.github/workflows/diagnostics-support-03510.yml'
+      - '.github/workflows/diagnostics-support.yml'
 jobs:
   player-renderer:
     runs-on: ubuntu-24.04

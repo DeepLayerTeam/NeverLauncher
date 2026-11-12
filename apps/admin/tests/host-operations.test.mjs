@@ -6,7 +6,7 @@ import {
   hostOperationOutcome04111,
   hostSnapshotFresh04111,
   bridgeReady04111,
-} from "../src/api/host-operations-04111.ts";
+} from "../src/api/host-operations.ts";
 import { can } from "../src/admin/permissions.ts";
 
 const now = Date.now();

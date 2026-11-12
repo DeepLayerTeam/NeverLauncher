@@ -17,7 +17,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from delivery_verify_0462 import verify_bundle
+from delivery_verify import verify_bundle
 
 MAX_ASSET_BYTES=2*1024*1024*1024
 

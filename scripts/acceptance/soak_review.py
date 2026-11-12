@@ -11,9 +11,9 @@ import sys
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from sweep_05211 import raw_soak, signed_soak, ROOT
-import inventory_0521 as inventory
-from inventory_0521 import safe_file, public_key, canonical, write_exclusive
+from sweep import raw_soak, signed_soak, ROOT
+import inventory as inventory
+from inventory import safe_file, public_key, canonical, write_exclusive
 
 DOMAIN = ('launcher.soak.real.' + inventory.VERSION + '\x00').encode()
 
@@ -30,7 +30,7 @@ def sign(a):
         serialization.Encoding.Raw,serialization.PublicFormat.Raw) != pub.public_bytes(
         serialization.Encoding.Raw,serialization.PublicFormat.Raw):
         raise ValueError('Несоответствие независимого ключа подписи')
-    from inventory_0521 import read_json
+    from inventory import read_json
     payload = read_json(a.report_dir / 'soak.json')
     dest = a.report_dir / 'soak.sig'
     write_exclusive(dest,key.sign(DOMAIN + canonical(payload)))

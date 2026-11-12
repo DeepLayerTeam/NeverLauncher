@@ -7,7 +7,7 @@ on:
       - 'tools/gravit-port/**'
       - 'examples/extensions/gravit-compat/**'
       - 'services/api/internal/extensionjava/**'
-      - '.github/workflows/gravit-compat-0307.yml'
+      - '.github/workflows/gravit-compat.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
@@ -15,10 +15,13 @@ on:
       - 'tools/gravit-port/**'
       - 'examples/extensions/gravit-compat/**'
       - 'services/api/internal/extensionjava/**'
-      - '.github/workflows/gravit-compat-0307.yml'
+      - '.github/workflows/gravit-compat.yml'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   java-source-port:
     strategy:

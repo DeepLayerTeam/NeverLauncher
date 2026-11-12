@@ -13,11 +13,11 @@ if version < (0, 19, 4):
 required_files = [
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeEventRecord.java",
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeEventJournal.java",
-    "services/api/internal/httpapi/server_bridge_events_0194.go",
-    "services/api/internal/dbmigrate/sql/0035_serverbridge_event_stream_0194.sql",
-    "cli/internal/dbmigrate/sql/0035_serverbridge_event_stream_0194.sql",
-    "services/api/internal/httpapi/server_bridge_events_0194_test.go",
-    "services/api/internal/repository/server_bridge_event_stream_0194_integration_test.go",
+    "services/api/internal/httpapi/server_bridge_events.go",
+    "services/api/internal/dbmigrate/sql/0035_serverbridge_event_stream.sql",
+    "cli/internal/dbmigrate/sql/0035_serverbridge_event_stream.sql",
+    "services/api/internal/httpapi/server_bridge_events_test.go",
+    "services/api/internal/repository/server_bridge_event_stream_integration_test.go",
 ]
 for rel in required_files:
     if not resource_exists(ROOT, rel):
@@ -78,13 +78,13 @@ checks = {
         "LevelEvent.Load",
         "LevelEvent.Unload",
     ],
-    "services/api/internal/httpapi/server_bridge_protocol_0191.go": [
+    "services/api/internal/httpapi/server_bridge_protocol.go": [
         "events.ordered-stream-v1",
     ],
     "services/api/internal/httpapi/routes_bridge.go": [
         "POST /api/v1/server-bridge/servers/{serverId}/events",
     ],
-    "services/api/internal/httpapi/server_bridge_events_0194.go": [
+    "services/api/internal/httpapi/server_bridge_events.go": [
         "ed25519.Verify",
         "serverBridgeEventBatchMax0194",
         "ackSequence",
@@ -132,7 +132,7 @@ required_types = {
     "proxy.switch",
 }
 event_source = (
-    ROOT / "services/api/internal/httpapi/server_bridge_events_0194.go"
+    ROOT / "services/api/internal/httpapi/server_bridge_events.go"
 ).read_text(encoding="utf-8")
 for event_type in sorted(required_types):
     if f'"{event_type}"' not in event_source:

@@ -6,14 +6,14 @@ on:
       - 'cli/**'
       - 'apps/admin/**'
       - 'scripts/ga/*0300*'
-      - '.github/workflows/auth-platform-protection-ga-0300.yml'
+      - '.github/workflows/auth-platform-protection-ga.yml'
   pull_request:
     paths:
       - 'services/api/**'
       - 'cli/**'
       - 'apps/admin/**'
       - 'scripts/ga/*0300*'
-      - '.github/workflows/auth-platform-protection-ga-0300.yml'
+      - '.github/workflows/auth-platform-protection-ga.yml'
   workflow_dispatch:
   workflow_call:
 permissions:
@@ -31,7 +31,7 @@ jobs:
           POSTGRES_PASSWORD: integration-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U auth -d auth' --health-interval 5s --health-timeout 5s --health-retries 25
+          --health-cmd "pg_isready -U auth -d auth" --health-interval 5s --health-timeout 5s --health-retries 25
       mysql:
         image: mysql:8.4
         env:
@@ -41,7 +41,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: integration-root-only
         ports: ['3306:3306']
         options: >-
-          --health-cmd 'mysqladmin ping -h 127.0.0.1 --silent' --health-interval 5s --health-timeout 5s --health-retries 30
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent" --health-interval 5s --health-timeout 5s --health-retries 30
       mariadb:
         image: mariadb:11.4
         env:
@@ -51,7 +51,7 @@ jobs:
           MARIADB_ROOT_PASSWORD: integration-root-only
         ports: ['3307:3306']
         options: >-
-          --health-cmd 'healthcheck.sh --connect --innodb_initialized' --health-interval 5s --health-timeout 5s --health-retries 30
+          --health-cmd "healthcheck.sh --connect --innodb_initialized" --health-interval 5s --health-timeout 5s --health-retries 30
     env:
       LAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable
       LAUNCHER_TEST_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable
@@ -78,8 +78,8 @@ jobs:
         run: |
           test "$(cat VERSION)" = 0.30.0
           python3 scripts/version/manage.py check
-          test -z "$(gofmt -l services/api/internal/httpapi/*0300*.go services/api/pkg/protection/*.go services/api/internal/httpapi/auth_v1.go services/api/internal/httpapi/oidc_flow_115.go services/api/internal/httpapi/microsoft_flow_116.go services/api/internal/httpapi/protection_0298.go services/api/internal/httpapi/auth_link_password_0291.go services/api/internal/httpapi/auth_provider_runtime_02910.go)"
-          python3 -m unittest discover -s scripts/ga -p 'test_assert_go_test_0300.py' -v
+          test -z "$(gofmt -l services/api/internal/httpapi/*0300*.go services/api/pkg/protection/*.go services/api/internal/httpapi/auth_v1.go services/api/internal/httpapi/oidc_flow_115.go services/api/internal/httpapi/microsoft_flow_116.go services/api/internal/httpapi/protection.go services/api/internal/httpapi/auth_link_password.go services/api/internal/httpapi/auth_provider_runtime.go)"
+          python3 -m unittest discover -s scripts/ga -p 'test_assert_go_test.py' -v
       - name: Собрать промышленный Backend на Go и выполнить go vet
         working-directory: services/api
         run: |
@@ -90,7 +90,7 @@ jobs:
         run: |
           set -euo pipefail
           go test -json -race -count=1 -timeout=12m ./internal/authrequest ./pkg/protection ./internal/httpapi -run 'Test.*0300|TestSecurityRealAuthHTTP02912|TestProtectionBanUnbanLiveHTTP0298' | tee "$RUNNER_TEMP/auth-http.json"
-          python3 ../../scripts/ga/assert_go_test_0300.py "$RUNNER_TEMP/auth-http.json" \
+          python3 ../../scripts/ga/assert_go_test.py "$RUNNER_TEMP/auth-http.json" \
             --require TestAuthPlatformRejectsAmbiguousMutations0300 \
             --require TestProtectionCannotUseMissingSessionStore0300 \
             --require TestProviderConfigRejectsDuplicateAndNestedAliases0300 \
@@ -104,12 +104,12 @@ jobs:
           set -euo pipefail
           go test -json -count=1 -timeout=12m ./internal/httpapi -run '^TestSecurityRealAuthPostgresTwoReplicas02912$' | tee "$RUNNER_TEMP/auth-postgres.json"
           go test -json -count=1 -timeout=12m ./internal/repository -run '^TestGlobalSessionRevocationPostgres0297$|^TestProtectionBanPostgres0298$' | tee -a "$RUNNER_TEMP/auth-postgres.json"
-          python3 ../../scripts/ga/assert_go_test_0300.py "$RUNNER_TEMP/auth-postgres.json" \
+          python3 ../../scripts/ga/assert_go_test.py "$RUNNER_TEMP/auth-postgres.json" \
             --require TestSecurityRealAuthPostgresTwoReplicas02912 \
             --require TestGlobalSessionRevocationPostgres0297 \
             --require TestProtectionBanPostgres0298
           go test -json -count=1 -timeout=9m ./internal/sqlconnector -run '^TestLiveSQLLegacyAuthentication0294$' | tee "$RUNNER_TEMP/auth-sql.json"
-          python3 ../../scripts/ga/assert_go_test_0300.py "$RUNNER_TEMP/auth-sql.json" \
+          python3 ../../scripts/ga/assert_go_test.py "$RUNNER_TEMP/auth-sql.json" \
             --require TestLiveSQLLegacyAuthentication0294/postgresql \
             --require TestLiveSQLLegacyAuthentication0294/mysql \
             --require TestLiveSQLLegacyAuthentication0294/mariadb

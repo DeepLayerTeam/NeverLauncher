@@ -18,7 +18,7 @@ version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 7), "Требуется VERSION не ниже 0.20.7")
 
 migration = read(
-    "services/api/internal/dbmigrate/sql/0046_extensions_capability_security_0207.sql"
+    "services/api/internal/dbmigrate/sql/0046_extensions_capability_security.sql"
 )
 for token in (
     "extension_permission_grants",
@@ -31,7 +31,7 @@ for token in (
 ):
     require(token in migration, f"Отсутствует миграция защиты разрешений: {token}")
 
-security = read("services/api/internal/extensionsecurity/security_0207.go")
+security = read("services/api/internal/extensionsecurity/security.go")
 for token in (
     "project:read",
     "release:read",
@@ -53,7 +53,7 @@ for token in (
 ):
     require(token in security, f"В менеджере безопасности отсутствует: {token}")
 
-host = read("services/api/internal/extensionhost/host_0205.go")
+host = read("services/api/internal/extensionhost/host.go")
 for token in (
     "permissionAllowed0207",
     "auditCapability0207",
@@ -64,7 +64,7 @@ for token in (
     "validateEventPermission0206",
 ):
     require(token in host, f"В защите разрешений Extension Host отсутствует: {token}")
-http_broker = read("services/api/internal/extensionhost/http_broker_0207.go")
+http_broker = read("services/api/internal/extensionhost/http_broker.go")
 for token in (
     "https",
     "IsLoopback",
@@ -75,10 +75,10 @@ for token in (
 ):
     require(token in http_broker, f"В защищённом HTTP-брокере отсутствует: {token}")
 
-lifecycle = read("services/api/internal/httpapi/extension_lifecycle_0204.go")
+lifecycle = read("services/api/internal/httpapi/extension_lifecycle.go")
 updates = (
-    read("services/api/internal/extensionupdates/updates_02011.go")
-    if (ROOT / "services/api/internal/extensionupdates/updates_02011.go").is_file()
+    read("services/api/internal/extensionupdates/updates.go")
+    if (ROOT / "services/api/internal/extensionupdates/updates.go").is_file()
     else ""
 )
 require(
@@ -95,7 +95,7 @@ for path in (
 ):
     require(path in routes, f"Отсутствует маршрут разрешений Admin: {path}")
 
-cli = read("cli/cmd/launcher/extension_security_0207.go")
+cli = read("cli/cmd/launcher/extension_security.go")
 for token in (
     "permission-grant",
     "permission-revoke",
@@ -105,7 +105,7 @@ for token in (
     "LAUNCHER_EXTENSION_SECRET_VALUE",
 ):
     require(token in cli, f"В CLI отсутствует проверка безопасности возможностей {token}")
-routing = read("cli/cmd/launcher/extension_commands_0201.go")
+routing = read("cli/cmd/launcher/extension_commands.go")
 require(
     "handleExtensionSecurity0207" in routing
     and '"permission-grant"' in routing

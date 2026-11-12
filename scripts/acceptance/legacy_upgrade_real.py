@@ -20,8 +20,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/integration'))
 sys.path.insert(0, str(ROOT / 'scripts/operations'))
-import live_upgrade_0480 as live
-from sqlite_pg_cutover_0475 import storage_fingerprint, write_secure
+import live_upgrade as live
+from sqlite_pg_cutover import storage_fingerprint, write_secure
 
 SCHEMA = 'launcher.legacy-live-upgrade-0528/v1'
 ORIGINAL = ('0.36.0', '0.46.0')

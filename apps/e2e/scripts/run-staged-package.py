@@ -7,15 +7,15 @@
 
 import argparse
 import time
-from staged_readiness_0343 import StartupObserver, log_health
-from staged_matching_0344 import MatchingServer, GameplayObserver
-from staged_auth_0347 import (
+from staged_readiness import StartupObserver, log_health
+from staged_matching import MatchingServer, GameplayObserver
+from staged_auth import (
     run_probe,
     ProviderUnavailable,
     ProviderRejected,
     ProviderMisconfigured,
 )
-from staged_lifecycle_0349 import run_lifecycle
+from staged_lifecycle import run_lifecycle
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -147,7 +147,7 @@ def run_checked(cmd, result_file, env):
 def run_runtime_observed(cmd, result_file, env, deadline, observer):
     # Реальным жизненным циклом Java/Guard управляет Runtime. Не читайте JSON stdout по каналу во время
     # опроса: большой ограниченный хвост лога может заполнить канал и заблокировать Runtime до завершения.
-    from process_group_03410 import group_flags, kill_tree
+    from process_group import group_flags, kill_tree
 
     stdout_path = result_file.with_suffix(".stdout")
     with (
@@ -259,7 +259,7 @@ def execute(args):
     }
     work = Path(args.output).resolve()
     work.mkdir(parents=True, exist_ok=True)
-    from runtime_capabilities_03410 import evaluate, host_identity
+    from runtime_capabilities import evaluate, host_identity
 
     host_java = args.java if args.java != "auto" else (shutil.which("java") or "")
     host = evaluate("headless", host_java)
@@ -612,7 +612,7 @@ def execute(args):
                 f"Закреплённая версия Java {required_major} для релиза не поддерживается"
             )
         if args.java == "auto":
-            from runtime_capabilities_03410 import host_identity
+            from runtime_capabilities import host_identity
 
             arch = host_identity()["arch"]
             envarch = "ARM64" if arch == "arm64" else "X64"
@@ -827,7 +827,7 @@ def execute(args):
                 args.backend,
             )
             if args.auth_mode == "custom":
-                from staged_auth_0347 import guard_denial_probe
+                from staged_auth import guard_denial_probe
 
                 guard_result = guard_denial_probe(
                     live_credential, args.guard_denied_credentials_file
@@ -970,7 +970,7 @@ def execute(args):
         # восстановите одноразовый клиент. Не формируйте PASS искусственно, если негативные сценарии нельзя
         # выполнить.
         if not launch_error and game.status == "passed":
-            from staged_negative_04314 import execute as adversarial_probes
+            from staged_negative import execute as adversarial_probes
             negative = adversarial_probes(
                 args.runtime, args.cli, signed_manifest_path,
                 args.pinned_public_key, package_path, delivery_client_dir,
@@ -986,7 +986,7 @@ def execute(args):
             }
         game_proof.write_text(json.dumps(gameplay_evidence, indent=2), encoding="utf-8")
         proof_hash = sha_file(game_proof)
-        from staged_matching_0344 import CRASH
+        from staged_matching import CRASH
 
         if (
             server.process.poll() is not None

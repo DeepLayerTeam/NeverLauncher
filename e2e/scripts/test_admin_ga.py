@@ -8,7 +8,7 @@ import pathlib
 import unittest
 from unittest.mock import patch
 
-SCRIPT = pathlib.Path(__file__).with_name('admin-ga-0220-serverbridge.py')
+SCRIPT = pathlib.Path(__file__).with_name('admin-ga-serverbridge.py')
 spec = importlib.util.spec_from_file_location('ga0220_bridge', SCRIPT)
 bridge = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bridge)

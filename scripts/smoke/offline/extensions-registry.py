@@ -19,7 +19,7 @@ version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 3), "Требуется VERSION не ниже 0.20.3")
 
 migration = read(
-    "services/api/internal/dbmigrate/sql/0043_extensions_registry_0203.sql"
+    "services/api/internal/dbmigrate/sql/0043_extensions_registry.sql"
 )
 for token in (
     "extension_registry_publishers",
@@ -36,7 +36,7 @@ for token in (
 ):
     require(token in migration, f"Отсутствует миграция реестра расширений {token}")
 
-repo = read("services/api/internal/repository/extension_registry_0203.go")
+repo = read("services/api/internal/repository/extension_registry.go")
 for token in (
     "PublishExtensionRegistryVersion",
     "SearchExtensionRegistry",
@@ -49,7 +49,7 @@ for token in (
 ):
     require(token in repo, f"Отсутствует репозиторий реестра расширений {token}")
 
-verifier = read("services/api/internal/extensionpackage/package_0203.go")
+verifier = read("services/api/internal/extensionpackage/package.go")
 for token in (
     "InspectSignedFile",
     "VerifyFile",
@@ -63,7 +63,7 @@ for token in (
 ):
     require(token in verifier, f"Отсутствует серверная проверка пакетов {token}")
 
-http = read("services/api/internal/httpapi/extension_registry_0203.go")
+http = read("services/api/internal/httpapi/extension_registry.go")
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for token in (
     "extensionRegistryPublish0203",
@@ -87,7 +87,7 @@ for route in (
 ):
     require(route in routes, f"Отсутствует маршрут реестра расширений {route}")
 
-cli = read("cli/cmd/launcher/extension_registry_0203.go")
+cli = read("cli/cmd/launcher/extension_registry.go")
 for token in (
     '"publishers"',
     '"publisher-add"',

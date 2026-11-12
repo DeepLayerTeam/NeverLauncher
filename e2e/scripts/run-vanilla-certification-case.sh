@@ -108,7 +108,7 @@ biomeBlendRadius:0
 OPTIONS
 fi
 
-source "$ROOT/e2e/scripts/lib/live-join-0524.sh"
+source "$ROOT/e2e/scripts/lib/live-join.sh"
 certification_live_start vanilla "" "$NL_BIN" "$RUNTIME_DIR/materialized-client"
 
 printf '[vanilla-cert] Запуск реального клиента Mojang на Java %s для %s/%s\n' "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"

@@ -4,12 +4,12 @@ on:
     paths:
       - 'apps/desktop/**'
       - 'runtime/runtime/**'
-      - '.github/workflows/desktop-offline-policy-0358.yml'
+      - '.github/workflows/desktop-offline-policy.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
       - 'runtime/runtime/**'
-      - '.github/workflows/desktop-offline-policy-0358.yml'
+      - '.github/workflows/desktop-offline-policy.yml'
 jobs:
   offline-renderer:
     runs-on: ubuntu-24.04

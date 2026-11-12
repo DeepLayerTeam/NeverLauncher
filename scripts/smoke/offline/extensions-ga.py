@@ -17,7 +17,7 @@ def require(cond, msg):
 product_version = (ROOT / "VERSION").read_text().strip()
 version = tuple(int(x) for x in product_version.split(".")[:3])
 require(version >= (0, 21, 0), "Требуется VERSION не ниже 0.21.0")
-contract = read("services/api/internal/extensioncontract/contract_0210.go")
+contract = read("services/api/internal/extensioncontract/contract.go")
 for token in [
     "PackageFormatVersion",
     "ManifestSchemaVersion",
@@ -28,27 +28,27 @@ for token in [
     "SupportsHostHello",
 ]:
     require(token in contract, f"Отсутствует контракт GA: {token}")
-registry = read("services/api/internal/httpapi/extension_registry_0203.go")
+registry = read("services/api/internal/httpapi/extension_registry.go")
 for token in [
     "RequireGAAPIVersion",
     "extension:registry:reject-contract",
     "quarantineRejectedUpload02012",
 ]:
     require(token in registry, f"Отсутствует применение требований GA в рабочем реестре: {token}")
-host = read("services/api/internal/extensionhost/host_0205.go")
+host = read("services/api/internal/extensionhost/host.go")
 for token in [
     "LAUNCHER_EXTENSION_API_VERSION",
     "SupportsHostHello",
     "extensionApiVersion",
 ]:
     require(token in host, f"Отсутствует согласование Host API на Backend: {token}")
-cli_host = read("services/api/internal/extensionhost/cli_0209.go")
+cli_host = read("services/api/internal/extensionhost/cli.go")
 require(
     "LAUNCHER_EXTENSION_API_VERSION" in cli_host,
     "Отсутствует согласование версии Host API в CLI",
 )
-admin = read("apps/admin/src/admin_extensions_0208.tsx")
-desktop = read("apps/desktop/src/extensions_0209.tsx")
+admin = read("apps/admin/src/admin_extensions.tsx")
+desktop = read("apps/desktop/src/extensions.tsx")
 require(
     "extensionApiVersion: EXTENSION_API_VERSION" in admin,
     "В контексте Host для Admin отсутствует версия API",
@@ -58,7 +58,7 @@ require(
     and "extensionApiVersion: EXTENSION_API_VERSION" in desktop,
     "В контексте Host для Desktop отсутствует оболочка сообщения или версия API",
 )
-ga = read("services/api/internal/extensionga/manager_0210.go")
+ga = read("services/api/internal/extensionga/manager.go")
 for token in [
     "VerifyLockfile",
     "EvaluatePublication",
@@ -72,7 +72,7 @@ for token in [
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for token in ["/extension-ga/status", "/extension-ga/reconcile"]:
     require(token in routes, f"GA Отсутствует маршрут: {token}")
-cli = read("cli/cmd/launcher/extension_ga_0210.go")
+cli = read("cli/cmd/launcher/extension_ga.go")
 for token in [
     "upgrade-source",
     "signed .nlext packages are immutable",
@@ -81,7 +81,7 @@ for token in [
     "strings.ReplaceAll",
 ]:
     require(token in cli, f"Отсутствует средство обновления исходников 0.20 → 0.21: {token}")
-mig = read("services/api/internal/dbmigrate/sql/0049_extensions_ga_0210.sql")
+mig = read("services/api/internal/dbmigrate/sql/0049_extensions_ga.sql")
 for token in [
     "extension_ga_contract",
     "package_format_version",
@@ -110,13 +110,13 @@ require(
     'version = "0.21.0"' in read("sdk/desktop/rust/Cargo.toml"),
     "Версия Rust SDK должна оставаться зафиксированной на GA 0.21.0",
 )
-targets = json.loads(read("extensions/ga-targets-0210.json"))
+targets = json.loads(read("extensions/ga-targets.json"))
 require(
     {x["os"] for x in targets["targets"] if x.get("required")}
     == {"linux", "windows", "macos"},
     "Неполный набор целевых платформ GA",
 )
-workflow = read(".github/workflows/extensions-ga-0210.yml")
+workflow = read(".github/workflows/extensions-ga.yml")
 for token in [
     "ubuntu-latest",
     "windows-latest",

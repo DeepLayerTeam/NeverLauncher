@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from gate_02413 import aggregate, REQUIRED_TARGETS, REQUIRED_CHECKS
+from gate import aggregate, REQUIRED_TARGETS, REQUIRED_CHECKS
 
 SHA = "a" * 40
 

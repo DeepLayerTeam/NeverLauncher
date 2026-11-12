@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-FILE = Path(__file__).with_name('final_bundle_e2e_0380.py')
+FILE = Path(__file__).with_name('final_bundle_e2e.py')
 spec = importlib.util.spec_from_file_location('final_bundle_e2e_0380', FILE)
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
@@ -69,7 +69,7 @@ class FinalBundleTests(unittest.TestCase):
         end = data.index('  required-production-ci:')
         job = data[start:end]
         build = job.index('run: bash scripts/release/build-release.sh')
-        e2e = job.index('python3 scripts/acceptance/final_bundle_e2e_0380.py')
+        e2e = job.index('python3 scripts/acceptance/final_bundle_e2e.py')
         self.assertLess(build, e2e)
         self.assertIn('--bundle "$DIR" --version "$VERSION" --commit "$GITHUB_SHA"', job)
         self.assertIn('path: |\n            ${{ runner.temp }}/nl-final-bundle-e2e-0380.json', job)

@@ -27,9 +27,9 @@ import tarfile
 import tempfile
 import time
 
-import dr_03512 as dr
-import multi_host_0512 as multi
-import nn1_compat_0516 as nn
+import dr as dr
+import multi_host as multi
+import nn1_compat as nn
 
 SCHEMA = "launcher.consistent-backup/0.51.8"
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
@@ -728,7 +728,7 @@ def main(argv=None):
     p.add_argument("--project", default="launcher")
     p.add_argument("--run-id", default="")
     p.add_argument("--node", action="append", default=[])
-    p.add_argument("--remote-script", default="/opt/launcher/scripts/operations/consistent_backup_0518.py")
+    p.add_argument("--remote-script", default="/opt/launcher/scripts/operations/consistent_backup.py")
     p.add_argument("--destination")
     p.add_argument("--backup")
     p.add_argument("--pgdata")

@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import { requestJSON, ApiError } from "../src/api/client.ts";
 import { canSeeSection } from "../src/admin/permissions.ts";
-import { routeIds } from "../src/admin/route-links-0381.ts";
+import { routeIds } from "../src/admin/route-links.ts";
 
 test("Управление текстурами скрыто от операторов без глобального разрешения settings:manage", () => {
   assert.ok(routeIds.includes("texture-management"));

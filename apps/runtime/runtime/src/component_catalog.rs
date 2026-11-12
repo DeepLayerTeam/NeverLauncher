@@ -624,7 +624,7 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
 mod tests{
  use super::*;
  #[test] fn go_v2_digest_and_presets(){
-  let cat:ComponentCatalog=serde_json::from_str(include_str!("../tests/fixtures/catalog_topology_0242_go.json")).unwrap();
+  let cat:ComponentCatalog=serde_json::from_str(include_str!("../tests/fixtures/catalog_topology_go.json")).unwrap();
   assert_eq!(digest_v2(&cat),"97b6cfd2584fbae25545d422cad08c28b30b1de5d8f399e81a0ed7af3535f909");
   validate_topology(&cat).unwrap();
   let mut other=cat.clone();other.groups[0].name="forged".into();assert_ne!(digest_v2(&cat),digest_v2(&other));
@@ -637,7 +637,7 @@ mod tests{
   let mut cycle=cat.clone();cycle.categories[0].parent_id="visual".into();assert!(validate_topology(&cycle).is_err());
  }
  #[test] fn custom_selection_0247_is_resolved_from_signed_catalog(){
-  let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+  let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
   let cat=m.component_catalog.as_ref().unwrap();
   let ids=resolve_graph_v3(cat,"@custom:v1:minimal:+shaders").unwrap();
   assert!(ids.contains("core")&&ids.contains("shaders")&&ids.contains("performance.sodium"));
@@ -650,7 +650,7 @@ mod tests{
   assert!(resolve_graph_v3(&exclusive,"@custom:v1:quality:").unwrap_err().contains("exclusive_group"));
  }
  #[test] fn conditional_named_presets_reject_incompatible_components_0391(){
-  let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+  let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
   let mut cat=m.component_catalog.unwrap();
   cat.components[2].exclusive_group="performance-engine".into();
   cat.components[1].exclusive_group="performance-engine".into();
@@ -659,7 +659,7 @@ mod tests{
   assert!(validate_topology(&cat).unwrap_err().contains("exclusive_group"));
  }
  #[test] fn signed_go_conditions_fixture_0244(){
-  let manifest:crate::Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_0244_go_signed.json")).unwrap();
+  let manifest:crate::Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_go_signed.json")).unwrap();
   let cat=manifest.component_catalog.as_ref().unwrap();
   assert_eq!(cat.schema_version,"4.0");
   assert_eq!(cat.digest,digest_v4(cat));
@@ -685,7 +685,7 @@ mod verified_server_permissions_0392_tests {
     use super::*;
     #[tokio::test]
     async fn rollback_grants_are_bound_to_each_signed_catalog_0393(){
-        let mut old:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_0244_go_signed.json")).unwrap();
+        let mut old:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_go_signed.json")).unwrap();
         let c=old.component_catalog.as_mut().unwrap();
         c.components[1].conditions.as_mut().unwrap().permissions=vec!["component.old".into()];
         c.digest=digest_v4(c);
@@ -712,7 +712,7 @@ mod verified_server_permissions_0392_tests {
     }
     #[tokio::test]
     async fn scope_is_exact_non_leaking_and_expires() {
-        let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_0244_go_signed.json")).unwrap();
+        let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_go_signed.json")).unwrap();
         let cat=m.component_catalog.as_mut().unwrap();
         cat.components[1].conditions.as_mut().unwrap().permissions=vec!["component.perf".into()];
         cat.digest=digest_v4(cat);

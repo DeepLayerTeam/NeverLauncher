@@ -19,7 +19,7 @@ def need(rel: str, needles: list[str]) -> None:
 
 
 need(
-    "services/api/internal/dbmigrate/sql/0015_session_device_risk_0126.sql",
+    "services/api/internal/dbmigrate/sql/0015_session_device_risk.sql",
     [
         "binding_epoch BIGINT NOT NULL DEFAULT 1",
         "risk_score SMALLINT NOT NULL DEFAULT 0",
@@ -29,7 +29,7 @@ need(
     ],
 )
 need(
-    "cli/internal/dbmigrate/sql/0015_session_device_risk_0126.sql",
+    "cli/internal/dbmigrate/sql/0015_session_device_risk.sql",
     ["binding_epoch", "risk_action", "risk_evaluated_at"],
 )
 need(
@@ -64,7 +64,7 @@ need(
     ],
 )
 need(
-    "services/api/internal/httpapi/session_device_risk_0126.go",
+    "services/api/internal/httpapi/session_device_risk.go",
     [
         "Launcher Session Device Binding v1",
         "refresh-token-sha256=",
@@ -115,7 +115,7 @@ need(
     ],
 )
 need(
-    "services/api/internal/httpapi/session_device_risk_0126_test.go",
+    "services/api/internal/httpapi/session_device_risk_test.go",
     [
         "TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126",
         "bound refresh succeeded without device proof",
@@ -135,9 +135,9 @@ need(
 )
 
 api_migration = (
-    ROOT / "services/api/internal/dbmigrate/sql/0015_session_device_risk_0126.sql"
+    ROOT / "services/api/internal/dbmigrate/sql/0015_session_device_risk.sql"
 )
-cli_migration = "cli/internal/dbmigrate/sql/0015_session_device_risk_0126.sql"
+cli_migration = "cli/internal/dbmigrate/sql/0015_session_device_risk.sql"
 if (
     api_migration.is_file()
     and resource_exists(ROOT, cli_migration)

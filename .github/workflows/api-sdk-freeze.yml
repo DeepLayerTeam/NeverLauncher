@@ -7,8 +7,8 @@ on:
       - 'scripts/sdk/generate-http-operations.py'
       - 'sdk/api/**'
       - 'sdk/java/http-client/**'
-      - 'services/api/internal/httpapi/api_contract_04512*'
-      - '.github/workflows/api-sdk-freeze-04512.yml'
+      - 'services/api/internal/httpapi/api_contract*'
+      - '.github/workflows/api-sdk-freeze.yml'
   pull_request:
     paths:
       - 'schemas/openapi.yaml'
@@ -16,8 +16,8 @@ on:
       - 'scripts/sdk/generate-http-operations.py'
       - 'sdk/api/**'
       - 'sdk/java/http-client/**'
-      - 'services/api/internal/httpapi/api_contract_04512*'
-      - '.github/workflows/api-sdk-freeze-04512.yml'
+      - 'services/api/internal/httpapi/api_contract*'
+      - '.github/workflows/api-sdk-freeze.yml'
   workflow_dispatch:
 jobs:
   contracts:
@@ -27,8 +27,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: python3 scripts/contracts/validate-openapi.py
-      - run: python3 scripts/contracts/compatibility_04512.py
-      - run: python3 -m unittest discover -s scripts/contracts -p 'test_compatibility_04512.py'
+      - run: python3 scripts/contracts/compatibility.py
+      - run: python3 -m unittest discover -s scripts/contracts -p 'test_compatibility.py'
       - run: python3 scripts/sdk/generate-http-operations.py --check
   go-sdk:
     runs-on: ubuntu-latest

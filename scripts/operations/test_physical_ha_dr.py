@@ -12,8 +12,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import physical_ha_dr_05210 as physical
-import dependency_ha_0513 as dependency
+import physical_ha_dr as physical
+import dependency_ha as dependency
 
 
 class PhysicalTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class PhysicalTests(unittest.TestCase):
         self.args = argparse.Namespace(
             mode='host', node=['a=user@node-a.test', 'b=user@node-b.test'],
             victim='a', project='launcher', directory='/opt/launcher/deploy/production',
-            remote_script='/opt/launcher/scripts/operations/multi_host_0512.py',
+            remote_script='/opt/launcher/scripts/operations/multi_host.py',
             edge_url='https://edge.test/ready', redfish_url='https://bmc.test/redfish/v1/Systems/1',
             bmc_token_file=str(self.secret), bmc_ca='/etc/ssl/cert.pem',
             expected_serial='hardware-SN-1234', router='router@router.test',
@@ -170,7 +170,7 @@ class PhysicalTests(unittest.TestCase):
     def test_restores_actual_world_bytes_before_live_game_protocol(self):
         # Файловое восстановление использует промышленный алгоритм DR; имитируется
         # только внешний сокет Minecraft (без поддельных нативных свидетельств GA).
-        from test_network_ha_recovery_0454 import make_world
+        from test_network_ha_recovery import make_world
         backup = make_world(self.home / 'backup')
         dest = self.home / 'restored-game'
         config = self.home / 'game.json'

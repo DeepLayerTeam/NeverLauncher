@@ -151,7 +151,7 @@ func TestExtensionPackageSignVerifyInspect0202(t *testing.T) {
 	if err := os.WriteFile(wrongPublicPath, []byte(hex.EncodeToString(wrongPub)), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := verifyExtensionPackage0202(pkg, wrongPublicPath, false); err == nil || !strings.Contains(err.Error(), "key mismatch") {
+	if _, err := verifyExtensionPackage0202(pkg, wrongPublicPath, false); err == nil || !strings.Contains(err.Error(), "Несовпадение ключа подписи") {
 		t.Fatalf("Ожидалось несовпадение доверенного ключа, получено: %v", err)
 	}
 	inspected, err := inspectExtensionPackage0202(pkg, true)
@@ -197,7 +197,7 @@ func TestExtensionPackageRejectsMissingEntrypoint0202(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := packExtensionPackage0202(source, filepath.Join(base, "missing.nlext"))
-	if err == nil || !strings.Contains(err.Error(), "entrypoint") {
+	if err == nil || !strings.Contains(err.Error(), "точка входа") {
 		t.Fatalf("Ожидалось отклонение отсутствующей точки входа, получено: %v", err)
 	}
 }
@@ -229,7 +229,7 @@ func TestExtensionPackageRejectsSourceSymlink0202(t *testing.T) {
 		t.Skipf("символическая ссылка недоступна: %v", err)
 	}
 	_, err := packExtensionPackage0202(source, filepath.Join(base, "symlink.nlext"))
-	if err == nil || !strings.Contains(strings.ToLower(err.Error()), "symlink") {
+	if err == nil || !strings.Contains(strings.ToLower(err.Error()), "символическ") {
 		t.Fatalf("Ожидалось отклонение символической ссылки, получено: %v", err)
 	}
 }
@@ -246,15 +246,15 @@ func TestExtensionPackageRejectsTraversalDuplicateAndSymlinkArchive0202(t *testi
 		{name: "traversal", entries: []struct {
 			name string
 			mode os.FileMode
-		}{{"../escape", 0o644}}, want: "unsafe"},
+		}{{"../escape", 0o644}}, want: "небезопасное значение"},
 		{name: "duplicate", entries: []struct {
 			name string
 			mode os.FileMode
-		}{{"payload/A.txt", 0o644}, {"payload/a.txt", 0o644}}, want: "duplicate"},
+		}{{"payload/A.txt", 0o644}, {"payload/a.txt", 0o644}}, want: "повторяющиеся записи"},
 		{name: "symlink", entries: []struct {
 			name string
 			mode os.FileMode
-		}{{"payload/link", os.ModeSymlink | 0o777}}, want: "symlink"},
+		}{{"payload/link", os.ModeSymlink | 0o777}}, want: "символические ссылки"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

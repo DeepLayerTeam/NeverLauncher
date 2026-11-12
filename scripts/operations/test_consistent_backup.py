@@ -13,8 +13,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import consistent_backup_0518 as cb
-import dr_03512 as dr
+import consistent_backup as cb
+import dr as dr
 
 
 class Backup0518Tests(unittest.TestCase):
@@ -264,7 +264,7 @@ class Backup0518Tests(unittest.TestCase):
                              directory="/opt/launcher/deploy/production", tar_image="alpine@sha256:" + "a" * 64,
                              stanza="nl", world_file=str(worlds), trust_file=str(trust),
                              external_auth_policy="none", external_source=[], destination=str(base / "snapshot"),
-                             remote_script="/opt/launcher/scripts/operations/consistent_backup_0518.py",
+                             remote_script="/opt/launcher/scripts/operations/consistent_backup.py",
                              pg_dsn_file=str(base / "pg.url"), s3_bucket="backup-bucket",
                              s3_endpoint="https://s3.example", world_cli="/opt/launcher/bin/nl")
             with patch.object(cb, "remote_json", side_effect=remote), \

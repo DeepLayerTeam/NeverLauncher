@@ -4,12 +4,12 @@ on:
     paths:
       - 'services/api/internal/sqlconnector/**'
       - 'services/api/go.*'
-      - '.github/workflows/sql-mapping-legacy-hash-0294.yml'
+      - '.github/workflows/sql-mapping-legacy-hash.yml'
   pull_request:
     paths:
       - 'services/api/internal/sqlconnector/**'
       - 'services/api/go.*'
-      - '.github/workflows/sql-mapping-legacy-hash-0294.yml'
+      - '.github/workflows/sql-mapping-legacy-hash.yml'
 permissions:
   contents: read
 jobs:

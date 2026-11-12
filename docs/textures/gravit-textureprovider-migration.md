@@ -18,7 +18,7 @@ Launcher **не угадывает** соответствие по имени п
 
 ## Подготовка и выполнение
 
-До запуска команды примените обычные миграции Launcher **вплоть до 0073_texture_gravit_import_02510**. Сначала сохраните резервную копию целевой базы и локального/S3-бакета; проверьте квоты и права на плащи. Настройте те же переменные целевого окружения, что и API (`LAUNCHER_DATABASE_DSN`, `LAUNCHER_STORAGE_DRIVER`, `LAUNCHER_STORAGE_LOCAL_PATH` или `LAUNCHER_STORAGE_S3_*`).
+До запуска команды примените обычные миграции Launcher **вплоть до 0073_texture_gravit_import**. Сначала сохраните резервную копию целевой базы и локального/S3-бакета; проверьте квоты и права на плащи. Настройте те же переменные целевого окружения, что и API (`LAUNCHER_DATABASE_DSN`, `LAUNCHER_STORAGE_DRIVER`, `LAUNCHER_STORAGE_LOCAL_PATH` или `LAUNCHER_STORAGE_S3_*`).
 
 Пример: исходный PostgreSQL и локальные исходные файлы. Не сохраняйте DSN с секретами в истории оболочки или журналах; предпочтительнее секреты из файла окружения.
 
@@ -28,7 +28,7 @@ cd services/api
 # В Gravit могут использоваться hash.png, skins/<hash>.png и другие схемы путей.
 export LAUNCHER_DATABASE_DSN='postgres://.../launcher'
 export GRAVIT_SOURCE_DSN='postgres://.../texture_provider'
-go run ./cmd/gravit-textures-import-02510 \
+go run ./cmd/gravit-textures-import \
   --source-id gravit-prod-01 --source-dsn "$GRAVIT_SOURCE_DSN" \
   --source-root /srv/gravit/storage --source-template '%kind%/%hash%.png' \
   --mapping ./minecraft-identity-mapping.json \
@@ -41,7 +41,7 @@ go run ./cmd/gravit-textures-import-02510 \
 
 ```bash
 # Пример: укажите утверждённый SHA-256 после независимой проверки отчёта.
-go run ./cmd/gravit-textures-import-02510 \
+go run ./cmd/gravit-textures-import \
   --source-id gravit-prod-01 --source-dsn "$GRAVIT_SOURCE_DSN" \
   --source-root /srv/gravit/storage --source-template '%kind%/%hash%.png' \
   --mapping ./minecraft-identity-mapping.json \

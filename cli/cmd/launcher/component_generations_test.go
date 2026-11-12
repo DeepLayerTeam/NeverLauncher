@@ -60,7 +60,7 @@ func TestComponentGenerationRealUpdater02311(t *testing.T) {
 	}
 	m.SecurityGeneration = 6
 	signComponentGenerationFixture02311(t, bundle, m, private)
-	if _, err := applyComponentPackage0157(bundle, "", "", root, "", 0, false, true); err == nil || !strings.Contains(err.Error(), "anti-rollback") {
+	if _, err := applyComponentPackage0157(bundle, "", "", root, "", 0, false, true); err == nil || !strings.Contains(err.Error(), "Защита компонентов от отката") {
 		t.Fatalf("Принят старый подписанный набор: %v", err)
 	}
 	m.SecurityGeneration = 7

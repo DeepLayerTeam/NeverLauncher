@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from assert_go_test_0300 import verify
+from assert_go_test import verify
 
 
 class RealExecutionGate0300Tests(unittest.TestCase):

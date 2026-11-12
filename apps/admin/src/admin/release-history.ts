@@ -1,5 +1,5 @@
 import type { ReleaseVersion0386 } from '../api/release.ts';
-import type { ChannelHead } from './owner-lifecycle-03513.ts';
+import type { ChannelHead } from './owner-lifecycle.ts';
 
 /** Ранее опубликованные релизы НЕ взаимозаменяемы с активным. Только Backend
  * может определить текущий релиз; отсутствие или несовпадение указателя

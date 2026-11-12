@@ -3,29 +3,29 @@ on:
   push:
     paths:
       - 'plugins/**'
-      - 'services/api/internal/httpapi/server_bridge_adapter_capabilities_0286*.go'
-      - 'services/api/internal/httpapi/server_bridge_runtime_0192.go'
-      - 'services/api/internal/httpapi/server_bridge_control_0195.go'
-      - 'services/api/internal/httpapi/server_bridge_ga_0200.go'
+      - 'services/api/internal/httpapi/server_bridge_adapter_capabilities*.go'
+      - 'services/api/internal/httpapi/server_bridge_runtime.go'
+      - 'services/api/internal/httpapi/server_bridge_control.go'
+      - 'services/api/internal/httpapi/server_bridge_ga.go'
       - 'apps/admin/src/api/serverbridge.ts'
       - 'apps/admin/src/admin/ServerBridgeWorkspace.tsx'
       - 'apps/admin/tests/serverbridge-operations.test.mjs'
       - 'e2e/java/ru/launcher/bridge/common/ServerBridgeAdapterCapability0286Harness.java'
-      - 'e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh'
+      - 'e2e/scripts/run-serverbridge-adapter-capabilities.sh'
       - 'serverbridge/certify_release.py'
-      - '.github/workflows/serverbridge-adapter-capabilities-0286.yml'
+      - '.github/workflows/serverbridge-adapter-capabilities.yml'
   pull_request:
     paths:
       - 'plugins/**'
-      - 'services/api/internal/httpapi/server_bridge_adapter_capabilities_0286*.go'
-      - 'services/api/internal/httpapi/server_bridge_runtime_0192.go'
-      - 'services/api/internal/httpapi/server_bridge_control_0195.go'
-      - 'services/api/internal/httpapi/server_bridge_ga_0200.go'
+      - 'services/api/internal/httpapi/server_bridge_adapter_capabilities*.go'
+      - 'services/api/internal/httpapi/server_bridge_runtime.go'
+      - 'services/api/internal/httpapi/server_bridge_control.go'
+      - 'services/api/internal/httpapi/server_bridge_ga.go'
       - 'apps/admin/src/api/serverbridge.ts'
       - 'apps/admin/src/admin/ServerBridgeWorkspace.tsx'
       - 'e2e/java/ru/launcher/bridge/common/ServerBridgeAdapterCapability0286Harness.java'
-      - 'e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh'
-      - '.github/workflows/serverbridge-adapter-capabilities-0286.yml'
+      - 'e2e/scripts/run-serverbridge-adapter-capabilities.sh'
+      - '.github/workflows/serverbridge-adapter-capabilities.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -47,9 +47,9 @@ jobs:
         with:
           node-version: '22'
       - name: Проверить промышленные исходники Java и политики 14 адаптеров
-        run: bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
+        run: bash e2e/scripts/run-serverbridge-adapter-capabilities.sh
       - name: "Регрессионные проверки безопасности протокола Java v3 (без запуска Minecraft)"
-        run: bash e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh
+        run: bash e2e/scripts/run-serverbridge-security-certification-e2e.sh
       - name: Проверить возможности и Runtime на Go
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestAdapter|TestServerBridgeRuntimeIdentity0192|TestServerBridgeControl' -count=1 -timeout=5m

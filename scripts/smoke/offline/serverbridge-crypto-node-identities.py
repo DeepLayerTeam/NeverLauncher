@@ -23,9 +23,9 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 
 api_migration = read(
-    "services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql"
+    "services/api/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities.sql"
 )
-cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities_0142.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0022_serverbridge_crypto_node_identities.sql")
 if api_migration != cli_migration:
     raise SystemExit("Криптографические миграции идентичности узлов API/CLI 0.14.2 различаются")
 require(
@@ -45,7 +45,7 @@ require(
     "Миграция 0.14.2",
 )
 
-identity = read("services/api/internal/httpapi/server_bridge_identity_0142.go")
+identity = read("services/api/internal/httpapi/server_bridge_identity.go")
 require(
     identity,
     [
@@ -150,7 +150,7 @@ if "X-Launcher-Server-Token" in java_client or "server.token" in java_config:
         "В Runtime плагина остался устаревший общий секрет ServerBridge Bearer"
     )
 
-regression = read("services/api/internal/httpapi/server_bridge_identity_0142_test.go")
+regression = read("services/api/internal/httpapi/server_bridge_identity_test.go")
 require(
     regression,
     [

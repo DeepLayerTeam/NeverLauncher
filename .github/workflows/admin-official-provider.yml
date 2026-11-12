@@ -5,13 +5,13 @@ on:
       - 'apps/admin/**'
       - 'services/api/**'
       - 'apps/desktop/src-tauri/**'
-      - '.github/workflows/admin-official-provider-02611.yml'
+      - '.github/workflows/admin-official-provider.yml'
   pull_request:
     paths:
       - 'apps/admin/**'
       - 'services/api/**'
       - 'apps/desktop/src-tauri/**'
-      - '.github/workflows/admin-official-provider-02611.yml'
+      - '.github/workflows/admin-official-provider.yml'
 jobs:
   backend:
     runs-on: ubuntu-latest

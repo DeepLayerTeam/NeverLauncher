@@ -2,12 +2,12 @@ name: Помощник переноса игроков 0.33.9
 on:
   push:
     paths:
-      - 'runtime/runtime/src/player_migration_0339.rs'
+      - 'runtime/runtime/src/player_migration.rs'
       - 'runtime/runtime/src/content_cache.rs'
-      - 'apps/desktop/src/PlayerMigration0339.tsx'
+      - 'apps/desktop/src/PlayerMigration.tsx'
       - 'apps/desktop/src/main.tsx'
       - 'apps/desktop/src-tauri/src/main.rs'
-      - '.github/workflows/player-migration-0339.yml'
+      - '.github/workflows/player-migration.yml'
   pull_request:
   workflow_dispatch:
 permissions:

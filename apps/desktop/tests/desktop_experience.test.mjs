@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { launchPreferences, scopedServers } from '../src/desktop_experience_0229.ts';
+import { launchPreferences, scopedServers } from '../src/desktop_experience.ts';
 const settings = { memoryMb: 4096, screenWidth: 1280, screenHeight: 720, fullscreen: false, autoEnter: false, serverHost: '', serverPort: 25565, offlineEnabled: false, serverId: '' };
 const server = [{ id:'pvp', name:'PVP',kind:'velocity',status:'active',health:'unknown' }];
 test('Отклоняются недопустимые объём памяти и разрешение экрана', () => {

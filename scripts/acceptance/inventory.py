@@ -46,7 +46,7 @@ CATALOGS = {
 # Для каждой обязательной цели вне Minecraft назначен конкретный исполнитель.
 RUNNERS = {
     'minecraft': 'e2e/scripts/run-compatibility-case.sh',
-    'serverbridge': 'serverbridge/live_matrix_04113.py',
+    'serverbridge': 'serverbridge/live_matrix.py',
     'device-trust': 'scripts/device_trust/matrix.py',
     'guard': 'scripts/guard_ci/matrix.py',
 }

@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rehearsal_0365 as r
+import rehearsal as r
 from release_policy import policy
 from verified_targets import CHECKS, TARGETS, paths, Blocked
 

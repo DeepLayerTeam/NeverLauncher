@@ -4,17 +4,17 @@ on:
     paths:
       - 'compatibility/gravit/**'
       - 'cli/internal/moduleparity/**'
-      - 'cli/cmd/launcher/module_parity_0301.go'
+      - 'cli/cmd/launcher/module_parity.go'
       - 'apps/desktop/**'
       - 'scripts/desktop/**'
       - 'scripts/diagnostics/**'
       - 'VERSION'
-      - '.github/workflows/module-parity-completion-03011.yml'
+      - '.github/workflows/module-parity-completion.yml'
   pull_request:
     paths:
       - 'compatibility/gravit/**'
       - 'cli/internal/moduleparity/**'
-      - 'cli/cmd/launcher/module_parity_0301.go'
+      - 'cli/cmd/launcher/module_parity.go'
       - 'apps/desktop/**'
       - 'scripts/desktop/**'
       - 'scripts/diagnostics/**'
@@ -22,6 +22,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   parity-regression:
     runs-on: ubuntu-24.04
@@ -66,8 +69,8 @@ jobs:
         with: {node-version: '22', cache: npm, cache-dependency-path: apps/desktop/package-lock.json}
       - name: Asset и prewarm тесты
         run: |
-          node --test scripts/desktop/prebuild_assets_03011.test.mjs
-          node --experimental-strip-types --test scripts/desktop/startup_prewarmer_03011.test.mjs
+          node --test scripts/desktop/prebuild_assets.test.mjs
+          node --experimental-strip-types --test scripts/desktop/startup_prewarmer.test.mjs
       - name: Проверить промышленное разбиение Vite на части и индекс ресурсов
         working-directory: apps/desktop
         run: |

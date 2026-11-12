@@ -2,20 +2,20 @@ name: Изоляция при разделении сети и регресси�
 on:
   push:
     paths:
-      - 'services/api/internal/repository/durable_0213.go'
-      - 'services/api/internal/repository/durable_memory_0213.go'
-      - 'services/api/internal/repository/operations_0217.go'
-      - 'services/api/internal/repository/partition_fencing_0514*'
+      - 'services/api/internal/repository/durable.go'
+      - 'services/api/internal/repository/durable_memory.go'
+      - 'services/api/internal/repository/operations.go'
+      - 'services/api/internal/repository/partition_fencing*'
       - 'services/api/internal/serverbridgeha/**'
-      - '.github/workflows/partition-fencing-0514.yml'
+      - '.github/workflows/partition-fencing.yml'
   pull_request:
     paths:
-      - 'services/api/internal/repository/durable_0213.go'
-      - 'services/api/internal/repository/durable_memory_0213.go'
-      - 'services/api/internal/repository/operations_0217.go'
-      - 'services/api/internal/repository/partition_fencing_0514*'
+      - 'services/api/internal/repository/durable.go'
+      - 'services/api/internal/repository/durable_memory.go'
+      - 'services/api/internal/repository/operations.go'
+      - 'services/api/internal/repository/partition_fencing*'
       - 'services/api/internal/serverbridgeha/**'
-      - '.github/workflows/partition-fencing-0514.yml'
+      - '.github/workflows/partition-fencing.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -56,4 +56,4 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/version/manage.py check
-          test -z "$(gofmt -l services/api/internal/repository/durable_0213.go services/api/internal/repository/durable_memory_0213.go services/api/internal/repository/operations_0217.go services/api/internal/repository/partition_fencing_0514_test.go services/api/internal/repository/partition_fencing_0514_integration_test.go services/api/internal/serverbridgeha/redis.go services/api/internal/serverbridgeha/partition_fencing_0514_test.go)"
+          test -z "$(gofmt -l services/api/internal/repository/durable.go services/api/internal/repository/durable_memory.go services/api/internal/repository/operations.go services/api/internal/repository/partition_fencing_test.go services/api/internal/repository/partition_fencing_integration_test.go services/api/internal/serverbridgeha/redis.go services/api/internal/serverbridgeha/partition_fencing_test.go)"

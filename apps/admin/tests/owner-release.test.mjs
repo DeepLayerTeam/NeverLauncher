@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {requireValidatedPackage0390} from '../src/admin/package-validation-0390.ts';
-import {observeOwnerOperation} from '../src/admin/owner-lifecycle-03513.ts';
+import {requireValidatedPackage0390} from '../src/admin/package-validation.ts';
+import {observeOwnerOperation} from '../src/admin/owner-lifecycle.ts';
 import {ReleaseApi} from '../src/api/release.ts';
 
 const expected={projectId:'alpha',profileId:'main',channel:'stable',revision:5,releaseId:'old'};

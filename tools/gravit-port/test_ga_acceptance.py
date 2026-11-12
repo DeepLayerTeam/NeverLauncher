@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import ga_acceptance_0500 as ga
+import ga_acceptance as ga
 
 
 def sh(data):

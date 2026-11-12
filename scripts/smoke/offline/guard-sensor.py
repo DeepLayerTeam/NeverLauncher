@@ -155,7 +155,7 @@ def main() -> int:
         ],
         "CI компиляции и интеграции Windows / Clippy",
     )
-    if "guard-sensor-0182.py" not in preflight:
+    if "guard-sensor.py" not in preflight:
         raise SystemExit(
             "[Launcher] Guard Sensor 0.18.2: не настроен запуск в предварительных проверках"
         )

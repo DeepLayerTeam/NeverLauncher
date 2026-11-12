@@ -2,14 +2,14 @@
 
 ## Режимы и границы
 
-`scripts/acceptance/inventory_0521.py` читает **сырые артефакты** `compatibility-*`, собранные из `e2e/scripts/run-compatibility-case.sh`. Он повторно проверяет `scripts/compatibility/matrix.py` и сами файлы JVM, загрузчика и среды выполнения, журналы, хеши, версию, исходный коммит, `GITHUB_RUN_ID` и `GITHUB_RUN_ATTEMPT`. Файлы не берутся из внешних произвольных URL, симлинки, двойные ключи JSON, дубликаты целей и подмены отвергаются. Принудительное уменьшение обязательного набора целей (поле `required`) в существующих матрицах блокируется.
+`scripts/acceptance/inventory.py` читает **сырые артефакты** `compatibility-*`, собранные из `e2e/scripts/run-compatibility-case.sh`. Он повторно проверяет `scripts/compatibility/matrix.py` и сами файлы JVM, загрузчика и среды выполнения, журналы, хеши, версию, исходный коммит, `GITHUB_RUN_ID` и `GITHUB_RUN_ATTEMPT`. Файлы не берутся из внешних произвольных URL, симлинки, двойные ключи JSON, дубликаты целей и подмены отвергаются. Принудительное уменьшение обязательного набора целей (поле `required`) в существующих матрицах блокируется.
 
 Сбор реальной матрицы выполняет существующий `.github/workflows/compatibility.yml`, включая все поддержанные ОС/архитектуры и Minecraft версии. Новое задание `acceptance-inventory-0521` перекачивает и **перепроверяет исходные** записи независимо от сводного `matrix.json`. Если хотя бы одна обязательная целевая платформа Minecraft не подтверждена, задание завершается с ошибкой и публикует отчёт BLOCKED. Для специализированного задания CI действует `--gate minecraft`; **общая** приёмка по умолчанию `--gate full` остаётся BLOCKED, пока не закрыты другие обязательные группы.
 
 Для явного локального анализа:
 
 ```bash
-python3 scripts/acceptance/inventory_0521.py inventory \
+python3 scripts/acceptance/inventory.py inventory \
   --results-root /absolute/path/to/downloaded/compatibility-results \
   --commit 0123456789012345678901234567890123456789 \
   --run-id 123456 --attempt 1 \
@@ -23,7 +23,7 @@ python3 scripts/acceptance/inventory_0521.py inventory \
 Оператор скачивает **сырые** `compatibility-*` из запуска CI для точного коммита. Проверяющий обязан самостоятельно получить отпечаток доверенного открытого ключа Ed25519. `public-key-sha256` — SHA-256 по DER SubjectPublicKeyInfo, передаётся из независимого доверенного канала; не принимать контрольную сумму из самой квитанции. Закрытый ключ проверяющего (`0600`) хранится вне репозитория и вне CI. Подпись не требуется для публикации предварительной матрицы CI, но обязательна для статуса `independently reviewed`.
 
 ```bash
-python3 scripts/acceptance/inventory_0521.py sign \
+python3 scripts/acceptance/inventory.py sign \
   --results-root /absolute/path/to/downloaded/compatibility-results \
   --commit 0123456789012345678901234567890123456789 \
   --run-id 123456 --attempt 1 --reviewer trusted-reviewer \
@@ -31,7 +31,7 @@ python3 scripts/acceptance/inventory_0521.py sign \
   --public-key /secure/offline/reviewer-public.pem \
   --public-key-sha256 <PINNED_SHA256_FROM_DIFFERENT_CHANNEL> \
   --output /secure/unused/receipt-0521.json
-python3 scripts/acceptance/inventory_0521.py verify \
+python3 scripts/acceptance/inventory.py verify \
   --results-root /absolute/path/to/downloaded/compatibility-results \
   --commit 0123456789012345678901234567890123456789 \
   --run-id 123456 --attempt 1 --reviewer trusted-reviewer \

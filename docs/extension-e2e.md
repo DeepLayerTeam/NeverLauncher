@@ -12,7 +12,7 @@ sh examples/extensions/java-runtime/build.sh
 sh examples/extensions/java-lifecycle/build.sh
 sh examples/extensions/gravit-compat/build.sh
 (cd cli && go build -o ../nl ./cmd/launcher)
-python3 e2e/extensions/accept_04212.py --target linux-x64 --cli ./nl --evidence evidence/linux-x64.json
+python3 e2e/extensions/accept.py --target linux-x64 --cli ./nl --evidence evidence/linux-x64.json
 ```
 
 В Windows используйте нативный `.exe` и `sh` из Git Bash; укажите `windows-x64` или `windows-arm64` в зависимости от архитектуры. Средство проверяет **фактический хост** и архитектуру JVM. Кросс-компиляция, эмуляция и вымышленные метки целевых платформ не подтверждают нативное выполнение. В CI проверка запускается на Linux, Windows и macOS для x64 и arm64. Недоступный исполнитель **блокирует** общий результат, а не засчитывается как успешный. Отдельно запустите тесты супервизора Go с инструментами Backend и собранным JAR хоста Java:
@@ -21,7 +21,7 @@ python3 e2e/extensions/accept_04212.py --target linux-x64 --cli ./nl --evidence 
 (cd services/api && LAUNCHER_TEST_JAVA_HOST_JAR="$(cd ../.. && pwd)/examples/extensions/java-host/build/package/backend/java-host.jar" go test -race -count=1 ./internal/extensionhost)
 ```
 
-Только успешный запуск на реальной платформе вправе записать `status: pass`. Подтверждения содержат точные хеши JAR, хеш CLI, исходный коммит (в CI), архитектуру ОС и сведения о JVM. Сводная проверка требует записи по всем шести целевым конфигурациям для **того же коммита CI** и успешного независимого задания супервизора Go. `e2e/extensions/aggregate_04212.py` отклоняет отсутствующие, неуспешные, устаревшие результаты, данные с неверной архитектурой, непроверенные подписи и отсутствие негативных проверок.
+Только успешный запуск на реальной платформе вправе записать `status: pass`. Подтверждения содержат точные хеши JAR, хеш CLI, исходный коммит (в CI), архитектуру ОС и сведения о JVM. Сводная проверка требует записи по всем шести целевым конфигурациям для **того же коммита CI** и успешного независимого задания супервизора Go. `e2e/extensions/aggregate.py` отклоняет отсутствующие, неуспешные, устаревшие результаты, данные с неверной архитектурой, непроверенные подписи и отсутствие негативных проверок.
 
 ## Интерпретация результатов
 

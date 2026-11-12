@@ -3,10 +3,10 @@ on:
   push:
     paths:
       - 'services/api/internal/storage/texture*'
-      - 'services/api/internal/repository/textures_lifecycle_02511*'
-      - 'services/api/cmd/texture-maintenance-0253/**'
-      - 'services/api/internal/dbmigrate/sql/0074_texture_lifecycle_recovery_02511.sql'
-      - '.github/workflows/texture-lifecycle-02511.yml'
+      - 'services/api/internal/repository/textures_lifecycle*'
+      - 'services/api/cmd/texture-maintenance/**'
+      - 'services/api/internal/dbmigrate/sql/0074_texture_lifecycle_recovery.sql'
+      - '.github/workflows/texture-lifecycle.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -41,5 +41,5 @@ jobs:
           TEST_PG_DSN_02511: postgres://texture_test:texture_test@localhost:5432/texture_test?sslmode=disable
         run: |
           go test -race -count=1 ./internal/storage ./internal/dbmigrate ./internal/repository
-          go vet ./internal/storage ./internal/dbmigrate ./internal/repository ./cmd/texture-maintenance-0253
-          go build -o /tmp/texture-maintenance-02511 ./cmd/texture-maintenance-0253
+          go vet ./internal/storage ./internal/dbmigrate ./internal/repository ./cmd/texture-maintenance
+          go build -o /tmp/texture-maintenance-02511 ./cmd/texture-maintenance

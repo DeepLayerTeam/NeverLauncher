@@ -151,14 +151,14 @@ func TestSharedAssets0277EndToEndAndNativeMultiTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = installVanilla(context.Background(), vanillaInstallOptions{MinecraftVersion: "fixture-1", ClientDir: filepath.Join(base, "four"), VersionManifest: server.URL + "/manifest", AssetBaseURL: server.URL + "/assets", Workers: 2, StrictUpstream: true, SharedCacheDir: cache, HTTPClient: server.Client()})
-	if err == nil || !strings.Contains(err.Error(), "cache") {
+	if err == nil || !strings.Contains(err.Error(), "общий кэш артефактов") {
 		t.Fatalf("допущен повреждённый кеш: %v", err)
 	}
 }
 
 func TestSharedArtifacts0277ConcurrentAndUnsafeRoots(t *testing.T) {
 	root := t.TempDir()
-	cache := filepath.Join(root, "cache")
+	cache := filepath.Join(root, "общий кэш артефактов")
 	src := filepath.Join(root, "src.jar")
 	data := []byte("same object")
 	if err := os.WriteFile(src, data, 0600); err != nil {

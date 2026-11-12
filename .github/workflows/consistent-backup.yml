@@ -2,13 +2,13 @@ name: Согласованное резервное копирование и PI
 on:
   push:
     paths:
-      - 'scripts/operations/consistent_backup_0518.py'
-      - 'scripts/operations/test_consistent_backup_0518.py'
-      - 'scripts/operations/dr_03512.py'
-      - 'scripts/operations/multi_host_0512.py'
-      - 'scripts/operations/nn1_compat_0516.py'
+      - 'scripts/operations/consistent_backup.py'
+      - 'scripts/operations/test_consistent_backup.py'
+      - 'scripts/operations/dr.py'
+      - 'scripts/operations/multi_host.py'
+      - 'scripts/operations/nn1_compat.py'
       - 'docs/deployment/consistent-backup-pitr.md'
-      - '.github/workflows/consistent-backup-0518.yml'
+      - '.github/workflows/consistent-backup.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -26,10 +26,10 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest -v \
-            scripts/operations/test_consistent_backup_0518.py \
-            scripts/operations/test_dr_03512.py \
-            scripts/operations/test_standard_backup_0453.py \
-            scripts/operations/test_multi_host_0512.py
+            scripts/operations/test_consistent_backup.py \
+            scripts/operations/test_dr.py \
+            scripts/operations/test_standard_backup.py \
+            scripts/operations/test_multi_host.py
       - uses: actions/setup-go@v6
         with:
           go-version-file: cli/go.mod

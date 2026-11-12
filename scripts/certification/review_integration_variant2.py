@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Приёмка выполненных кроссплатформенных проверок выпуска Launcher с блокировкой при неопределённости.
 
-Свидетельства создаются run_integration_0310.py и собираются из CI-заданий. Успех не доказывает
+Свидетельства создаются run_integration_variant2.py и собираются из CI-заданий. Успех не доказывает
 полный паритет M01–M19 или настоящего Minecraft.
 """
 
@@ -10,7 +10,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
-from run_integration_0310 import CASES
+from run_integration_variant2 import CASES
 
 COMMON = {
     "java-sdk",

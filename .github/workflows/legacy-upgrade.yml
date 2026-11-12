@@ -2,11 +2,11 @@ name: Обновление старых версий Launcher 0.47.6
 on:
   push:
     paths:
-      - 'scripts/operations/legacy_upgrade_0476.py'
-      - 'scripts/operations/test_legacy_upgrade_0476.py'
-      - 'scripts/operations/component_upgrade_0458.py'
+      - 'scripts/operations/legacy_upgrade.py'
+      - 'scripts/operations/test_legacy_upgrade.py'
+      - 'scripts/operations/component_upgrade.py'
       - 'docs/releases/0.47.6-legacy-upgrades.md'
-      - '.github/workflows/legacy-upgrade-0476.yml'
+      - '.github/workflows/legacy-upgrade.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -23,7 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest \
-            scripts/operations/test_legacy_upgrade_0476.py \
-            scripts/operations/test_component_upgrade_0458.py -v
-          python3 -m py_compile scripts/operations/legacy_upgrade_0476.py scripts/operations/component_upgrade_0458.py
+            scripts/operations/test_legacy_upgrade.py \
+            scripts/operations/test_component_upgrade.py -v
+          python3 -m py_compile scripts/operations/legacy_upgrade.py scripts/operations/component_upgrade.py
           python3 scripts/version/manage.py check

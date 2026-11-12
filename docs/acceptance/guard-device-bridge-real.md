@@ -2,13 +2,13 @@
 
 ## Фактически выполняемые проверки
 
-`guard_shadow_05012.go` в API теперь записывает действительную `Server.Version` запущенного сервера вместо устаревшей `0.50.12`. Настоящий журнал, создаваемый Go и связанный цепочкой HMAC, читается скриптом `adversarial_pilot_05012.py`: изменение или повторное воспроизведение делают его недействительным. Имена игроков и токены сеансов не записываются. Одна некорректная версия либо повторно использованный журнал от другого выпуска приводят к отказу. Существующие проверки подписанной и отозванной привязки Guard не обходятся.
+`guard_shadow.go` в API теперь записывает действительную `Server.Version` запущенного сервера вместо устаревшей `0.50.12`. Настоящий журнал, создаваемый Go и связанный цепочкой HMAC, читается скриптом `adversarial_pilot.py`: изменение или повторное воспроизведение делают его недействительным. Имена игроков и токены сеансов не записываются. Одна некорректная версия либо повторно использованный журнал от другого выпуска приводят к отказу. Существующие проверки подписанной и отозванной привязки Guard не обходятся.
 
-Промышленный вспомогательный процесс Vanilla теперь **обязан получить один успешный подписанный сигнал активности Backend до публикации `server.ready`**. `scripts/acceptance/vanilla_sidecar_live_0529.py` активно подключается к **работающему** выделенному серверу Minecraft 1.21.1 по локальному статусному сокету и RCON, проверяет фактический PID JVM и вспомогательного процесса и точный хеш JAR, анализирует исходные журналы Vanilla и измеряет продвижение игровых тактов. Пароль RCON читается **только** из `LAUNCHER_VANILLA_RCON_PASSWORD` и никогда не попадает в результат. Запускайте на узле Linux с `/proc`, предварительно развёрнутым подписанным промышленным sidecar и закрытым портом RCON. Автономный Java-симулятор не принимается за реальный сервер.
+Промышленный вспомогательный процесс Vanilla теперь **обязан получить один успешный подписанный сигнал активности Backend до публикации `server.ready`**. `scripts/acceptance/vanilla_sidecar_live.py` активно подключается к **работающему** выделенному серверу Minecraft 1.21.1 по локальному статусному сокету и RCON, проверяет фактический PID JVM и вспомогательного процесса и точный хеш JAR, анализирует исходные журналы Vanilla и измеряет продвижение игровых тактов. Пароль RCON читается **только** из `LAUNCHER_VANILLA_RCON_PASSWORD` и никогда не попадает в результат. Запускайте на узле Linux с `/proc`, предварительно развёрнутым подписанным промышленным sidecar и закрытым портом RCON. Автономный Java-симулятор не принимается за реальный сервер.
 
 У 14 идентификаторов целевых платформ разные заявленные возможности:
 
-- **10 сквозных проверок среды выполнения:** Velocity, BungeeCord, Waterfall, Spigot, Paper, Purpur, Folia, Fabric, Forge, NeoForge. `serverbridge/live_matrix_04113.py` повторно проверяет оригинальный процесс Docker каждого сервера, точный развёрнутый JAR, подписанный сигнал активности, действительное разрешение и последующий отзыв сетевого доступа, серверные журналы и подключение клиента Paper.
+- **10 сквозных проверок среды выполнения:** Velocity, BungeeCord, Waterfall, Spigot, Paper, Purpur, Folia, Fabric, Forge, NeoForge. `serverbridge/live_matrix.py` повторно проверяет оригинальный процесс Docker каждого сервера, точный развёрнутый JAR, подписанный сигнал активности, действительное разрешение и последующий отзыв сетевого доступа, серверные журналы и подключение клиента Paper.
 - **Три цели совместимости сборки:** Bukkit, Quilt, Sponge. Производственные JAR проверяет `serverbridge/certify_release.py` (набор из 14 JAR и исполняемый механизм проверки возможностей адаптеров). **Это не означает сертификацию реального исполнения этих трёх целей.** Для заявления «14/14 работают вживую» нужны нативные сквозные свидетельства работы исходных проектов Bukkit/Quilt/Sponge; этот этап не утверждает, что они получены.
 - **Один вспомогательный процесс с RCON и E2E:** Vanilla с настоящим статусным сокетом, авторизованным RCON, процессом Java, стартовым рукопожатием и работающим сервером с игровыми тактами.
 
@@ -17,11 +17,11 @@
 ## Локальный запуск
 
 ```bash
-python3 -m unittest discover -s scripts/acceptance -p 'test_guard_device_bridge_real_0529.py' -v
-python3 -m unittest discover -s scripts/acceptance -p 'test_guard_shadow_crosslang_0529.py' -v
-bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
-python3 scripts/guard_ci/test_adversarial_pilot_05012.py
-python3 scripts/acceptance/guard_device_bridge_real_0529.py local \
+python3 -m unittest discover -s scripts/acceptance -p 'test_guard_device_bridge_real.py' -v
+python3 -m unittest discover -s scripts/acceptance -p 'test_guard_shadow_crosslang.py' -v
+bash e2e/scripts/run-serverbridge-adapter-capabilities.sh
+python3 scripts/guard_ci/test_adversarial_pilot.py
+python3 scripts/acceptance/guard_device_bridge_real.py local \
   --only-suite loader-transformations --output /absolute/private/0529-loader-only.json
 ```
 
@@ -36,7 +36,7 @@ python3 scripts/acceptance/guard_device_bridge_real_0529.py local \
 ```bash
 export LAUNCHER_VANILLA_RCON_PASSWORD="$(cat /secure/rcon-password)"
 umask 077
-python3 scripts/acceptance/guard_device_bridge_real_0529.py live \
+python3 scripts/acceptance/guard_device_bridge_real.py live \
   --config /etc/launcher/acceptance/guard-device-bridge-0529.json \
   --output /absolute/new-private/guard-device-bridge-result.json
 ```

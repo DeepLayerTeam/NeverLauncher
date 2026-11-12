@@ -9,7 +9,7 @@ import tempfile
 import threading
 import unittest
 
-import alert_receiver_05210 as alert
+import alert_receiver as alert
 
 class ReceiverTests(unittest.TestCase):
     def setUp(self):

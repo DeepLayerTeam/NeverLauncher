@@ -230,7 +230,7 @@ def confirm_local_files(manifest, root, paths, should_exist):
 def run_real_game(binary, manifest_file, pinned_key, root, preset, java, server, report):
     # Вызывает поставляемый нативный Runtime, настоящий локальный совместимый Minecraft-сервер и JVM.
     # Никакого имитированного клиентского процесса или вымышленной успешной квитанции.
-    from staged_matching_0344 import JOIN, player_online, parse_gametime, CRASH
+    from staged_matching import JOIN, player_online, parse_gametime, CRASH
     username = 'NL_Cert_Client'
     server.prepare().start(timeout=200)
     launched = False
@@ -416,7 +416,7 @@ def execute(args, report):
         # Докажите НАСТОЯЩИЙ вход клиента и игрока по этому опубликованному манифесту на совпадающий
         # сервер vanilla или с модами; одного успешного завершения недостаточно.
         sys.path.insert(0, str(ROOT / 'e2e' / 'scripts'))
-        from staged_matching_0344 import MatchingServer
+        from staged_matching import MatchingServer
         game = manifest.get('minecraft', {})
         mc, loader, loader_version = game.get('version'), game.get('loader'), game.get('loaderVersion', '')
         need(mc and loader in ('vanilla', 'fabric', 'quilt', 'forge', 'neoforge'), 'В манифесте отсутствует реальный идентификатор Minecraft')

@@ -2,13 +2,13 @@ name: Хаос-тестирование нескольких узлов и на�
 on:
   push:
     paths:
-      - 'scripts/operations/multi_host_chaos_05110.py'
-      - 'scripts/operations/test_multi_host_chaos_05110.py'
-      - 'scripts/operations/multi_host_0512.py'
+      - 'scripts/operations/multi_host_chaos.py'
+      - 'scripts/operations/test_multi_host_chaos.py'
+      - 'scripts/operations/multi_host.py'
       - 'deploy/production/docker-compose.observability.yml'
       - 'deploy/production/monitoring/blackbox.yml'
       - 'docs/operations/multi-host-chaos-observability.md'
-      - '.github/workflows/multi-host-chaos-observability-05110.yml'
+      - '.github/workflows/multi-host-chaos-observability.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -27,15 +27,15 @@ jobs:
           set -euo pipefail
           python3 -m pip install 'PyYAML==6.0.3'
           PYTHONPATH=scripts/operations python3 -m unittest -v \
-            scripts/operations/test_multi_host_chaos_05110.py \
-            scripts/operations/test_multi_host_0512.py \
-            scripts/operations/test_dependency_ha_0513.py \
-            scripts/operations/test_cross_host_recovery_0519.py
+            scripts/operations/test_multi_host_chaos.py \
+            scripts/operations/test_multi_host.py \
+            scripts/operations/test_dependency_ha.py \
+            scripts/operations/test_cross_host_recovery.py
       - name: Проверить Python, метаданные версий, Prometheus и конфигурацию blackbox
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/operations/multi_host_chaos_05110.py
+          python3 -m py_compile scripts/operations/multi_host_chaos.py
           python3 scripts/version/manage.py check
           python3 - <<'PY'
           import yaml
@@ -47,7 +47,7 @@ jobs:
           assert any('LAUNCHER_PROMETHEUS_ALERT_RULES' in str(v) for v in d['services']['prometheus']['volumes'])
           PY
           mkdir -p "$RUNNER_TEMP/chaos-monitor"
-          python3 scripts/operations/multi_host_chaos_05110.py monitor-config \
+          python3 scripts/operations/multi_host_chaos.py monitor-config \
             --node-url a=https://node-a.example.org/ready \
             --node-url b=https://node-b.example.org/ready \
             --edge-url https://launcher.example.org/ready \

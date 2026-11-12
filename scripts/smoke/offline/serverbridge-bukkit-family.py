@@ -18,8 +18,8 @@ def require(text: str, needles: list[str], label: str) -> None:
         raise SystemExit(f"{label}: отсутствует {missing}")
 
 
-api_migration = read("services/api/internal/dbmigrate/sql/0024_bukkit_family_0144.sql")
-cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0024_bukkit_family_0144.sql")
+api_migration = read("services/api/internal/dbmigrate/sql/0024_bukkit_family.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0024_bukkit_family.sql")
 if api_migration != cli_migration:
     raise SystemExit("Миграции семейства Bukkit API/CLI 0.14.4 отличаются")
 require(
@@ -138,7 +138,7 @@ if "folia-supported: true" not in read(
     raise SystemExit("В plugin.yml для Folia необходимо явно задать folia-supported: true")
 
 backend = read("services/api/internal/httpapi/server_bridge.go")
-integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
+integrity = read("services/api/internal/httpapi/serverbridge_integrity.go")
 manifest = read("services/api/internal/httpapi/bridge_plugins.go")
 require(
     backend,
@@ -222,7 +222,7 @@ require(
     "Перечень значений семейства Bukkit в OpenAPI",
 )
 
-tests = read("services/api/internal/httpapi/serverbridge_bukkit_family_0144_test.go")
+tests = read("services/api/internal/httpapi/serverbridge_bukkit_family_test.go")
 require(
     tests,
     [
@@ -405,7 +405,7 @@ ci = read(".github/workflows/ci.yml")
 for text, label in ((preflight, "preflight"), (ci, "CI")):
     require(
         text,
-        ["serverbridge-bukkit-family-0144.py", "run-bukkit-family-migration-e2e.sh"],
+        ["serverbridge-bukkit-family.py", "run-bukkit-family-migration-e2e.sh"],
         f"0.14.4 {label} wiring",
     )
 require(

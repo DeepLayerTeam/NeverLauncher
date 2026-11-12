@@ -2,13 +2,13 @@ name: Windows TPM — аттестация ключа 0.31.3
 on:
   push:
     paths:
-      - 'apps/desktop/src-tauri/src/tpm_wire_0313.rs'
-      - 'apps/desktop/src-tauri/src/tpm_windows_0313.rs'
+      - 'apps/desktop/src-tauri/src/tpm_wire.rs'
+      - 'apps/desktop/src-tauri/src/tpm_windows.rs'
       - 'apps/desktop/src-tauri/src/device_keys.rs'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src-tauri/Cargo.toml'
       - 'services/api/internal/attestverify/**'
-      - '.github/workflows/windows-tpm-key-attestation-0313.yml'
+      - '.github/workflows/windows-tpm-key-attestation.yml'
   pull_request:
   workflow_dispatch:
 jobs:

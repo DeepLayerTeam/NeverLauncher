@@ -10,9 +10,9 @@ import (
 
 // CurrentMatrixPath — исполняемая опись доказательств после 0.30.10. Исторический
 // MatrixPath остаётся неизменным для регрессионной проверки базы.
-const CurrentMatrixPath = "compatibility/gravit/module-parity-0310.json"
-const PreviousMatrixPath03012 = "compatibility/gravit/module-parity-03012.json"
-const PreviousMatrixPath03011 = "compatibility/gravit/module-parity-03011.json"
+const CurrentMatrixPath = "compatibility/gravit/module-parity_variant4.json"
+const PreviousMatrixPath03012 = "compatibility/gravit/module-parity_variant3.json"
+const PreviousMatrixPath03011 = "compatibility/gravit/module-parity_variant2.json"
 
 func LoadCurrentMatrix(root string) (Matrix, error) {
 	var m Matrix
@@ -126,7 +126,7 @@ func latestAuditVersionAllowed(version string) bool {
 
 // LatestMatrixPath04211 проверяет те же 19 модулей по ТЕКУЩИМ путям исходников. Наличие локального кода и
 // тестов доказывает реализацию, но не сертифицирует совместимость с первоисточником.
-const LatestMatrixPath04211 = "compatibility/gravit/module-parity-04211.json"
+const LatestMatrixPath04211 = "compatibility/gravit/module-parity_variant5.json"
 
 func LoadLatestMatrix04211(root string) (Matrix, error) {
 	var m Matrix

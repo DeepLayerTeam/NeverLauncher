@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 const root=new URL('../../../',import.meta.url);
 const read=(name)=>readFileSync(new URL(name,root),'utf8');
 const conf=JSON.parse(read('apps/desktop/src-tauri/tauri.conf.json'));
-const capability=JSON.parse(read('apps/desktop/src-tauri/capabilities/desktop-main-0356.json'));
+const capability=JSON.parse(read('apps/desktop/src-tauri/capabilities/desktop-main.json'));
 test('Производственная CSP запрещает сокеты разработки и произвольные нативные источники',()=>{
  const csp=conf.app.security.csp;
  for(const directive of ["script-src 'self'", "connect-src 'self' ipc: http://ipc.localhost https:","object-src 'none'","worker-src 'none'","form-action 'none'","frame-ancestors 'none'"])
@@ -23,7 +23,7 @@ test('Нативное открытие путей ограничено ката
  assert.match(rust,/async fn open_external_https_0356/);
  assert.match(rust,/url\.scheme\(\) != "https"/);
  assert.match(rust,/requested != safe/);
- const component=read('apps/desktop/src/extensions_0209.tsx');
+ const component=read('apps/desktop/src/extensions.tsx');
  assert.match(component,/sandbox="allow-scripts"/);
  assert.doesNotMatch(component,/sandbox="allow-scripts allow-same-origin"/);
  assert.match(component,/bridge\.authorize/);

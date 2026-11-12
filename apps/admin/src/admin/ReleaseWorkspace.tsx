@@ -18,7 +18,7 @@ import {
   type OwnerCheck,
   type ChannelHead,
   openStagedRollback,
-} from "./owner-lifecycle-03513.ts";
+} from "./owner-lifecycle.ts";
 import { auditHref, recoveryAdvice } from "./lifecycle.ts";
 import {
   ReleaseApi,
@@ -40,7 +40,7 @@ import { channelHistory0386 } from "./release-history-0386";
 import {
   durableOwnerKey,
   findOriginalOwnerJob,
-} from "./owner-recovery-0388.ts";
+} from "./owner-recovery.ts";
 
 type Step = "project" | "profile" | "build" | "verify" | "channel";
 const steps: Array<{ id: Step; title: string }> = [

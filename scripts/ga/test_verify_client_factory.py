@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from verify_client_factory_0280 import verify
+from verify_client_factory import verify
 
 
 def dump(path, data):

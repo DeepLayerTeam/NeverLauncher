@@ -117,7 +117,7 @@ require(
 preflight = read("scripts/release/preflight.sh")
 require(
     preflight,
-    ["guard-ci-release-certification-0139.py", "scripts/guard_ci/test_matrix.py"],
+    ["guard-ci-release-certification.py", "scripts/guard_ci/test_matrix.py"],
     "предварительная сертификация Guard",
 )
 

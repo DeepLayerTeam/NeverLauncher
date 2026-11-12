@@ -10,7 +10,7 @@ on:
       - 'cli/**'
       - 'prestarter/**'
       - 'apps/desktop/**'
-      - '.github/workflows/module-parity-0301.yml'
+      - '.github/workflows/module-parity.yml'
   pull_request:
     paths:
       - 'VERSION'
@@ -21,7 +21,7 @@ on:
       - 'cli/**'
       - 'prestarter/**'
       - 'apps/desktop/**'
-      - '.github/workflows/module-parity-0301.yml'
+      - '.github/workflows/module-parity.yml'
   workflow_dispatch:
 permissions:
   contents: read

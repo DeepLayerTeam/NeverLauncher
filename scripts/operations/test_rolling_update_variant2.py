@@ -14,10 +14,10 @@ import types
 import unittest
 from unittest.mock import patch
 
-import rolling_update_0520 as ru
-import nn1_compat_0516 as nn
-import multi_host_0512 as multi
-from test_nn1_compat_0516 import report as live_report
+import rolling_update_variant2 as ru
+import nn1_compat as nn
+import multi_host as multi
+from test_nn1_compat import report as live_report
 
 A = "registry.example/launcher/api@sha256:" + "a" * 64
 B = "registry.example/launcher/api@sha256:" + "b" * 64
@@ -216,13 +216,13 @@ class RollingTest(unittest.TestCase):
             self.assertIn("--allow-update", argv[-1])
             return json.dumps({"schema": ru.SCHEMA, "ready": True, "project": "launcher"})
         with patch.object(multi, "run", side_effect=fake_run):
-            ru.remote("operator@node-a", "/opt/launcher/scripts/operations/rolling_update_0520.py",
+            ru.remote("operator@node-a", "/opt/launcher/scripts/operations/rolling_update_variant2.py",
                       "/opt/launcher/deploy/production", "launcher", "local-rollback")
 
     def test_remote_rejects_uncertain_response_and_does_not_claim_success(self):
         with patch.object(multi, "run", return_value="not-json"):
             with self.assertRaisesRegex(ru.RollingError, "некорректный JSON"):
-                ru.remote("user@node-a", "/opt/launcher/scripts/operations/rolling_update_0520.py",
+                ru.remote("user@node-a", "/opt/launcher/scripts/operations/rolling_update_variant2.py",
                           "/opt/launcher/deploy/production", "launcher", "local-apply")
 
     def test_edge_monitor_reports_real_failures(self):
@@ -253,8 +253,8 @@ class ClusterControllerTest(unittest.TestCase):
             node=["alpha=operator@alpha", "beta=operator@beta"],
             edge_url="https://edge.example", pg_dsn_file=Path("/tmp/pg-secret"),
             project="launcher", directory="/opt/launcher/deploy/production",
-            remote_script="/opt/launcher/scripts/operations/multi_host_0512.py",
-            rolling_script="/opt/launcher/scripts/operations/rolling_update_0520.py")
+            remote_script="/opt/launcher/scripts/operations/multi_host.py",
+            rolling_script="/opt/launcher/scripts/operations/rolling_update_variant2.py")
 
     def remote_call(self, target, script, directory, project, mode, **kwargs):
         name = target.split("@", 1)[1]

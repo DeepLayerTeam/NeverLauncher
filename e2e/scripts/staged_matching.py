@@ -24,7 +24,7 @@ import tempfile
 import time
 import zipfile
 
-from staged_readiness_0343 import command, find_window, log_health
+from staged_readiness import command, find_window, log_health
 
 BOOT_VERSION = re.compile(r"(?im)Starting minecraft server version\s+([^\s]+)")
 BOOT_READY = re.compile(r'(?im)\bDone \([\d.,]+s\)! For help, type ["\x27]?help')
@@ -408,7 +408,7 @@ class MatchingServer:
             else [self.java, "-Xms256M", "-Xmx1536M", "-jar", self.entry, "nogui"]
         )
         self.log_stream = open(self.log_file, "xb")
-        from process_group_03410 import group_flags
+        from process_group import group_flags
 
         self.process = subprocess.Popen(
             command_line,
@@ -466,7 +466,7 @@ class MatchingServer:
         if self.process:
             if self.process.poll() is None:
                 try:
-                    from process_group_03410 import stop_tree
+                    from process_group import stop_tree
 
                     stop_tree(self.process)
                 except ProcessLookupError:
@@ -474,7 +474,7 @@ class MatchingServer:
                 try:
                     self.process.wait(timeout=10)
                 except subprocess.TimeoutExpired:
-                    from process_group_03410 import kill_tree
+                    from process_group import kill_tree
 
                     kill_tree(self.process)
                     self.process.wait(timeout=10)
@@ -518,7 +518,7 @@ class GameplayObserver:
         path = self.output / name
         path.unlink(missing_ok=True)
         if sys.platform in ("win32", "darwin"):
-            from native_window_03410 import screenshot_world
+            from native_window import screenshot_world
 
             return screenshot_world(wid, path)
         command(["scrot", "--window", wid, "--silent", str(path)], 10)
@@ -599,7 +599,7 @@ class GameplayObserver:
                 )
                 self.first_frame = self.screenshot(wid, "world-before.png")
                 if sys.platform in ("win32", "darwin"):
-                    from native_window_03410 import move_forward
+                    from native_window import move_forward
 
                     move_forward(wid, 2)
                 else:
@@ -639,7 +639,7 @@ class GameplayObserver:
             subprocess.TimeoutExpired,
             ConnectionError,
         ) as exc:
-            from native_window_03410 import GUIUnavailable
+            from native_window import GUIUnavailable
 
             if isinstance(exc, GUIUnavailable):
                 self.blocked = str(exc)[:240]

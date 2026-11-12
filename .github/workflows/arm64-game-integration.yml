@@ -5,16 +5,19 @@ on:
       - 'cli/**'
       - 'runtime/**'
       - 'apps/desktop/**'
-      - '.github/workflows/arm64-game-integration-04313.yml'
+      - '.github/workflows/arm64-game-integration.yml'
   push:
     paths:
       - 'cli/**'
       - 'runtime/**'
       - 'apps/desktop/**'
-      - '.github/workflows/arm64-game-integration-04313.yml'
+      - '.github/workflows/arm64-game-integration.yml'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   native-arm64:
     strategy:

@@ -1,5 +1,5 @@
 # Мониторинг только для оператора. Все порты остаются в частной сети лаунчера. Создайте
-# alertmanager.json командой scripts/operations/observability_0459.py configure.
+# alertmanager.json командой scripts/operations/observability.py configure.
 services:
   monitor-volume-init:
     image: alpine:3.20

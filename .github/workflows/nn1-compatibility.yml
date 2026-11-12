@@ -3,11 +3,11 @@ on:
   push:
     paths:
       - 'services/api/internal/dbmigrate/**'
-      - 'scripts/operations/nn1_compat_0516.py'
-      - 'scripts/operations/test_nn1_compat_0516.py'
-      - 'scripts/operations/ha_inventory_0511.py'
-      - 'scripts/operations/multi_host_0512.py'
-      - '.github/workflows/nn1-compatibility-0516.yml'
+      - 'scripts/operations/nn1_compat.py'
+      - 'scripts/operations/test_nn1_compat.py'
+      - 'scripts/operations/ha_inventory.py'
+      - 'scripts/operations/multi_host.py'
+      - '.github/workflows/nn1-compatibility.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -25,9 +25,9 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest \
-            scripts/operations/test_nn1_compat_0516.py \
-            scripts/operations/test_multi_host_0512.py \
-            scripts/operations/test_ha_inventory_0511.py -v
+            scripts/operations/test_nn1_compat.py \
+            scripts/operations/test_multi_host.py \
+            scripts/operations/test_ha_inventory.py -v
       - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod

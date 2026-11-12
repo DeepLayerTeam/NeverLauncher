@@ -4,11 +4,11 @@ on:
     paths:
       - 'tools/validation-attestor/**'
       - 'e2e/scripts/**'
-      - 'services/api/internal/httpapi/validation_attestation_0345*'
-      - 'services/api/internal/httpapi/validation_component_matrix_0348*'
+      - 'services/api/internal/httpapi/validation_attestation*'
+      - 'services/api/internal/httpapi/validation_component_matrix*'
       - 'runtime/runtime/src/bin/runtime.rs'
       - 'runtime/runtime/src/transactional_release.rs'
-      - 'tools/validation-attestor/official_chain_0347.py'
+      - 'tools/validation-attestor/official_chain.py'
       - 'services/api/internal/httpapi/validation_*0346*'
       - 'services/api/internal/repository/validation_*0346*'
       - 'services/api/internal/dbmigrate/sql/0104*'
@@ -16,7 +16,7 @@ on:
       - 'services/api/internal/httpapi/*03412*'
       - 'services/api/internal/repository/*03412*'
       - 'cli/internal/dbmigrate/catalog.zip'
-      - '.github/workflows/validation-attestor-0345.yml'
+      - '.github/workflows/validation-attestor.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,15 +31,15 @@ jobs:
         run: |
           python3 -m pip install --break-system-packages 'cryptography>=44,<47'
           python3 tools/validation-attestor/test_attestor.py
-          python3 tools/validation-attestor/test_diagnostics_03412.py
-          python3 tools/validation-attestor/test_component_matrix_0348.py
-          python3 tools/validation-attestor/test_official_chain_0347.py
-          python3 e2e/scripts/test_staged_auth_0347.py
-          python3 e2e/scripts/test_run_staged_package_0342.py
-          python3 e2e/scripts/test_staged_negative_04314.py
-          python3 e2e/scripts/test_staged_readiness_0343.py
-          python3 e2e/scripts/test_staged_matching_0344.py
-          python3 e2e/scripts/test_staged_lifecycle_0349.py
+          python3 tools/validation-attestor/test_diagnostics.py
+          python3 tools/validation-attestor/test_component_matrix.py
+          python3 tools/validation-attestor/test_official_chain.py
+          python3 e2e/scripts/test_staged_auth.py
+          python3 e2e/scripts/test_run_staged_package.py
+          python3 e2e/scripts/test_staged_negative.py
+          python3 e2e/scripts/test_staged_readiness.py
+          python3 e2e/scripts/test_staged_matching.py
+          python3 e2e/scripts/test_staged_lifecycle.py
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
@@ -47,7 +47,7 @@ jobs:
         run: |
           cd cli && go build -o "$RUNNER_TEMP/launcher" ./cmd/launcher
           cd ..
-          NL349_CLI="$RUNNER_TEMP/launcher" python3 e2e/scripts/test_staged_lifecycle_0349.py
+          NL349_CLI="$RUNNER_TEMP/launcher" python3 e2e/scripts/test_staged_lifecycle.py
       - name: Проверить автономный импорт Runtime, контроль хеш-сумм и откат файлов
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib offline_staged_adoption
       - uses: actions/setup-go@v5

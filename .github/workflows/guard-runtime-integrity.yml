@@ -3,11 +3,14 @@ on:
   push:
     paths:
       - 'runtime/runtime/**'
-      - '.github/workflows/guard-runtime-integrity-0437.yml'
+      - '.github/workflows/guard-runtime-integrity.yml'
   pull_request:
     paths:
       - 'runtime/runtime/**'
-      - '.github/workflows/guard-runtime-integrity-0437.yml'
+      - '.github/workflows/guard-runtime-integrity.yml'
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   guard-runtime:
     strategy:
@@ -27,4 +30,4 @@ jobs:
         run: python3 -m pip install 'cryptography>=42,<47'
       - name: "Проверить реальную подпись пакетов Linux и доставку архивов tar"
         if: runner.os == 'Linux'
-        run: python3 scripts/release/test_guard_manifest_sign_0437.py -q
+        run: python3 scripts/release/test_guard_manifest_sign.py -q

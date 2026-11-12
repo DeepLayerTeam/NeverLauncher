@@ -6,10 +6,10 @@ on:
       - 'sdk/java/core/**'
       - 'sdk/java/gravit-compat/**'
       - 'examples/extensions/gravit-compat/**'
-      - 'compatibility/gravit/module-parity-04211.json'
+      - 'compatibility/gravit/module-parity_variant5.json'
       - 'cli/internal/moduleparity/**'
-      - 'cli/cmd/launcher/module_parity_0301.go'
-      - '.github/workflows/gravit-source-port-04211.yml'
+      - 'cli/cmd/launcher/module_parity.go'
+      - '.github/workflows/gravit-source-port.yml'
   pull_request:
   workflow_dispatch:
 permissions:

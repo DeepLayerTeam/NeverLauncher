@@ -4,25 +4,28 @@ on:
     paths:
       - 'cli/internal/discordrpc/**'
       - 'cli/internal/lanmdns/**'
-      - 'cli/cmd/launcher/lan_discord_0308*'
+      - 'cli/cmd/launcher/lan_discord*'
       - 'cli/cmd/launcher/main.go'
-      - 'apps/desktop/src-tauri/src/discord_presence_0308.rs'
+      - 'apps/desktop/src-tauri/src/discord_presence.rs'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
-      - '.github/workflows/discord-lan-0308.yml'
+      - '.github/workflows/discord-lan.yml'
   pull_request:
     paths:
       - 'cli/internal/discordrpc/**'
       - 'cli/internal/lanmdns/**'
-      - 'cli/cmd/launcher/lan_discord_0308*'
+      - 'cli/cmd/launcher/lan_discord*'
       - 'cli/cmd/launcher/main.go'
-      - 'apps/desktop/src-tauri/src/discord_presence_0308.rs'
+      - 'apps/desktop/src-tauri/src/discord_presence.rs'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
-      - '.github/workflows/discord-lan-0308.yml'
+      - '.github/workflows/discord-lan.yml'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   cli-integration:
     strategy:

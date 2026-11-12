@@ -76,10 +76,10 @@ func TestSignedExternalModulePolicy05010(t *testing.T) {
 	if err := launch(); err != nil {
 		t.Fatalf("подписанное наложение отклонено: %v", err)
 	}
-	if err := os.WriteFile(path, []byte("changed"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("Обнаружено изменение"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := launch(); err == nil || !strings.Contains(err.Error(), "changed") {
+	if err := launch(); err == nil || !strings.Contains(err.Error(), "Обнаружено изменение") {
 		t.Fatalf("разрешено изменённое наложение: %v", err)
 	}
 	if err := os.WriteFile(path, []byte("an exact external module"), 0600); err != nil {
@@ -90,7 +90,7 @@ func TestSignedExternalModulePolicy05010(t *testing.T) {
 	if err := guardCompatInstall0502(root, signCompat0502(t, policy, private), key); err != nil {
 		t.Fatal(err)
 	}
-	if err := launch(); err == nil || !strings.Contains(err.Error(), "revoked") {
+	if err := launch(); err == nil || !strings.Contains(err.Error(), "отозван") {
 		t.Fatalf("разрешено отозванное наложение: %v", err)
 	}
 }

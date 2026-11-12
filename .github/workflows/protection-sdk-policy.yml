@@ -7,7 +7,7 @@ on:
       - 'services/api/internal/repository/**'
       - 'services/api/internal/dbmigrate/**'
       - 'cli/internal/dbmigrate/**'
-      - '.github/workflows/protection-sdk-policy-0298.yml'
+      - '.github/workflows/protection-sdk-policy.yml'
   pull_request:
     paths:
       - 'services/api/pkg/protection/**'
@@ -15,7 +15,7 @@ on:
       - 'services/api/internal/repository/**'
       - 'services/api/internal/dbmigrate/**'
       - 'cli/internal/dbmigrate/**'
-      - '.github/workflows/protection-sdk-policy-0298.yml'
+      - '.github/workflows/protection-sdk-policy.yml'
 permissions:
   contents: read
 jobs:

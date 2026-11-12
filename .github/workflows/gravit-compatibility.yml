@@ -3,14 +3,14 @@ on:
   push:
     paths:
       - 'services/api/internal/gravitdetector/**'
-      - 'services/api/internal/repository/migration_compat_0332*'
-      - 'services/api/internal/httpapi/migration_compat_0332*'
+      - 'services/api/internal/repository/migration_compat*'
+      - 'services/api/internal/httpapi/migration_compat*'
       - 'services/api/internal/httpapi/handler.go'
       - 'services/api/internal/dbmigrate/sql/0090_*'
-      - 'cli/cmd/launcher/migration_workflow_0331.go'
-      - 'cli/cmd/launcher/migration_compat_0332_test.go'
-      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
-      - '.github/workflows/gravit-compatibility-0332.yml'
+      - 'cli/cmd/launcher/migration_workflow.go'
+      - 'cli/cmd/launcher/migration_compat_test.go'
+      - 'apps/admin/src/admin/MigrationCenter.tsx'
+      - '.github/workflows/gravit-compatibility.yml'
   pull_request:
   workflow_dispatch:
 permissions:

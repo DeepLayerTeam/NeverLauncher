@@ -11,7 +11,7 @@ import tempfile
 import time
 import unittest
 
-FILE = Path(__file__).with_name('adversarial_pilot_05012.py')
+FILE = Path(__file__).with_name('adversarial_pilot.py')
 spec = importlib.util.spec_from_file_location('pilot05012', FILE)
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

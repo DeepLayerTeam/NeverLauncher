@@ -5,7 +5,7 @@ on:
       - 'services/api/internal/deployment/**'
       - 'services/api/internal/storage/**'
       - 'services/api/cmd/launcher-api/**'
-      - '.github/workflows/standard-network-growth-03212.yml'
+      - '.github/workflows/standard-network-growth.yml'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
   pull_request:

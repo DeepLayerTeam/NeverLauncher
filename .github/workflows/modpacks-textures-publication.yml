@@ -4,20 +4,22 @@ on:
     paths:
       - 'VERSION'
       - 'runtime/runtime/src/**'
-      - 'runtime/runtime/tests/selected_optional_0526.rs'
+      - 'runtime/runtime/tests/selected_optional.rs'
       - 'services/api/internal/httpapi/package_product.go'
-      - 'services/api/internal/httpapi/package_preflight_0526_test.go'
-      - 'scripts/acceptance/*0526.py'
-      - '.github/workflows/modpacks-textures-publication-0526.yml'
+      - 'services/api/internal/httpapi/package_preflight_test.go'
+      - 'scripts/acceptance/modpacks_textures_publication.py'
+      - 'scripts/acceptance/test_modpacks_textures_publication.py'
+      - '.github/workflows/modpacks-textures-publication.yml'
   pull_request:
     paths:
       - 'VERSION'
       - 'runtime/runtime/src/**'
-      - 'runtime/runtime/tests/selected_optional_0526.rs'
+      - 'runtime/runtime/tests/selected_optional.rs'
       - 'services/api/internal/httpapi/package_product.go'
-      - 'services/api/internal/httpapi/package_preflight_0526_test.go'
-      - 'scripts/acceptance/*0526.py'
-      - '.github/workflows/modpacks-textures-publication-0526.yml'
+      - 'services/api/internal/httpapi/package_preflight_test.go'
+      - 'scripts/acceptance/modpacks_textures_publication.py'
+      - 'scripts/acceptance/test_modpacks_textures_publication.py'
+      - '.github/workflows/modpacks-textures-publication.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -36,8 +38,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/version/manage.py check
-          python3 -m unittest discover -s scripts/acceptance -p 'test_modpacks_textures_publication_0526.py' -v
-          python3 -m py_compile scripts/acceptance/modpacks_textures_publication_0526.py
+          python3 -m unittest discover -s scripts/acceptance -p 'test_modpacks_textures_publication.py' -v
+          python3 -m py_compile scripts/acceptance/modpacks_textures_publication.py
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
@@ -46,7 +48,7 @@ jobs:
         working-directory: services/api
         run: |
           set -euo pipefail
-          test -z "$(gofmt -l internal/httpapi/package_product.go internal/httpapi/package_preflight_0526_test.go)"
+          test -z "$(gofmt -l internal/httpapi/package_product.go internal/httpapi/package_preflight_test.go)"
           go build ./cmd/...
           go test -count=1 -timeout=15m ./internal/httpapi \
             -run 'TestPublicationCandidate0526UsesActualUploadedBytesAndGraph|TestCanonicalPackageProductUploadValidatePublish|TestPublishedPackageIsImmutable'
@@ -107,7 +109,7 @@ jobs:
             extra+=(--server-bundle-sha256 "${NL_0526_SERVER_SHA256:-}")
             extra+=(--server-entry "${NL_0526_SERVER_ENTRY:-}")
           fi
-          python3 scripts/acceptance/modpacks_textures_publication_0526.py \
+          python3 scripts/acceptance/modpacks_textures_publication.py \
             --secrets "$NL_0526_SECRETS" --operator-token "$NL_0526_OPERATOR_TOKEN" \
             --runtime "$NL_0526_RUNTIME" --runtime-sha256 "$NL_0526_RUNTIME_SHA256" \
             --cli "$NL_0526_CLI" --cli-sha256 "$NL_0526_CLI_SHA256" \

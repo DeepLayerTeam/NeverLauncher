@@ -16,7 +16,7 @@ def require(rel, tokens):
 
 
 require(
-    "services/api/internal/httpapi/server_bridge_ga_0200.go",
+    "services/api/internal/httpapi/server_bridge_ga.go",
     [
         "ServerBridge 3 GA",
         "ga-frozen",
@@ -30,7 +30,7 @@ require(
     ],
 )
 require(
-    "cli/cmd/launcher/serverbridge_provisioning_0199.go",
+    "cli/cmd/launcher/serverbridge_provisioning.go",
     [
         "migrate-v3",
         "protocol-v3-ga-migration.json",
@@ -81,7 +81,7 @@ require(
     ],
 )
 require(
-    "services/api/internal/dbmigrate/sql/0041_serverbridge3_ga_0200.sql",
+    "services/api/internal/dbmigrate/sql/0041_serverbridge3_ga.sql",
     ["protocol_version=2", "compatibility/deprecation-only", "migrate-v3"],
 )
 require(

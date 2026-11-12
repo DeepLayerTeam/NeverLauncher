@@ -20,8 +20,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/release'))
-from delivery_verify_0462 import verify_bundle, read_archive, EXPECTED
-from staged_accept_0462 import run_verify
+from delivery_verify import verify_bundle, read_archive, EXPECTED
+from staged_accept import run_verify
 
 VERSION = '0.51.0'
 SUPPORTED = ('windows-x64', 'windows-arm64', 'linux-x64', 'linux-arm64', 'darwin-x64', 'darwin-arm64')

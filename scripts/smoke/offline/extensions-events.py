@@ -19,7 +19,7 @@ version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 6), "Требуется VERSION не ниже 0.20.6")
 
 migration = read(
-    "services/api/internal/dbmigrate/sql/0045_extensions_events_hooks_0206.sql"
+    "services/api/internal/dbmigrate/sql/0045_extensions_events_hooks.sql"
 )
 for token in (
     "extension_event_log",
@@ -44,7 +44,7 @@ require(
     "Очередь недоставленных сообщений (DLQ) должна сохраняться после отмены подписки",
 )
 
-bus = read("services/api/internal/eventbus/bus_0206.go")
+bus = read("services/api/internal/eventbus/bus.go")
 for token in (
     '"project.before-save"',
     '"project.saved"',
@@ -67,7 +67,7 @@ for token in (
 ):
     require(token in bus, f"В шине событий отсутствует: {token}")
 
-repo = read("services/api/internal/repository/extension_events_0206.go")
+repo = read("services/api/internal/repository/extension_events.go")
 for token in (
     "FOR UPDATE OF d SKIP LOCKED",
     "pe.ordering_key=e.ordering_key",
@@ -83,7 +83,7 @@ for token in (
 ):
     require(token in repo, f"В репозитории событий отсутствует: {token}")
 
-host = read("services/api/internal/extensionhost/host_0205.go")
+host = read("services/api/internal/extensionhost/host.go")
 for token in (
     "GET /v1/events/subscriptions",
     "POST /v1/events/subscriptions",
@@ -107,7 +107,7 @@ for rel in (
     text = read(rel)
     require("0206" in text, f"{rel} не подключён к обработчикам событий")
 
-bridge = read("services/api/internal/httpapi/server_bridge_events_0194.go")
+bridge = read("services/api/internal/httpapi/server_bridge_events.go")
 require(
     "ServerBridgeReceived" in bridge and "appendEvents0194" in bridge,
     "События ServerBridge не передаются после подтверждённой записи",

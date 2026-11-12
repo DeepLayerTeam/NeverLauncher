@@ -4,11 +4,11 @@
 
 ## SQLite Minimal / переход на PostgreSQL
 
-Оператор выполняет команды существующего `db_upgrade_0457.py`, а не ручной SQL. Он использует реальный мигратор API, модуль службы systemd, полное резервирование, проверку новой схемы и восстановление прежнего состояния при ошибке. Обязательные аргументы и контролируемый сценарий приведены в [Database Upgrade](../releases/0.45.7-database-upgrade.md).
+Оператор выполняет команды существующего `db_upgrade.py`, а не ручной SQL. Он использует реальный мигратор API, модуль службы systemd, полное резервирование, проверку новой схемы и восстановление прежнего состояния при ошибке. Обязательные аргументы и контролируемый сценарий приведены в [Database Upgrade](../releases/0.45.7-database-upgrade.md).
 
 ```sh
-python3 scripts/operations/db_upgrade_0457.py sqlite --help
-python3 scripts/operations/db_upgrade_0457.py postgres --help
+python3 scripts/operations/db_upgrade.py sqlite --help
+python3 scripts/operations/db_upgrade.py postgres --help
 ```
 
 Для PostgreSQL перед запуском требуется остановка писателей, отдельные `--source-env`/`--target-env`, `--snapshot`, точное подтверждение `--project`/`--confirm` и `--maintenance-approved`; запишите проверенную предыдущую версию. Нельзя выполнять миграцию под живыми репликами API и рабочих процессов разных версий.
@@ -16,12 +16,12 @@ python3 scripts/operations/db_upgrade_0457.py postgres --help
 ## API/Admin/CLI/ServerBridge/клиенты/расширения
 
 ```sh
-python3 scripts/operations/component_upgrade_0458.py standard --help
-python3 scripts/operations/component_upgrade_0458.py network-ha --help
-python3 scripts/operations/component_upgrade_0458.py linux-host --help
-python3 scripts/operations/component_upgrade_0458.py rollback-linux-host --help
-python3 scripts/operations/component_upgrade_0458.py client --help
-python3 scripts/operations/component_upgrade_0458.py extensions --help
+python3 scripts/operations/component_upgrade.py standard --help
+python3 scripts/operations/component_upgrade.py network-ha --help
+python3 scripts/operations/component_upgrade.py linux-host --help
+python3 scripts/operations/component_upgrade.py rollback-linux-host --help
+python3 scripts/operations/component_upgrade.py client --help
+python3 scripts/operations/component_upgrade.py extensions --help
 ```
 
 - **Standard API/Admin:** остановить writers; сделать полную Standard копию, собрать образы до простоя, переключить теги, проверить фактический digest контейнеров и `/ready`; при ошибке восстановить образы и согласованную БД.
@@ -34,4 +34,4 @@ python3 scripts/operations/component_upgrade_0458.py extensions --help
 
 ## Условия разрешения трафика после обновления
 
-Проверьте `/ready` реального API, результаты `operator_accept_04513.py live`, вход прежнего владельца, чтение проекта и двоичных объектов, защиту заданий ServerBridge от устаревших исполнителей, выпуск и откат тестовой сборки, загрузку клиента и подключение к Minecraft. Если миграция восстановлена из копии, отдельно сверяйте момент последней подтверждённой записи и возможные потерянные данные. Любое `NOT RUN` остаётся незавершённым критерием приёмки, даже если версия бинарника уже 0.45.14.
+Проверьте `/ready` реального API, результаты `operator_accept.py live`, вход прежнего владельца, чтение проекта и двоичных объектов, защиту заданий ServerBridge от устаревших исполнителей, выпуск и откат тестовой сборки, загрузку клиента и подключение к Minecraft. Если миграция восстановлена из копии, отдельно сверяйте момент последней подтверждённой записи и возможные потерянные данные. Любое `NOT RUN` остаётся незавершённым критерием приёмки, даже если версия бинарника уже 0.45.14.

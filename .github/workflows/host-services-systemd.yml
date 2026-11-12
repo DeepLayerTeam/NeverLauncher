@@ -3,13 +3,16 @@ on:
   push:
     paths:
       - 'cli/**'
-      - 'scripts/test/host-systemd-e2e-02811.py'
-      - '.github/workflows/host-services-systemd-02811.yml'
+      - 'scripts/test/host-systemd-e2e.py'
+      - '.github/workflows/host-services-systemd.yml'
   pull_request:
     paths:
       - 'cli/**'
-      - 'scripts/test/host-systemd-e2e-02811.py'
-      - '.github/workflows/host-services-systemd-02811.yml'
+      - 'scripts/test/host-systemd-e2e.py'
+      - '.github/workflows/host-services-systemd.yml'
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   linux:
     runs-on: ubuntu-latest
@@ -30,7 +33,7 @@ jobs:
           cd cli
           go build -o "$RUNNER_TEMP/nl" ./cmd/launcher
           cd ..
-          python3 scripts/test/host-systemd-e2e-02811.py --cli "$RUNNER_TEMP/nl"
+          python3 scripts/test/host-systemd-e2e.py --cli "$RUNNER_TEMP/nl"
       - name: Статический анализ
         working-directory: cli
         run: go vet ./cmd/launcher

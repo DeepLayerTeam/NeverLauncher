@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import subprocess
-from canonical_zip_0461 import write_zip
+from canonical_zip import write_zip
 from pathlib import Path
 
 TOP_FILES = {

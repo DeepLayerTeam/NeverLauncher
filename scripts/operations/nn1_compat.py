@@ -19,8 +19,8 @@ import subprocess
 import sys
 from urllib.parse import parse_qs, unquote, urlsplit
 
-import ha_inventory_0511 as inventory
-import multi_host_0512 as multi
+import ha_inventory as inventory
+import multi_host as multi
 
 PAIR = frozenset(("0.51.5", "0.51.6"))
 # Зафиксировано под точный каталог миграций PostgreSQL поставленной версии 0.51.5.
@@ -220,7 +220,7 @@ def main(argv=None):
     ap.add_argument("--node", action="append", required=True, help="label=ssh-user@node (повторяемый параметр)")
     ap.add_argument("--directory", default="/opt/launcher/deploy/production")
     ap.add_argument("--project", default="launcher")
-    ap.add_argument("--remote-script", default="/opt/launcher/scripts/operations/multi_host_0512.py")
+    ap.add_argument("--remote-script", default="/opt/launcher/scripts/operations/multi_host.py")
     ap.add_argument("--edge-url", required=True)
     ap.add_argument("--pg-dsn-file", type=Path, required=True, help="Один закрытый URL postgres:// с правами 0600; не передавать секреты в argv")
     ap.add_argument("--require-mixed", action="store_true")

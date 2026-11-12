@@ -18,7 +18,7 @@ python3 "${ROOT_DIR}/scripts/build/embedded_cli_assets.py" --check || exit 2
 # При изменении зафиксированных исходных данных сборки завершайте процесс до изменения релизных файлов.
 # Та же защита выполняется после сборок CI, чтобы выявить изменение файлов фиксации зависимостей.
 if release_from_0462; then
-  python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
+  python3 "${ROOT_DIR}/scripts/release/inputs_guard.py" verify || exit 2
 fi
 OUT_DIR="${2:-${ROOT_DIR}/dist/release-${VERSION}}"
 WORK_DIR="${ROOT_DIR}/dist/.release-${VERSION}"
@@ -114,7 +114,7 @@ if [[ "${VERSION}" == "0.27.0" ]]; then
   }
   OFFICIAL_GA_RECEIPT="$(mktemp)"
   trap '[[ -z "${COMPONENTS_GA_RECEIPT}" ]] || rm -f "${COMPONENTS_GA_RECEIPT}"; [[ -z "${OFFICIAL_GA_RECEIPT}" ]] || rm -f "${OFFICIAL_GA_RECEIPT}"' EXIT
-  python3 "${ROOT_DIR}/scripts/ga/official_minecraft_0270.py" \
+  python3 "${ROOT_DIR}/scripts/ga/official_minecraft.py" \
     --attestations "${OFFICIAL_GA_DIR}" --public-key "${OFFICIAL_GA_PUB}" \
     --commit "${SOURCE_COMMIT}" --output "${OFFICIAL_GA_RECEIPT}"
 fi
@@ -134,7 +134,7 @@ if [[ "${VERSION}" == "0.31.0" ]]; then
     echo "0.31.0 Для подписи финального выпуска требуется чистая рабочая копия" >&2; exit 2;
   }
   SOURCE_COMMIT="${HEAD_COMMIT}"
-  python3 "${ROOT_DIR}/scripts/ga/verify_java_ga_0310.py" \
+  python3 "${ROOT_DIR}/scripts/ga/verify_java_ga.py" \
     --evidence "${LAUNCHER_JAVA_GA_EVIDENCE_DIR}" \
     --revision "${HEAD_COMMIT}" \
     --public-key "${LAUNCHER_JAVA_GA_APPROVAL_PUBLIC_KEY_FILE}" \
@@ -196,7 +196,7 @@ if [[ "${VERSION}" == "0.33.0" ]]; then
   }
   SINGLE_NODE_GA_VERIFIED_DIR="$(mktemp -d)"
   trap 'rm -rf -- "${SINGLE_NODE_GA_VERIFIED_DIR}"' EXIT
-  python3 "${ROOT_DIR}/scripts/ga/single_node_ga_0330.py" \
+  python3 "${ROOT_DIR}/scripts/ga/single_node_ga.py" \
     --evidence-dir "${SINGLE_NODE_GA_DIR}" \
     --public-key "${SINGLE_NODE_GA_PUBLIC_KEY}" \
     --commit "${SOURCE_COMMIT}" \
@@ -228,7 +228,7 @@ if [[ "${GA_RUNTIME_GATE_REQUIRED}" == "1" ]]; then
   SOURCE_COMMIT="${HEAD_COMMIT}"
   GA_RUNTIME_PREFLIGHT_FILE="$(mktemp)"
   trap 'rm -f -- "${GA_RUNTIME_PREFLIGHT_FILE}"' EXIT
-  python3 "${ROOT_DIR}/scripts/ga/runtime_acceptance_0350.py" \
+  python3 "${ROOT_DIR}/scripts/ga/runtime_acceptance.py" \
     --backend "${NL_GA_BACKEND_URL}" --package-id "${NL_GA_PACKAGE_ID}" \
     --source-sha "${SOURCE_COMMIT}" --version "${VERSION}" \
     --output "${GA_RUNTIME_PREFLIGHT_FILE}" || {
@@ -727,7 +727,7 @@ require_file "${RELEASE_CLI}"
 if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
   log "Проверка манифеста и свидетельств управляемой JRE для шести целевых нативных сред Java"
   # DELIVERY_MANIFEST.json будет сформирован release build ниже; до этого проверяем source artifacts через production Go tests/static gate.
-  python3 "${ROOT_DIR}/scripts/smoke/offline/managed-jre-distribution-0155.py"
+  python3 "${ROOT_DIR}/scripts/smoke/offline/managed-jre-distribution.py"
 fi
 
 log "Формирование и проверка действительного пакета Desktop"
@@ -762,7 +762,7 @@ cp "${ROOT_DIR}/artifacts/plugins/SERVERBRIDGE3_CERTIFICATION.json" "${OUT_DIR}/
 # реальные испытания 14 целей.
 if [[ "$(printf '%s\n' '0.42.0' "${VERSION}" | sort -V | head -n1)" == "0.42.0" ]]; then
   log "${VERSION}: проверить точное содержимое финального пакета ServerBridge и полный цикл работы сети"
-  python3 "${ROOT_DIR}/scripts/ga/accept_network_release_0420.py" \
+  python3 "${ROOT_DIR}/scripts/ga/accept_network_release.py" \
     --root "${ROOT_DIR}" --release "${OUT_DIR}" \
     --runtime "${LAUNCHER_NETWORK_LIVE_EVIDENCE_DIR:-${ROOT_DIR}/e2e/runtime}" \
     --source-commit "${SOURCE_COMMIT}" \
@@ -797,11 +797,11 @@ if [[ "$(printf '%s\n' '0.43.0' "${VERSION}" | sort -V | head -n1)" == '0.43.0' 
     "${RELEASE_CLI}" extension verify "${OUT_DIR}/${FILE}" --public-key "${EXT_PUBLIC}"
   done
   cp -- "${EXT_PUBLIC}" "${OUT_DIR}/EXTENSION_PUBLISHER_PUBLIC_KEY_0430.pem"
-  python3 "${ROOT_DIR}/scripts/ga/extension_release_0430.py" \
+  python3 "${ROOT_DIR}/scripts/ga/extension_release.py" \
     --evidence "${EXT_EVIDENCE}" --bundle "${OUT_DIR}" --cli "${RELEASE_CLI}" \
     --publisher-key "${EXT_PUBLIC}" --version "${VERSION}" \
     --commit "${SOURCE_COMMIT}" --run-id "${EXT_RUN}" --run-attempt "${EXT_ATTEMPT}" \
-    --matrix "${ROOT_DIR}/compatibility/gravit/module-parity-04211.json" \
+    --matrix "${ROOT_DIR}/compatibility/gravit/module-parity_variant5.json" \
     --output "${OUT_DIR}/EXTENSION_RELEASE_CERTIFICATION_0430.json"
   # BOM/SHA256SUMS описывают плоский корень релиза. Упакуйте все семь исходных отчётов
   # в один ZIP верхнего уровня, чтобы их точные байты вошли в подписанный BOM.
@@ -839,7 +839,7 @@ if [[ "${VERSION}" == "0.27.0" ]]; then
   [[ -s "${OFFICIAL_GA_RECEIPT}" ]] || { echo "Отсутствует подписанное подтверждение официальной приёмки Minecraft GA" >&2; exit 2; }
   cp "${OFFICIAL_GA_RECEIPT}" "${OUT_DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
   log "Привязка независимой сертификации работающего Minecraft для шести платформ к подписанному манифесту"
-  python3 "${ROOT_DIR}/scripts/ga/verify_official_artifacts_0270.py" \
+  python3 "${ROOT_DIR}/scripts/ga/verify_official_artifacts.py" \
     --bundle "${OUT_DIR}" --receipt "${OUT_DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
 fi
 
@@ -865,7 +865,7 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   # Начиная с 0.43.1 поставляйте независимо подписанные исходные наблюдения для каждой возможности, а не
   # только сводку security: PASS. Публикация повторно проверяет архив.
   if [[ "$(printf '%s\n' '0.43.1' "${VERSION}" | sort -V | head -n1)" == '0.43.1' ]]; then
-    python3 "${ROOT_DIR}/scripts/ga/package_security_0431.py" \
+    python3 "${ROOT_DIR}/scripts/ga/package_security.py" \
       --evidence "${GA_TARGET_EVIDENCE_DIR}" --trusted-key "${GA_TARGET_TRUSTED_KEY}" \
       --version "${VERSION}" --commit "${SOURCE_COMMIT}" \
       --output "${OUT_DIR}/SECURITY_CAPABILITY_EVIDENCE_0431.zip"
@@ -874,7 +874,7 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   # финального пакета, а не манифестов. Артефакт входит в границу подписи SHA256SUMS/Ed25519 и
   # пересчитывается при публикации; без доказательств нельзя заявлять поддержку.
   if [[ "$(printf '%s\n' '0.44.0' "${VERSION}" | sort -V | head -n1)" == '0.44.0' ]]; then
-    python3 "${ROOT_DIR}/scripts/ga/verified_support_0440.py" \
+    python3 "${ROOT_DIR}/scripts/ga/verified_support.py" \
       --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
       --trusted-key "${GA_TARGET_TRUSTED_KEY}" --version "${VERSION}" \
       --commit "${SOURCE_COMMIT}" \
@@ -883,7 +883,7 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   # Начиная с 0.43.15 обязательна полная повторная проверка каждой подписанной проверки,
   # включая журналы запуска игрока. Результат включается в плоский корень подписанного релиза.
   if [[ "$(printf '%s\n' '0.43.15' "${VERSION}" | sort -V | head -n1)" == '0.43.15' ]]; then
-    python3 "${ROOT_DIR}/scripts/ga/package_full_evidence_04315.py" \
+    python3 "${ROOT_DIR}/scripts/ga/package_full_evidence.py" \
       --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
       --trusted-key "${GA_TARGET_TRUSTED_KEY}" --version "${VERSION}" \
       --commit "${SOURCE_COMMIT}" \
@@ -896,7 +896,7 @@ fi
 # не добавляется позже.
 if python3 "${ROOT_DIR}/scripts/release/release_policy.py" requires-rehearsal --version "${VERSION}" | grep -qx '1'; then
   log "Репетиция конечной упаковки и проверка подписанных точных байтов"
-  python3 "${ROOT_DIR}/scripts/release/rehearsal_0365.py" certify \
+  python3 "${ROOT_DIR}/scripts/release/rehearsal.py" certify \
     --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
     --trusted-key "${GA_TARGET_TRUSTED_KEY}" --commit "${SOURCE_COMMIT}" \
     --version "${VERSION}" --output "${OUT_DIR}/RELEASE_REHEARSAL_0365.json"
@@ -939,11 +939,11 @@ fi
 # 0.46.2: проверяйте полные шесть ФАКТИЧЕСКИХ целевых пакетов и сохраняйте подтверждённый побайтовый
 # реестр ДО построения подписанного манифеста выпуска.
 if release_from_0462; then
-  python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
+  python3 "${ROOT_DIR}/scripts/release/delivery_verify.py" \
     --bundle "${OUT_DIR}" --out "${OUT_DIR}/DELIVERY_VERIFIED_0462.json" || exit 2
 fi
 if release_from_0470; then
-  python3 "${ROOT_DIR}/scripts/release/reproducible_0470.py" compare \
+  python3 "${ROOT_DIR}/scripts/release/reproducible.py" compare \
     --a-report "${LAUNCHER_REPRO_A_REPORT}" --a-sig "${LAUNCHER_REPRO_A_SIG}" \
     --a-key "${LAUNCHER_REPRO_A_KEY}" --a-dir "${LAUNCHER_REPRO_A_DIR}" \
     --b-report "${LAUNCHER_REPRO_B_REPORT}" --b-sig "${LAUNCHER_REPRO_B_SIG}" \
@@ -953,7 +953,7 @@ fi
 "${RELEASE_CLI}" "${release_build_args[@]}"
 if release_from_0462; then
   # Проверяйте, что манифест выпуска явно перечисляет точные байты всех шести пакетов.
-  python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
+  python3 "${ROOT_DIR}/scripts/release/delivery_verify.py" \
     --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
 fi
 if [[ "${PUBLIC_DELIVERY_REQUIRED}" == "1" ]]; then
@@ -997,8 +997,8 @@ fi
 
 if release_from_0462; then
   # До разрешения подписи проверяйте фактические, а не объявленные байты конечного установщика.
-  python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
-  python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
+  python3 "${ROOT_DIR}/scripts/release/delivery_verify.py" --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
+  python3 "${ROOT_DIR}/scripts/release/inputs_guard.py" verify || exit 2
 fi
 
 log "Подписание выпуска Ed25519"
@@ -1007,7 +1007,7 @@ log "Подписание выпуска Ed25519"
 log "Строгая проверка обязательных артефактов, контрольных сумм и корневого ключа доверия Ed25519"
 "${RELEASE_CLI}" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
 if release_from_0462; then
-  python3 "${ROOT_DIR}/scripts/release/delivery_verify_0462.py" \
+  python3 "${ROOT_DIR}/scripts/release/delivery_verify.py" \
     --bundle "${OUT_DIR}" --release-manifest >/dev/null || exit 2
 fi
 # Только после проверки финального манифеста командами release sign и verify независимый нативный оператор
@@ -1015,7 +1015,7 @@ fi
 # Разрешение имеет ТРЕТИЙ доверенный ключ Ed25519. Доказательство связывания аутентифицируется оператором
 # отдельно и не вставляется в уже подписанный Ed25519-манифест.
 if release_from_0470; then
-  python3 "${ROOT_DIR}/scripts/release/reproducible_0470.py" link \
+  python3 "${ROOT_DIR}/scripts/release/reproducible.py" link \
     --comparison "${OUT_DIR}/REPRODUCIBILITY_COMPARISON_0470.json" \
     --approval "${LAUNCHER_REPRO_NATIVE_APPROVAL}" \
     --approval-sig "${LAUNCHER_REPRO_NATIVE_APPROVAL_SIG}" \
@@ -1037,7 +1037,7 @@ if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD
   "${RELEASE_CLI}" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
   if python3 "${ROOT_DIR}/scripts/release/release_policy.py" requires-rehearsal --version "${VERSION}" | grep -qx '1'; then
     log "Пробная публикация: копирование выпуска, повторная проверка подписи и проверка допустимости публикации"
-    python3 "${ROOT_DIR}/scripts/release/rehearsal_0365.py" dry-run \
+    python3 "${ROOT_DIR}/scripts/release/rehearsal.py" dry-run \
       --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
       --trusted-key "${GA_TARGET_TRUSTED_KEY}" --commit "${SOURCE_COMMIT}" \
       --version "${VERSION}" --cli "${RELEASE_CLI}" --public-key "${PUBLIC_KEY}" \
@@ -1052,6 +1052,6 @@ else
 fi
 
 if release_from_0462; then
-  python3 "${ROOT_DIR}/scripts/release/inputs_guard_0461.py" verify || exit 2
+  python3 "${ROOT_DIR}/scripts/release/inputs_guard.py" verify || exit 2
 fi
 log "Каталог промышленного выпуска готов: ${OUT_DIR}"

@@ -16,7 +16,7 @@ from unittest.mock import patch
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding,PrivateFormat,PublicFormat,NoEncryption
 
-import reproducible_0470 as repro
+import reproducible as repro
 
 
 def fake_binary(platform, arch):

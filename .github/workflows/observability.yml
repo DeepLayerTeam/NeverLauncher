@@ -2,15 +2,15 @@ name: Launcher 0.45.9 — наблюдаемость
 on:
   push:
     paths:
-      - 'services/api/internal/httpapi/request_observability_0459*'
+      - 'services/api/internal/httpapi/request_observability*'
       - 'services/api/internal/httpapi/observability.go'
       - 'services/api/internal/httpapi/server.go'
-      - 'services/api/cmd/launcher-api/process_role_0455.go'
-      - 'scripts/operations/observability_0459.py'
-      - 'scripts/operations/test_observability_0459.py'
+      - 'services/api/cmd/launcher-api/process_role.go'
+      - 'scripts/operations/observability.py'
+      - 'scripts/operations/test_observability.py'
       - 'deploy/production/monitoring/**'
       - 'deploy/production/docker-compose.observability.yml'
-      - '.github/workflows/observability-0459.yml'
+      - '.github/workflows/observability.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -26,8 +26,8 @@ jobs:
       - name: Проверить настоящий диагностический ZIP и регрессии вебхуков
         run: |
           set -euo pipefail
-          python3 -m unittest scripts/operations/test_observability_0459.py -v
-          python3 -m py_compile scripts/operations/observability_0459.py
+          python3 -m unittest scripts/operations/test_observability.py -v
+          python3 -m py_compile scripts/operations/observability.py
           python3 scripts/version/manage.py check
       - name: Проверить конфигурацию Prometheus и оповещения через promtool
         run: |
@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/monitor"
-          python3 scripts/operations/observability_0459.py configure --webhook-url https://alerts.example.org/ci --output "$RUNNER_TEMP/monitor/alertmanager.json"
+          python3 scripts/operations/observability.py configure --webhook-url https://alerts.example.org/ci --output "$RUNNER_TEMP/monitor/alertmanager.json"
           docker run --rm -v "$RUNNER_TEMP/monitor:/etc/alertmanager:ro" --entrypoint /bin/amtool prom/alertmanager:v0.27.0 check-config /etc/alertmanager/alertmanager.json
           LAUNCHER_ALERTMANAGER_CONFIG="$RUNNER_TEMP/monitor/alertmanager.json" docker compose -f deploy/production/docker-compose.yml -f deploy/production/docker-compose.observability.yml --env-file deploy/production/env.production.example config --quiet
   go-observability:

@@ -22,7 +22,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
 from release_policy import policy
-from security_capabilities_0431 import checks as security_checks, verify_all as verify_security
+from security_capabilities import checks as security_checks, verify_all as verify_security
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey

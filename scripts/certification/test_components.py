@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from fault_server import FaultServer, Object
-from components_02413 import build_fixture, profile_digest, current_target
+from components import build_fixture, profile_digest, current_target
 
 
 class ComponentCertificationFixtureTests(unittest.TestCase):

@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import multi_host_chaos_05110 as chaos
+import multi_host_chaos as chaos
 
 
 class ChaosTests(unittest.TestCase):
@@ -23,8 +23,8 @@ class ChaosTests(unittest.TestCase):
             failed_node='a', fault=fault, state=str(home / 'fault.json'), report=str(home / 'out.json'),
             directory='/opt/launcher/deploy/production', project='launcher',
             edge_url='https://launcher.example.org/ready', timeout=15,
-            multi_host_script='/opt/launcher/scripts/operations/multi_host_0512.py',
-            chaos_script='/opt/launcher/scripts/operations/multi_host_chaos_05110.py',
+            multi_host_script='/opt/launcher/scripts/operations/multi_host.py',
+            chaos_script='/opt/launcher/scripts/operations/multi_host_chaos.py',
             allow_disruption='I-ACCEPT-REAL-OUTAGE',
             approval_file='/opt/launcher/deploy/production/.chaos-approval-05110.json',
             alertmanager_url=None, alert_name='LauncherHostIngressDown', alert_timeout=45)

@@ -404,10 +404,10 @@ class MatrixToolTests(unittest.TestCase):
     def test_canonical_upstream_catalogue_policies(self) -> None:
         """Сохранять все 292 заявленные цели, не выдавая 12 недоступных за успешно прошедшие."""
         for rel in (
-            "scripts/smoke/offline/quilt-compatibility-II-0172.py",
-            "scripts/smoke/offline/neoforge-compatibility-II-0176.py",
-            "scripts/smoke/offline/loader-compatibility-rc-01711.py",
-            "scripts/smoke/offline/loader-compatibility-ga-0180.py",
+            "scripts/smoke/offline/quilt-compatibility-II.py",
+            "scripts/smoke/offline/neoforge-compatibility-II.py",
+            "scripts/smoke/offline/loader-compatibility-rc.py",
+            "scripts/smoke/offline/loader-compatibility-ga.py",
         ):
             proc = subprocess.run(
                 ["python3", str(ROOT / rel)],

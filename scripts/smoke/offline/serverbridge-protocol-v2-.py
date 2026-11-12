@@ -19,9 +19,9 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 
 api_migration = read(
-    "services/api/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_0141.sql"
+    "services/api/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_.sql"
 )
-cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_0141.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0021_serverbridge_protocol_v2_.sql")
 if api_migration != cli_migration:
     raise SystemExit("Миграции ServerBridge API/CLI 0.14.1 отличаются")
 require(
@@ -57,7 +57,7 @@ require(
 
 handler = read("services/api/internal/httpapi/handler.go")
 require(handler, ["configureRepositoryV2(s.Repo)"], "Подключение хранилища ServerBridge")
-protocol = read("services/api/internal/httpapi/server_bridge_protocol_0191.go")
+protocol = read("services/api/internal/httpapi/server_bridge_protocol.go")
 bridge = (
     read("services/api/internal/httpapi/server_bridge.go")
     + read("services/api/internal/httpapi/server_bridge_persistence_v2.go")
@@ -106,7 +106,7 @@ require(
     "Текущие константы Java ServerBridge v3 и константы последовательного обновления v2",
 )
 contract_tests = read(
-    "services/api/internal/httpapi/server_bridge_protocol_0191_test.go"
+    "services/api/internal/httpapi/server_bridge_protocol_test.go"
 )
 require(
     contract_tests,

@@ -2,7 +2,7 @@
 
 ## Реальный инструмент и назначение
 
-`ha_inventory_0511.py` инвентаризирует **фактически запущенные** Docker-контейнеры (Docker API через `docker ps/inspect`), проверяет работоспособность и готовность каждого API-сервера и обработчика заданий, а также доступность зависимостей через штатное `launcher-api diagnose growth`. При наличии контейнеров PostgreSQL и Redis он выполняет запросы только для чтения к работающим PostgreSQL и Redis и сохраняет измеренные задержки `/ready`. Никаких изменений в пользовательской БД или конфигурации аудит не вносит; существующий `diagnose growth` кратковременно создаёт и удаляет специально именованные тестовые Redis-lease и S3-объект.
+`ha_inventory.py` инвентаризирует **фактически запущенные** Docker-контейнеры (Docker API через `docker ps/inspect`), проверяет работоспособность и готовность каждого API-сервера и обработчика заданий, а также доступность зависимостей через штатное `launcher-api diagnose growth`. При наличии контейнеров PostgreSQL и Redis он выполняет запросы только для чтения к работающим PostgreSQL и Redis и сохраняет измеренные задержки `/ready`. Никаких изменений в пользовательской БД или конфигурации аудит не вносит; существующий `diagnose growth` кратковременно создаёт и удаляет специально именованные тестовые Redis-lease и S3-объект.
 
 Реализация проверяет фактическую `LAUNCHER_PROCESS_ROLE`, постоянную `LAUNCHER_REPLICA_ID`, запрет авто-миграции в работающих репликах, PostgreSQL и S3, механизмы защиты от устаревших владельцев ресурсов и политику ограничения частоты запросов, запущенность и состояние контейнеров Docker; при подозрительных настройках или невозможности проверки ставит `RISK` либо `UNVERIFIED`, **никогда не фиктивный PASS**. Отдельно отслеживаются локальные точки монтирования: `storage`, `backups`, `factory`, `coordinator`, `extensions`. Указано, что их роль в сохранности распределённого состояния должна проверяться отдельно. Анализ исходников фиксирует локальные поля `RuntimeState` и загрузку сохранённого снимка состояния при запуске; он **не** подтверждает согласованность MFA и ключей доступа между API-репликами.
 
@@ -12,7 +12,7 @@
 
 ```bash
 cd /opt/launcher  # дерево Launcher 0.51.1, где находится scripts/operations/
-python3 scripts/operations/ha_inventory_0511.py node \
+python3 scripts/operations/ha_inventory.py node \
   --project launcher --samples 5 \
   --source-root /opt/launcher \
   --output /var/tmp/ha-inventory-node-a.json
@@ -25,11 +25,11 @@ python3 scripts/operations/ha_inventory_0511.py node \
 На каждом хосте должны находиться одинаковые версии инструмента и доверенное дерево проекта. SSH доступ — ключевой, `BatchMode`, `StrictHostKeyChecking=yes`; интерактивное подтверждение host key и парольная аутентификация намеренно не используются. Запускающий узел обязан иметь Docker; удалённые `operator@host` получают локальные сведения с **их собственных** Docker Engines.
 
 ```bash
-python3 scripts/operations/ha_inventory_0511.py cluster \
+python3 scripts/operations/ha_inventory.py cluster \
   --project launcher-prod \
   --node a=local \
   --node b=operator@host-b.example.net \
-  --remote-script /opt/launcher/scripts/operations/ha_inventory_0511.py \
+  --remote-script /opt/launcher/scripts/operations/ha_inventory.py \
   --edge-url https://launcher.example.net/ready \
   --samples 5 \
   --source-root /opt/launcher \
@@ -44,7 +44,7 @@ python3 scripts/operations/ha_inventory_0511.py cluster \
 
 1. `deploy/production/docker-compose.network-ha.yml` определяет два API-сервера и два обработчика заданий, но все сервисы одного `docker compose` остаются в одном домене отказа при запуске на одном Docker-хосте. `docker-compose.yml` содержит по одному локальному PostgreSQL, Redis, Admin и Nginx. Не обозначайте эту инсталляцию как выдерживающую потерю хоста.
 2. `services/api/internal/httpapi/runtime_state.go`: локальные объекты `AuthSessions`, `Security`, `Passkeys`, `ServerBridge`, `Maintenance`, `PackageMutation`, `BackendLifecycle0289`. Некоторые компоненты используют собственные постоянные хранилища PostgreSQL, однако снимки из `persistence.go` загружаются на старте. Для каждого изменяемого поля требуется фактическая проверка записи/чтения между репликами и чтения после перезапуска, иначе общая БД ещё не доказывает видимость изменения второму API.
-3. `component_upgrade_0458.py` выполняет переключение с остановкой; совместимость схем N/N−1 и обновление без одновременной остановки ещё не доказаны.
+3. `component_upgrade.py` выполняет переключение с остановкой; совместимость схем N/N−1 и обновление без одновременной остановки ещё не доказаны.
 4. `growth.go` проверяет рекомендательную блокировку PostgreSQL, аренду блокировки Redis и обмен данными S3 между разными клиентами **в момент вызова**, но это не проверка разделения полномочий при сетевом разрыве, смены ведущего узла или потери всех сервисов одного хоста.
 5. Игровые миры `ServerBridge` и управляемые процессы Minecraft живут вне исследуемого API Compose; их единственного владельца, снимки состояния и восстановление этот аудит не проверяет.
 6. До 0.51.1 при отсутствии `LAUNCHER_REPLICA_ID` мог использоваться сгенерированный от имени хоста и PID идентификатор. Теперь Network-HA запуск не принимает пустой или некорректный ID; идентификатор обязан быть стабилен между перезапусками и уникален для реплики.
@@ -56,7 +56,7 @@ python3 scripts/operations/ha_inventory_0511.py cluster \
 ## Тестирование этого изменения
 
 ```bash
-python3 -m unittest discover -s scripts/operations -p 'test_ha_inventory_0511.py' -v
+python3 -m unittest discover -s scripts/operations -p 'test_ha_inventory.py' -v
 cd services/api && go test ./internal/deployment -run 'TestAutoDetectStandardAndNetworkHA|TestExplicitModeRejectsUnsafeCombinations' -count=1
 ```
 

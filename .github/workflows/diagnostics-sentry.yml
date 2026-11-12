@@ -4,11 +4,11 @@ on:
     paths:
       - 'services/api/internal/sentrydiag/**'
       - 'services/api/cmd/launcher-api/main.go'
-      - 'apps/desktop/src/sentry_diagnostics_0309.ts'
-      - 'apps/desktop/src-tauri/src/sentry_diagnostics_0309.rs'
+      - 'apps/desktop/src/sentry_diagnostics.ts'
+      - 'apps/desktop/src-tauri/src/sentry_diagnostics.rs'
       - 'sdk/java/core/**'
       - 'scripts/diagnostics/**'
-      - '.github/workflows/diagnostics-sentry-0309.yml'
+      - '.github/workflows/diagnostics-sentry.yml'
   pull_request:
     paths:
       - 'services/api/internal/sentrydiag/**'

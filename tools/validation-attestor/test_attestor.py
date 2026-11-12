@@ -643,7 +643,7 @@ class TrustBoundaryTests(unittest.TestCase):
     def test_python_canonical_order_agrees_with_go_signed_struct(self):
         source = (
             Path(__file__).resolve().parents[2]
-            / "services/api/internal/httpapi/validation_attestation_0345.go"
+            / "services/api/internal/httpapi/validation_attestation.go"
         ).read_text()
         import re
 

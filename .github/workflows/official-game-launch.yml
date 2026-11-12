@@ -4,12 +4,12 @@ on:
     paths:
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
-      - 'apps/desktop/src/launch_modes_0269.ts'
-      - 'apps/desktop/src/desktop_experience_0229.ts'
-      - 'apps/desktop/tests/launch_modes_0269.test.mjs'
+      - 'apps/desktop/src/launch_modes.ts'
+      - 'apps/desktop/src/desktop_experience.ts'
+      - 'apps/desktop/tests/launch_modes.test.mjs'
       - 'runtime/runtime/src/lib.rs'
-      - 'runtime/runtime/src/launch_identity_0269.rs'
-      - '.github/workflows/official-game-launch-0269.yml'
+      - 'runtime/runtime/src/launch_identity.rs'
+      - '.github/workflows/official-game-launch.yml'
   pull_request:
   workflow_dispatch:
 permissions:

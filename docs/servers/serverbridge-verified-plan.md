@@ -41,7 +41,7 @@ LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY=<64-char-hex-offline-policy-public-
 
 ```sh
 cd services/api
-go run ./cmd/planpolicy-02412 -policy /secure/policy.json -key /secure/offline-policy-seed.hex -out /secure/bridge-plans.signed.json
+go run ./cmd/planpolicy -policy /secure/policy.json -key /secure/offline-policy-seed.hex -out /secure/bridge-plans.signed.json
 ```
 
 Команда создаёт оболочку политики с `schemaVersion`, Base64 точных подписанных байтов политики и подписью Ed25519 от `Launcher-ServerBridge-Plan-Policy-v1\n` + этих байтов; публичный ключ выводится для конфигурации. Это **отдельный операторский ключ**, не ключ подписи игрового выпуска и не закрытый ключ узла ServerBridge. Храните закрытый seed автономно.

@@ -18,7 +18,7 @@ def require(condition: bool, message: str) -> None:
 
 version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 2), "Требуется VERSION не ниже 0.20.2")
-source = read("cli/cmd/launcher/extension_package_0202.go")
+source = read("cli/cmd/launcher/extension_package.go")
 for token in (
     "archive/zip",
     "checksums.sha256",
@@ -35,7 +35,7 @@ for token in (
 ):
     require(token in source, f"Отсутствует реализация пакета расширения: {token}")
 
-commands = read("cli/cmd/launcher/extension_commands_0201.go")
+commands = read("cli/cmd/launcher/extension_commands.go")
 for command in ('"pack"', '"sign"', '"verify"', '"inspect"'):
     require(command in commands, f"Отсутствует команда расширений в CLI: {command}")
 

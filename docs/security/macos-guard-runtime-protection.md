@@ -22,8 +22,8 @@
 cargo check --manifest-path runtime/runtime/Cargo.toml --all-targets
 cargo build --manifest-path runtime/runtime/Cargo.toml --bin runtime --bin guard
 cargo test --manifest-path runtime/runtime/Cargo.toml --lib macos_runtime_guard_0509 -- --nocapture
-python3 scripts/tests/guard_runtime_integrity_0505.py
-python3 scripts/tests/continuous_game_protection_0506.py
+python3 scripts/tests/guard_runtime_integrity.py
+python3 scripts/tests/continuous_game_protection.py
 ```
 
 В GitHub Actions добавлено задание на `macos-15` (ARM64) и `macos-15-intel` (x64). Задание проверяет настоящее `libproc`, проверенную подпись Java и реальную дочернюю JVM. На Linux эти проверки нельзя считать пройденными. На целевом Mac дополнительно нужны подписанная app/Guard поставка и реальный Minecraft/loader/join/long-run с разрешёнными модами/Java-агентами; пока этого нет, GA — BLOCKED.

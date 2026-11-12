@@ -19,11 +19,11 @@ parts = tuple(int(x) for x in version.split("-", 1)[0].split(".")[:3])
 if parts < (0, 19, 11):
     raise SystemExit(f"Высокодоступная плоскость управления: требуется версия не ниже 0.19.11, получено {version}")
 
-control = read("services/api/internal/httpapi/server_bridge_control_0195.go")
+control = read("services/api/internal/httpapi/server_bridge_control.go")
 repo = read("services/api/internal/repository/server_bridge_v2.go")
 coord = read("services/api/internal/serverbridgeha/redis.go")
 migration = read(
-    "services/api/internal/dbmigrate/sql/0040_serverbridge_ha_control_plane_01911.sql"
+    "services/api/internal/dbmigrate/sql/0040_serverbridge_ha_control_plane.sql"
 )
 runtime = read("services/api/internal/httpapi/rate_limit.go")
 observability = read("services/api/internal/httpapi/observability.go")
@@ -45,7 +45,7 @@ bridge_config = read(
 )
 redis_tests = read("services/api/internal/serverbridgeha/redis_test.go")
 pg_tests = read(
-    "services/api/internal/repository/server_bridge_ha_control_plane_01911_integration_test.go"
+    "services/api/internal/repository/server_bridge_ha_control_plane_integration_test.go"
 )
 preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
@@ -182,8 +182,8 @@ for forbidden in ["status == 401 ||", "status == 403 ||"]:
     if forbidden in client:
         raise SystemExit("«отказ в аутентификации»: запрещено «инициировать переключение резервного адреса»")
 for text, needle, label in [
-    (preflight, "serverbridge-ha-control-plane-01911.py", "preflight"),
-    (ci, "serverbridge-ha-control-plane-01911.py", "CI"),
+    (preflight, "serverbridge-ha-control-plane.py", "preflight"),
+    (ci, "serverbridge-ha-control-plane.py", "CI"),
 ]:
     if needle not in text:
         raise SystemExit(f"{label}: отсутствует {needle!r}")

@@ -24,10 +24,10 @@ ROOT = Path(__file__).resolve().parents[2]
 # Команды неизменяемы и не берутся из расширения или манифеста пользователя.
 CASES = {
     "java-publication": (
-        (sys.executable, "scripts/ga/java_sdk_ga_0310.py", "--output", "{maven}"),
+        (sys.executable, "scripts/ga/java_sdk_ga.py", "--output", "{maven}"),
     ),
     "java-signed-fixtures": (
-        (sys.executable, "scripts/ga/test_signed_java_0310.py", "--cli", "{cli}"),
+        (sys.executable, "scripts/ga/test_signed_java.py", "--cli", "{cli}"),
     ),
     "java-sdk": (("sh", "sdk/java/core/build.sh", "test"),),
     "jvm-host-e2e": (
@@ -77,7 +77,7 @@ CASES = {
     ),
     "devtools-e2e": (
         ("go", "build", "-o", "{cli}", "./cmd/launcher"),
-        (sys.executable, "scripts/devtools/smoke_03010.py", "--cli", "{cli}"),
+        (sys.executable, "scripts/devtools/smoke.py", "--cli", "{cli}"),
     ),
     "lan-security": (("go", "test", "-v", "-race", "-count=1", "./internal/lanmdns"),),
     "discord-ipc": (
@@ -90,16 +90,16 @@ CASES = {
         ("go", "test", "-v", "-race", "-count=1", "./internal/sentrydiag"),
     ),
     "asset-integrity": (
-        ("node", "--test", "scripts/desktop/prebuild_assets_03011.test.mjs"),
+        ("node", "--test", "scripts/desktop/prebuild_assets.test.mjs"),
         (
             "node",
             "--experimental-strip-types",
             "--test",
-            "scripts/desktop/startup_prewarmer_03011.test.mjs",
+            "scripts/desktop/startup_prewarmer.test.mjs",
         ),
     ),
     "sentry-release": (
-        (sys.executable, "scripts/diagnostics/test_upload_release_0309.py"),
+        (sys.executable, "scripts/diagnostics/test_upload_release.py"),
     ),
     "module-parity": (
         ("go", "build", "-o", "{cli}", "./cmd/launcher"),

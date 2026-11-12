@@ -8,7 +8,7 @@ import {
   clearOwnerPending,
   prepareOwnerOperation,
   observeOwnerOperation,
-} from "../src/admin/owner-lifecycle-03513.ts";
+} from "../src/admin/owner-lifecycle.ts";
 
 const intent = {
   kind: "package-publish",
@@ -373,7 +373,7 @@ test("Повтор запроса API использует то же намер�
 
 test("Поэтапный откат восстанавливает настоящий подписанный пакет в серверном черновике, а не синтетический релиз", async () => {
   const { openStagedRollback } =
-    await import("../src/admin/owner-lifecycle-03513.ts");
+    await import("../src/admin/owner-lifecycle.ts");
   const rollback = {
     intent: {
       ...intent,
@@ -427,7 +427,7 @@ test("Поэтапный откат восстанавливает настоя�
 });
 test("Поэтапный откат отклоняет несовпадающий пакет Backend без создания черновика", async () => {
   const { openStagedRollback } =
-    await import("../src/admin/owner-lifecycle-03513.ts");
+    await import("../src/admin/owner-lifecycle.ts");
   const rollback = {
     intent: {
       ...intent,

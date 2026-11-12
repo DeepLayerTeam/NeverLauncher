@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// Условия — подписанные предикаты, а не команды клиента. В схеме 1.0 каждое непустое
-// поле должно совпасть; массивы объединяются ИЛИ, поля — И. Отсутствующий доверенный
-// контекст никогда не означает неограниченный доступ.
+// Условия — подписанные предикаты, а не команды клиента. В схеме 1.0 каждое
+// непустое поле должно совпадать; элементы массива объединяются через ИЛИ, поля — через И.
+// Отсутствие доверенного контекста никогда не означает неограниченный доступ.
 type ComponentConditions0244 struct {
 	SchemaVersion         string   `json:"schemaVersion"`
 	OS                    []string `json:"os,omitempty"`
@@ -32,8 +32,8 @@ type ComponentEnvironment0244 struct {
 	MinecraftVersion string
 	Loader           string
 	LoaderVersion    string
-	// Эта карта ОБЯЗАНА поступать из аутентифицированной серверной авторизации, а не из JSON
-	// Desktop или непроверенного локального профиля учётной записи.
+	// Эта карта ОБЯЗАТЕЛЬНО должна поступать из авторизованного контекста сервера,
+	// а не из JSON Desktop или непроверенного локального профиля аккаунта.
 	VerifiedPermissions map[string]bool
 }
 
@@ -97,7 +97,7 @@ func validPermissionName0244(s string) bool {
 
 func validDistinct0244(values []string, limit int, valid func(string) bool) error {
 	if len(values) > limit {
-		return errors.New("Массив условий превышает допустимый предел")
+		return errors.New("Массив условий превышает допустимый размер")
 	}
 	seen := make(map[string]bool, len(values))
 	for _, v := range values {
@@ -112,7 +112,7 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
 		for _, c := range cat.Components {
 			if c.Conditions != nil {
-				return fmt.Errorf("У компонента %s есть неподписанные условия версии 4", c.ID)
+				return fmt.Errorf("Компонент %s содержит неподписанные условия v4", c.ID)
 			}
 		}
 		return nil
@@ -123,7 +123,7 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 			continue
 		}
 		if v.SchemaVersion != "1.0" {
-			return fmt.Errorf("Компонент %s: неподдерживаемая схема условий %q", c.ID, v.SchemaVersion)
+			return fmt.Errorf("Компонент %s: неподдерживаемая схема условия %q", c.ID, v.SchemaVersion)
 		}
 		if err := validDistinct0244(v.OS, 8, func(s string) bool { return s == "windows" || s == "linux" || s == "macos" }); err != nil {
 			return fmt.Errorf("компонент %s: ОС: %w", c.ID, err)
@@ -132,7 +132,7 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 			return fmt.Errorf("компонент %s: архитектура: %w", c.ID, err)
 		}
 		if v.JavaMajorMax != 0 && v.JavaMajorMin > v.JavaMajorMax {
-			return fmt.Errorf("Компонент %s: границы диапазона основных версий Java указаны в обратном порядке", c.ID)
+			return fmt.Errorf("Компонент %s: диапазон основных версий Java задан в обратном порядке", c.ID)
 		}
 		if v.JavaMajorMin > 99 || v.JavaMajorMax > 99 {
 			return fmt.Errorf("Компонент %s: недопустимая основная версия Java", c.ID)
@@ -150,12 +150,12 @@ func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
 		}
 		if v.MinecraftVersionRange != "" {
 			if _, err := matchRange0243("1.0.0", v.MinecraftVersionRange); err != nil {
-				return fmt.Errorf("Компонент %s, диапазон версий Minecraft: %w", c.ID, err)
+				return fmt.Errorf("Диапазон версий Minecraft для компонента %s: %w", c.ID, err)
 			}
 		}
 		if v.LoaderVersionRange != "" {
 			if _, err := matchRange0243("1.0.0", v.LoaderVersionRange); err != nil {
-				return fmt.Errorf("Компонент %s, диапазон версий загрузчика: %w", c.ID, err)
+				return fmt.Errorf("Диапазон версий загрузчика для компонента %s: %w", c.ID, err)
 			}
 		}
 	}
@@ -191,7 +191,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 	if v.MinecraftVersionRange != "" {
 		ok, e := matchRange0243(env.MinecraftVersion, v.MinecraftVersionRange)
 		if e != nil {
-			return "Версия Minecraft не соответствует семантическому версионированию: " + e.Error()
+			return "Версия Minecraft не совместима по SemVer: " + e.Error()
 		}
 		if !ok {
 			return fmt.Sprintf("версия Minecraft %q не входит в диапазон %q", env.MinecraftVersion, v.MinecraftVersionRange)
@@ -203,7 +203,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 	if v.LoaderVersionRange != "" {
 		ok, e := matchRange0243(env.LoaderVersion, v.LoaderVersionRange)
 		if e != nil {
-			return "Версия загрузчика не соответствует семантическому версионированию: " + e.Error()
+			return "Версия загрузчика не совместима по SemVer: " + e.Error()
 		}
 		if !ok {
 			return fmt.Sprintf("загрузчик %q не входит в диапазон %q", env.LoaderVersion, v.LoaderVersionRange)
@@ -217,12 +217,12 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 	return ""
 }
 
-// ResolveCatalogConditional0244 обрабатывает автоматические умолчания отдельно от
-// обязательных, явно выбранных и зависимых компонентов. Недоступный компонент по умолчанию
-// исключается, а недоступный обязательный выбор вызывает явную ошибку.
+// ResolveCatalogConditional0244 обрабатывает автоматические значения по умолчанию
+// отдельно от обязательных, явно выбранных и зависимых компонентов. Недоступный
+// компонент по умолчанию исключается, а недоступный обязательный выбор вызывает ошибку.
 func ResolveCatalogConditional0244(cat ComponentCatalog0241, preset string, env ComponentEnvironment0244) ([]string, error) {
 	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
-		return nil, fmt.Errorf("Для разрешения условий требуется каталог версии 4")
+		return nil, fmt.Errorf("Механизм разрешения условий: требуется каталог v4")
 	}
 	if err := ValidateCatalogConditions0244(cat); err != nil {
 		return nil, err

@@ -13,7 +13,7 @@ import unittest
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from staged_lifecycle_0349 import (
+from staged_lifecycle import (
     extract_pinned_prior,
     interrupted_download,
     interrupt_and_recover,
@@ -25,7 +25,7 @@ from staged_lifecycle_0349 import (
 from importlib.machinery import SourceFileLoader
 
 runner = SourceFileLoader(
-    "runner_v09", str(Path(__file__).with_name("run-staged-package-0342.py"))
+    "runner_v09", str(Path(__file__).with_name("run-staged-package.py"))
 ).load_module()
 
 

@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import independent_accept_04514 as ia
+import independent_accept as ia
 
 
 class IndependentAcceptanceTests(unittest.TestCase):
@@ -149,7 +149,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
         # Один успешный возврат дочернего процесса не должен означать PASS.
 
     def test_versioned_updater_rejects_env_drift(self):
-        import component_upgrade_0458 as comp
+        import component_upgrade as comp
         old = self.file('before.env', b'LAUNCHER_IMAGE_TAG=0.45.13\nLAUNCHER_DATABASE_AUTO_MIGRATE=false\nSITE=unchanged\n')
         new = self.file('after.env', b'LAUNCHER_IMAGE_TAG=0.45.14\nLAUNCHER_DATABASE_AUTO_MIGRATE=false\nSITE=unchanged\n')
         self.assertEqual(comp.assert_same_config(old, new, source_version='0.45.13', target_version='0.45.14'), '0.45.13')
@@ -185,7 +185,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
         seen = []
         def invoke(args, **kwargs):
             seen.append(args)
-            if 'standard' in args and args[1].endswith('component_upgrade_0458.py'):
+            if 'standard' in args and args[1].endswith('component_upgrade.py'):
                 return {'status': 'upgraded', 'from': '0.45.13', 'to': ia.VERSION, 'backendVerified': True}
             return {'status': 'verified', 'postgresArchiveChecked': True}
         with patch.object(ia, 'checked_env'), patch.object(ia, 'invoke', side_effect=invoke), \

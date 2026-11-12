@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_TARGETS = ROOT / "extensions/trust-recovery-targets-02012.json"
+DEFAULT_TARGETS = ROOT / "extensions/trust-recovery-targets.json"
 
 
 def load(path: Path):

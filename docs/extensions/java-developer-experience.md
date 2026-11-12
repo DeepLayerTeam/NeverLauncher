@@ -18,8 +18,8 @@
 sh sdk/java/core/build.sh test
 sh sdk/java/gravit-compat/build.sh test
 sh sdk/java/http-client/build.sh test
-python3 scripts/ga/java_sdk_ga_0310.py --skip-build --output /tmp/java-sdk-04812
-python3 scripts/java/compare_sdk_repos_04812.py dist/java-sdk/maven /tmp/java-sdk-04812/maven
+python3 scripts/ga/java_sdk_ga.py --skip-build --output /tmp/java-sdk-04812
+python3 scripts/java/compare_sdk_repos.py dist/java-sdk/maven /tmp/java-sdk-04812/maven
 ```
 
 Итоговое сравнение выполняется **побайтово** и предполагает одинаковые эффективные версии компилятора и Javadoc у сохранённой публикации и локальной сборки. Совместимость исходников между версиями JDK проверяется отдельно; различия Javadoc не означают несовместимости API.
@@ -38,9 +38,9 @@ gradle --no-daemon -p examples/extensions/java-developer-04812 classes
 Сборка пригодного для развёртывания **неподписанного** каталога расширения из **опубликованного** SDK, а не локальных каталогов классов:
 
 ```sh
-python3 scripts/java/build_developer_package_04812.py --output /tmp/java-developer-package
-python3 scripts/java/developer_e2e_04812.py --report /tmp/java-developer-e2e.json
-python3 scripts/java/test_developer_e2e_04812.py
+python3 scripts/java/build_developer_package.py --output /tmp/java-developer-package
+python3 scripts/java/developer_e2e.py --report /tmp/java-developer-e2e.json
+python3 scripts/java/test_developer_e2e.py
 ```
 
 Результат содержит `launcher-extension.json`, `backend/workspace.jar`, `cli/workspace.jar`, `admin/index.html` и `desktop/index.html`. Используйте существующий `nl extension pack` с настоящим ключом Ed25519 издателя и обычный доверенный процесс установки. Инструмент намеренно не подписывает, не устанавливает и не выдаёт разрешения.
@@ -68,7 +68,7 @@ E2E-комплекс компилирует **только исходники п
 | Windows x64 | Требуется CI | Требуется CI | Матрица GitHub Actions с Temurin |
 | macOS ARM64 / x64 | Требуется CI | Требуется CI | Матрица GitHub Actions с Temurin; фактическая архитектура узла CI фиксируется в CI |
 
-Межплатформенное задание: `.github/workflows/java-developer-experience-04812.yml`. Шесть комбинаций ОС/JDK выполняют тесты SDK, публикацию из собранных классов, сборку внешнего потребителя, негативные проверки безопасности, Maven и Gradle, а также загружают подтверждения каждого задания. Независимое задание Linux повторяет публикацию дважды и побайтово сравнивает результаты. **Наличие конфигурации CI не доказывает, что удалённые задания уже выполнялись.** В локальной приёмочной среде патча 0.48.12 нет Java 17, Maven, Gradle и исполняемых сред Windows/macOS.
+Межплатформенное задание: `.github/workflows/java-developer-experience.yml`. Шесть комбинаций ОС/JDK выполняют тесты SDK, публикацию из собранных классов, сборку внешнего потребителя, негативные проверки безопасности, Maven и Gradle, а также загружают подтверждения каждого задания. Независимое задание Linux повторяет публикацию дважды и побайтово сравнивает результаты. **Наличие конфигурации CI не доказывает, что удалённые задания уже выполнялись.** В локальной приёмочной среде патча 0.48.12 нет Java 17, Maven, Gradle и исполняемых сред Windows/macOS.
 
 ## Границы безопасности и ограничения GA
 

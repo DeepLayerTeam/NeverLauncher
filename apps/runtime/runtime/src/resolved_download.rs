@@ -63,7 +63,7 @@ mod tests {
     use super::*;
     #[test]
     fn signed_fixture_plan_is_deterministic_and_excludes_unselected_files() {
-        let mut m: Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+        let mut m: Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
         let catalog=m.component_catalog.as_mut().unwrap();
         for c in &mut catalog.components {c.conditions=None;}
         catalog.digest=crate::component_actions_0245::digest_v5(catalog);

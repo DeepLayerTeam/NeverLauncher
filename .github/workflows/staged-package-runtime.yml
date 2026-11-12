@@ -50,11 +50,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64 x11-utils mesa-utils scrot imagemagick tesseract-ocr tesseract-ocr-eng xdotool
       - name: Отклонить ложные доказательства запуска и проверить операции агента
         run: |
-          python3 e2e/scripts/test_staged_readiness_0343.py
-          python3 e2e/scripts/test_run_staged_package_0342.py
-          python3 e2e/scripts/test_staged_matching_0344.py
-          python3 e2e/scripts/test_staged_auth_0347.py
-          python3 e2e/scripts/test_staged_lifecycle_0349.py
+          python3 e2e/scripts/test_staged_readiness.py
+          python3 e2e/scripts/test_run_staged_package.py
+          python3 e2e/scripts/test_staged_matching.py
+          python3 e2e/scripts/test_staged_auth.py
+          python3 e2e/scripts/test_staged_lifecycle.py
       - name: Собрать исполняемые файлы CLI и Runtime без сборки клиента Minecraft
         run: |
           cd cli && go build -o ../nl ./cmd/launcher
@@ -136,7 +136,7 @@ jobs:
             echo "$SERVER_BUNDLE_SHA256  $SERVER_BUNDLE" | sha256sum -c - >/dev/null
           fi
           xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
-            python3 e2e/scripts/run-staged-package-0342.py \
+            python3 e2e/scripts/run-staged-package.py \
               --backend "$STAGED_BACKEND" --admin-token "$STAGED_OPERATOR" \
               --package-id "$STAGED_PACKAGE_ID" --output "$RUNNER_TEMP/staged-execution" \
               --cli "$GITHUB_WORKSPACE/nl" \

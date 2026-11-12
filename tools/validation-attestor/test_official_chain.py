@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 import unittest
-import official_chain_0347 as chain
+import official_chain as chain
 
 CLIENT = "12345678-1234-1234-1234-123456789abc"
 

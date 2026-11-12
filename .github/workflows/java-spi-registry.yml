@@ -4,14 +4,14 @@ on:
     paths:
       - 'sdk/java/core/**'
       - 'examples/extensions/java-spi/**'
-      - 'scripts/java/package_dependencies_0482.py'
-      - '.github/workflows/java-spi-registry-0483.yml'
+      - 'scripts/java/package_dependencies.py'
+      - '.github/workflows/java-spi-registry.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
       - 'examples/extensions/java-spi/**'
-      - 'scripts/java/package_dependencies_0482.py'
-      - '.github/workflows/java-spi-registry-0483.yml'
+      - 'scripts/java/package_dependencies.py'
+      - '.github/workflows/java-spi-registry.yml'
   workflow_dispatch:
 permissions:
   contents: read

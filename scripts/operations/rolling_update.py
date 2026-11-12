@@ -34,9 +34,9 @@ import tempfile
 import threading
 import time
 
-import ha_inventory_0511 as inventory
-import multi_host_0512 as multi
-import nn1_compat_0516 as nn
+import ha_inventory as inventory
+import multi_host as multi
+import nn1_compat as nn
 
 SOURCE = "0.51.6"
 TARGET = "0.51.7"
@@ -520,8 +520,8 @@ def main(argv=None):
     ap.add_argument("--directory", default="/opt/launcher/deploy/production")
     ap.add_argument("--project", default="launcher")
     ap.add_argument("--node", action="append", default=[])
-    ap.add_argument("--remote-script", default="/opt/launcher/scripts/operations/multi_host_0512.py")
-    ap.add_argument("--rolling-script", default="/opt/launcher/scripts/operations/rolling_update_0517.py")
+    ap.add_argument("--remote-script", default="/opt/launcher/scripts/operations/multi_host.py")
+    ap.add_argument("--rolling-script", default="/opt/launcher/scripts/operations/rolling_update.py")
     ap.add_argument("--pg-dsn-file", type=Path)
     ap.add_argument("--edge-url")
     ap.add_argument("--allow-update", action="store_true")

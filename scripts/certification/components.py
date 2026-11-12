@@ -26,7 +26,7 @@ from fault_server import FaultServer, Object
 from runtime_e2e import sign, payload
 
 ROOT = Path(__file__).resolve().parents[2]
-FIXTURE = ROOT / "runtime/runtime/tests/fixtures/catalog_actions_0245_go_signed.json"
+FIXTURE = ROOT / "runtime/runtime/tests/fixtures/catalog_actions_go_signed.json"
 
 
 def current_target() -> tuple[str, str]:

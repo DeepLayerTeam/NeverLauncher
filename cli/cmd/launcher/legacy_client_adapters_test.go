@@ -76,12 +76,12 @@ func TestLegacyAdapters0278RejectUnknownTweakerAndUnpinnedLibrary(t *testing.T) 
 	child := "versions/forge/forge.json"
 	putLegacyTestFile0278(t, root, child, []byte(`{"id":"forge","inheritsFrom":"1.12.2","mainClass":"net.minecraft.launchwrapper.Launch","minecraftArguments":"--tweakClass unknown.Tweaker"}`))
 	_, err := resolveLegacyLaunch0278(root, "forge", mc, child, 8, []vanillaTarget{currentVanillaTarget()})
-	if err == nil || !strings.Contains(err.Error(), "tweaker") {
+	if err == nil || !strings.Contains(err.Error(), "проверенный модификатор запуска Forge") {
 		t.Fatalf("Принят неизвестный Tweaker: %v", err)
 	}
 	putLegacyTestFile0278(t, root, child, []byte(`{"id":"forge","inheritsFrom":"1.12.2","mainClass":"net.minecraft.launchwrapper.Launch","minecraftArguments":"--tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker","libraries":[{"name":"unknown:missing:1"}]}`))
 	_, err = resolveLegacyLaunch0278(root, "forge", mc, child, 8, []vanillaTarget{currentVanillaTarget()})
-	if err == nil || !strings.Contains(err.Error(), "missing classpath") {
+	if err == nil || !strings.Contains(err.Error(), "Отсутствует: артефакт пути классов") {
 		t.Fatalf("Принята отсутствующая библиотека: %v", err)
 	}
 	if _, err = resolveLegacyLaunch0278(root, "forge", mc, child, 17, []vanillaTarget{currentVanillaTarget()}); err == nil {

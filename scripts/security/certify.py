@@ -75,7 +75,7 @@ WINDOWS_LIVE = {"./internal/windowssandbox": ["TestRealWindowsAppContainerAndJob
 
 def source_fingerprint():
     sha = hashlib.sha256()
-    paths = [ROOT / "VERSION", ROOT / "scripts/security/certify_03114.py"]
+    paths = [ROOT / "VERSION", ROOT / "scripts/security/certify.py"]
     for sub in [
         "services/api/internal/attestverify",
         "services/api/internal/httpapi",

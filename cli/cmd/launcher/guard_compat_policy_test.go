@@ -85,7 +85,7 @@ func TestGuardCompatibility0502RealFileEnforcementAndRevocation(t *testing.T) {
 		t.Fatal("Принят неверный проект")
 	}
 	intruder := artifact0502(t, root, "mod", "mods/injected.jar", "unlisted mod")
-	if err := launch(); err == nil || !strings.Contains(err.Error(), "unauthorized") {
+	if err := launch(); err == nil || !strings.Contains(err.Error(), "не разрешён политикой совместимости Guard") {
 		t.Fatalf("принят неизвестный мод: %v", err)
 	}
 	if err := os.Remove(filepath.Join(root, filepath.FromSlash(intruder.Path))); err != nil {
@@ -94,7 +94,7 @@ func TestGuardCompatibility0502RealFileEnforcementAndRevocation(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "mods/fabric-api.jar"), []byte("tampered"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := launch(); err == nil || !strings.Contains(err.Error(), "digest mismatch") {
+	if err := launch(); err == nil || !strings.Contains(err.Error(), "Несовпадение: хеш совместимости Guard") {
 		t.Fatalf("принят изменённый мод: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "mods/fabric-api.jar"), []byte("real jar bytes fixture"), 0600); err != nil {
@@ -105,7 +105,7 @@ func TestGuardCompatibility0502RealFileEnforcementAndRevocation(t *testing.T) {
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, priv), key); err != nil {
 		t.Fatal(err)
 	}
-	if err := launch(); err == nil || !strings.Contains(err.Error(), "revoked") {
+	if err := launch(); err == nil || !strings.Contains(err.Error(), "отозван") {
 		t.Fatalf("принят отозванный агент: %v", err)
 	}
 	p.RevokedDigests = nil
@@ -114,7 +114,7 @@ func TestGuardCompatibility0502RealFileEnforcementAndRevocation(t *testing.T) {
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, priv), key); err != nil {
 		t.Fatal(err)
 	}
-	if err := launch(); err == nil || !strings.Contains(err.Error(), "transformation revoked") {
+	if err := launch(); err == nil || !strings.Contains(err.Error(), "Преобразование совместимости Guard отозвано") {
 		t.Fatalf("принята отозванная трансформация: %v", err)
 	}
 	// Старая подписанная политика не может отменить отзыв.
@@ -275,7 +275,7 @@ func TestGuardCompatibility0502RealJVMPremainClassEnforcement(t *testing.T) {
 	if err := os.WriteFile(intruder, []byte("unapproved"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if output, err := run(); err == nil || !strings.Contains(err.Error(), "unauthorized") {
+	if output, err := run(); err == nil || !strings.Contains(err.Error(), "не разрешён политикой совместимости Guard") {
 		t.Fatalf("неизвестный мод дошёл до запуска Java: %v %s", err, output)
 	}
 	if err := os.Remove(intruder); err != nil {

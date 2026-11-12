@@ -25,14 +25,14 @@ import sys
 import time
 from urllib.parse import urlsplit
 
-import multi_host_0512 as multi
-import multi_host_chaos_05110 as chaos
-import dependency_ha_0513 as dependency
-import dr_03512 as dr
+import multi_host as multi
+import multi_host_chaos as chaos
+import dependency_ha as dependency
+import dr as dr
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/acceptance'))
-import vanilla_sidecar_live_0529 as vanilla
+import vanilla_sidecar_live as vanilla
 
 VERSION = (ROOT / 'VERSION').read_text().strip()
 SCHEMA = 'launcher.physical-ha-dr/0.52.10'
@@ -593,7 +593,7 @@ def main(argv=None):
     p.add_argument('--victim', default='')
     p.add_argument('--project', default='launcher')
     p.add_argument('--directory', default='/opt/launcher/deploy/production')
-    p.add_argument('--remote-script', default='/opt/launcher/scripts/operations/multi_host_0512.py')
+    p.add_argument('--remote-script', default='/opt/launcher/scripts/operations/multi_host.py')
     p.add_argument('--edge-url', default='')
     p.add_argument('--redfish-url', default='')
     p.add_argument('--bmc-token-file', default='')

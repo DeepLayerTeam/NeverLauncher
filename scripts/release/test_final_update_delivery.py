@@ -41,7 +41,7 @@ def load_script(filename, alias):
 
 linux = load_script("linux-package.py", "linux_package_0410")
 macos = load_script("macos-package.py", "macos_package_0410")
-import rehearsal_0365 as release
+import rehearsal as release
 from component_set_sign import signed_set, sign_delegated_set
 
 VERSION = "0.41.0"

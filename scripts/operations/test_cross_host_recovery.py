@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import cross_host_recovery_0519 as rec
+import cross_host_recovery as rec
 
 
 def ns(**kwargs):
@@ -165,7 +165,7 @@ class Recovery0519Tests(unittest.TestCase):
                       project="nl-dr-a", pgdata=str(root / "new-pgdata"),
                       s3_bucket="new-bucket", s3_endpoint="https://s3.example",
                       tar_image="alpine@sha256:" + "a"*64,
-                      remote_script="/opt/launcher/scripts/operations/cross_host_recovery_0519.py")
+                      remote_script="/opt/launcher/scripts/operations/cross_host_recovery.py")
             transferred = []
             def remote(host, script, action, *extra, **kw):
                 self.assertEqual(action, "local-preflight")
@@ -247,7 +247,7 @@ class Recovery0519Tests(unittest.TestCase):
             opts = ns(work=str(root), source_fenced=True, external_secrets_restored=True,
                       project="nl-dr-check", ready_url="https://new.example/ready",
                       incident_at=incident.isoformat(), pg_dsn_file=str(root / "dsn"),
-                      ack_ledger=None, multi_host_script="/opt/launcher/scripts/operations/multi_host_0512.py",
+                      ack_ledger=None, multi_host_script="/opt/launcher/scripts/operations/multi_host.py",
                       directory="/opt/launcher/deploy/production")
             with patch.object(rec.nn, "dsn_environment", return_value={}), \
                  patch.object(rec.cb, "execute", return_value=b"t\n"), \

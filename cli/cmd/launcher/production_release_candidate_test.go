@@ -53,7 +53,7 @@ func TestProductionReleaseCandidate01511BindsExactCohort(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "artifact-a.bin"), []byte("tampered"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := verifyProductionReleaseCandidateDocument01511(dir, "0.15.11"); err == nil || !strings.Contains(err.Error(), "cohort mismatch") {
+	if _, err := verifyProductionReleaseCandidateDocument01511(dir, "0.15.11"); err == nil || !strings.Contains(err.Error(), "Набор кандидата производственного релиза не совпадает") {
 		t.Fatalf("Принята изменённая группа: %v", err)
 	}
 }

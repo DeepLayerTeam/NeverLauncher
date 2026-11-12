@@ -4,15 +4,18 @@ on:
     paths:
       - 'sdk/java/core/**'
       - 'examples/extensions/java-lifecycle/**'
-      - '.github/workflows/java-sdk-core-0302.yml'
+      - '.github/workflows/java-sdk-core.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
       - 'examples/extensions/java-lifecycle/**'
-      - '.github/workflows/java-sdk-core-0302.yml'
+      - '.github/workflows/java-sdk-core.yml'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   java-sdk-core:
     strategy:

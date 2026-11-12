@@ -9,10 +9,10 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import test_full_evidence_04315 as fixture
-from test_verified_targets_0360 import COMMIT, NOW
+import test_full_evidence as fixture
+from test_verified_targets_variant2 import COMMIT, NOW
 from verified_targets import verify
-from verified_support_0440 import document, serialize, check_file, BOUNDS
+from verified_support import document, serialize, check_file, BOUNDS
 
 
 class SignedSupportIntegrationTests(unittest.TestCase):

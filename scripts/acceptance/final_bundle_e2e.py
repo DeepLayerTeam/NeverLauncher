@@ -20,7 +20,7 @@ import subprocess
 import sys
 
 HERE = Path(__file__).resolve().parent
-RUNNER = HERE / "minimal_live_e2e_0378.py"
+RUNNER = HERE / "minimal_live_e2e.py"
 BINARY = "launcher-api-linux-x64"
 REQUIRED_CHECKS = frozenset(
     (

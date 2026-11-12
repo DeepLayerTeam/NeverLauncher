@@ -19,9 +19,9 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 
 api_migration = read(
-    "services/api/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql"
+    "services/api/internal/dbmigrate/sql/0023_one_time_join_tickets.sql"
 )
-cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0023_one_time_join_tickets_0143.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0023_one_time_join_tickets.sql")
 if api_migration != cli_migration:
     raise SystemExit("Миграции одноразовых билетов подключения API/CLI 0.14.3 отличаются")
 require(
@@ -42,7 +42,7 @@ require(
     "Миграция 0.14.3",
 )
 
-helper = read("services/api/internal/httpapi/server_bridge_join_tickets_0143.go")
+helper = read("services/api/internal/httpapi/server_bridge_join_tickets.go")
 require(
     helper,
     [
@@ -101,7 +101,7 @@ require(
 )
 
 serverbridge_test = read(
-    "services/api/internal/httpapi/server_bridge_join_tickets_0143_test.go"
+    "services/api/internal/httpapi/server_bridge_join_tickets_test.go"
 )
 yggdrasil_test = read("services/api/internal/httpapi/minecraft_auth_119_test.go")
 require(
@@ -156,7 +156,7 @@ for text, label in [(preflight, "preflight"), (ci, "CI")]:
     require(
         text,
         [
-            "serverbridge-one-time-join-tickets-0143.py",
+            "serverbridge-one-time-join-tickets.py",
             "run-one-time-join-ticket-migration-e2e.sh",
         ],
         f"0.14.3 {label} wiring",

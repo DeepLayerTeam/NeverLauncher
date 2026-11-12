@@ -14,7 +14,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_verified_targets_0360 import TargetGateTests, COMMIT, NOW, digest
+from test_verified_targets_variant2 import TargetGateTests, COMMIT, NOW, digest
 from verified_targets import (
     Blocked,
     CHECKS,
@@ -133,7 +133,7 @@ class FinalPlayerReleaseTests(unittest.TestCase):
         self.assertEqual(len(checks_for("0.40.0")), 15)
         # Последующим выпускам требуются дополнительные независимо проверенные возможности
         # безопасности; нельзя переносить историческое количество 0.40.0 на 1.0.0.
-        from security_capabilities_0431 import checks as security_checks
+        from security_capabilities import checks as security_checks
         self.assertEqual(len(checks_for("1.0.0")), 15 + len(security_checks("1.0.0")))
 
     def test_missing_local_or_official_live_execution_blocks_ga(self):

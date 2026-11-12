@@ -28,10 +28,10 @@ HEX = re.compile(r'^[0-9a-f]{64}$')
 BOOT = re.compile(r'^[0-9a-f]{32}$')
 SAFE = re.compile(r'^[a-z][a-z0-9_:-]{0,95}$')
 SUITES = (
-    ('loader-transformations', 'scripts/tests/guard_loader_0504.py', 6),
-    ('runtime-integrity', 'scripts/tests/guard_runtime_integrity_0505.py', 7),
-    ('continuous-watchdog', 'scripts/tests/continuous_game_protection_0506.py', 2),
-    ('linux-process-protection', 'scripts/tests/linux_runtime_guard_0508.py', 4),
+    ('loader-transformations', 'scripts/tests/guard_loader.py', 6),
+    ('runtime-integrity', 'scripts/tests/guard_runtime_integrity.py', 7),
+    ('continuous-watchdog', 'scripts/tests/continuous_game_protection.py', 2),
+    ('linux-process-protection', 'scripts/tests/linux_runtime_guard.py', 4),
 )
 
 

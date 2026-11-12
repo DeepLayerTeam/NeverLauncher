@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from datetime import datetime,timezone,timedelta
-import operations_ga_0460 as ga
+import operations_ga as ga
 
 class OperationsGATests(unittest.TestCase):
     def setUp(self):
@@ -97,7 +97,7 @@ class OperationsGATests(unittest.TestCase):
                              serialization.PrivateFormat.PKCS8,serialization.NoEncryption()))
         private.chmod(0o600)
         import sys
-        args=['operations_ga_0460.py','attest','--bundle',str(self.bundle),
+        args=['operations_ga.py','attest','--bundle',str(self.bundle),
               '--source-commit','a'*40,'--operator-private-key',str(private),
               '--output-dir',str(self.evidence)]
         for stage,filename in [('install','install-standard'),('upgrade','upgrade-standard'),

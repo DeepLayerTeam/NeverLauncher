@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-from canonical_zip_0461 import write_zip
+from canonical_zip import write_zip
 from pathlib import Path
 
 ap = argparse.ArgumentParser()

@@ -5,11 +5,11 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
-from verify_java_ga_0310 import verify
+from verify_java_ga import verify
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'certification'))
-from review_integration_0310 import REQUIRED, review
-from run_integration_0310 import CASES
+from review_integration_variant2 import REQUIRED, review
+from run_integration_variant2 import CASES
 
 SHA='d'*40
 

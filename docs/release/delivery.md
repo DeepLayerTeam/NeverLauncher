@@ -15,14 +15,14 @@
 ```bash
 VERSION="$(cat VERSION)"
 python3 scripts/version/manage.py check
-python3 scripts/release/inputs_guard_0461.py verify
-python3 scripts/release/delivery_verify_0462.py --bundle "dist/release-$VERSION" --release-manifest
+python3 scripts/release/inputs_guard.py verify
+python3 scripts/release/delivery_verify.py --bundle "dist/release-$VERSION" --release-manifest
 ```
 
 Для независимой приёмки байтов, доступных по неизменяемому HTTPS-пути подготовки/CDN, **сначала** загрузите точные подписанные артефакты без перепаковки. Затем выполните:
 
 ```bash
-python3 scripts/release/staged_accept_0462.py \
+python3 scripts/release/staged_accept.py \
   --bundle "dist/release-$(cat VERSION)" \
   --base-url "https://your-staging.example/releases/v$(cat VERSION)" \
   --cli "dist/release-$(cat VERSION)/launcher-cli-linux-x64" \

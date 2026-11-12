@@ -4,12 +4,12 @@ on:
     paths:
       - 'apps/desktop/**'
       - 'runtime/runtime/**'
-      - '.github/workflows/desktop-migrations-0359.yml'
+      - '.github/workflows/desktop-migrations.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
       - 'runtime/runtime/**'
-      - '.github/workflows/desktop-migrations-0359.yml'
+      - '.github/workflows/desktop-migrations.yml'
 jobs:
   renderer:
     runs-on: ubuntu-24.04

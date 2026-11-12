@@ -100,7 +100,7 @@ func TestConflictingDependencyLibrariesRejected0482(t *testing.T) {
 	if err := os.WriteFile(jar, host, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Inspect(jar); err == nil || !strings.Contains(err.Error(), "class conflict") {
+	if _, err := Inspect(jar); err == nil || !strings.Contains(err.Error(), "Конфликт классов") {
 		t.Fatalf("Ошибочно принят повторяющийся класс сторонней библиотеки: %v", err)
 	}
 	// Разные ID зависимостей могут сосуществовать, но две версии одних и тех же координат —
@@ -115,7 +115,7 @@ func TestConflictingDependencyLibrariesRejected0482(t *testing.T) {
 	if err := os.WriteFile(jar, host, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Inspect(jar); err == nil || !strings.Contains(err.Error(), "duplicate dependency") {
+	if _, err := Inspect(jar); err == nil || !strings.Contains(err.Error(), "повторяющийся идентификатор зависимости") {
 		t.Fatalf("Ошибочно приняты повторяющиеся координаты зависимостей: %v", err)
 	}
 }

@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.exceptions import InvalidSignature
 
-from guard_manifest_sign_0437 import DOMAIN, sign_manifest
+from guard_manifest_sign import DOMAIN, sign_manifest
 
 
 class GuardManifestSignatureTests(unittest.TestCase):

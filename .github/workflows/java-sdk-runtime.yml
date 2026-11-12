@@ -5,24 +5,27 @@ on:
       - 'sdk/java/core/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/eventbus/**'
-      - 'services/api/internal/repository/extension_events_0206.go'
-      - 'services/api/internal/repository/extension_events_0423_test.go'
+      - 'services/api/internal/repository/extension_events.go'
+      - 'services/api/internal/repository/extension_events_test.go'
       - 'examples/extensions/java-runtime/**'
       - 'examples/extensions/java-lifecycle/**'
-      - '.github/workflows/java-sdk-runtime-0303.yml'
+      - '.github/workflows/java-sdk-runtime.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/eventbus/**'
-      - 'services/api/internal/repository/extension_events_0206.go'
-      - 'services/api/internal/repository/extension_events_0423_test.go'
+      - 'services/api/internal/repository/extension_events.go'
+      - 'services/api/internal/repository/extension_events_test.go'
       - 'examples/extensions/java-runtime/**'
       - 'examples/extensions/java-lifecycle/**'
-      - '.github/workflows/java-sdk-runtime-0303.yml'
+      - '.github/workflows/java-sdk-runtime.yml'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   java-runtime:
     strategy:

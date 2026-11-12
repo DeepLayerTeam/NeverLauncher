@@ -5,7 +5,7 @@ on:
       - 'services/api/internal/sqlitecore/**'
       - 'services/api/internal/sqlitedurable/**'
       - 'services/api/cmd/launcher-sqlite/**'
-      - '.github/workflows/sqlite-durable-0325.yml'
+      - '.github/workflows/sqlite-durable.yml'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
   pull_request:

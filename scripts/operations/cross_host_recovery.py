@@ -23,10 +23,10 @@ import tarfile
 import tempfile
 import time
 
-import consistent_backup_0518 as cb
-import dr_03512 as dr
-import multi_host_0512 as multi
-import nn1_compat_0516 as nn
+import consistent_backup as cb
+import dr as dr
+import multi_host as multi
+import nn1_compat as nn
 
 SCHEMA = "launcher.cross-host-recovery/0.51.9"
 STATE = "recovery-state-0519.json"
@@ -437,7 +437,7 @@ def admission(args):
             "Время инцидента недопустимо или предшествует контрольной точке")
     # Проверьте, что НОВЫЙ PostgreSQL действительно допускает запись через свою
     # защищённую служебную точку подключения.
-    from nn1_compat_0516 import dsn_environment
+    from nn1_compat import dsn_environment
     env = dsn_environment(Path(args.pg_dsn_file))
     result = cb.execute(["psql", "-X", "-q", "-A", "-t", "-w", "-v", "ON_ERROR_STOP=1",
                          "-c", "SELECT NOT pg_is_in_recovery();"], env=env, timeout=45).decode().strip()
@@ -484,8 +484,8 @@ def main(argv=None):
     p.add_argument("--trust-file"); p.add_argument("--node", action="append", default=[])
     p.add_argument("--world-destination", action="append", default=[])
     p.add_argument("--project", default="")
-    p.add_argument("--remote-script", default="/opt/launcher/scripts/operations/cross_host_recovery_0519.py")
-    p.add_argument("--multi-host-script", default="/opt/launcher/scripts/operations/multi_host_0512.py")
+    p.add_argument("--remote-script", default="/opt/launcher/scripts/operations/cross_host_recovery.py")
+    p.add_argument("--multi-host-script", default="/opt/launcher/scripts/operations/multi_host.py")
     p.add_argument("--directory", default="/opt/launcher/deploy/production")
     p.add_argument("--tar-image"); p.add_argument("--volume"); p.add_argument("--sha256")
     p.add_argument("--destination"); p.add_argument("--backup-id")

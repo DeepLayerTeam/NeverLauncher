@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import auth_identity_real_0525 as auth
+import auth_identity_real as auth
 
 
 def example_input():

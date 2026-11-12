@@ -28,9 +28,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/acceptance'))
 sys.path.insert(0, str(ROOT / 'scripts/release'))
-import inventory_0521 as inventory
-import native_packages_0522 as native
-import sweep_05211 as sweep
+import inventory as inventory
+import native_packages as native
+import sweep as sweep
 
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
 SCHEMA = 'launcher.candidate-freeze/' + VERSION

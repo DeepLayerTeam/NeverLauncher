@@ -33,25 +33,25 @@ need('apps/desktop/src-tauri/src/device_keys.rs', [
     'is_hardware_backend_kind',
     'hardware_backend_classification_is_fail_closed',
 ])
-need('services/api/internal/httpapi/device_trust_0121.go', [
+need('services/api/internal/httpapi/device_trust.go', [
     'case "p256"',
     'ecdsa.Verify',
     'elliptic.Unmarshal(elliptic.P256()',
     'keyBinding',
     'hardwareProvider',
 ])
-need('services/api/internal/httpapi/device_trust_0121_test.go', [
+need('services/api/internal/httpapi/device_trust_test.go', [
     'TestDeviceTrustHardwareP256RegistrationAndBinding0123',
     'signP256P1363Test0123',
     '"keyBinding":       "hardware"',
     '"assurance"] != "proof-of-possession"',
 ])
-need('services/api/internal/repository/devices_0121.go', [
+need('services/api/internal/repository/devices.go', [
     'device.KeyAlgorithm != "ed25519" && device.KeyAlgorithm != "p256"',
     'device.KeyBinding != "software" && device.KeyBinding != "hardware"',
     'hardware-bound device keys must use p256',
 ])
-need('services/api/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql', [
+need('services/api/internal/dbmigrate/sql/0013_hardware_bound_identities.sql', [
     "key_algorithm IN ('ed25519','p256')",
     "key_binding IN ('software','hardware')",
     "key_binding='hardware' AND key_algorithm='p256'",
@@ -69,12 +69,12 @@ need('.github/workflows/ci.yml', [
 
 # В этом выпуске бэкенд никогда не должен считать заявленную устройством аппаратную
 # привязку удалённой аттестацией или устойчивой к фишингу аутентификацией.
-server = (ROOT / 'services/api/internal/httpapi/device_trust_0121.go').read_text(encoding='utf-8')
+server = (ROOT / 'services/api/internal/httpapi/device_trust.go').read_text(encoding='utf-8')
 if 'Assurance:         "hardware"' in server or 'Assurance:         "attested"' in server:
     errors.append('обработчик доверия к устройству: аппаратная привязка без аттестации необоснованно повышает уровень доверия')
 
-migration_api = (ROOT / 'services/api/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql').read_bytes()
-migration_cli = resource_read_bytes(ROOT, 'cli/internal/dbmigrate/sql/0013_hardware_bound_identities_0123.sql')
+migration_api = (ROOT / 'services/api/internal/dbmigrate/sql/0013_hardware_bound_identities.sql').read_bytes()
+migration_cli = resource_read_bytes(ROOT, 'cli/internal/dbmigrate/sql/0013_hardware_bound_identities.sql')
 if migration_api != migration_cli:
     errors.append('SQL-миграция 0013 различается в каталогах API и CLI')
 

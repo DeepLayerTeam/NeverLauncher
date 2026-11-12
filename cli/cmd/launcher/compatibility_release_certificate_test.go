@@ -110,7 +110,7 @@ func TestLoaderCompatibilityReleaseCertificate01711RejectsMissingCertificate(t *
 	if err := os.Remove(filepath.Join(bundle, loaderCompatibilityReleaseCertificateFile01711)); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.11"); err == nil || !strings.Contains(err.Error(), "missing") {
+	if err := verifyCompatibilityCertificationInBundle(bundle, "0.17.11"); err == nil || !strings.Contains(err.Error(), "Отсутствует") {
 		t.Fatalf("Отсутствие полного релиз-кандидата должно приводить к отказу: %v", err)
 	}
 }

@@ -3,14 +3,17 @@ on:
   push:
     paths:
       - 'services/api/**'
-      - '.github/workflows/trust-isolation-baseline-0311.yml'
+      - '.github/workflows/trust-isolation-baseline.yml'
   pull_request:
     paths:
       - 'services/api/**'
-      - '.github/workflows/trust-isolation-baseline-0311.yml'
+      - '.github/workflows/trust-isolation-baseline.yml'
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   functional:
     name: ${{ matrix.os }} — политика доверия, возможности расширений и диагностика

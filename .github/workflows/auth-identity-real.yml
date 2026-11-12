@@ -3,23 +3,23 @@ on:
   push:
     paths:
       - 'VERSION'
-      - 'services/api/internal/httpapi/auth_browser_replay_0525*'
+      - 'services/api/internal/httpapi/auth_browser_replay*'
       - 'services/api/internal/httpapi/oidc_flow_115.go'
       - 'services/api/internal/httpapi/microsoft_flow_116.go'
-      - 'services/api/internal/httpapi/federation_release_0120.go'
-      - 'scripts/acceptance/auth_identity_real_0525.py'
-      - 'scripts/acceptance/test_auth_identity_real_0525.py'
-      - '.github/workflows/auth-identity-real-0525.yml'
+      - 'services/api/internal/httpapi/federation_release.go'
+      - 'scripts/acceptance/auth_identity_real.py'
+      - 'scripts/acceptance/test_auth_identity_real.py'
+      - '.github/workflows/auth-identity-real.yml'
   pull_request:
     paths:
       - 'VERSION'
-      - 'services/api/internal/httpapi/auth_browser_replay_0525*'
+      - 'services/api/internal/httpapi/auth_browser_replay*'
       - 'services/api/internal/httpapi/oidc_flow_115.go'
       - 'services/api/internal/httpapi/microsoft_flow_116.go'
-      - 'services/api/internal/httpapi/federation_release_0120.go'
-      - 'scripts/acceptance/auth_identity_real_0525.py'
-      - 'scripts/acceptance/test_auth_identity_real_0525.py'
-      - '.github/workflows/auth-identity-real-0525.yml'
+      - 'services/api/internal/httpapi/federation_release.go'
+      - 'scripts/acceptance/auth_identity_real.py'
+      - 'scripts/acceptance/test_auth_identity_real.py'
+      - '.github/workflows/auth-identity-real.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -36,7 +36,7 @@ jobs:
           POSTGRES_PASSWORD: integration-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U acceptance -d acceptance'
+          --health-cmd "pg_isready -U acceptance -d acceptance"
           --health-interval 5s --health-timeout 5s --health-retries 25
     env:
       LAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://acceptance:integration-only@localhost:5432/acceptance?sslmode=disable
@@ -51,8 +51,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/version/manage.py check
-          python3 -m unittest discover -s scripts/acceptance -p 'test_auth_identity_real_0525.py' -v
-          if python3 scripts/acceptance/auth_identity_real_0525.py run \
+          python3 -m unittest discover -s scripts/acceptance -p 'test_auth_identity_real.py' -v
+          if python3 scripts/acceptance/auth_identity_real.py run \
                --secrets "$RUNNER_TEMP/not-provided.json" \
                --oidc-proof "$RUNNER_TEMP/not-provided-oidc.json" \
                --output "$RUNNER_TEMP/false-pass.json"; then
@@ -68,7 +68,7 @@ jobs:
         working-directory: services/api
         run: |
           set -euo pipefail
-          test -z "$(gofmt -l internal/httpapi/*0525*.go internal/httpapi/oidc_flow_115.go internal/httpapi/microsoft_flow_116.go internal/httpapi/federation_release_0120.go)"
+          test -z "$(gofmt -l internal/httpapi/*0525*.go internal/httpapi/oidc_flow_115.go internal/httpapi/microsoft_flow_116.go internal/httpapi/federation_release.go)"
           go build ./cmd/...
           go test -race -count=1 -timeout=12m ./internal/httpapi \
             -run 'TestBrowserReplayAcrossAPIReplicas0525|TestBrowserLinkReplayAndLoginSeparation0525|TestBrowserReplayAtomicMemory0525|TestBrowserNonceAcrossPostgresReplicas0525|TestOIDCBeginCompleteCreatesCanonicalLauncherSession|TestGenericBrowserProviderExplicitLink0120|TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116'
@@ -95,7 +95,7 @@ jobs:
           : "${AUTH_0525_OIDC_PROOF_FILE:?требуется файл подтверждения реального браузера с правами доступа 0600}"
           : "${AUTH_0525_API_SHA256:?требуется независимо закреплённая контрольная сумма SHA-256 пакета Backend}"
           umask 077
-          python3 scripts/acceptance/auth_identity_real_0525.py run \
+          python3 scripts/acceptance/auth_identity_real.py run \
              --secrets "$AUTH_0525_SECRETS_FILE" \
              --oidc-proof "$AUTH_0525_OIDC_PROOF_FILE" \
              --source-commit "$GITHUB_SHA" \

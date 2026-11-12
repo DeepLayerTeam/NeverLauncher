@@ -6,14 +6,14 @@ on:
       - 'scripts/acceptance/**'
       - 'scripts/install/production-deploy.py'
       - 'deploy/production/docker-compose*.yml'
-      - '.github/workflows/owner-admin-real-0523.yml'
+      - '.github/workflows/owner-admin-real.yml'
   pull_request:
     paths:
       - 'VERSION'
       - 'scripts/acceptance/**'
       - 'scripts/install/production-deploy.py'
       - 'deploy/production/docker-compose*.yml'
-      - '.github/workflows/owner-admin-real-0523.yml'
+      - '.github/workflows/owner-admin-real.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -32,15 +32,15 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/version/manage.py check
-          python3 -m py_compile scripts/acceptance/minimal_live_e2e_0378.py scripts/acceptance/owner_admin_real_0523.py scripts/install/production-deploy.py
-          python3 -m unittest discover -s scripts/acceptance -p 'test_owner_admin_real_0523.py' -v
-          python3 -m unittest discover -s scripts/acceptance -p 'test_minimal_live_e2e_0378.py' -v
-          python3 -m unittest discover -s scripts/acceptance -p 'test_final_bundle_e2e_0380.py' -v
+          python3 -m py_compile scripts/acceptance/minimal_live_e2e.py scripts/acceptance/owner_admin_real.py scripts/install/production-deploy.py
+          python3 -m unittest discover -s scripts/acceptance -p 'test_owner_admin_real.py' -v
+          python3 -m unittest discover -s scripts/acceptance -p 'test_minimal_live_e2e.py' -v
+          python3 -m unittest discover -s scripts/acceptance -p 'test_final_bundle_e2e.py' -v
           python3 -m unittest discover -s scripts/install -p 'test_production_deploy.py' -v
       - name: Убедиться, что отсутствие реального промышленного хоста никогда не даёт результат успех
         run: |
           set -euo pipefail
-          if python3 scripts/acceptance/owner_admin_real_0523.py \
+          if python3 scripts/acceptance/owner_admin_real.py \
             --env "$RUNNER_TEMP/missing.env" --email owner@example.invalid \
             --password-file "$RUNNER_TEMP/missing.password" \
             --server-id missing-host --bridge-registration-file "$RUNNER_TEMP/missing-reg.json" \
@@ -83,7 +83,7 @@ jobs:
           : "${NL_0523_SERVER_ID:?требуется отдельный сервер Minecraft}"
           : "${NL_0523_OWNER_EMAIL:?требуется отдельный адрес электронной почты владельца}"
           umask 077
-          python3 scripts/acceptance/owner_admin_real_0523.py \
+          python3 scripts/acceptance/owner_admin_real.py \
             --env "$NL_0523_ENV" --email "$NL_0523_OWNER_EMAIL" \
             --password-file "$NL_0523_PASSWORD_FILE" \
             --server-id "$NL_0523_SERVER_ID" \

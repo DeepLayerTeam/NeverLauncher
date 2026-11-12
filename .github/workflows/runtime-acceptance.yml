@@ -49,7 +49,7 @@ jobs:
           go test -count=1 -timeout 30m ./internal/dbmigrate ./internal/repository ./internal/httpapi \
             -run 'TestV11|TestV12|TestGA|TestGASource|TestStableSQL|TestStableRuntime|TestProductionGate|TestTrustedAttestation|TestV05|TestV08'
       - name: Отклонять неполные, устаревшие, поддельные или имитированные GA-свидетельства
-        run: python3 scripts/ga/test_runtime_acceptance_0350.py
+        run: python3 scripts/ga/test_runtime_acceptance.py
   live-backend-acceptance:
     # Защищённое окружение разрешает только токен Backend API для чтения.
     # В нём нет ни ключа подписи аттестации, ни ключа промышленного релиза.
@@ -71,7 +71,7 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          python3 scripts/ga/runtime_acceptance_0350.py \
+          python3 scripts/ga/runtime_acceptance.py \
             --backend "$NL_GA_BACKEND_URL" --package-id "$STAGED_PACKAGE" \
             --version "$(cat VERSION)" --source-sha "$GITHUB_SHA" \
             --output "$RUNNER_TEMP/GA_RUNTIME_PREFLIGHT_0350.json"

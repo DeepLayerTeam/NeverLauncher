@@ -140,9 +140,9 @@ require(
 
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
-if "windows-production-hardening-0136.py" not in ci:
+if "windows-production-hardening.py" not in ci:
     raise SystemExit("0.13.6: проверка защиты не подключена к CI")
-if "windows-production-hardening-0136.py" not in preflight:
+if "windows-production-hardening.py" not in preflight:
     raise SystemExit("0.13.6: проверка защиты не подключена к предварительной проверке выпуска")
 require(
     ci,

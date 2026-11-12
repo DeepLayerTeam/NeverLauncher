@@ -10,7 +10,7 @@ on:
       - 'services/api/**'
       - 'scripts/rc/**'
       - 'scripts/operations/**'
-      - '.github/workflows/release-candidate-03514.yml'
+      - '.github/workflows/release-candidate.yml'
   push:
     paths:
       - 'VERSION'
@@ -19,12 +19,15 @@ on:
       - 'services/api/**'
       - 'scripts/rc/**'
       - 'scripts/operations/**'
-      - '.github/workflows/release-candidate-03514.yml'
+      - '.github/workflows/release-candidate.yml'
 permissions:
   contents: read
 concurrency:
   group: launcher-03514-${{ github.ref }}
   cancel-in-progress: false
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   rc-regressions:
     name: "Версия, отрицательные свидетельства и безопасность исходников DR"
@@ -40,10 +43,10 @@ jobs:
       - name: "Приёмочные исполняемые тесты с отказом при ошибке"
         run: |
           python3 scripts/version/manage.py check
-          python3 scripts/acceptance/ux_0351.py audit
+          python3 scripts/acceptance/ux.py audit
           python3 -m unittest discover -s scripts/rc -p 'test_*.py' -v
-          python3 -m unittest discover -s scripts/operations -p 'test_dr_03512.py' -v
-          python3 -m unittest discover -s scripts/ga -p 'test_runtime_acceptance_0350.py' -v
+          python3 -m unittest discover -s scripts/operations -p 'test_dr.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_runtime_acceptance.py' -v
   runtime-native:
     needs: [rc-regressions]
     name: "Подписанная загрузка, восстановление и отказ при подмене (${{ matrix.target }})"
@@ -76,7 +79,7 @@ jobs:
           ext=''
           if [ '${{ matrix.target }}' = 'windows' ]; then ext='.exe'; fi
           mkdir -p rc-out/native
-          python scripts/rc/native_03514.py \
+          python scripts/rc/native.py \
             --runtime "runtime/runtime/target/release/runtime${ext}" \
             --signer "runtime/runtime/target/release/examples/cert_sign_fixture${ext}" \
             --commit "$GITHUB_SHA" \
@@ -142,7 +145,7 @@ jobs:
           ext=''
           if [ '${{ matrix.target }}' = 'windows' ]; then ext='.exe'; fi
           mkdir -p rc-out/desktop
-          python scripts/rc/platform_03514.py \
+          python scripts/rc/platform.py \
             --binary "apps/desktop/src-tauri/target/release/launcher-desktop${ext}" \
             --frontend apps/desktop/dist \
             --commit "$GITHUB_SHA" \
@@ -167,7 +170,7 @@ jobs:
           POSTGRES_DB: launcher_rc
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U launcher_rc -d launcher_rc'
+          --health-cmd "pg_isready -U launcher_rc -d launcher_rc"
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:launcher_rc_ci_only@127.0.0.1:5432/launcher_rc?sslmode=disable
@@ -190,7 +193,7 @@ jobs:
       - name: "Сквозные HTTP-тесты владельца и игрока на временном настоящем Backend"
         run: |
           mkdir -p rc-out/backend
-          bash scripts/acceptance/run_owner_player_0351.sh "$PWD/rc-out/backend/owner-player.json"
+          bash scripts/acceptance/run_owner_player.sh "$PWD/rc-out/backend/owner-player.json"
       - uses: actions/upload-artifact@v4
         with:
           name: rc03514-backend-${{ github.sha }}
@@ -225,7 +228,7 @@ jobs:
           path: rc-out/backend
       - name: "Проверка реальных операций, хешей, границ доступа и полноты точного коммита"
         run: |
-          python scripts/rc/gate_03514.py \
+          python scripts/rc/gate.py \
             --native-dir rc-out/native --desktop-dir rc-out/desktop \
             --backend rc-out/backend/owner-player.json \
             --commit "$GITHUB_SHA" --output rc03514-verification.json

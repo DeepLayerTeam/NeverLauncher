@@ -95,7 +95,7 @@ if (
   const [command, option, path] = process.argv.slice(2);
   if (!["pack", "verify"].includes(command) || option !== "--dist" || !path) {
     console.error(
-      "Использование: node prebuild_assets_03011.mjs pack|verify --dist <vite-dist>",
+      "Использование: node prebuild_assets.mjs pack|verify --dist <vite-dist>",
     );
     process.exitCode = 2;
   } else {

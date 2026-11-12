@@ -16,9 +16,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/release'))
-from check_payload_0461 import inventory
-from adversarial_pilot_05012 import verify_game
-from guard_ga_0510 import Blocked, VERSION, TARGETS, LOADERS, COMMIT, require
+from check_payload import inventory
+from adversarial_pilot import verify_game
+from guard_ga import Blocked, VERSION, TARGETS, LOADERS, COMMIT, require
 
 
 def capture(work: Path, paper: Path, username: str, target: str, loader: str, commit: str,
@@ -33,7 +33,7 @@ def capture(work: Path, paper: Path, username: str, target: str, loader: str, co
     row = release['targets'][target]
     require(package.resolve() == (release_bundle / row['file']).resolve() and package.is_file()
             and not package.is_symlink(), 'Это не точный финальный подписанный установщик')
-    from adversarial_pilot_05012 import file_hash
+    from adversarial_pilot import file_hash
     require(file_hash(package) == row['sha256'], 'Готовый установщик изменён после проверки')
     game = verify_game(work, paper, username)
     require(game['loader'] == loader, 'Фактический загрузчик Minecraft отличается от запрошенного')

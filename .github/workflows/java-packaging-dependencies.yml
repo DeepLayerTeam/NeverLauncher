@@ -4,18 +4,18 @@ on:
     paths:
       - 'sdk/java/core/**'
       - 'services/api/internal/extensionjava/**'
-      - 'services/api/internal/extensionlifecycle/java_manager_0305.go'
-      - 'scripts/java/package_dependencies_0482.py'
+      - 'services/api/internal/extensionlifecycle/java_manager.go'
+      - 'scripts/java/package_dependencies.py'
       - 'examples/extensions/java-dependencies/**'
-      - '.github/workflows/java-packaging-dependencies-0482.yml'
+      - '.github/workflows/java-packaging-dependencies.yml'
   pull_request:
     paths:
       - 'sdk/java/core/**'
       - 'services/api/internal/extensionjava/**'
-      - 'services/api/internal/extensionlifecycle/java_manager_0305.go'
-      - 'scripts/java/package_dependencies_0482.py'
+      - 'services/api/internal/extensionlifecycle/java_manager.go'
+      - 'scripts/java/package_dependencies.py'
       - 'examples/extensions/java-dependencies/**'
-      - '.github/workflows/java-packaging-dependencies-0482.yml'
+      - '.github/workflows/java-packaging-dependencies.yml'
   workflow_dispatch:
 permissions:
   contents: read

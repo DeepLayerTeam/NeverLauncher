@@ -20,8 +20,8 @@ import sys
 import tempfile
 import zipfile
 
-from delivery_verify_0462 import EXPECTED, read_archive, verify_target
-from reproducible_0470 import (
+from delivery_verify import EXPECTED, read_archive, verify_target
+from reproducible import (
     TARGETS, RELEASE_VERSION, contract, visit_archive, require_path, sha256_file, atomic_json,
 )
 

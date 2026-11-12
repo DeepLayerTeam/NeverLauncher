@@ -27,18 +27,18 @@ except ValueError as exc:
 if version_tuple < (0, 12, 8):
     raise SystemExit(f"Версия: требуется версия не ниже 0.12.8, получено {version}")
 
-handler = read("services/api/internal/httpapi/device_key_recovery_0128.go")
-repo = read("services/api/internal/repository/devices_0121.go")
+handler = read("services/api/internal/httpapi/device_key_recovery.go")
+repo = read("services/api/internal/repository/devices.go")
 model = read("services/api/internal/model/model.go")
 routes = read("services/api/internal/httpapi/routes_auth.go")
 native = read("apps/desktop/src-tauri/src/device_keys.rs")
 tauri = read("apps/desktop/src-tauri/src/main.rs")
 desktop = read("apps/desktop/src/main.tsx")
 migration_api = read(
-    "services/api/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql"
+    "services/api/internal/dbmigrate/sql/0017_device_key_recovery_rotation.sql"
 )
-migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql")
-tests = read("services/api/internal/httpapi/device_key_recovery_0128_test.go")
+migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation.sql")
+tests = read("services/api/internal/httpapi/device_key_recovery_test.go")
 
 require(
     handler,

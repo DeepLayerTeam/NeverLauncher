@@ -3,13 +3,13 @@ on:
   push:
     paths:
       - 'cli/cmd/launcher/**'
-      - 'e2e/scripts/run-client-factory-certification-02712.sh'
-      - '.github/workflows/runtime-e2e-certification-02712.yml'
+      - 'e2e/scripts/run-client-factory-certification.sh'
+      - '.github/workflows/runtime-e2e-certification.yml'
   pull_request:
     paths:
       - 'cli/cmd/launcher/**'
-      - 'e2e/scripts/run-client-factory-certification-02712.sh'
-      - '.github/workflows/runtime-e2e-certification-02712.yml'
+      - 'e2e/scripts/run-client-factory-certification.sh'
+      - '.github/workflows/runtime-e2e-certification.yml'
   workflow_dispatch:
     inputs:
       actual_minecraft:
@@ -76,7 +76,7 @@ jobs:
           LAUNCHER_CERT_OUTPUT: e2e/client-factory-02712-result
         run: |
           export LAUNCHER_CERT_JAVA="$JAVA_HOME/bin/java"
-          bash e2e/scripts/run-client-factory-certification-02712.sh
+          bash e2e/scripts/run-client-factory-certification.sh
       - name: Загрузить свидетельства (Загрузить закрытые подписание ключ)
         if: always()
         uses: actions/upload-artifact@v4

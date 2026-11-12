@@ -2,19 +2,22 @@ name: Guard 0.50.10 — совместимость нативного ПО и JV
 on:
   push:
     paths:
-      - 'runtime/runtime/src/guard_compatibility_0502.rs'
-      - 'runtime/runtime/src/runtime_integrity_0505.rs'
-      - 'runtime/runtime/src/linux_runtime_guard_0508.rs'
-      - 'runtime/runtime/src/continuous_game_protection_0506.rs'
+      - 'runtime/runtime/src/guard_compatibility.rs'
+      - 'runtime/runtime/src/runtime_integrity.rs'
+      - 'runtime/runtime/src/linux_runtime_guard.rs'
+      - 'runtime/runtime/src/continuous_game_protection.rs'
       - 'runtime/guard-sensor/src/hook_engine.rs'
       - 'sdk/java/trusted-agent/**'
       - 'cli/cmd/launcher/guard_compat*'
-      - 'scripts/tests/guard_runtime_integrity_0505.py'
-      - '.github/workflows/mod-software-compatibility-05010.yml'
+      - 'scripts/tests/guard_runtime_integrity.py'
+      - '.github/workflows/mod-software-compatibility.yml'
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   native-runtime:
     strategy:
@@ -53,7 +56,7 @@ jobs:
         if: runner.os == 'Windows'
         run: cargo test --manifest-path runtime/guard-sensor/Cargo.toml --lib external_overlay_scope_05010_tests
       - name: "Проверить реальные процессы Java, JNI, модули и JAR в положительных и отрицательных сценариях"
-        run: python scripts/tests/guard_runtime_integrity_0505.py
+        run: python scripts/tests/guard_runtime_integrity.py
       - name: Проверить подписанную политику, отзыв доступа и наложения в Linux
         working-directory: cli
         run: go test ./cmd/launcher -run '^(TestExternalNativeCompatibility05010|TestSignedExternalModulePolicy05010|TestGuardCompatibility0502)' -count=1 -timeout 12m

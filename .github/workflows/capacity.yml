@@ -7,7 +7,7 @@ on:
       - 'services/api/cmd/launcher-api/main.go'
       - 'services/api/internal/httpapi/**'
       - 'VERSION'
-      - '.github/workflows/capacity-03215.yml'
+      - '.github/workflows/capacity.yml'
   pull_request:
     paths:
       - 'services/api/internal/capacity/**'

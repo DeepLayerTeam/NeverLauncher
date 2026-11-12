@@ -1007,7 +1007,7 @@ mod tests {
         let _=fs::remove_dir_all(parent);
     }
     fn signed_optional_fixture_0246(root:&Path)->(Manifest,String){
-        let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+        let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
         let catalog=m.component_catalog.as_mut().unwrap();
         // Тестовый сценарий должен работать на всех ОС, даже если в эталонном манифесте
         // указаны необязательные условия, характерные для Linux.

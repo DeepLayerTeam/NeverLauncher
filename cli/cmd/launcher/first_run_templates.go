@@ -24,6 +24,9 @@ func readCanonicalProductionTemplate(name string) ([]byte, string, error) {
 		data, err := os.ReadFile(path)
 		return data, path, err
 	}
+	if name == "README.md" || name == "TLS.md" || name == "production-checklist.md" {
+		return nil, "", os.ErrNotExist
+	}
 	if name != "docker-compose.yml" && name != "nginx.conf" && name != "env.production.example" {
 		return nil, "", fmt.Errorf("Неизвестное значение: промышленный шаблон: %q", name)
 	}

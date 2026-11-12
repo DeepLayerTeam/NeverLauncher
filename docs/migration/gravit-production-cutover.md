@@ -63,7 +63,7 @@
 **Этап 1 — запрет новых подключений и завершение существующих:**
 
 ```sh
-python3 tools/gravit-port/production_cutover_04911.py prepare \
+python3 tools/gravit-port/production_cutover.py prepare \
   --config /srv/launcher-cutover/config.json \
   --journal-dir /srv/launcher-cutover/journal --confirm run_12345678
 ```
@@ -77,7 +77,7 @@ python3 tools/gravit-port/production_cutover_04911.py prepare \
 **Этап 2 — активация настоящего маршрута PostgreSQL, вход на цель и трафик Minecraft:**
 
 ```sh
-python3 tools/gravit-port/production_cutover_04911.py activate \
+python3 tools/gravit-port/production_cutover.py activate \
   --config /srv/launcher-cutover/config.json \
   --journal-dir /srv/launcher-cutover/journal --confirm run_12345678
 ```
@@ -87,7 +87,7 @@ python3 tools/gravit-port/production_cutover_04911.py activate \
 Прочитайте локальный статус, ничего не переключая:
 
 ```sh
-python3 tools/gravit-port/production_cutover_04911.py status \
+python3 tools/gravit-port/production_cutover.py status \
   --config /srv/launcher-cutover/config.json --journal-dir /srv/launcher-cutover/journal
 ```
 
@@ -99,4 +99,4 @@ python3 tools/gravit-port/production_cutover_04911.py status \
 
 В каталоге аудита хранятся JSON маршрута до активации, предварительной активации, активации, после и окончательного состояния, отчёт Minecraft после переключения, журнал без перезаписи и блокировка. Файлы имеют права `0600`, каталог — `0700`. Bearer-токен, пароль тестового аккаунта и ответ авторизации не записываются в свидетельства. Повторная `prepare` в том же каталоге отклоняется. Средство не меняет файлы миров Minecraft, не переносит писателей БД и инвентарь игроков, не меняет DNS, не подписывает выпуски и не сертифицирует устойчивость HAProxy. Не используйте его на настоящем проекте до доказанной репетиции, внешнего fencing и проверенных процедур восстановления.
 
-**Локальная регрессия:** `python3 -m unittest discover -s tools/gravit-port -p 'test_production_cutover_04911.py' -v`. В ней используются настоящий Unix-сокет и реальные вызовы дочернего CLI с тестовыми заменителями HAProxy/Backend, а не промышленная инфраструктура. Для приёмки всё ещё нужны реальные HAProxy, PostgreSQL, Minecraft, подписанный выпуск, аккаунт Microsoft и независимый оператор.
+**Локальная регрессия:** `python3 -m unittest discover -s tools/gravit-port -p 'test_production_cutover.py' -v`. В ней используются настоящий Unix-сокет и реальные вызовы дочернего CLI с тестовыми заменителями HAProxy/Backend, а не промышленная инфраструктура. Для приёмки всё ещё нужны реальные HAProxy, PostgreSQL, Minecraft, подписанный выпуск, аккаунт Microsoft и независимый оператор.

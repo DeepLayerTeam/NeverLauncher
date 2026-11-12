@@ -11,7 +11,7 @@ on:
       - 'services/api/internal/microsoftconnector/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
-      - '.github/workflows/provider-runtime-parity-0296.yml'
+      - '.github/workflows/provider-runtime-parity.yml'
   pull_request:
     paths:
       - 'services/api/pkg/authconnector/**'
@@ -23,7 +23,7 @@ on:
       - 'services/api/internal/microsoftconnector/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
-      - '.github/workflows/provider-runtime-parity-0296.yml'
+      - '.github/workflows/provider-runtime-parity.yml'
 permissions:
   contents: read
 jobs:

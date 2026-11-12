@@ -3,11 +3,11 @@ name: 0.52.12 — фиксация окончательных файлов и н
 on:
   push:
     paths:
-      - 'scripts/release/defect_rehearsal_05212.py'
-      - 'scripts/release/test_defect_rehearsal_05212.py'
-      - 'scripts/acceptance/sweep_05211.py'
-      - 'scripts/release/independent_current_05211.py'
-      - '.github/workflows/defect-closure-rehearsal-05212.yml'
+      - 'scripts/release/defect_rehearsal.py'
+      - 'scripts/release/test_defect_rehearsal.py'
+      - 'scripts/acceptance/sweep.py'
+      - 'scripts/release/independent_current.py'
+      - '.github/workflows/defect-closure-rehearsal.yml'
   pull_request:
   workflow_dispatch:
     inputs:
@@ -47,10 +47,10 @@ jobs:
           set -euo pipefail
           python -m pip install 'cryptography>=42,<47' 'PyYAML>=6,<7'
           PYTHONPATH=scripts/acceptance:scripts/release:scripts/operations python -m unittest -q \
-            scripts/release/test_defect_rehearsal_05212.py \
-            scripts/acceptance/test_sweep_05211.py \
-            scripts/release/test_independent_current_05211.py \
-            scripts/acceptance/test_soak_05211.py
+            scripts/release/test_defect_rehearsal.py \
+            scripts/acceptance/test_sweep.py \
+            scripts/release/test_independent_current.py \
+            scripts/acceptance/test_soak.py
           python scripts/version/manage.py check
 
   freeze:
@@ -83,7 +83,7 @@ jobs:
           [[ "$APPROVED_INDEX_SHA" =~ ^[0-9a-f]{64}$ ]]
           test -n "$FREEZE_INBOX" && test -n "$RELEASE_SIGN_KEY"
           mkdir -p "$RUNNER_TEMP/freeze-05212"
-          python scripts/release/defect_rehearsal_05212.py freeze \
+          python scripts/release/defect_rehearsal.py freeze \
             --commit "$APPROVED_COMMIT" --project "$APPROVED_PROJECT" \
             --packages "$FREEZE_INBOX/packages" --index "$FREEZE_INBOX/source-index.json" \
             --index-sha "$APPROVED_INDEX_SHA" \
@@ -136,7 +136,7 @@ jobs:
           test -n "$LAB_INBOX" && test -n "$REVIEWER_PRIVATE_KEY"
           test -n "$RELEASE_PUBLIC_PIN" && test -n "$ISSUES_PUBLIC_PIN" && test -n "$REVIEWER_PUBLIC_PIN"
           mkdir -p "$RUNNER_TEMP/rehearsal-05212/logs"
-          python scripts/release/defect_rehearsal_05212.py rehearse \
+          python scripts/release/defect_rehearsal.py rehearse \
             --commit "$APPROVED_COMMIT" --project "$APPROVED_PROJECT" \
             --packages "$LAB_INBOX/packages" --index "$LAB_INBOX/source-index.json" \
             --index-sha "$APPROVED_INDEX_SHA" \
@@ -198,7 +198,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$LAB_INBOX"
-          python scripts/release/defect_rehearsal_05212.py verify \
+          python scripts/release/defect_rehearsal.py verify \
             --commit "$APPROVED_COMMIT" --project "$APPROVED_PROJECT" \
             --packages "$LAB_INBOX/packages" --index "$LAB_INBOX/source-index.json" \
             --index-sha "$APPROVED_INDEX_SHA" \

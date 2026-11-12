@@ -8,14 +8,14 @@ on:
       - 'services/api/internal/dbmigrate/sql/0097*'
       - 'cli/cmd/launcher/migration_rehearsal*'
       - 'cli/cmd/launcher/migration_live*'
-      - 'cli/cmd/launcher/migration_rehearsal_local_04910*'
-      - 'cli/cmd/launcher/migration_workflow_0331.go'
-      - 'tools/gravit-port/rehearse_cohort_04910.py'
-      - 'tools/gravit-port/test_rehearse_cohort_04910.py'
+      - 'cli/cmd/launcher/migration_rehearsal_local*'
+      - 'cli/cmd/launcher/migration_workflow.go'
+      - 'tools/gravit-port/rehearse_cohort.py'
+      - 'tools/gravit-port/test_rehearse_cohort.py'
       - 'docs/migration/gravit-cohort-rehearsal.md'
       - 'docs/migration/gravit-live-rehearsal.md'
       - 'schemas/openapi*'
-      - '.github/workflows/gravit-rehearsal-03310.yml'
+      - '.github/workflows/gravit-rehearsal.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -54,7 +54,7 @@ jobs:
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestRehearsal|TestRehearseLocal04910'
       - name: Проверить группу из трёх проектов на синтетических данных (без сертификации GA)
-        run: python3 -m unittest discover -s tools/gravit-port -p 'test_rehearse_cohort_04910.py' -v
+        run: python3 -m unittest discover -s tools/gravit-port -p 'test_rehearse_cohort.py' -v
       - name: Проверить контракт и версию
         run: |
           python3 scripts/version/manage.py check

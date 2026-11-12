@@ -23,8 +23,8 @@ import sys
 import tempfile
 from urllib.parse import urlsplit
 
-import dr_03512 as dr
-import db_upgrade_0457 as database
+import dr as dr
+import db_upgrade as database
 
 TARGET = '0.45.8'
 SOURCE = '0.45.7'

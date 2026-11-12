@@ -52,7 +52,7 @@ jobs:
           (cd cli && go build -trimpath -o /tmp/nl ./cmd/launcher)
           /tmp/nl delivery manifest --bundle "${OUT}" --version "${VERSION}"
           /tmp/nl delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
-          python3 scripts/smoke/offline/managed-jre-distribution-0155.py
+          python3 scripts/smoke/offline/managed-jre-distribution.py
 
       - name: Загрузить управляемая JRE промышленные ресурсы
         uses: actions/upload-artifact@v4

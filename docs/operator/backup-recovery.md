@@ -4,7 +4,7 @@
 
 ## Минимальный режим (Minimal, SQLite): перенос на другой Linux-хост
 
-Остановите systemd API и всех сторонних процессов записи. Ключ шифрования храните по отдельному каналу, не в резервируемом каталоге. Установите зависимости `scripts/install/requirements-portable-0452.txt` из доверенного источника.
+Остановите systemd API и всех сторонних процессов записи. Ключ шифрования храните по отдельному каналу, не в резервируемом каталоге. Установите зависимости `scripts/install/requirements-portable.txt` из доверенного источника.
 
 ```sh
 umask 077
@@ -39,19 +39,19 @@ python3 scripts/install/minimal-install.py check \
 Внутри резервной копии находятся дамп PostgreSQL, локальное хранилище и координатор SQLite. Вне неё — `.env`, TLS, ключи подписи, внешний провайдер авторизации и Minecraft-миры. Сохраните внешние секреты в менеджере секретов, отключите других SQL-клиентов и процессов, записывающих данные в тома Docker.
 
 ```sh
-sudo python3 scripts/operations/dr_03512.py backup \
+sudo python3 scripts/operations/dr.py backup \
   --project launcher --confirm launcher \
   --env-file deploy/production/.env \
   --snapshot /srv/backups/standard-04513 \
   --production-source --maintenance-approved
-sudo python3 scripts/operations/dr_03512.py verify \
+sudo python3 scripts/operations/dr.py verify \
   --snapshot /srv/backups/standard-04513
 ```
 
 На новом хосте: идентичная версия Docker-образов и секретов; пустые тома Docker и контейнеры; TLS/HTTPS должны указывать на новый хост (не на исходный адрес DNS). Пример **разрушающей операции только на чистом целевом проекте**:
 
 ```sh
-sudo python3 scripts/operations/dr_03512.py restore-fresh \
+sudo python3 scripts/operations/dr.py restore-fresh \
   --project launcher --confirm launcher \
   --env-file deploy/production/.env \
   --snapshot /srv/backups/standard-04513 \
@@ -63,7 +63,7 @@ sudo python3 scripts/operations/dr_03512.py restore-fresh \
 
 ## Режим высокой доступности (Network-HA): миры, PostgreSQL, S3 и защита от устаревших владельцев
 
-Остановите Minecraft JVM/сохраните миры через [механизм world-backup](../servers/serverbridge-world-backup.md), затем прекратите все процессы API, обработчиков и сторонние процессы записи. Используйте `dr_03512.py backup --network-ha` с действующим бакетом S3 и повторяемыми `--world-backup name=/absolute/backup-id`; проверяйте снимок штатной командой `verify`. Для восстановления используйте **новый** бакет S3, новые пустые тома данных и `--world-destination name=/absolute/fresh/server-root` для каждого сохранённого мира. Подробная последовательность и обязательные аргументы даны в [Network-HA Recovery](../releases/0.45.4-network-ha-recovery.md).
+Остановите Minecraft JVM/сохраните миры через [механизм world-backup](../servers/serverbridge-world-backup.md), затем прекратите все процессы API, обработчиков и сторонние процессы записи. Используйте `dr.py backup --network-ha` с действующим бакетом S3 и повторяемыми `--world-backup name=/absolute/backup-id`; проверяйте снимок штатной командой `verify`. Для восстановления используйте **новый** бакет S3, новые пустые тома данных и `--world-destination name=/absolute/fresh/server-root` для каждого сохранённого мира. Подробная последовательность и обязательные аргументы даны в [Network-HA Recovery](../releases/0.45.4-network-ha-recovery.md).
 
 **Запрещено** переносить прежний журнал Redis AOF и данные об аренде: восстановление запускает чистый Redis и требует блокировку устаревших владельцев в PostgreSQL для незавершённых команд/активных игровых сессий до запуска API. После этого ServerBridge повторно регистрируется. Старые команды не должны выполняться с восстановленным токеном. Нет автоматического запуска игрового сервера до явной проверки миров, аккаунтов, инвентарей и состояния узлов.
 

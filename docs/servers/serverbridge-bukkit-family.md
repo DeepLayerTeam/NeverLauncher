@@ -20,7 +20,7 @@ Backend сохраняет результат в журнале ServerBridge и 
 ## Проверки
 
 ```bash
-python3 e2e/scripts/test-bukkit-control-0415.py
+python3 e2e/scripts/test-bukkit-control.py
 # На CI с Go 1.27.3 и доступными модулями:
 cd services/api && go test ./internal/httpapi -run 'TestBridgeOutcomeClassification0411' -count=1
 ```

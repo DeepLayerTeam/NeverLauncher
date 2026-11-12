@@ -52,8 +52,8 @@ def audit() -> None:
     if not a or a != b:
         raise RuntimeError("Файлы миграций Backend и CLI или их контрольные суммы отличаются")
     for migration in (
-        "0053_release_workspace_0218.sql", "0054_serverbridge_operator_0219.sql",
-        "0055_config_audit_02111.sql",
+        "0053_release_workspace.sql", "0054_serverbridge_operator.sql",
+        "0055_config_audit.sql",
     ):
         if migration not in a:
             raise RuntimeError(f"Отсутствует обязательная миграция: {migration}")

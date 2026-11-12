@@ -3,17 +3,17 @@ on:
   push:
     paths:
       - 'services/api/internal/gravitinventory/**'
-      - 'services/api/internal/repository/migration_inventory_0333*'
-      - 'services/api/internal/repository/migration_compat_0332.go'
-      - 'services/api/internal/httpapi/migration_inventory_0333.go'
+      - 'services/api/internal/repository/migration_inventory*'
+      - 'services/api/internal/repository/migration_compat.go'
+      - 'services/api/internal/httpapi/migration_inventory.go'
       - 'services/api/internal/httpapi/handler.go'
       - 'services/api/internal/dbmigrate/sql/0091_*'
-      - 'cli/cmd/launcher/migration_inventory_0333*'
-      - 'cli/cmd/launcher/migration_workflow_0331.go'
-      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'cli/cmd/launcher/migration_inventory*'
+      - 'cli/cmd/launcher/migration_workflow.go'
+      - 'apps/admin/src/admin/MigrationCenter.tsx'
       - 'services/api/internal/embeddedadmin/site/**'
       - 'schemas/openapi-migration-center.json'
-      - '.github/workflows/gravit-source-inventory-0333.yml'
+      - '.github/workflows/gravit-source-inventory.yml'
   pull_request:
   workflow_dispatch:
 permissions:

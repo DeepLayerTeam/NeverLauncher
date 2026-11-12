@@ -15,7 +15,7 @@ def require(ok, msg):
 
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 8), "Требуется VERSION не ниже 0.20.8")
-model = read("services/api/internal/model/extensions_0201.go")
+model = read("services/api/internal/model/extensions.go")
 for token in (
     "ExtensionAdminContributions",
     "ExtensionAdminPage",
@@ -24,14 +24,14 @@ for token in (
     "ExtensionAdminAction",
 ):
     require(token in model, f"В модели отсутствует: {token}")
-repo = read("services/api/internal/repository/extensions_0201.go")
+repo = read("services/api/internal/repository/extensions.go")
 for token in (
     "Для дополнений Admin требуется разрешение ui:contribute",
     "standalone .html entrypoint",
     "normalizeAdminContributions0208",
 ):
     require(token in repo, f"В репозитории отсутствует проверка Admin: {token}")
-handler = read("services/api/internal/httpapi/extension_admin_0208.go")
+handler = read("services/api/internal/httpapi/extension_admin.go")
 for token in (
     "extensions.admin-rpc.v1",
     "sandbox",
@@ -57,7 +57,7 @@ for path in (
     "/api/v1/admin/extensions/{extensionId}/rpc",
 ):
     require(path in routes, f"Отсутствует маршрут расширений Admin: {path}")
-ui = read("apps/admin/src/admin_extensions_0208.tsx")
+ui = read("apps/admin/src/admin_extensions.tsx")
 for token in (
     'sandbox="allow-scripts"',
     "postMessage",
@@ -74,7 +74,7 @@ require(
     "В интерфейсе Admin не подключены менеджер расширений или виджеты",
 )
 cli_scaffold = read("cli/cmd/launcher/project_commands.go") + read(
-    "cli/cmd/launcher/extension_sdk_02010.go"
+    "cli/cmd/launcher/extension_sdk.go"
 )
 for token in ('case "admin":', "admin/index.html", "ui:contribute", "uiTemplate02010"):
     require(token in cli_scaffold, f"В шаблоне Admin SDK отсутствует: {token}")

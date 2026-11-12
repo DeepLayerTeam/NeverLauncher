@@ -2,15 +2,15 @@ name: Физический HA и аварийное восстановление
 on:
   push:
     paths:
-      - 'scripts/operations/physical_ha_dr_05210.py'
-      - 'scripts/operations/alert_receiver_05210.py'
-      - 'scripts/operations/dependency_ha_0513.py'
-      - 'scripts/operations/test_physical_ha_dr_05210.py'
-      - 'scripts/operations/test_alert_receiver_05210.py'
-      - 'scripts/operations/test_dependency_ha_0513.py'
-      - 'deploy/production/physical-partition-05210.nft'
+      - 'scripts/operations/physical_ha_dr.py'
+      - 'scripts/operations/alert_receiver.py'
+      - 'scripts/operations/dependency_ha.py'
+      - 'scripts/operations/test_physical_ha_dr.py'
+      - 'scripts/operations/test_alert_receiver.py'
+      - 'scripts/operations/test_dependency_ha.py'
+      - 'deploy/production/physical-partition.nft'
       - 'docs/operations/physical-ha-disaster-recovery.md'
-      - '.github/workflows/physical-ha-dr-05210.yml'
+      - '.github/workflows/physical-ha-dr.yml'
   pull_request:
   workflow_dispatch:
     inputs:
@@ -47,18 +47,18 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest -v \
-            scripts/operations/test_physical_ha_dr_05210.py \
-            scripts/operations/test_alert_receiver_05210.py \
-            scripts/operations/test_dependency_ha_0513.py \
-            scripts/operations/test_multi_host_chaos_05110.py \
-            scripts/operations/test_cross_host_recovery_0519.py \
-            scripts/operations/test_independent_ha_ga_0520.py
-          python3 -m py_compile scripts/operations/physical_ha_dr_05210.py scripts/operations/alert_receiver_05210.py
+            scripts/operations/test_physical_ha_dr.py \
+            scripts/operations/test_alert_receiver.py \
+            scripts/operations/test_dependency_ha.py \
+            scripts/operations/test_multi_host_chaos.py \
+            scripts/operations/test_cross_host_recovery.py \
+            scripts/operations/test_independent_ha_ga.py
+          python3 -m py_compile scripts/operations/physical_ha_dr.py scripts/operations/alert_receiver.py
           python3 scripts/version/manage.py check
       - name: Убедиться, что без реального оборудования и секретов не создаётся квитанция физического испытания
         run: |
           set +e
-          python3 scripts/operations/physical_ha_dr_05210.py host \
+          python3 scripts/operations/physical_ha_dr.py host \
             --state /tmp/nl-ci-05210-state.json --report /tmp/nl-ci-05210-report.json \
             --allow-disruption I-ACCEPT-PHYSICAL-OUTAGE >/dev/null 2>&1
           rc=$?
@@ -133,23 +133,23 @@ jobs:
           fi
           case "$MODE" in
             host)
-              python3 scripts/operations/physical_ha_dr_05210.py host \
+              python3 scripts/operations/physical_ha_dr.py host \
                 "${common[@]}" --victim "$VICTIM" ;;
             partition)
               if [[ "$VICTIM" == a ]]; then vip="$VICTIM_IP_A"; else vip="$VICTIM_IP_B"; fi
               test -n "$ROUTER" && test -n "$vip"
-              python3 scripts/operations/physical_ha_dr_05210.py partition \
+              python3 scripts/operations/physical_ha_dr.py partition \
                 "${common[@]}" --victim "$VICTIM" --router "$ROUTER" \
                 --victim-ip "$vip" --ttl 190 ;;
             dependency)
               test -n "$BACKEND_NAME" && test -n "$BACKEND_TARGET"
-              python3 scripts/operations/physical_ha_dr_05210.py dependency \
+              python3 scripts/operations/physical_ha_dr.py dependency \
                 "${common[@]}" --service "$SERVICE" --backend-server "$BACKEND_NAME" \
                 --target "$BACKEND_TARGET" --ha-env-file /etc/launcher/ha-0513.env ;;
             world)
               test -n "$WORLD_BACKUP" && test -n "$WORLD_DEST" && test -n "$WORLD_START" && test -n "$WORLD_STOP"
               test -n "$WORLD_CONFIG" && test -n "$WORLD_PLAYER" && test -n "$WORLD_MARKER_XYZ" && test -n "$WORLD_MARKER_BLOCK"
-              python3 scripts/operations/physical_ha_dr_05210.py world \
+              python3 scripts/operations/physical_ha_dr.py world \
                 "${common[@]}" --source-fenced --world-backup "$WORLD_BACKUP" \
                 --world-destination "$WORLD_DEST" --game-start "$WORLD_START" \
                 --game-stop "$WORLD_STOP" --game-config "$WORLD_CONFIG" \

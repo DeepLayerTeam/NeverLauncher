@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   ga-e2e:
     strategy:
@@ -47,8 +50,8 @@ jobs:
       - name: Проверить исходный контракт GA
         shell: bash
         run: |
-          python3 scripts/compatibility/extensions_ga_0210.py validate
-          python3 scripts/smoke/offline/extensions-ga-0210.py
+          python3 scripts/compatibility/extensions_ga.py validate
+          python3 scripts/smoke/offline/extensions-ga.py
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check
 
@@ -113,7 +116,7 @@ jobs:
           merge-multiple: true
       - name: Собрать публичную матрицу и сертификат с блокировкой при ошибке
         run: |
-          python3 scripts/compatibility/extensions_ga_0210.py aggregate --evidence-dir evidence-raw --out-json EXTENSIONS_GA_COMPATIBILITY.json --out-md EXTENSIONS_GA_COMPATIBILITY.md --out-certificate EXTENSIONS_GA_CERTIFICATE.json
+          python3 scripts/compatibility/extensions_ga.py aggregate --evidence-dir evidence-raw --out-json EXTENSIONS_GA_COMPATIBILITY.json --out-md EXTENSIONS_GA_COMPATIBILITY.md --out-certificate EXTENSIONS_GA_CERTIFICATE.json
       - uses: actions/upload-artifact@v4
         with:
           name: extensions-0.21.0-ga-certification

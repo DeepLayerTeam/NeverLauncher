@@ -4,14 +4,14 @@ on:
     paths:
       - 'prestarter/**'
       - 'apps/desktop/**'
-      - 'scripts/desktop/build_signed_0352.sh'
-      - '.github/workflows/signed-first-run-0352.yml'
+      - 'scripts/desktop/build_signed.sh'
+      - '.github/workflows/signed-first-run.yml'
   push:
     paths:
       - 'prestarter/**'
       - 'apps/desktop/**'
-      - 'scripts/desktop/build_signed_0352.sh'
-      - '.github/workflows/signed-first-run-0352.yml'
+      - 'scripts/desktop/build_signed.sh'
+      - '.github/workflows/signed-first-run.yml'
   workflow_dispatch:
 permissions:
   contents: read

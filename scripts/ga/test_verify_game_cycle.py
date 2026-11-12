@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from verify_game_cycle_0364 import verify
+from verify_game_cycle import verify
 
 COMMIT = "a" * 40
 

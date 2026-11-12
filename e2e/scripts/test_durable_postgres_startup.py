@@ -11,7 +11,7 @@ import tempfile
 import textwrap
 import unittest
 
-SCRIPT = pathlib.Path(__file__).with_name("run-durable-boundaries-0213-e2e.sh")
+SCRIPT = pathlib.Path(__file__).with_name("run-durable-boundaries-e2e.sh")
 
 
 class DurablePostgresStartupTests(unittest.TestCase):

@@ -4,12 +4,12 @@ on:
     paths:
       - 'cli/**'
       - 'services/api/internal/dbmigrate/**'
-      - '.github/workflows/auth-migration-compat-02911.yml'
+      - '.github/workflows/auth-migration-compat.yml'
   pull_request:
     paths:
       - 'cli/**'
       - 'services/api/internal/dbmigrate/**'
-      - '.github/workflows/auth-migration-compat-02911.yml'
+      - '.github/workflows/auth-migration-compat.yml'
 permissions:
   contents: read
 jobs:
@@ -25,7 +25,7 @@ jobs:
           POSTGRES_PASSWORD: integration-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U launcher -d launcher' --health-interval 5s --health-timeout 5s --health-retries 25
+          --health-cmd "pg_isready -U launcher -d launcher" --health-interval 5s --health-timeout 5s --health-retries 25
     env:
       LAUNCHER_DATABASE_DSN: postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable
     steps:
@@ -44,7 +44,7 @@ jobs:
           # Скопировать каталог миграций CLI, исключив ТОЛЬКО 0086. Так создаётся
           # база данных со всеми неизменяемыми миграциями вплоть до 0.29.10.
           cp -a cli /tmp/nl-cli-prior
-          rm /tmp/nl-cli-prior/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
+          rm /tmp/nl-cli-prior/internal/dbmigrate/sql/0086_auth_upgrade_integrity.sql
           (cd /tmp/nl-cli-prior && go build -o /tmp/nl-prior ./cmd/launcher)
           /tmp/nl-prior db migrate apply
       - name: "Создать данные двух изолированных издателей до обновления"

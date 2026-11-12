@@ -32,8 +32,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_pem_public_key
 
-from delivery_verify_0462 import ARCH, EXPECTED, verify_bundle
-from check_payload_0461 import secure_name
+from delivery_verify import ARCH, EXPECTED, verify_bundle
+from check_payload import secure_name
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_PATH = ROOT / 'reproducibility/primary-payload.json'
@@ -227,7 +227,7 @@ def capture(bundle: Path, *, builder: str, runner: str, commit: str) -> dict:
     baseline = load_json(BASELINE_PATH)
     if baseline.get('release') != RELEASE_VERSION:
         raise ValueError('Неожиданная версия базового набора')
-    from inputs_guard_0461 import record, verify
+    from inputs_guard import record, verify
     verify(baseline, record())
     return {'schema':'launcher.unsigned-build.v1','version':RELEASE_VERSION,
             'commit':commit,'builder':builder,'runner':runner,

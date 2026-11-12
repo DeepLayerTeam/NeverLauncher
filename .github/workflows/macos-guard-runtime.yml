@@ -4,14 +4,14 @@ on:
     paths:
       - 'runtime/runtime/**'
       - 'sdk/java/trusted-agent/**'
-      - 'scripts/tests/guard_runtime_integrity_0505.py'
-      - '.github/workflows/macos-guard-runtime-0509.yml'
+      - 'scripts/tests/guard_runtime_integrity.py'
+      - '.github/workflows/macos-guard-runtime.yml'
   pull_request:
     paths:
       - 'runtime/runtime/**'
       - 'sdk/java/trusted-agent/**'
-      - 'scripts/tests/guard_runtime_integrity_0505.py'
-      - '.github/workflows/macos-guard-runtime-0509.yml'
+      - 'scripts/tests/guard_runtime_integrity.py'
+      - '.github/workflows/macos-guard-runtime.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -50,8 +50,8 @@ jobs:
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --test macos_guard_runtime_0509 -- --nocapture
       - name: "Регрессионные проверки целостности подписанных JAR и нативных файлов, а также сторожевого процесса Java"
         run: |
-          python3 scripts/tests/guard_runtime_integrity_0505.py
-          python3 scripts/tests/continuous_game_protection_0506.py
+          python3 scripts/tests/guard_runtime_integrity.py
+          python3 scripts/tests/continuous_game_protection.py
       - name: Проверить состояние SIP (диагностика не подтверждает успешную проверку Runtime)
         if: always()
         run: |

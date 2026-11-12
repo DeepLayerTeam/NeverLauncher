@@ -13,7 +13,7 @@ func TestLAN0308RejectUnpinnedVerify(t *testing.T) {
 }
 func TestLAN0308RejectNonLocalAdvertiser(t *testing.T) {
 	err := handleLAN0308([]string{"publish", "--instance", "Sample", "--url", "https://192.0.2.25:8443", "--fingerprint", strings.Repeat("a", 64)})
-	if err == nil || !strings.Contains(err.Error(), "local") {
+	if err == nil || !strings.Contains(err.Error(), "локальному интерфейсу LAN") {
 		t.Fatalf("ожидалась проверка локального IP-адреса, получено: %v", err)
 	}
 }

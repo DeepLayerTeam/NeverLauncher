@@ -9,24 +9,24 @@ if version < (0, 19, 7):
         f"Интеграция игровых сеансов (версия 3): требуется версия не ниже 0.19.7, получено {version}"
     )
 required = [
-    "services/api/internal/repository/server_bridge_player_sessions_0197.go",
-    "services/api/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_0197.sql",
-    "cli/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_0197.sql",
+    "services/api/internal/repository/server_bridge_player_sessions.go",
+    "services/api/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_.sql",
+    "cli/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_.sql",
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgePlayerSessionRegistry.java",
 ]
 for rel in required:
     if not resource_exists(ROOT, rel):
         raise SystemExit(f"Отсутствует: «0.19.7 рабочий файл»: {rel}")
 proto = (
-    ROOT / "services/api/internal/httpapi/server_bridge_protocol_0191.go"
+    ROOT / "services/api/internal/httpapi/server_bridge_protocol.go"
 ).read_text()
 repo = (
-    ROOT / "services/api/internal/repository/server_bridge_player_sessions_0197.go"
+    ROOT / "services/api/internal/repository/server_bridge_player_sessions.go"
 ).read_text()
 repo_core = (ROOT / "services/api/internal/repository/server_bridge_v2.go").read_text()
 validate = (ROOT / "services/api/internal/httpapi/bridge_plugins.go").read_text()
 handoff = (
-    ROOT / "services/api/internal/httpapi/server_bridge_topology_handoff_0148.go"
+    ROOT / "services/api/internal/httpapi/server_bridge_topology_handoff.go"
 ).read_text()
 client = (
     ROOT
@@ -38,7 +38,7 @@ registry = (
 ).read_text()
 migration = (
     ROOT
-    / "services/api/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_0197.sql"
+    / "services/api/internal/dbmigrate/sql/0038_serverbridge_player_session_integration3_.sql"
 ).read_text()
 cert = (ROOT / "serverbridge/certify_release.py").read_text()
 preflight = (ROOT / "scripts/release/preflight.sh").read_text()
@@ -131,8 +131,8 @@ for text, wants, label in checks:
         if want not in text:
             raise SystemExit(f"{label}: отсутствует {want!r}")
 for text, want, label in [
-    (preflight, "serverbridge-player-session-integration3-0197.py", "preflight"),
-    (ci, "serverbridge-player-session-integration3-0197.py", "CI"),
+    (preflight, "serverbridge-player-session-integration3-.py", "preflight"),
+    (ci, "serverbridge-player-session-integration3-.py", "CI"),
 ]:
     if want not in text:
         raise SystemExit(f"{label}: отсутствует {want!r}")

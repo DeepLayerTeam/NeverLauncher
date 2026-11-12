@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
-import ha_inventory_0511 as ha
+import ha_inventory as ha
 
 
 def fixture(service, label, replica, health="healthy", ready=True, image="sha256:"+"a"*64):

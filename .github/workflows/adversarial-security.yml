@@ -3,8 +3,8 @@ on:
   push:
     paths:
       - 'services/api/internal/**'
-      - 'scripts/security/certify_03114.py'
-      - '.github/workflows/adversarial-security-03114.yml'
+      - 'scripts/security/certify.py'
+      - '.github/workflows/adversarial-security.yml'
   pull_request:
     paths:
       - 'services/api/internal/**'
@@ -23,6 +23,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   offline-adversarial:
     runs-on: ubuntu-24.04
@@ -33,9 +36,9 @@ jobs:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
       - name: Провести обязательные проверки угроз и гонок; пропуск тестов не разрешён
-        run: python3 scripts/security/certify_03114.py --tier offline --output "$RUNNER_TEMP/03114-offline.json"
+        run: python3 scripts/security/certify.py --tier offline --output "$RUNNER_TEMP/03114-offline.json"
       - name: "Проверить Guard Runtime и ServerBridge на обход проверки сеанса"
-        run: python3 scripts/security/certify_03114.py --tier backend-security --output "$RUNNER_TEMP/03114-backend-security.json"
+        run: python3 scripts/security/certify.py --tier backend-security --output "$RUNNER_TEMP/03114-backend-security.json"
       - name: Собрать промышленные зависимости и выполнить полную сборку
         working-directory: services/api
         run: |
@@ -85,7 +88,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
       - name: "Проверить пространства имён, cgroup и изоляцию дочерних процессов; пропуск считается сбоем"
-        run: python3 scripts/security/certify_03114.py --tier linux-live --output "$RUNNER_TEMP/03114-linux-live.json"
+        run: python3 scripts/security/certify.py --tier linux-live --output "$RUNNER_TEMP/03114-linux-live.json"
       - name: Опубликовать результаты проверок ядра
         if: always()
         uses: actions/upload-artifact@v4
@@ -104,7 +107,7 @@ jobs:
           go-version-file: services/api/go.mod
       - name: "Проверить настоящие AppContainer, ACL, задания и дочерние процессы; пропуск проверки считается сбоем"
         shell: pwsh
-        run: python scripts/security/certify_03114.py --tier windows-live --output "$env:RUNNER_TEMP/03114-windows-live.json"
+        run: python scripts/security/certify.py --tier windows-live --output "$env:RUNNER_TEMP/03114-windows-live.json"
       - name: Опубликовать Windows свидетельства
         if: always()
         uses: actions/upload-artifact@v4

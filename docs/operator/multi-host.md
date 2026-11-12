@@ -19,12 +19,12 @@
 
 ```sh
 cd /opt/launcher/deploy/production
-cp multi-host-0512.example.env .env
+cp multi-host.example.env .env
 chmod 600 .env
 # Укажите настоящие дайджесты образов, пути TLS, общие подключения, секреты,
 # ID узла и IP привязки. Не включайте реальные секреты или закрытые ключи SSH
 # в архив выпуска или файлы отчётов.
-python3 ../../scripts/operations/multi_host_0512.py local-check \
+python3 ../../scripts/operations/multi_host.py local-check \
   --directory /opt/launcher/deploy/production --output /var/tmp/launcher-preflight-a.json
 ```
 
@@ -47,7 +47,7 @@ docker compose -p launcher -f docker-compose.multi-host.yml run --rm --no-deps \
 После успешной предварительной проверки и доступности внешних зависимостей запустите каждый узел:
 
 ```sh
-python3 /opt/launcher/scripts/operations/multi_host_0512.py local-up \
+python3 /opt/launcher/scripts/operations/multi_host.py local-up \
   --directory /opt/launcher/deploy/production --output /var/tmp/launcher-node-a-up.json
 ```
 
@@ -58,7 +58,7 @@ python3 /opt/launcher/scripts/operations/multi_host_0512.py local-up \
 Используйте выделенные SSH-учётные данные оператора с точно закреплёнными ключами хостов в `known_hosts`, `BatchMode=yes`, установленным кодом и заранее подготовленным `.env` на каждой цели. SSH-пользователю нужен доступ к Docker; это эквивалентно root и должно быть ограничено. Не выставляйте инструмент анонимным веб-API.
 
 ```sh
-TOOL=/opt/launcher/scripts/operations/multi_host_0512.py
+TOOL=/opt/launcher/scripts/operations/multi_host.py
 NODES='--node a=operator@node-a.internal --node b=operator@node-b.internal'
 python3 "$TOOL" cluster-check $NODES --output /var/tmp/ha-check-0512.json
 python3 "$TOOL" cluster-up $NODES --edge-url https://launcher.example \
@@ -89,6 +89,6 @@ python3 "$TOOL" cluster-drill $NODES --edge-url https://launcher.example \
 1. Переключение PostgreSQL/Redis/S3 и их RPO/RTO не реализованы этим выпуском (0.51.3); отказ единой общей зависимости всё ещё может отключить оба продуктовых узла.
 2. Разделение сети, ограждение устаревших обработчиков/ServerBridge и ровно однократные внешние эффекты требуют враждебных проверок 0.51.4/0.51.5.
 3. Локальные старые снимки безопасности/сеансов и файловые изменения плагинов между репликами ещё не проверены; избегайте маршрутов с несинхронизированным состоянием в памяти или локально до отдельных тестов транзакционной согласованности.
-4. Исходная команда `cluster-up` требует **идентичных** закреплённых образов на всех хостах; не используйте её для поэтапного обновления. Версия 0.51.7 даёт отдельный рабочий контроллер `rolling_update_0517.py` для последовательного обновления узлов (см. `docs/deployment/rolling-update.md`). Онлайн-изменения схемы также запрещены во время смешанной работы 0.51.6/0.51.7.
+4. Исходная команда `cluster-up` требует **идентичных** закреплённых образов на всех хостах; не используйте её для поэтапного обновления. Версия 0.51.7 даёт отдельный рабочий контроллер `rolling_update.py` для последовательного обновления узлов (см. `docs/deployment/rolling-update.md`). Онлайн-изменения схемы также запрещены во время смешанной работы 0.51.6/0.51.7.
 5. Внешний балансировщик и DNS управляются вне Compose. Балансировщик только на узле A вновь создаст единую точку отказа хоста.
 6. По-прежнему действуют шлюзы точных окончательных байтов, игры/Guard и независимого GA. Без доступа к двум настоящим хостам нельзя заявлять измеренные HA RTO/RPO.

@@ -8,6 +8,7 @@
 from __future__ import annotations
 import argparse
 import io
+import json
 import sys
 import zipfile
 from pathlib import Path
@@ -38,10 +39,16 @@ def bundle(source: Path, prefix: str, pattern: str) -> tuple[bytes, int]:
         raise ValueError("Набор шаблонов рабочего развёртывания изменился")
     if any(not p.is_file() or p.is_symlink() for p in files):
         raise ValueError("Набор ресурсов содержит символическую ссылку или объект, не являющийся файлом")
+    names = json.loads((source.parent / "migration_names.json").read_text(encoding="utf-8")) if prefix == "sql/" else {}
+    if set(names) - {p.name for p in files}:
+        raise ValueError("Migration name mapping references missing files")
+    archive_names = [names.get(p.name, p.name) for p in files]
+    if len(set(archive_names)) != len(files) or any(Path(name).name != name or not name.endswith(".sql") for name in archive_names if prefix == "sql/"):
+        raise ValueError("Invalid or duplicate migration names")
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in files:
-            info = zipfile.ZipInfo(prefix + path.name, (1980, 1, 1, 0, 0, 0))
+            info = zipfile.ZipInfo(prefix + names.get(path.name, path.name), (1980, 1, 1, 0, 0, 0))
             info.create_system = 3
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16

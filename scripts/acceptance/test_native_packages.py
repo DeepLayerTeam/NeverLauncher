@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-SPEC = importlib.util.spec_from_file_location('native_0522', Path(__file__).with_name('native_packages_0522.py'))
+SPEC = importlib.util.spec_from_file_location('native_0522', Path(__file__).with_name('native_packages.py'))
 m = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(m)
 SHA = 'a' * 64

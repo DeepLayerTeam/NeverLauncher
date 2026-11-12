@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { adminHref, parseAdminRoute } from '../src/admin/route-links-0381.ts';
-import { contextStorageKey, readSavedContext, resolveProjectContext, saveContext } from '../src/admin/project-context-0381.ts';
+import { adminHref, parseAdminRoute } from '../src/admin/route-links.ts';
+import { contextStorageKey, readSavedContext, resolveProjectContext, saveContext } from '../src/admin/project-context.ts';
 
 const catalog = {
   projects:[{id:'alpha',name:'Alpha'},{id:'beta',name:'Beta'}],

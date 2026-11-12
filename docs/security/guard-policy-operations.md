@@ -62,7 +62,7 @@ cd cli
 go test ./cmd/guard-policy-sign -count=1
 go test ./cmd/launcher -run 'TestGuardPolicyOperations05011|TestGuardCompatibility0502' -count=1
 cd ../apps/admin
-node --experimental-strip-types --test tests/guard_policy_05011.test.mjs
+node --experimental-strip-types --test tests/guard_policy.test.mjs
 npm ci && npm run build
 ```
 

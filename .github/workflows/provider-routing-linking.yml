@@ -9,7 +9,7 @@ on:
       - 'apps/desktop/src/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
-      - '.github/workflows/provider-routing-linking-0293.yml'
+      - '.github/workflows/provider-routing-linking.yml'
   pull_request:
     paths:
       - 'services/api/internal/federation/**'
@@ -19,7 +19,7 @@ on:
       - 'apps/desktop/src/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
-      - '.github/workflows/provider-routing-linking-0293.yml'
+      - '.github/workflows/provider-routing-linking.yml'
 permissions:
   contents: read
 jobs:
@@ -52,7 +52,7 @@ jobs:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
       - name: "Контроль форматирования Go"
-        run: test -z "$(gofmt -l internal/federation internal/repository/auth_conflict_0293.go internal/repository/memory.go internal/repository/postgres.go internal/config/config.go internal/httpapi/auth_accounts.go internal/httpapi/provider_routing_0293_test.go internal/httpapi/sql_connector_113.go internal/httpapi/federation_112.go internal/httpapi/federation_release_0120.go internal/httpapi/auth_link_password_0291.go internal/httpapi/microsoft_flow_116.go internal/federation/linked_refresh_0293.go)"
+        run: test -z "$(gofmt -l internal/federation internal/repository/auth_conflict.go internal/repository/memory.go internal/repository/postgres.go internal/config/config.go internal/httpapi/auth_accounts.go internal/httpapi/provider_routing_test.go internal/httpapi/sql_connector_113.go internal/httpapi/federation_112.go internal/httpapi/federation_release.go internal/httpapi/auth_link_password.go internal/httpapi/microsoft_flow_116.go internal/federation/linked_refresh.go)"
       - name: "Регрессионные тесты выбора провайдера и явной проверки владения"
         run: go test -count=1 -timeout=5m ./internal/federation ./internal/config ./internal/httpapi -run 'TestRouting0293|TestHTTPLoginRouting0293|TestHTTPLinkBlockedBeforeCredentialProof0293|TestGenericBrowserProviderExplicitLink0120'
       - name: Проверить реальный источник PostgreSQL и обработку конфликтов

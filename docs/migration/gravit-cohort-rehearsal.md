@@ -63,10 +63,10 @@
 chmod 0600 /srv/secure/cohort.json
 install -d -m 0700 /srv/private/cohort-04910
 read -rs LAUNCHER_TOKEN && export LAUNCHER_TOKEN
-python3 tools/gravit-port/rehearse_cohort_04910.py \
+python3 tools/gravit-port/rehearse_cohort.py \
     --config /srv/secure/cohort.json \
     --output-dir /srv/private/cohort-04910 --preflight-only
-python3 tools/gravit-port/rehearse_cohort_04910.py \
+python3 tools/gravit-port/rehearse_cohort.py \
     --config /srv/secure/cohort.json \
     --output-dir /srv/private/cohort-04910
 unset LAUNCHER_TOKEN

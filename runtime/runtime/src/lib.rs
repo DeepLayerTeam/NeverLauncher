@@ -2191,7 +2191,7 @@ mod tests {
 
     #[test]
     fn go_signed_v3_catalog_v2_interop_0242() {
-        let signed = include_str!("../tests/fixtures/catalog_manifest_v3_go_signed_0242.json");
+        let signed = include_str!("../tests/fixtures/catalog_manifest_v3_go_signed.json");
         let manifest: Manifest = serde_json::from_str(signed).expect("получить тестовый каталог, подписанный Go");
         let key="24a9dcf8fac87bd5cb27d51d09f98188bc1c00b1223f5ccaa26a5736d9a53d78";
         verify_manifest_signature(&manifest,key).expect("подпись Ed25519 v3 каталога v2 из Go должна проверяться в Rust");
@@ -2214,7 +2214,7 @@ mod tests {
     #[test]
     fn signed_go_v3_dependencies_and_conflicts_0243() {
         use crate::component_catalog_0241::{active_files,digest_v3,ComponentRequirement};
-        let signed=include_str!("../tests/fixtures/catalog_dependency_0243_go_signed.json");
+        let signed=include_str!("../tests/fixtures/catalog_dependency_go_signed.json");
         let manifest:Manifest=serde_json::from_str(signed).expect("тестовые данные разрешителя v3 из Go должны декодироваться");
         let key="03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8";
         verify_manifest_signature(&manifest,key).expect("подпись Go Ed25519 для каталога 3.0 должна проверяться в Rust");

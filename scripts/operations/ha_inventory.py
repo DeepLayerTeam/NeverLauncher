@@ -263,7 +263,7 @@ def source_state_inventory(root):
     files = {
         "runtime": root / "services/api/internal/httpapi/runtime_state.go",
         "persistence": root / "services/api/internal/httpapi/persistence.go",
-        "roles": root / "services/api/cmd/launcher-api/process_role_0455.go",
+        "roles": root / "services/api/cmd/launcher-api/process_role.go",
         "leases": root / "services/api/internal/deployment/growth.go",
     }
     try:
@@ -585,7 +585,7 @@ def main(argv=None):
     cluster.add_argument("--project", required=True)
     cluster.add_argument("--node", action="append", required=True,
                          help="name=local или name=trusted-ssh-user@host (повторять на разных хостах)")
-    cluster.add_argument("--remote-script", default="/opt/launcher/scripts/operations/ha_inventory_0511.py")
+    cluster.add_argument("--remote-script", default="/opt/launcher/scripts/operations/ha_inventory.py")
     cluster.add_argument("--samples", type=int, default=3)
     cluster.add_argument("--skip-growth", action="store_true")
     cluster.add_argument("--edge-url", help="Настоящий публичный HTTPS-адрес или /ready")

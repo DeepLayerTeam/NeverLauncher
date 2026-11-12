@@ -4,12 +4,12 @@ on:
     paths:
       - 'runtime/runtime/**'
       - 'apps/desktop/**'
-      - '.github/workflows/download-reliability-0354.yml'
+      - '.github/workflows/download-reliability.yml'
   push:
     paths:
       - 'runtime/runtime/**'
       - 'apps/desktop/**'
-      - '.github/workflows/download-reliability-0354.yml'
+      - '.github/workflows/download-reliability.yml'
   workflow_dispatch:
 permissions:
   contents: read

@@ -23,7 +23,7 @@ need('services/api/internal/httpapi/routes_auth.go', [
     'POST /api/v1/admin/auth/devices/{deviceId}/revoke',
     'requireFreshAuth117("users:manage", "phishing-resistant", 5*time.Minute',
 ])
-need('services/api/internal/httpapi/device_management_0125.go', [
+need('services/api/internal/httpapi/device_management.go', [
     'authDeviceRevoke0125',
     'authDeviceRevokeOthers0125',
     'currentTrustedDeviceID0125',
@@ -36,7 +36,7 @@ need('services/api/internal/httpapi/device_management_0125.go', [
     'ServerBridge.invalidateSession',
     'revocationPermanent',
 ])
-need('services/api/internal/repository/devices_0121.go', [
+need('services/api/internal/repository/devices.go', [
     'func (r *SQLRepository) RevokeTrustedDevice',
     'func (r *SQLRepository) RevokeOtherTrustedDevices',
     "assurance='proof-of-possession'",
@@ -52,7 +52,7 @@ need('services/api/internal/repository/devices_0121.go', [
     'SET CONSTRAINTS ALL IMMEDIATE',
     'revoke trusted device: validate deferred constraints',
 ])
-need('services/api/internal/httpapi/device_management_0125_test.go', [
+need('services/api/internal/httpapi/device_management_test.go', [
     'TestDeviceManagementRevokeOthersAndChallengeInvalidation0125',
     'TestDeviceManagementSelfRevokeIsPermanentAndIdempotent0125',
     'revoke-others',

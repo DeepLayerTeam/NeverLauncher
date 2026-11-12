@@ -6,7 +6,7 @@
 
 1. Соберите клиент Minecraft существующей фабрикой Client Factory **до** подписания выпуска Backend либо предоставьте другой полный исполняемый клиент Minecraft с закреплёнными зависимостями Minecraft/загрузчика. Включите в подписанные файлы пакета **все** реальные файлы среды выполнения (`versions/`, `libraries/`, `assets/`, `natives/`, моды и метаданные Runtime). Ни один этап тестового исполнителя не должен собирать подменный клиент Minecraft.
 2. Подпишите выпуск, подготовьте его и выполните настоящую проверку целостности пакета. `POST /api/v1/packages/{packageId}/staged-runs` в Backend выдаёт ограниченное по времени разрешение на чтение и отправку отчёта для конкретного дайджеста пакета с успешно подтверждённой целостностью.
-3. Запустите `.github/workflows/staged-package-runtime-0342.yml` с точным `package_id` либо используйте процесс подготовки кандидата промышленного выпуска. Настройте защищённое GitHub Environment `runtime-validation-staging`:
+3. Запустите `.github/workflows/staged-package-runtime.yml` с точным `package_id` либо используйте процесс подготовки кандидата промышленного выпуска. Настройте защищённое GitHub Environment `runtime-validation-staging`:
    - Переменная `NL_STAGED_BACKEND_URL` — TLS-адрес Backend.
    - Переменная `NL_STAGED_MANIFEST_PUBLIC_KEY` — независимо предоставленный и **закреплённый** открытый ключ Ed25519 проекта в шестнадцатеричном виде из 64 символов (его нельзя брать из полученного манифеста).
    - Секрет окружения `NL_STAGED_RUNNER_OPERATOR_TOKEN` — токен только с проектным правом `release:prepare`. Никогда не раскрывайте ключи подписания выпусков и данные промышленной среды.
@@ -21,7 +21,7 @@
 ## Локальная проверка
 
 ```
-python3 -m unittest e2e/scripts/test_run_staged_package_0342.py -v
+python3 -m unittest e2e/scripts/test_run_staged_package.py -v
 cd cli && go test ./cmd/launcher -run 'TestRuntimeCertification02712|TestClientPackage|TestClientFactory0271' -count=1
 cd ../services/api && go test ./internal/httpapi ./internal/repository ./internal/dbmigrate -run 'TestStaged.*0342|TestStable.*0341|TestEvaluateAppliedSealedCatalog' -count=1
 ```

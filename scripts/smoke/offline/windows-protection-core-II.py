@@ -117,13 +117,13 @@ def main() -> int:
     require(
         ci,
         [
-            "windows-protection-core-II-0181.py",
+            "windows-protection-core-II.py",
             "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         ],
         "Проверки Windows в CI",
     )
-    if "windows-protection-core-II-0181.py" not in preflight:
+    if "windows-protection-core-II.py" not in preflight:
         raise SystemExit(
             "[Launcher] Windows Protection Core II 0.18.1: не настроен запуск в предварительных проверках"
         )

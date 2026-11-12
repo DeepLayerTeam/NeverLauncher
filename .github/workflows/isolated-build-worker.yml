@@ -5,14 +5,14 @@ on:
       - 'cli/cmd/launcher/**'
       - 'cli/go.mod'
       - 'cli/go.sum'
-      - '.github/workflows/isolated-build-worker-0273.yml'
+      - '.github/workflows/isolated-build-worker.yml'
       - 'VERSION'
   pull_request:
     paths:
       - 'cli/cmd/launcher/**'
       - 'cli/go.mod'
       - 'cli/go.sum'
-      - '.github/workflows/isolated-build-worker-0273.yml'
+      - '.github/workflows/isolated-build-worker.yml'
       - 'VERSION'
 permissions:
   contents: read
@@ -32,7 +32,7 @@ jobs:
       - name: Проверить форматирование Go
         if: runner.os == 'Linux'
         shell: bash
-        run: test -z "$(gofmt -l cli/cmd/launcher/isolated_build_worker_0273*.go cli/cmd/launcher/forge_runtime.go cli/cmd/launcher/forge_processor_recovery.go cli/cmd/launcher/client_factory_0271.go)"
+        run: test -z "$(gofmt -l cli/cmd/launcher/isolated_build_worker*.go cli/cmd/launcher/forge_runtime.go cli/cmd/launcher/forge_processor_recovery.go cli/cmd/launcher/client_factory.go)"
       - name: Проверить агент, восстановление и реальные фикстуры материализатора
         working-directory: cli
         shell: bash

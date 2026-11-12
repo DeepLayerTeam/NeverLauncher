@@ -15,7 +15,7 @@ import unittest
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 spec = importlib.util.spec_from_file_location(
-    "game_cycle_0364", HERE / "game_cycle_0364.py"
+    "game_cycle_0364", HERE / "game_cycle.py"
 )
 game = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(game)
@@ -143,7 +143,7 @@ class RealProductionUpdater(unittest.TestCase):
             }
             package.write_text(json.dumps(doc))
             env = dict(os.environ, GITHUB_SHA=commit)
-            runner = HERE / "game_cycle_0364.py"
+            runner = HERE / "game_cycle.py"
             common = [
                 "--root",
                 str(checkout),

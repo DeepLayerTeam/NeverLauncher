@@ -31,7 +31,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
 
-import multi_host_0512 as multi
+import multi_host as multi
 
 SCHEMA = 'launcher.multi-host-chaos/0.51.10'
 MAX_OUTPUT = 128_000
@@ -588,8 +588,8 @@ def main(argv=None):
         p.add_argument('--node', action='append', required=True)
         p.add_argument('--directory', required=True)
         p.add_argument('--project', required=True)
-        p.add_argument('--multi-host-script', default='/opt/launcher/scripts/operations/multi_host_0512.py')
-        p.add_argument('--chaos-script', default='/opt/launcher/scripts/operations/multi_host_chaos_05110.py')
+        p.add_argument('--multi-host-script', default='/opt/launcher/scripts/operations/multi_host.py')
+        p.add_argument('--chaos-script', default='/opt/launcher/scripts/operations/multi_host_chaos.py')
         p.add_argument('--edge-url', required=True)
         if mode in ('run', 'recover'):
             p.add_argument('--state', required=True)

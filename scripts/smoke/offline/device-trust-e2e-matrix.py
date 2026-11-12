@@ -212,8 +212,8 @@ require(
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
 if (
-    "device-trust-e2e-matrix-0129.py" not in ci
-    or "device-trust-e2e-matrix-0129.py" not in preflight
+    "device-trust-e2e-matrix.py" not in ci
+    or "device-trust-e2e-matrix.py" not in preflight
 ):
     raise SystemExit("Проверка релиза 0.12.9 не подключена к CI или предварительным проверкам")
 if "run-device-trust-e2e.sh" not in ci:

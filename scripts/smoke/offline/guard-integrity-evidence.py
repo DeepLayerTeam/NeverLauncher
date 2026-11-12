@@ -116,9 +116,9 @@ require(
 
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
-if "guard-integrity-evidence-0132.py" not in ci:
+if "guard-integrity-evidence.py" not in ci:
     raise SystemExit("Guard 0.13.2: проверка целостности не подключена к CI")
-if "guard-integrity-evidence-0132.py" not in preflight:
+if "guard-integrity-evidence.py" not in preflight:
     raise SystemExit("Guard 0.13.2: проверка целостности не подключена к предварительной проверке выпуска")
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.

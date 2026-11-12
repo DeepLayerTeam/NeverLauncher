@@ -17,11 +17,11 @@ mkdir -p "$ROOT/e2e/runtime"
   GOTOOLCHAIN=local go test -json -race -count=1 -timeout 240s ./cmd/launcher \
     -run '^(TestRemoteFault.*04112|TestHostLifecycle0414(RealJVMStartStopRestartAndSIGTERM|RealJVMAutoRecoveryAfterCrash|RealJVMCrashLoopIsBounded|ActualCLIAndRemoteEffects|StopWhileJavaCrashIsInBackoff)|TestWorldBackup(CreateVerifyRestore02810|GateBlocksStartAndSecondBackup04110|GateFailsClosedAndRecoversOffline04110))$'
 ) > "$ROOT/e2e/runtime/network-faults-0420.go-test.jsonl"
-python3 "$ROOT/scripts/ga/record_network_faults_0420.py" \
+python3 "$ROOT/scripts/ga/record_network_faults.py" \
   --log "$ROOT/e2e/runtime/network-faults-0420.go-test.jsonl" \
   --source-commit "$SOURCE_COMMIT" --version 0.42.0 \
   --out "$ROOT/e2e/runtime/network-faults-0420.json"
-python3 "$ROOT/serverbridge/live_matrix_04113.py" --scope all --root "$ROOT" \
+python3 "$ROOT/serverbridge/live_matrix.py" --scope all --root "$ROOT" \
   --runtime "$ROOT/e2e/runtime" \
   --out "$ROOT/e2e/runtime/live-matrix-all-0420.json"
 printf '0.42.0: выполнены реальные испытания сбоев JVM/хоста и полная матрица Minecraft\n'

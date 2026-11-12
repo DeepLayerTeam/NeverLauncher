@@ -15,7 +15,7 @@ def require(ok, msg):
 
 version = tuple(int(x) for x in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 9), "Требуется VERSION не ниже 0.20.9")
-model = read("services/api/internal/model/extensions_0201.go")
+model = read("services/api/internal/model/extensions.go")
 for token in (
     "ExtensionDesktopContributions",
     "ExtensionDesktopPage",
@@ -25,10 +25,10 @@ for token in (
     "ExtensionCLICommand",
 ):
     require(token in model, f"В модели отсутствует: {token}")
-security = read("services/api/internal/extensionsecurity/security_0207.go")
+security = read("services/api/internal/extensionsecurity/security.go")
 for token in ('"desktop:contribute"', '"desktop:bridge"', '"cli:contribute"'):
     require(token in security, f"В каталоге разрешений отсутствует: {token}")
-host = read("services/api/internal/extensionhost/cli_0209.go")
+host = read("services/api/internal/extensionhost/cli.go")
 for token in (
     "RunCLI0209",
     "LAUNCHER_EXTENSION_TARGET",
@@ -41,7 +41,7 @@ for token in (
     "MaxProcesses",
 ):
     require(token in host, f"В CLI отсутствует хост расширений {token}")
-handler = read("services/api/internal/httpapi/extension_desktop_cli_0209.go")
+handler = read("services/api/internal/httpapi/extension_desktop_cli.go")
 for token in (
     "extensions.desktop-rpc.v1",
     "desktop:contribute",
@@ -64,7 +64,7 @@ for path in (
     "/api/v1/admin/extension-cli/{extensionId}/invoke",
 ):
     require(path in routes, f"Отсутствует маршрут: {path}")
-desktop = read("apps/desktop/src/extensions_0209.tsx")
+desktop = read("apps/desktop/src/extensions.tsx")
 for token in (
     'sandbox="allow-scripts"',
     "event.source !== frame",
@@ -83,7 +83,7 @@ for token in (
     "generate_handler",
 ):
     require(token in tauri, f"Отсутствует ограниченный мост Tauri: {token}")
-cli = read("cli/cmd/launcher/extension_cli_0209.go")
+cli = read("cli/cmd/launcher/extension_cli.go")
 for token in (
     "handleExtensionNamespace0209",
     "extensionCLICompletion0209",
@@ -93,7 +93,7 @@ for token in (
 ):
     require(token in cli, f"В CLI отсутствует пространство команд среды исполнения {token}")
 scaffold = read("cli/cmd/launcher/project_commands.go") + read(
-    "cli/cmd/launcher/extension_sdk_02010.go"
+    "cli/cmd/launcher/extension_sdk.go"
 )
 for token in (
     'return "desktop/index.html"',

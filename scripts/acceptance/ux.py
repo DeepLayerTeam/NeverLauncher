@@ -18,7 +18,7 @@ import tempfile
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[2]
-CATALOG = Path("compatibility/gravit/user-journeys-0351.json")
+CATALOG = Path("compatibility/gravit/user-journeys.json")
 IDS = [f"G{i:02}" for i in range(1, 36)] + [f"M{i:02}" for i in range(1, 20)]
 UX = {
     "UX01": ["G07", "G13", "G30", "G31", "M07", "M11"],

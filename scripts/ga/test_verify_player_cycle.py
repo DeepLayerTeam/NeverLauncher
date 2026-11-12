@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from verify_player_cycle_0398 import CASES, verify
+from verify_player_cycle import CASES, verify
 
 COMMIT = 'a' * 40
 UUID = '0123456789abcdef0123456789abcdef'

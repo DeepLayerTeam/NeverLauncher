@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from verify_server_control_0290 import verify
+from verify_server_control import verify
 
 SHA = "a" * 40
 VERSION = "0.29.0"

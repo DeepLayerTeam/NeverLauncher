@@ -170,7 +170,7 @@ def main() -> int:
     require(
         ci,
         [
-            "python scripts/smoke/offline/guard-thread-process-integrity-0186.py",
+            "python scripts/smoke/offline/guard-thread-process-integrity.py",
             "cargo build --manifest-path runtime/guard-thread-probe/Cargo.toml",
             "GUARD_THREAD_PROBE_DLL",
             "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
@@ -178,7 +178,7 @@ def main() -> int:
         ],
         "интеграционные и adversarial-проверки Windows / Clippy",
     )
-    if "guard-thread-process-integrity-0186.py" not in preflight:
+    if "guard-thread-process-integrity.py" not in preflight:
         raise SystemExit(
             "[Launcher] Thread & Process Integrity 0.18.6: не настроен запуск в предварительных проверках"
         )

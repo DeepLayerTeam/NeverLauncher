@@ -5,7 +5,7 @@
 ## Развёртывание
 
 1. **До обновления** создайте резервную копию PostgreSQL и объектов `texture-blobs/sha256/`.
-2. Примените `services/api/internal/dbmigrate/sql/0069_texture_storage_0253.sql` штатным мигратором с контролем сумм (не повторяйте и не редактируйте 0067/0068).
+2. Примените `services/api/internal/dbmigrate/sql/0069_texture_storage.sql` штатным мигратором с контролем сумм (не повторяйте и не редактируйте 0067/0068).
 3. Разверните API 0.25.3. При загрузке в S3 используется условный `If-None-Match: *` с подписанными `Content-Type`, заголовками кеша и SHA-256; коллизия проверяется по содержимому, а не перезаписывается. Локальные записи остаются атомарными, через жёсткие ссылки и fsync.
 4. Настройте либо `LAUNCHER_STORAGE_DRIVER=local` + `LAUNCHER_STORAGE_LOCAL_PATH`, либо `LAUNCHER_STORAGE_DRIVER=s3` + существующие `LAUNCHER_STORAGE_S3_*`. **Не переключайте драйвер без миграции метаданных БД и байтов объектов.** При восстановлении и резервном копировании используется тот же драйвер, что в снимке.
 
@@ -13,7 +13,7 @@
 
 ## Автономная команда обслуживания
 
-Выполняйте команды из `services/api` с тем же окружением, что и API, и настроенным `LAUNCHER_DATABASE_DSN`. Сборка: `go build -o texture-maintenance ./cmd/texture-maintenance-0253`.
+Выполняйте команды из `services/api` с тем же окружением, что и API, и настроенным `LAUNCHER_DATABASE_DSN`. Сборка: `go build -o texture-maintenance ./cmd/texture-maintenance`.
 
 ```bash
 ./texture-maintenance --command backup --backup /var/backups/launcher/textures-2026-10-23

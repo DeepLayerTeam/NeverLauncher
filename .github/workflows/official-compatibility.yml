@@ -11,13 +11,13 @@ on:
       - 'services/api/cmd/official-provider-poc/**'
       - 'apps/desktop/**'
       - 'runtime/runtime/**'
-      - 'scripts/certification/official-game-join-02612.py'
-      - 'scripts/certification/test_official_game_join_02612.py'
-      - 'scripts/ga/official_minecraft_0270.py'
-      - 'scripts/ga/test_official_minecraft_0270.py'
-      - 'scripts/ga/verify_official_artifacts_0270.py'
-      - 'scripts/ga/test_official_artifacts_0270.py'
-      - '.github/workflows/official-compatibility-02612.yml'
+      - 'scripts/certification/official-game-join.py'
+      - 'scripts/certification/test_official_game_join.py'
+      - 'scripts/ga/official_minecraft.py'
+      - 'scripts/ga/test_official_minecraft.py'
+      - 'scripts/ga/verify_official_artifacts.py'
+      - 'scripts/ga/test_official_artifacts.py'
+      - '.github/workflows/official-compatibility.yml'
       - 'VERSION'
   push:
     paths:
@@ -25,18 +25,21 @@ on:
       - 'services/api/cmd/official-provider-poc/**'
       - 'apps/desktop/**'
       - 'runtime/runtime/**'
-      - 'scripts/certification/official-game-join-02612.py'
-      - 'scripts/certification/test_official_game_join_02612.py'
-      - 'scripts/ga/official_minecraft_0270.py'
-      - 'scripts/ga/test_official_minecraft_0270.py'
-      - 'scripts/ga/verify_official_artifacts_0270.py'
-      - 'scripts/ga/test_official_artifacts_0270.py'
-      - '.github/workflows/official-compatibility-02612.yml'
+      - 'scripts/certification/official-game-join.py'
+      - 'scripts/certification/test_official_game_join.py'
+      - 'scripts/ga/official_minecraft.py'
+      - 'scripts/ga/test_official_minecraft.py'
+      - 'scripts/ga/verify_official_artifacts.py'
+      - 'scripts/ga/test_official_artifacts.py'
+      - '.github/workflows/official-compatibility.yml'
       - 'VERSION'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  PYTHONUTF8: "1"
 
 jobs:
   provider-chain-and-sessionserver:
@@ -72,11 +75,11 @@ jobs:
         run: go build -o "$RUNNER_TEMP/official-provider-poc${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/official-provider-poc
         shell: bash
       - name: Проверить парсер подтверждающих журналов оператора на тестовых данных
-        run: python ../../scripts/certification/test_official_game_join_02612.py
+        run: python ../../scripts/certification/test_official_game_join.py
       - name: Выполнить негативные тесты подписанной проверки GA 0.27.0 на тестовых данных
-        run: python ../../scripts/ga/test_official_minecraft_0270.py
+        run: python ../../scripts/ga/test_official_minecraft.py
       - name: Выполнить отрицательные тесты точной привязки нативных установщиков (только тестовые данные)
-        run: python ../../scripts/ga/test_official_artifacts_0270.py
+        run: python ../../scripts/ga/test_official_artifacts.py
 
   native-runtime-and-desktop:
     name: Нативный лаунчер и граница хранения учётных данных ОС / ${{ matrix.os }}
@@ -117,7 +120,7 @@ jobs:
           npm run test:textures
           npm run test:launch-modes
           npm run test:components
-          node --experimental-strip-types --test tests/startup_screen_0427.test.mjs
+          node --experimental-strip-types --test tests/startup_screen.test.mjs
       - name: Выполнить промышленную сборку интерфейса
         working-directory: apps/desktop
         run: npm run build

@@ -2,16 +2,19 @@ name: Guard 0.50.6 — непрерывное наблюдение за игро
 on:
   push:
     paths:
-      - 'runtime/runtime/src/continuous_game_protection_0506.rs'
+      - 'runtime/runtime/src/continuous_game_protection.rs'
       - 'runtime/runtime/src/supervisor.rs'
       - 'runtime/runtime/src/lib.rs'
-      - 'sdk/java/trusted-agent/src/main/java/ru/launcher/trusted/RuntimeIntegrity0505.java'
-      - 'scripts/tests/continuous_game_protection_0506.py'
-      - '.github/workflows/continuous-game-protection-0506.yml'
+      - 'sdk/java/trusted-agent/src/main/java/ru/launcher/trusted/RuntimeIntegrity.java'
+      - 'scripts/tests/continuous_game_protection.py'
+      - '.github/workflows/continuous-game-protection.yml'
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: "1"
+
 jobs:
   live-guard:
     strategy:
@@ -40,9 +43,9 @@ jobs:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
       - name: Проверить реальную активность JVM, её жизненный цикл и целостность исполняемого кода
-        run: python scripts/tests/continuous_game_protection_0506.py
+        run: python scripts/tests/continuous_game_protection.py
       - name: Запустить предыдущие регрессионные проверки целостности работающей JVM
-        run: python scripts/tests/guard_runtime_integrity_0505.py
+        run: python scripts/tests/guard_runtime_integrity.py
       - name: Скомпилировать и проверить нативный сторожевой процесс родительского процесса
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib continuous_game_protection_0506
       - name: "Скомпилировать полный Runtime и управляемый Launcher"

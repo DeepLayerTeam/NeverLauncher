@@ -4,18 +4,18 @@ on:
     paths:
       - 'scripts/install/production-deploy.py'
       - 'scripts/install/test_production_deploy.py'
-      - 'scripts/install/test_production_first_run_0451.py'
+      - 'scripts/install/test_production_first_run.py'
       - 'deploy/production/**'
       - 'installer/**'
-      - '.github/workflows/production-deployment-03213.yml'
+      - '.github/workflows/production-deployment.yml'
   pull_request:
     paths:
       - 'scripts/install/production-deploy.py'
       - 'scripts/install/test_production_deploy.py'
-      - 'scripts/install/test_production_first_run_0451.py'
+      - 'scripts/install/test_production_first_run.py'
       - 'deploy/production/**'
       - 'installer/**'
-      - '.github/workflows/production-deployment-03213.yml'
+      - '.github/workflows/production-deployment.yml'
   workflow_dispatch:
 permissions:
   contents: read

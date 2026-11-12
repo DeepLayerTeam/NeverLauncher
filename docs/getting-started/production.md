@@ -2,7 +2,7 @@
 
 Текущая версия продукта определяется файлом `VERSION`. Установка требует реальной конфигурации, подтверждённых Guard/Bridge-политик, доверенного TLS и независимого хранилища ключей. Наличие скрипта или конфигурационного файла **не** является доказательством готовой установки.
 
-Основное пошаговое руководство для оператора: [установка Minimal/Standard/Network-HA](../operator/installation.md). В нём приведены **реальные** вызовы `scripts/install/minimal-install.py` и `scripts/install/production-deploy.py`, первичное создание администратора через backend и отдельная операторская проверка в режиме только для чтения `scripts/operations/operator_accept_04513.py`.
+Основное пошаговое руководство для оператора: [установка Minimal/Standard/Network-HA](../operator/installation.md). В нём приведены **реальные** вызовы `scripts/install/minimal-install.py` и `scripts/install/production-deploy.py`, первичное создание администратора через backend и отдельная операторская проверка в режиме только для чтения `scripts/operations/operator_accept.py`.
 
 Операции после установки: [резервирование](../operator/backup-recovery.md), [обновления/откат](../operator/upgrades.md), [HA/инциденты](../operator/ha-incidents.md), [политика подписей](../operator/security-delivery.md) и [ведомость второго оператора](../operator/operator-checklist.md).
 

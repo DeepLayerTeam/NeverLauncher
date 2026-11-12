@@ -46,7 +46,7 @@ required = [
     "sdk/api/extension-host-protocol.json",
     "sdk/api/openapi-operations-generated.json",
     "scripts/sdk/generate-types.py",
-    "cli/cmd/launcher/extension_sdk_02010.go",
+    "cli/cmd/launcher/extension_sdk.go",
 ]
 for rel in required:
     require((ROOT / rel).is_file(), f"Отсутствует обязательный файл SDK: {rel}")
@@ -92,7 +92,7 @@ rust = read("sdk/desktop/rust/src/lib.rs")
 for token in ("RpcRequest", "DESKTOP_PROTOCOL_VERSION", "validate"):
     require(token in rust, f"В Rust SDK Desktop отсутствует: {token}")
 
-cmd = read("cli/cmd/launcher/extension_sdk_02010.go")
+cmd = read("cli/cmd/launcher/extension_sdk.go")
 for token in (
     "extensionInit02010",
     "extensionBuildCommand02010",
@@ -113,7 +113,7 @@ require(
     in read("cli/cmd/launcher/project_commands.go"),
     "Точка входа Backend SDK должна указывать на исполняемый файл",
 )
-routing = read("cli/cmd/launcher/extension_commands_0201.go")
+routing = read("cli/cmd/launcher/extension_commands.go")
 require(
     'case "init", "dev", "test", "build"' in routing,
     "Маршрутизация команд SDK расширений отсутствует",

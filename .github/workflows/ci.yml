@@ -15,6 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  PYTHONUTF8: "1"
   CI: "true"
 
 jobs:
@@ -38,46 +39,46 @@ jobs:
           python3 scripts/smoke/offline/hardware-bound-identity.py
           python3 scripts/smoke/offline/challenge-response-attestation.py
           python3 scripts/smoke/offline/device-management-revocation.py
-          python3 scripts/smoke/offline/session-device-risk-0126.py
-          python3 scripts/smoke/offline/minecraft-serverbridge-trust-0127.py
-          python3 scripts/smoke/offline/cross-platform-key-recovery-0128.py
-          python3 scripts/smoke/offline/device-trust-e2e-matrix-0129.py
-          python3 scripts/smoke/offline/device-trust-migration-stabilization-01210.py
-          python3 scripts/smoke/offline/device-trust-release-0130.py
-          python3 scripts/smoke/offline/guard-windows-0131.py
-          python3 scripts/smoke/offline/guard-integrity-evidence-0132.py
-          python3 scripts/smoke/offline/guard-process-policy-0133.py
-          python3 scripts/smoke/offline/guard-guard-attestation-0134.py
-          python3 scripts/smoke/offline/minecraft-serverbridge-integrity-0135.py
-          python3 scripts/smoke/offline/windows-production-hardening-0136.py
-          python3 scripts/smoke/offline/linux-production-implementation-0137.py
-          python3 scripts/smoke/offline/macos-production-implementation-0138.py
-          python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
-          python3 scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py
-          python3 scripts/smoke/offline/guard-release-0140.py
-          python3 scripts/smoke/offline/serverbridge-protocol-v2-0141.py
-          python3 scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py
-          python3 scripts/smoke/offline/serverbridge-one-time-join-tickets-0143.py
-          python3 scripts/smoke/offline/serverbridge-bukkit-family-0144.py
-          python3 scripts/smoke/offline/serverbridge-proxy-family-0145.py
-          python3 scripts/smoke/offline/serverbridge-fabric-0146.py
-          python3 scripts/smoke/offline/serverbridge-forge-neoforge-0147.py
-          python3 scripts/smoke/offline/serverbridge-zero-patch-topology-handoff-0148.py
-          python3 scripts/smoke/offline/serverbridge-public-matrix-ha-hardening-0149.py
-          python3 scripts/smoke/offline/serverbridge-migration-stabilization-01410.py
-          python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
-          python3 scripts/smoke/offline/signed-windows-x64-arm64-0152.py
-          python3 scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py
-          python3 scripts/smoke/offline/notarized-macos-x64-arm64-0154.py
-          python3 scripts/smoke/offline/managed-jre-distribution-0155.py
-          python3 scripts/smoke/offline/managed-java-II-0165.py
-          python3 scripts/smoke/offline/unified-transactional-updater-core-0156.py
-          python3 scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py
-          python3 scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py
-          python3 scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py
-          python3 scripts/smoke/offline/migration-stabilization-01510.py
-          python3 scripts/smoke/offline/production-release-candidate-01511.py
-          python3 scripts/smoke/offline/production-delivery-release-0160.py
+          python3 scripts/smoke/offline/session-device-risk.py
+          python3 scripts/smoke/offline/minecraft-serverbridge-trust.py
+          python3 scripts/smoke/offline/cross-platform-key-recovery.py
+          python3 scripts/smoke/offline/device-trust-e2e-matrix.py
+          python3 scripts/smoke/offline/device-trust-migration-stabilization.py
+          python3 scripts/smoke/offline/device-trust-release.py
+          python3 scripts/smoke/offline/guard-windows.py
+          python3 scripts/smoke/offline/guard-integrity-evidence.py
+          python3 scripts/smoke/offline/guard-process-policy.py
+          python3 scripts/smoke/offline/guard-guard-attestation.py
+          python3 scripts/smoke/offline/minecraft-serverbridge-integrity.py
+          python3 scripts/smoke/offline/windows-production-hardening.py
+          python3 scripts/smoke/offline/linux-production-implementation.py
+          python3 scripts/smoke/offline/macos-production-implementation.py
+          python3 scripts/smoke/offline/guard-ci-release-certification.py
+          python3 scripts/smoke/offline/guard-migration-compatibility-stabilization.py
+          python3 scripts/smoke/offline/guard-release.py
+          python3 scripts/smoke/offline/serverbridge-protocol-v2-.py
+          python3 scripts/smoke/offline/serverbridge-crypto-node-identities.py
+          python3 scripts/smoke/offline/serverbridge-one-time-join-tickets.py
+          python3 scripts/smoke/offline/serverbridge-bukkit-family.py
+          python3 scripts/smoke/offline/serverbridge-proxy-family.py
+          python3 scripts/smoke/offline/serverbridge-fabric.py
+          python3 scripts/smoke/offline/serverbridge-forge-neoforge.py
+          python3 scripts/smoke/offline/serverbridge-zero-patch-topology-handoff.py
+          python3 scripts/smoke/offline/serverbridge-public-matrix-ha-hardening.py
+          python3 scripts/smoke/offline/serverbridge-migration-stabilization.py
+          python3 scripts/smoke/offline/delivery-manifest-platform-architecture.py
+          python3 scripts/smoke/offline/signed-windows-x64-arm64-.py
+          python3 scripts/smoke/offline/linux-x64-arm64-production-packages.py
+          python3 scripts/smoke/offline/notarized-macos-x64-arm64-.py
+          python3 scripts/smoke/offline/managed-jre-distribution.py
+          python3 scripts/smoke/offline/managed-java-II.py
+          python3 scripts/smoke/offline/unified-transactional-updater-core.py
+          python3 scripts/smoke/offline/desktop-guard-runtime-transactional-update.py
+          python3 scripts/smoke/offline/release-verification-v2-trust-lifecycle.py
+          python3 scripts/smoke/offline/public-production-delivery-matrix-e2e.py
+          python3 scripts/smoke/offline/migration-stabilization.py
+          python3 scripts/smoke/offline/production-release-candidate.py
+          python3 scripts/smoke/offline/production-delivery-release.py
           python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
           python3 scripts/guard_ci/test_matrix.py
           bash scripts/smoke/offline/version-alignment.sh
@@ -90,21 +91,21 @@ jobs:
           python3 scripts/compatibility/test_certify_jre.py
           python3 scripts/compatibility/test_retry_macos_sdl3.py
           python3 scripts/compatibility/test_vanilla_sdl3_retry_wiring.py
-          python3 scripts/smoke/offline/minecraft-compatibility-II-ga-0170.py
-          python3 scripts/smoke/offline/fabric-compatibility-II-0171.py
-          python3 scripts/smoke/offline/quilt-compatibility-II-0172.py
-          python3 scripts/smoke/offline/forge-modern-0173.py
-          python3 scripts/smoke/offline/forge-legacy-1122-0174.py
-          python3 scripts/smoke/offline/forge-legacy-1710-0175.py
-          python3 scripts/smoke/offline/neoforge-compatibility-II-0176.py
-          python3 scripts/smoke/offline/loader-resolution-pinning-0177.py
-          python3 scripts/smoke/offline/loader-native-e2e-0178.py
-          python3 scripts/smoke/offline/cross-platform-loaders-0179.py
-          python3 scripts/smoke/offline/loader-hardening-01710.py
-          python3 scripts/smoke/offline/loader-compatibility-rc-01711.py
-          python3 scripts/smoke/offline/loader-compatibility-ga-0180.py
-          python3 scripts/smoke/offline/windows-protection-core-II-0181.py
-          python3 scripts/smoke/offline/guard-sensor-0182.py
+          python3 scripts/smoke/offline/minecraft-compatibility-II-ga.py
+          python3 scripts/smoke/offline/fabric-compatibility-II.py
+          python3 scripts/smoke/offline/quilt-compatibility-II.py
+          python3 scripts/smoke/offline/forge-modern.py
+          python3 scripts/smoke/offline/forge-legacy-1122-.py
+          python3 scripts/smoke/offline/forge-legacy-1710-.py
+          python3 scripts/smoke/offline/neoforge-compatibility-II.py
+          python3 scripts/smoke/offline/loader-resolution-pinning.py
+          python3 scripts/smoke/offline/loader-native-e2e.py
+          python3 scripts/smoke/offline/cross-platform-loaders.py
+          python3 scripts/smoke/offline/loader-hardening.py
+          python3 scripts/smoke/offline/loader-compatibility-rc.py
+          python3 scripts/smoke/offline/loader-compatibility-ga.py
+          python3 scripts/smoke/offline/windows-protection-core-II.py
+          python3 scripts/smoke/offline/guard-sensor.py
           python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
           python3 scripts/device_trust/test_matrix.py
           python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json
@@ -194,8 +195,8 @@ jobs:
           cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Проверить Runtime и Guard под Linux, выполнить clippy
         run: |
-          python3 scripts/smoke/offline/linux-production-implementation-0137.py
-          python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
+          python3 scripts/smoke/offline/linux-production-implementation.py
+          python3 scripts/smoke/offline/guard-ci-release-certification.py
           cargo test --manifest-path runtime/runtime/Cargo.toml
           cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_linux -- --nocapture
           cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings
@@ -352,22 +353,22 @@ jobs:
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
       - name: Запустить интеграционные тесты Guard для Windows
         run: |
-          python scripts/smoke/offline/windows-production-hardening-0136.py
-          python scripts/smoke/offline/windows-protection-core-II-0181.py
-          python scripts/smoke/offline/guard-sensor-0182.py
-          python scripts/smoke/offline/guard-module-guard-0183.py
-          python scripts/smoke/offline/guard-aggressive-hook-engine-0184.py
-          python scripts/smoke/offline/guard-memory-integrity-0185.py
-          python scripts/smoke/offline/guard-thread-process-integrity-0186.py
-          python scripts/smoke/offline/guard-debug-instrumentation-0187.py
-          python scripts/smoke/offline/guard-jvm-aware-protection-0188.py
-          python scripts/smoke/offline/guard-continuous-guard-0189.py
-          python scripts/smoke/offline/guard-attestation-v2-01810.py
+          python scripts/smoke/offline/windows-production-hardening.py
+          python scripts/smoke/offline/windows-protection-core-II.py
+          python scripts/smoke/offline/guard-sensor.py
+          python scripts/smoke/offline/guard-module-guard.py
+          python scripts/smoke/offline/guard-aggressive-hook-engine.py
+          python scripts/smoke/offline/guard-memory-integrity.py
+          python scripts/smoke/offline/guard-thread-process-integrity.py
+          python scripts/smoke/offline/guard-debug-instrumentation.py
+          python scripts/smoke/offline/guard-jvm-aware-protection.py
+          python scripts/smoke/offline/guard-continuous-guard.py
+          python scripts/smoke/offline/guard-attestation-v2-.py
           cd services/api
           go test ./internal/httpapi -run 'TestGuardAttestationV2' -count=1
           go test ./internal/dbmigrate -run 'TestGuardAttestationV2Migration01810' -count=1
           cd ../..
-          python scripts/smoke/offline/guard-ci-release-certification-0139.py
+          python scripts/smoke/offline/guard-ci-release-certification.py
           cargo fmt --manifest-path runtime/runtime/Cargo.toml
           cargo fmt --manifest-path runtime/guard-sensor/Cargo.toml
           cargo fmt --manifest-path runtime/guard-memory-probe/Cargo.toml
@@ -472,8 +473,8 @@ jobs:
       - name: Проверить готовность macOS к релизу и нативные тесты Rust
         shell: bash
         run: |
-          python3 scripts/smoke/offline/macos-production-implementation-0138.py
-          python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
+          python3 scripts/smoke/offline/macos-production-implementation.py
+          python3 scripts/smoke/offline/guard-ci-release-certification.py
           cargo fmt --manifest-path runtime/runtime/Cargo.toml
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib -- --nocapture
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib integrity::tests -- --nocapture
@@ -652,9 +653,9 @@ jobs:
         run: bash scripts/build/bridge-plugins.sh
       - name: Проверить семантику подтверждения Runtime 0.42.0 и негативные регрессионные тесты пакетов релиза
         run: |
-          python3 -m unittest discover -s serverbridge/tests -p '*04113.py' -v
-          python3 -m unittest discover -s e2e/scripts -p 'test_record_serverbridge_runtime_04113.py' -v
-          python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release_0420.py' -v
+          python3 -m unittest discover -s serverbridge/tests -p 'test_live_matrix.py' -v
+          python3 -m unittest discover -s e2e/scripts -p 'test_record_serverbridge_runtime.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release.py' -v
 
   containers:
     name: Контейнеры промышленного окружения
@@ -725,7 +726,7 @@ jobs:
           (cd cli && go build -trimpath -o /tmp/nl-managed-jre ./cmd/launcher)
           /tmp/nl-managed-jre delivery manifest --bundle "${OUT}" --version "${VERSION}"
           /tmp/nl-managed-jre delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
-          python3 scripts/smoke/offline/managed-jre-distribution-0155.py
+          python3 scripts/smoke/offline/managed-jre-distribution.py
       - name: Загрузить промышленные артефакты управляемой JRE для точного коммита
         uses: actions/upload-artifact@v4
         with:
@@ -768,7 +769,7 @@ jobs:
       - name: Проверить надёжную инициализацию PostgreSQL и отказ при ошибочных повторных попытках
         run: python3 -m unittest discover -s e2e/scripts -p test_durable_postgres_startup.py -v
       - name: Проверить перезапуск PostgreSQL с несколькими репликами и разграничением прав 0.21.3
-        run: bash e2e/scripts/run-durable-boundaries-0213-e2e.sh
+        run: bash e2e/scripts/run-durable-boundaries-e2e.sh
       - name: Проверить миграцию Device Trust с 0.12.9 на 0.12.10
         run: bash e2e/scripts/run-device-trust-migration-e2e.sh
       - name: Проверить миграцию Guard с 0.13.9 на 0.13.10
@@ -792,77 +793,77 @@ jobs:
       - name: Проверить миграцию Public Matrix и усиление HA с 0.14.8 на 0.14.9
         run: bash e2e/scripts/run-serverbridge-ha-hardening-migration-e2e.sh
       - name: Проверить выпуск ServerBridge 3
-        run: python3 scripts/smoke/offline/serverbridge-release-0150.py
+        run: python3 scripts/smoke/offline/serverbridge-release.py
       - name: Проверить обнаружение узлов и идентичность Runtime в ServerBridge 3 (0.19.2)
-        run: python3 scripts/smoke/offline/serverbridge-runtime-identity-0192.py
+        run: python3 scripts/smoke/offline/serverbridge-runtime-identity.py
       - name: Проверить телеметрию серверов ServerBridge 3 (0.19.3)
-        run: python3 scripts/smoke/offline/serverbridge-telemetry-0193.py
+        run: python3 scripts/smoke/offline/serverbridge-telemetry.py
       - name: Проверить поток событий серверов ServerBridge 3 (0.19.4)
-        run: python3 scripts/smoke/offline/serverbridge-event-stream-0194.py
+        run: python3 scripts/smoke/offline/serverbridge-event-stream.py
       - name: Проверить управляющий API ServerBridge 3 (0.19.5)
-        run: python3 scripts/smoke/offline/serverbridge-control-api-0195.py
+        run: python3 scripts/smoke/offline/serverbridge-control-api.py
       - name: Проверить топологию и маршрутизацию ServerBridge 3 (0.19.6)
-        run: python3 scripts/smoke/offline/serverbridge-topology-routing2-0196.py
+        run: python3 scripts/smoke/offline/serverbridge-topology-routing2-.py
       - name: Проверить интеграцию игровых сеансов ServerBridge 3 (0.19.7)
-        run: python3 scripts/smoke/offline/serverbridge-player-session-integration3-0197.py
+        run: python3 scripts/smoke/offline/serverbridge-player-session-integration3-.py
       - name: Проверить универсальные серверные адаптеры ServerBridge 3 (0.19.8)
-        run: python3 scripts/smoke/offline/serverbridge-universal-adapters-0198.py
+        run: python3 scripts/smoke/offline/serverbridge-universal-adapters.py
       - name: Проверить подготовку ServerBridge 3 без патчей (0.19.9)
         run: |
-          python3 scripts/smoke/offline/serverbridge-zero-patch-provisioning-0199.py
+          python3 scripts/smoke/offline/serverbridge-zero-patch-provisioning.py
           (cd cli && go test -run 'TestServerBridge(Detect|Install|DryRun|ReleaseTargetCohort)' ./cmd/launcher)
       - name: Проверить хост ServerBridge (0.19.10)
         run: |
-          python3 scripts/smoke/offline/serverbridge-host-01910.py
+          python3 scripts/smoke/offline/serverbridge-host.py
           (cd cli && go test -run 'TestServerBridgeHost' ./cmd/launcher)
           (cd cli && GOOS=windows GOARCH=amd64 go test -c ./cmd/launcher -o /tmp/launcher-host-windows.test.exe)
       - name: Проверить управляющий контур высокой доступности ServerBridge (0.19.11)
         run: |
-          python3 scripts/smoke/offline/serverbridge-ha-control-plane-01911.py
+          python3 scripts/smoke/offline/serverbridge-ha-control-plane.py
           (cd services/api && go test ./internal/serverbridgeha)
           (cd services/api && go test -run 'TestServerBridge(Control|HAControlPlane)' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
       - name: Проверить безопасность и сертификацию ServerBridge (0.19.12)
         run: |
-          python3 scripts/smoke/offline/serverbridge-security-certification-01912.py
-          bash e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh
+          python3 scripts/smoke/offline/serverbridge-security-certification.py
+          bash e2e/scripts/run-serverbridge-security-certification-e2e.sh
           (cd services/api && go test -run 'TestServerBridge(Security|ProtocolV3|Event|NodeIdentity|Control)' ./internal/httpapi)
       - name: Проверить готовность ServerBridge 3 к общедоступному выпуску (0.20.0)
         run: |
-          python3 scripts/smoke/offline/serverbridge3-ga-0200.py
+          python3 scripts/smoke/offline/serverbridge3-ga.py
           (cd services/api && go test -run 'TestServerBridgeGA0200' ./internal/httpapi)
           (cd cli && go test -run 'TestServerBridge.*0200|TestVerifyServerBridge3GACertification0200' ./cmd/launcher ./internal/dbmigrate)
       - name: Проверить ядро расширений (0.20.1)
         run: |
-          python3 scripts/smoke/offline/extensions-core-0201.py
+          python3 scripts/smoke/offline/extensions-core.py
           (cd services/api && go test -run 'TestExtensionsCoreHTTP0201|TestExtensionMemoryRepository' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
           (cd cli && go test -run 'TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/launcher ./internal/dbmigrate)
       - name: Проверить пакет расширения (0.20.2)
         run: |
-          python3 scripts/smoke/offline/extensions-package-0202.py
+          python3 scripts/smoke/offline/extensions-package.py
           (cd cli && go test -run 'TestExtensionPackage.*0202|TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/launcher)
           (cd cli && go vet ./cmd/launcher)
       - name: Проверить реестр расширений (0.20.3)
         run: |
-          python3 scripts/smoke/offline/extensions-registry-0203.py
+          python3 scripts/smoke/offline/extensions-registry.py
           (cd services/api && go test -run 'TestExtensionsRegistry.*0203|TestVerifyRegistryPackageAcceptsOlderCLISBOM0203|TestExtensionRegistryMemoryProductionLifecycle0203|TestExtensionsRegistryMigration0203' ./internal/httpapi ./internal/extensionpackage ./internal/repository ./internal/dbmigrate)
           (cd cli && go test -run 'TestExtensionRegistry.*0203|TestExtensionPackage.*0202' ./cmd/launcher ./internal/dbmigrate)
           (cd cli && go vet ./cmd/launcher)
       - name: Проверить жизненный цикл установки расширений (0.20.4)
         run: |
-          python3 scripts/smoke/offline/extensions-install-lifecycle-0204.py
+          python3 scripts/smoke/offline/extensions-install-lifecycle.py
           (cd services/api && go test -run 'TestExtensionLifecycle.*0204|TestExtractPayloadFile0204|TestExtensionsInstallLifecycleMigration0204' ./internal/extensionpackage ./internal/repository ./internal/dbmigrate ./internal/extensionlifecycle)
           (cd cli && go test -run 'TestExtensionLifecycle.*0204' ./cmd/launcher ./internal/dbmigrate)
           (cd cli && go vet ./cmd/launcher)
       - name: Проверить хост расширений (0.20.5)
         run: |
-          python3 scripts/smoke/offline/extensions-host-0205.py
+          python3 scripts/smoke/offline/extensions-host.py
           (cd services/api && go test -run 'TestExtensionHost.*0205|TestSafeEntrypointRejectsSymlink0205|TestSanitizedEnvironmentForwardsSecrets0205|TestStartRequiresEnabledState0205' ./internal/extensionhost)
           (cd services/api && go test -run 'TestExtensionHostAdmin.*0205' ./internal/httpapi)
           (cd cli && go test -run 'TestExtensionHostCLI0205|TestExtensionLifecycle.*0204' ./cmd/launcher)
           (cd cli && go vet ./cmd/launcher)
       - name: Проверить события и хуки расширений (0.20.6)
         run: |
-          python3 scripts/smoke/offline/extensions-events-0206.py
+          python3 scripts/smoke/offline/extensions-events.py
           (cd services/api && go test -run 'TestEventBus.*0206|TestSyncHook.*0206|TestAsyncDelivery.*0206|TestSubscription.*0206|TestTypedProjectPayload.*0206|TestDeliveryLeaseFencing.*0206|TestDisabledInstall.*0206' ./internal/eventbus)
           (cd services/api && go test -run 'TestEventSubscriptionPermissionBoundary0206|TestValidateCallbackURLLoopbackOnly0206' ./internal/extensionhost)
           (cd services/api && go test -run 'TestExtensionsEventsHooksMigration0206' ./internal/dbmigrate)
@@ -871,7 +872,7 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
       - name: Проверить разрешения и безопасность возможностей расширений (0.20.7)
         run: |
-          python3 scripts/smoke/offline/extensions-capability-security-0207.py
+          python3 scripts/smoke/offline/extensions-capability-security.py
           (cd services/api && go test -run 'TestDenyByDefaultGrantRevokeAndDiff0207|TestProjectScopedGrant0207|TestSecretsEncryptedAuthenticated0207' ./internal/extensionsecurity)
           (cd services/api && go test -run 'TestEventSubscriptionPermissionBoundary0206|TestExtensionHost.*0205|TestForbiddenOutboundIP0207' ./internal/extensionhost)
           (cd services/api && go test -run 'TestExtensionsCapabilitySecurityMigration0207' ./internal/dbmigrate)
@@ -881,7 +882,7 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
       - name: Проверить расширения в панели Admin (0.20.8)
         run: |
-          python3 scripts/smoke/offline/extensions-admin-0208.py
+          python3 scripts/smoke/offline/extensions-admin.py
           (cd services/api && go test -run 'TestAdminContributions0208' ./internal/repository)
           (cd services/api && go test -run 'TestAdminHTMLHardening0208|TestSafeAdminEntrypoint0208|TestAdminProjectScope0208|TestAdminEntrypointServedFromEnabledVerifiedInstall0208' ./internal/httpapi)
           (cd services/api && go vet ./internal/repository ./internal/httpapi)
@@ -892,7 +893,7 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
       - name: Проверить расширения Desktop и CLI (0.20.9)
         run: |
-          python3 scripts/smoke/offline/extensions-desktop-cli-0209.py
+          python3 scripts/smoke/offline/extensions-desktop-cli.py
           (cd services/api && go test -run 'TestDesktop.*0209|TestCLIExtension.*0209|TestLifecycleStopTerminatesTransientCLI0209' ./internal/httpapi ./internal/extensionhost)
           (cd services/api && go test -run 'TestDesktopAndCLIContributions0209|TestCanonicalFourTargetManifest0209' ./internal/repository)
           (cd services/api && go vet ./internal/httpapi ./internal/extensionhost ./internal/repository)
@@ -904,7 +905,7 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
       - name: Проверить SDK расширений (0.20.10)
         run: |
-          python3 scripts/smoke/offline/extensions-sdk-02010.py
+          python3 scripts/smoke/offline/extensions-sdk.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/types_generated.go sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/rust/src/generated.rs sdk/api/openapi-operations-generated.json
           (cd sdk/backend/go && go test ./... && go vet ./...)
@@ -920,7 +921,7 @@ jobs:
           python3 scripts/contracts/validate-openapi.py
       - name: Проверить зависимости и обновления расширений (0.20.11)
         run: |
-          python3 scripts/smoke/offline/extensions-dependencies-updates-02011.py
+          python3 scripts/smoke/offline/extensions-dependencies-updates.py
           (cd services/api && go test -run '02011' ./internal/extensionresolver ./internal/extensionupdates ./internal/repository ./internal/dbmigrate)
           (cd services/api && go vet ./internal/extensionresolver ./internal/extensionupdates ./internal/repository)
           (cd cli && go test -run '02011' ./cmd/launcher ./internal/dbmigrate && go vet ./cmd/launcher)
@@ -929,16 +930,16 @@ jobs:
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
       - name: Проверить доверие, восстановление и сертификацию расширений (0.20.12)
         run: |
-          python3 scripts/smoke/offline/extensions-trust-recovery-certification-02012.py
-          python3 scripts/compatibility/extensions_trust_02012.py validate
+          python3 scripts/smoke/offline/extensions-trust-recovery-certification.py
+          python3 scripts/compatibility/extensions_trust.py validate
           (cd services/api && go test -run '02012|TestExtensionHostCrashLoopDetection0205' ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/launcher-api)
           (cd services/api && go vet ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/httpapi ./cmd/launcher-api)
           (cd cli && go test -run '02012' ./cmd/launcher ./internal/dbmigrate && go vet ./cmd/launcher)
           python3 scripts/contracts/validate-openapi.py
       - name: Проверить готовность расширений к общедоступному выпуску (0.21.0)
         run: |
-          python3 scripts/smoke/offline/extensions-ga-0210.py
-          python3 scripts/compatibility/extensions_ga_0210.py validate
+          python3 scripts/smoke/offline/extensions-ga.py
+          python3 scripts/compatibility/extensions_ga.py validate
           (cd services/api && go test ./internal/extensioncontract ./internal/extensionga)
           (cd cli && go test ./cmd/launcher -run '0210|ExtensionUpgradeSource')
           (cd sdk/backend/go && go test ./...)
@@ -950,13 +951,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python3 scripts/compatibility/honest_validation_trust_0212.py validate --online
+          python3 scripts/compatibility/honest_validation_trust.py validate --online
           (cd services/api && go test -run '0211|0212|Authorization|ProjectAuthorization' ./internal/authorization ./internal/httpapi ./internal/dbmigrate ./internal/repository ./internal/extensionhost)
           (cd services/api && go vet ./internal/authorization ./internal/httpapi ./internal/repository ./internal/extensionhost)
           (cd cli && go test ./internal/dbmigrate ./cmd/launcher -run '0212|Runtime|Pipeline' && go vet ./internal/dbmigrate ./cmd/launcher)
       - name: Проверить устойчивость критических границ и сертификацию (0.21.3)
         run: |
-          python3 scripts/compatibility/durable_boundaries_0213.py validate
+          python3 scripts/compatibility/durable_boundaries.py validate
           (cd services/api && go test -run '0213|Authorization|ProjectAuthorization' ./internal/authorization ./internal/httpapi ./internal/dbmigrate ./internal/repository)
           (cd services/api && go vet ./internal/authorization ./internal/httpapi ./internal/repository ./cmd/launcher-api)
           (cd cli && go test ./internal/dbmigrate ./cmd/launcher -run '0213|Migration' && go vet ./internal/dbmigrate ./cmd/launcher)
@@ -964,9 +965,9 @@ jobs:
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
       - name: Проверить манифест поставки и архитектуру платформ (0.15.1)
-        run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py
+        run: python3 scripts/smoke/offline/delivery-manifest-platform-architecture.py
       - name: Проверить подписанные пакеты Windows x64 и ARM64 (0.15.2)
-        run: python3 scripts/smoke/offline/signed-windows-x64-arm64-0152.py
+        run: python3 scripts/smoke/offline/signed-windows-x64-arm64-.py
       - name: Проверить миграцию и стабилизацию ServerBridge с 0.14.9 на 0.14.10
         run: bash e2e/scripts/run-serverbridge-migration-stabilization-e2e.sh
       - name: Проверить жизненный цикл Device Trust в PostgreSQL
@@ -977,10 +978,10 @@ jobs:
         run: bash e2e/scripts/run-device-trust-e2e.sh
       - name: Проверить реальные данные жизненного цикла игры с отказом по умолчанию и счётчики издателя
         run: |
-          python3 -m unittest discover -s e2e/scripts -p 'test_game_cycle_0364.py' -v
+          python3 -m unittest discover -s e2e/scripts -p 'test_game_cycle.py' -v
           python3 -m unittest discover -s e2e/scripts -p 'test_publish_client_package.py' -v
-          python3 -m unittest discover -s scripts/ga -p 'test_verify_game_cycle_0364.py' -v
-          python3 -m unittest discover -s scripts/ga -p 'test_verify_player_cycle_0398.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_game_cycle.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_player_cycle.py' -v
       - name: Установить, опубликовать, синхронизировать, запустить Minecraft, подключиться, отозвать доступ и проверить отказ
         run: bash e2e/scripts/run-minecraft-e2e.sh
       - name: Проверить гонки и сбои Go для точного коммита 0.42+ и обязательные реальные запуски Minecraft на 14 платформах
@@ -993,15 +994,15 @@ jobs:
             GOTOOLCHAIN=local go test -json -race -count=1 -timeout 240s ./cmd/launcher \
               -run '^(TestRemoteFault.*04112|TestHostLifecycle0414(RealJVMStartStopRestartAndSIGTERM|RealJVMAutoRecoveryAfterCrash|RealJVMCrashLoopIsBounded|ActualCLIAndRemoteEffects|StopWhileJavaCrashIsInBackoff)|TestWorldBackup(CreateVerifyRestore02810|GateBlocksStartAndSecondBackup04110|GateFailsClosedAndRecoversOffline04110))$'
           ) > e2e/runtime/network-faults-0420.go-test.jsonl
-          python3 scripts/ga/record_network_faults_0420.py \
+          python3 scripts/ga/record_network_faults.py \
             --log e2e/runtime/network-faults-0420.go-test.jsonl \
             --source-commit "$GITHUB_SHA" --version "$(cat VERSION)" \
             --out e2e/runtime/network-faults-0420.json
-          python3 serverbridge/live_matrix_04113.py --root . --scope all \
+          python3 serverbridge/live_matrix.py --root . --scope all \
             --runtime e2e/runtime --out e2e/runtime/live-matrix-all-0420.json
       - name: Потребовать свидетельства реального резервного копирования и восстановления мира Paper для 0.29.0
         run: |
-          python3 scripts/ga/verify_server_control_0290.py \
+          python3 scripts/ga/verify_server_control.py \
             --e2e-dir e2e/runtime --version "$(cat VERSION)" --source-commit "$GITHUB_SHA"
       - name: Проверить свидетельства работоспособности Minecraft
         run: |
@@ -1014,13 +1015,13 @@ jobs:
           done
       - name: Потребовать независимую проверку обновления и отката реального Minecraft
         run: |
-          python3 scripts/ga/verify_game_cycle_0364.py \
+          python3 scripts/ga/verify_game_cycle.py \
             --e2e-dir e2e/runtime --version "$(cat VERSION)" \
             --source-commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
       - name: Потребовать реальные положительные и отрицательные сквозные тесты игрок 0.39.8
         run: |
-          python3 scripts/ga/verify_player_cycle_0398.py \
+          python3 scripts/ga/verify_player_cycle.py \
             --e2e-dir e2e/runtime --version "$(cat VERSION)" \
             --source-commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
@@ -1188,7 +1189,7 @@ jobs:
       - name: Проверить промышленный критерий приёмки обходных тестов CI 0.18.11
         shell: pwsh
         run: |
-          python scripts/smoke/offline/guard-windows-adversarial-ci-01811.py
+          python scripts/smoke/offline/guard-windows-adversarial-ci.py
           python scripts/guard_ci/test_windows_adversarial.py
       - name: Загрузить свидетельства проверок обходов для каждой версии Java
         if: always()
@@ -1235,13 +1236,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/smoke/offline/guard-windows-protection-rc-01812.py
+          python3 scripts/smoke/offline/guard-windows-protection-rc.py
           (cd cli && go test ./cmd/launcher -run 'TestWindowsProtection' -count=1)
       - name: Проверить промышленный критерий готовности Windows Protection GA 0.19.0
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/smoke/offline/guard-windows-protection-ga-0190.py
+          python3 scripts/smoke/offline/guard-windows-protection-ga.py
           (cd cli && go test ./cmd/launcher -run 'TestWindowsProtectionGA' -count=1)
       - name: Загрузить сертификат проверок обходов Windows
         if: always()
@@ -1271,17 +1272,17 @@ jobs:
         run: |
           python3 scripts/version/manage.py check
           python3 -m unittest discover -s scripts/ga -p 'test_verified_targets*.py' -v
-          python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game_0440.py' -v
-          python3 -m unittest discover -s scripts/ga -p 'test_verified_support_0440.py' -v
-          python3 -m unittest discover -s scripts/ga -p 'test_player_final_0400.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_verified_support.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_player_final.py' -v
           python3 -m unittest discover -s scripts/rc -p 'test_*.py' -v
-          python3 scripts/release/test_certify_profiles_ga_0230.py
-          python3 scripts/release/test_certification_run_0362.py
+          python3 scripts/release/test_certify_profiles_ga.py
+          python3 scripts/release/test_certification_run.py
           python3 -m unittest discover -s scripts/ci -p 'test_*.py' -v
           python3 scripts/release/test_fetch_exact_certifications.py
-          python3 -m unittest discover -s scripts/release -p 'test_rehearsal_0365.py' -v
-          python3 -m unittest discover -s scripts/release -p 'test_final_update_delivery_0410.py' -v
-          python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -v
+          python3 -m unittest discover -s scripts/release -p 'test_rehearsal.py' -v
+          python3 -m unittest discover -s scripts/release -p 'test_final_update_delivery.py' -v
+          python3 -m unittest discover -s scripts/release -p 'test_publish.py' -v
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
@@ -1355,7 +1356,7 @@ jobs:
           TMPDIR: ${{ runner.temp }}/storage-parity-0371
         run: |
           set -euo pipefail
-          test -z "$(gofmt -l internal/httpapi/sqlite_runtime_0373*.go internal/repository/sqlite_http_runtime_0373*.go)"
+          test -z "$(gofmt -l internal/httpapi/sqlite_runtime*.go internal/repository/sqlite_http_runtime*.go)"
           go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTPDevicesJobsExtensionsRestart0373$' ./internal/repository
           go test -race -count=1 -timeout=12m -run '^TestSQLiteRuntime.*0373$' ./internal/httpapi
           go vet ./internal/httpapi ./internal/repository
@@ -1367,7 +1368,7 @@ jobs:
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
-          test -z "$(gofmt -l internal/repository/sqlite_http_stable_0374*.go internal/httpapi/rate_limit.go)"
+          test -z "$(gofmt -l internal/repository/sqlite_http_stable*.go internal/httpapi/rate_limit.go)"
           go test -race -count=1 -timeout=15m -run '^TestSQLiteStablePublish.*0374$' ./internal/repository
           go test -race -count=1 -timeout=12m -run '^(TestRateLimitAtomicAndRestart|TestLeaseFencingAndRestart|TestProductionRCConcurrentRateLimitStress)$' ./internal/sqlitecoord
           go test -race -count=1 -timeout=5m -run '^TestSQLiteCoordinatorFailClosed0374$' ./internal/httpapi
@@ -1380,7 +1381,7 @@ jobs:
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
-          test -z "$(gofmt -l internal/repository/sqlite_http_install_0375*.go internal/deployment/minimal_0375*.go)"
+          test -z "$(gofmt -l internal/repository/sqlite_http_install*.go internal/deployment/minimal*.go)"
           go test -race -count=1 -timeout=8m -run '^TestMinimalInstallationSQLite0375$' ./internal/repository
           go test -race -count=1 -timeout=8m -run '^TestMinimalDeployment0375$' ./internal/deployment
           go test -race -count=1 -timeout=5m -run '^TestProductionMinimalSQLiteAccepted0375$' ./internal/config
@@ -1400,10 +1401,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --disable-pip-version-check -r scripts/install/requirements-portable-0452.txt
+          python3 -m pip install --disable-pip-version-check -r scripts/install/requirements-portable.txt
           python3 -m py_compile scripts/install/minimal_backup.py scripts/install/minimal_portable.py scripts/install/minimal-install.py
           python3 -m unittest discover -s scripts/install -p 'test_minimal_backup.py' -v
-          python3 -m unittest discover -s scripts/install -p 'test_minimal_portable_0452.py' -v
+          python3 -m unittest discover -s scripts/install -p 'test_minimal_portable.py' -v
 
       - name: Проверить исполняемый нативный установщик (0.37.5)
         shell: bash
@@ -1433,11 +1434,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --disable-pip-version-check -r scripts/install/requirements-portable-0452.txt
-          python3 -m unittest discover -s scripts/acceptance -p 'test_minimal_live_e2e_0378.py' -v
-          python3 -m unittest discover -s scripts/acceptance -p 'test_final_bundle_e2e_0380.py' -v
+          python3 -m pip install --disable-pip-version-check -r scripts/install/requirements-portable.txt
+          python3 -m unittest discover -s scripts/acceptance -p 'test_minimal_live_e2e.py' -v
+          python3 -m unittest discover -s scripts/acceptance -p 'test_final_bundle_e2e.py' -v
           python3 -m unittest discover -s scripts/install -p 'test_minimal_backup.py' -v
-          python3 -m unittest discover -s scripts/install -p 'test_minimal_portable_0452.py' -v
+          python3 -m unittest discover -s scripts/install -p 'test_minimal_portable.py' -v
           python3 -m unittest discover -s scripts/install -p 'test_minimal_install.py' -v
       - name: Собрать настоящий Backend и проверить локальную файловую систему
         shell: bash
@@ -1477,7 +1478,7 @@ jobs:
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
-          python3 scripts/acceptance/minimal_live_e2e_0378.py \
+          python3 scripts/acceptance/minimal_live_e2e.py \
             --binary "$RUNNER_TEMP/nl-live-api-0378" \
             --guard-policy "$RUNNER_TEMP/nl-0378-policies/guard.json" \
             --bridge-policy "$RUNNER_TEMP/nl-0378-policies/bridge.json" \
@@ -1531,7 +1532,7 @@ jobs:
       - name: Проверить целостность исходников и lockfile
         if: always()
         run: |
-          python3 scripts/release/inputs_guard_0461.py verify
+          python3 scripts/release/inputs_guard.py verify
           git diff --exit-code -- apps/admin/package-lock.json apps/desktop/package-lock.json sdk/api/go/go.mod sdk/api/typescript
 
   reproducibility-tools-0470:
@@ -1548,14 +1549,14 @@ jobs:
       - name: Проверить закреплённые входные данные и воспроизводимость с отказом при ошибке
         run: |
           python3 -m pip install --disable-pip-version-check 'cryptography>=43,<47'
-          python3 scripts/release/inputs_guard_0461.py verify
-          python3 -m unittest discover -s scripts/release -p 'test_inputs_guard_0461.py'
-          python3 -m unittest discover -s scripts/release -p 'test_check_payload_0461.py'
-          python3 -m unittest discover -s scripts/release -p 'test_reproducible_0470.py'
-          python3 -m unittest discover -s scripts/release -p 'test_canonical_zip_0461.py'
-          python3 -m unittest discover -s scripts/release -p 'test_unsigned_package_0470.py'
-          python3 -m unittest discover -s scripts/release -p 'test_native_verify_0470.py'
-          python3 scripts/release/check_go_repro_0470.py
+          python3 scripts/release/inputs_guard.py verify
+          python3 -m unittest discover -s scripts/release -p 'test_inputs_guard.py'
+          python3 -m unittest discover -s scripts/release -p 'test_check_payload.py'
+          python3 -m unittest discover -s scripts/release -p 'test_reproducible.py'
+          python3 -m unittest discover -s scripts/release -p 'test_canonical_zip.py'
+          python3 -m unittest discover -s scripts/release -p 'test_unsigned_package.py'
+          python3 -m unittest discover -s scripts/release -p 'test_native_verify.py'
+          python3 scripts/release/check_go_repro.py
           python3 scripts/version/manage.py check
 
   required-ci:
@@ -1578,7 +1579,7 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s\n' "$CI_NEEDS_JSON" > "$RUNNER_TEMP/required-ci-needs.json"
-          python3 scripts/ci/required_jobs_0363.py \
+          python3 scripts/ci/required_jobs.py \
             --workflow .github/workflows/ci.yml --gate required-ci \
             --needs-json "$RUNNER_TEMP/required-ci-needs.json" \
             --source-sha "$GITHUB_SHA" --version-file VERSION --run-id "$GITHUB_RUN_ID" \

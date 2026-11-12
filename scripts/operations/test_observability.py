@@ -10,7 +10,7 @@ import unittest
 import zipfile
 
 HERE=Path(__file__).resolve().parent
-SPEC=importlib.util.spec_from_file_location('obs_0459',HERE/'observability_0459.py')
+SPEC=importlib.util.spec_from_file_location('obs_0459',HERE/'observability.py')
 mod=importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mod)
 

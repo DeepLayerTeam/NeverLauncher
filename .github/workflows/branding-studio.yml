@@ -5,13 +5,13 @@ on:
       - 'apps/admin/**'
       - 'apps/desktop/**'
       - 'prestarter/**'
-      - '.github/workflows/branding-studio-0355.yml'
+      - '.github/workflows/branding-studio.yml'
   pull_request:
     paths:
       - 'apps/admin/**'
       - 'apps/desktop/**'
       - 'prestarter/**'
-      - '.github/workflows/branding-studio-0355.yml'
+      - '.github/workflows/branding-studio.yml'
 permissions:
   contents: read
 jobs:

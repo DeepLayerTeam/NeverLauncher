@@ -245,10 +245,10 @@ def verify_docs():
     # Проверяйте реальное существование каждой точки входа, упомянутой в
     # эксплуатационных руководствах.
     for entry in ('scripts/install/production-deploy.py', 'scripts/install/minimal-install.py',
-                  'scripts/operations/dr_03512.py', 'scripts/operations/db_upgrade_0457.py',
-                  'scripts/operations/component_upgrade_0458.py',
-                  'scripts/operations/chaos_0456.py', 'scripts/operations/restore_accept_0456.py',
-                  'scripts/operations/observability_0459.py'):
+                  'scripts/operations/dr.py', 'scripts/operations/db_upgrade.py',
+                  'scripts/operations/component_upgrade.py',
+                  'scripts/operations/chaos.py', 'scripts/operations/restore_accept.py',
+                  'scripts/operations/observability.py'):
         require((ROOT / entry).is_file(), 'Исполняемый файл оператора отсутствует: ' + entry)
         count += 1
     return {'checkedFiles': len(DOC_FILES), 'checkedLinksAndEntrypoints': count - len(DOC_FILES)}

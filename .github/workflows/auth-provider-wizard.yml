@@ -5,13 +5,13 @@ on:
       - 'services/api/**'
       - 'apps/admin/**'
       - 'cli/internal/dbmigrate/**'
-      - '.github/workflows/auth-provider-wizard-02910.yml'
+      - '.github/workflows/auth-provider-wizard.yml'
   pull_request:
     paths:
       - 'services/api/**'
       - 'apps/admin/**'
       - 'cli/internal/dbmigrate/**'
-      - '.github/workflows/auth-provider-wizard-02910.yml'
+      - '.github/workflows/auth-provider-wizard.yml'
 permissions:
   contents: read
 jobs:
@@ -46,7 +46,7 @@ jobs:
         run: |
           # Использовать каталог миграций с той же реализацией репозитория, что и в промышленной системе.
           go test ./internal/dbmigrate -count=1
-          psql 'postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql
+          psql 'postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard.sql
       - name: Проверить мастер настройки провайдера авторизации, гонки и интеграцию с PostgreSQL
         working-directory: services/api
         env:

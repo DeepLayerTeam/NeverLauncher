@@ -5,7 +5,7 @@ import unittest
 from unittest import mock
 
 HERE = Path(__file__).resolve().parent
-spec = importlib.util.spec_from_file_location('repro_05211', HERE / 'independent_current_05211.py')
+spec = importlib.util.spec_from_file_location('repro_05211', HERE / 'independent_current.py')
 import sys
 sys.path.insert(0, str(HERE))
 r = importlib.util.module_from_spec(spec)

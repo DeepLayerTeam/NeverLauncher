@@ -165,7 +165,7 @@ mod tests{
         assert!(parse_import_02410(&serde_json::to_string(&p).unwrap().replace("\"selectedIds\"", "\"extra\":true,\"selectedIds\"")).is_err());
     }
     #[test]fn migration_rejects_other_profile(){
-        let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+        let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
         let p=PortableSelection02410{schema_version:"1.0".into(),project_id:"different".into(),profile_id:m.profile_id.clone(),channel:m.channel.clone(),source_version:"0.24.9".into(),source_catalog_digest:"a".repeat(64),source_preset:"".into(),selected_ids:vec![]};
         assert!(migrate_02410(&p,&m).unwrap_err().contains("Другой проект"));
     }
@@ -177,7 +177,7 @@ mod signed_migration_tests {
     use crate::{component_actions_0245, sign_manifest};
 
     fn fixture()->Manifest{
-        let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+        let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
         let catalog=m.component_catalog.as_mut().unwrap();
         for c in &mut catalog.components {c.conditions=None;}
         catalog.digest=component_actions_0245::digest_v5(catalog);

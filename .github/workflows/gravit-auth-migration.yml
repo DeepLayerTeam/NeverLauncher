@@ -3,14 +3,14 @@ on:
   push:
     paths:
       - 'services/api/internal/gravitcredentials/**'
-      - 'services/api/internal/repository/migration_auth_0335*'
-      - 'services/api/internal/httpapi/migration_auth_0335*'
+      - 'services/api/internal/repository/migration_auth*'
+      - 'services/api/internal/httpapi/migration_auth*'
       - 'services/api/internal/httpapi/federation_112.go'
       - 'services/api/internal/dbmigrate/sql/0093*'
-      - 'cli/cmd/launcher/migration_auth_0335*'
-      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'cli/cmd/launcher/migration_auth*'
+      - 'apps/admin/src/admin/MigrationCenter.tsx'
       - 'schemas/openapi-migration-center.json'
-      - '.github/workflows/gravit-auth-migration-0335.yml'
+      - '.github/workflows/gravit-auth-migration.yml'
   pull_request:
   workflow_dispatch:
 permissions:

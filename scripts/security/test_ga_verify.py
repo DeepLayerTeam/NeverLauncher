@@ -9,7 +9,7 @@ import unittest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-spec = importlib.util.spec_from_file_location("ga_verify_0320", Path(__file__).with_name("ga_verify_0320.py"))
+spec = importlib.util.spec_from_file_location("ga_verify_0320", Path(__file__).with_name("ga_verify.py"))
 gate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gate)
 

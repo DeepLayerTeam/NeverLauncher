@@ -7,7 +7,7 @@ import os
 import subprocess
 import tempfile
 import unittest
-from java_sdk_ga_0310 import ROOT, MODULES, publish
+from java_sdk_ga import ROOT, MODULES, publish
 
 
 class JavaGATests(unittest.TestCase):

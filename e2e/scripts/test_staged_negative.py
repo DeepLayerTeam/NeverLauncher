@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import staged_negative_04314 as negative
-import run_native_validation_03410 as native
+import staged_negative as negative
+import run_native_validation as native
 
 
 class GameAdversarialRegression(unittest.TestCase):

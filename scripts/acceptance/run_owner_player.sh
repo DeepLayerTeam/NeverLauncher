@@ -44,5 +44,5 @@ done
 curl --noproxy '*' -fsS "$BASE/health" >/dev/null
 # Путь доказательств выбирает вызывающий; скрипт никогда не собирает учётные данные, тела
 # HTTP-запросов и сырые журналы Backend в публикуемом артефакте.
-python3 "$ROOT/scripts/acceptance/owner_player_api_0351.py" \
+python3 "$ROOT/scripts/acceptance/owner_player_api.py" \
   --backend "$BASE" --isolated-test-instance --output "${1:?Usage: $0 /absolute/result.json}"

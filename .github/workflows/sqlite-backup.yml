@@ -7,7 +7,7 @@ on:
       - 'services/api/cmd/launcher-sqlite/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
-      - '.github/workflows/sqlite-backup-03210.yml'
+      - '.github/workflows/sqlite-backup.yml'
   pull_request:
   workflow_dispatch:
 permissions:

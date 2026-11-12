@@ -75,10 +75,10 @@ require(
     ],
 )
 
-backend = read("services/api/internal/httpapi/guard_attestation_v2_01810.go")
+backend = read("services/api/internal/httpapi/guard_attestation_v2_.go")
 require(
     backend,
-    "services/api/internal/httpapi/guard_attestation_v2_01810.go",
+    "services/api/internal/httpapi/guard_attestation_v2_.go",
     [
         "guardAttestationV2Purpose01810",
         "guardContinuousJoinPurpose01810",
@@ -116,7 +116,7 @@ require(
 )
 require(
     backend,
-    "services/api/internal/httpapi/guard_attestation_v2_01810.go",
+    "services/api/internal/httpapi/guard_attestation_v2_.go",
     [
         '"guardSha256"',
         '"launcherSha256"',
@@ -141,16 +141,16 @@ require(
 )
 
 migration_api = read(
-    "services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql"
+    "services/api/internal/dbmigrate/sql/0032_guard_attestation_v2_.sql"
 )
-migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
+migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_.sql")
 if migration_api != migration_cli:
     raise SystemExit(
         "[Launcher] Проверка аттестации v2 0.18.10: миграция API/CLI 0032 отличается"
     )
 require(
     migration_api,
-    "0032_guard_attestation_v2_01810.sql",
+    "0032_guard_attestation_v2_.sql",
     [
         "guard-attest-v2",
         "guard-continuous-join-v2",
@@ -159,10 +159,10 @@ require(
     ],
 )
 
-tests = read("services/api/internal/httpapi/guard_attestation_v2_01810_test.go")
+tests = read("services/api/internal/httpapi/guard_attestation_v2__test.go")
 require(
     tests,
-    "guard_attestation_v2_01810_test.go",
+    "guard_attestation_v2__test.go",
     [
         "TestGuardAttestationV2ValidatesFreshContinuousEvidence01810",
         "TestGuardAttestationV2RejectsStaleAndDivergedContinuousEvidence01810",
@@ -189,19 +189,19 @@ require(
     ci,
     ".github/workflows/ci.yml",
     [
-        "guard-attestation-v2-01810.py",
+        "guard-attestation-v2-.py",
         "TestGuardAttestationV2",
         "windows_attestation_v2::tests",
     ],
 )
-if "guard-attestation-v2-01810.py" not in preflight:
+if "guard-attestation-v2-.py" not in preflight:
     raise SystemExit(
         "[Launcher] Проверка аттестации v2 0.18.10: отсутствует подключение предварительных проверок релиза"
     )
 
 for rel, text in [
     ("runtime/runtime/src/windows_attestation_v2.rs", runtime),
-    ("services/api/internal/httpapi/guard_attestation_v2_01810.go", backend),
+    ("services/api/internal/httpapi/guard_attestation_v2_.go", backend),
 ]:
     lowered = text.lower()
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:

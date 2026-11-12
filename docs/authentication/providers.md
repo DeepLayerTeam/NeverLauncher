@@ -79,7 +79,7 @@ Backend включает внутреннюю систему аутентифи�
 
 При запуске SQL-коннектор открывает **транзакцию только для чтения** и выполняет `SELECT` на ноль строк по настроенным столбцам. Драйвер обязан подтвердить наличие таблицы и каждого столбца; поля пароля и Minecraft UUID не должны иметь бинарный тип БД. Отсутствующие поля, нехватка прав или несовместимая схема блокируют запуск провайдера ещё до попытки входа. Предпросмотр отображения показывает только логические поля, имена SQL-столбцов и типы — никогда записи или хеши паролей. SQL-идентификаторы проверяются и экранируются для конкретного диалекта; пользовательский ввод привязывается параметрами. После проверки схемы готовятся запрос и проверка состояния подключения.
 
-Для живых тестов направьте `LAUNCHER_SQL_TEST_POSTGRES_DSN`, `LAUNCHER_SQL_TEST_MYSQL_DSN` и `LAUNCHER_SQL_TEST_MARIADB_DSN` на изолированные одноразовые БД. Workflow `sql-mapping-legacy-hash-0294.yml` поднимает все три движка; до промышленного запуска должны пройти правильный/неверный пароль, ошибка отображения и отказ неизвестному хешу. Справка Gravit: https://gravitlauncher.com/auth/ (PasswordVerifier); AdditionalHash: https://github.com/GravitLauncher/LauncherModules.
+Для живых тестов направьте `LAUNCHER_SQL_TEST_POSTGRES_DSN`, `LAUNCHER_SQL_TEST_MYSQL_DSN` и `LAUNCHER_SQL_TEST_MARIADB_DSN` на изолированные одноразовые БД. Workflow `sql-mapping-legacy-hash.yml` поднимает все три движка; до промышленного запуска должны пройти правильный/неверный пароль, ошибка отображения и отказ неизвестному хешу. Справка Gravit: https://gravitlauncher.com/auth/ (PasswordVerifier); AdditionalHash: https://github.com/GravitLauncher/LauncherModules.
 
 ## Работающий Gravit FileAuthSystem — 0.42.6
 

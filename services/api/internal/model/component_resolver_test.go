@@ -145,7 +145,7 @@ func TestResolutionErrorTyped0243(t *testing.T) {
 func TestGoSignedDependencyFixture0243(t *testing.T) {
 	// Проверяйте настоящие байты encoding/json и crypto/ed25519 издателя Go; их
 	// также использует межъязыковой тест фикстуры нативного Rust.
-	raw, err := os.ReadFile("../../../../runtime/runtime/tests/fixtures/catalog_dependency_0243_go_signed.json")
+	raw, err := os.ReadFile("../../../../runtime/runtime/tests/fixtures/catalog_dependency_go_signed.json")
 	if err != nil {
 		t.Fatal(err)
 	}

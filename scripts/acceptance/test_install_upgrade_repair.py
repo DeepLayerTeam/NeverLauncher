@@ -5,7 +5,7 @@ import os
 import tempfile
 import unittest
 
-MOD = Path(__file__).with_name('install_upgrade_repair_0527.py')
+MOD = Path(__file__).with_name('install_upgrade_repair.py')
 spec = importlib.util.spec_from_file_location('nl_acceptance_0527', MOD)
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)

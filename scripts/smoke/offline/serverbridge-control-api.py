@@ -17,11 +17,11 @@ required = [
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeControlExecutor.java",
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeControlJournal.java",
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeControlTrust.java",
-    "services/api/internal/httpapi/server_bridge_control_0195.go",
-    "services/api/internal/httpapi/server_bridge_control_0195_test.go",
-    "services/api/internal/repository/server_bridge_control_0195_integration_test.go",
-    "services/api/internal/dbmigrate/sql/0036_serverbridge_control_api_0195.sql",
-    "cli/internal/dbmigrate/sql/0036_serverbridge_control_api_0195.sql",
+    "services/api/internal/httpapi/server_bridge_control.go",
+    "services/api/internal/httpapi/server_bridge_control_test.go",
+    "services/api/internal/repository/server_bridge_control_integration_test.go",
+    "services/api/internal/dbmigrate/sql/0036_serverbridge_control_api.sql",
+    "cli/internal/dbmigrate/sql/0036_serverbridge_control_api.sql",
 ]
 for rel in required:
     if not resource_exists(ROOT, rel):
@@ -35,7 +35,7 @@ checks = {
         "POST /api/v1/server-bridge/servers/{serverId}/control/ack",
         "serverbridge:control",
     ],
-    "services/api/internal/httpapi/server_bridge_control_0195.go": [
+    "services/api/internal/httpapi/server_bridge_control.go": [
         "serverbridge:console",
         "Idempotency-Key",
         "ed25519.Sign",
@@ -165,7 +165,7 @@ for path in control_sources:
             )
 
 migration = (
-    ROOT / "services/api/internal/dbmigrate/sql/0036_serverbridge_control_api_0195.sql"
+    ROOT / "services/api/internal/dbmigrate/sql/0036_serverbridge_control_api.sql"
 ).read_text(encoding="utf-8")
 for required_sql in (
     "UNIQUE (server_id, requested_by, idempotency_key)",

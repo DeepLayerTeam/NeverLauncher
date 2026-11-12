@@ -72,7 +72,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 }
 
 func TestDeviceTrustStabilizationMigration01210(t *testing.T) {
-	b, err := os.ReadFile("sql/0018_device_trust_stabilization_01210.sql")
+	b, err := os.ReadFile("sql/0018_device_trust_stabilization.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestDeviceTrustStabilizationMigration01210(t *testing.T) {
 }
 
 func TestGuardMigrationCompatibilityStabilization01310(t *testing.T) {
-	b, err := os.ReadFile("sql/0020_guard_migration_compatibility_stabilization_01310.sql")
+	b, err := os.ReadFile("sql/0020_guard_migration_compatibility_stabilization.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestGuardMigrationCompatibilityStabilization01310(t *testing.T) {
 }
 
 func TestServerBridgeProtocolV2Migration0141(t *testing.T) {
-	b, err := os.ReadFile("sql/0021_serverbridge_protocol_v2_0141.sql")
+	b, err := os.ReadFile("sql/0021_serverbridge_protocol_v2_.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +141,7 @@ func TestServerBridgeProtocolV2Migration0141(t *testing.T) {
 }
 
 func TestServerBridgeCryptoNodeIdentitiesMigration0142(t *testing.T) {
-	b, err := os.ReadFile("sql/0022_serverbridge_crypto_node_identities_0142.sql")
+	b, err := os.ReadFile("sql/0022_serverbridge_crypto_node_identities.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestServerBridgeCryptoNodeIdentitiesMigration0142(t *testing.T) {
 }
 
 func TestOneTimeJoinTicketsMigration0143(t *testing.T) {
-	b, err := os.ReadFile("sql/0023_one_time_join_tickets_0143.sql")
+	b, err := os.ReadFile("sql/0023_one_time_join_tickets.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestOneTimeJoinTicketsMigration0143(t *testing.T) {
 }
 
 func TestBukkitFamilyMigration0144(t *testing.T) {
-	b, err := os.ReadFile("sql/0024_bukkit_family_0144.sql")
+	b, err := os.ReadFile("sql/0024_bukkit_family.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ func TestBukkitFamilyMigration0144(t *testing.T) {
 }
 
 func TestProxyFamilyMigration0145(t *testing.T) {
-	b, err := os.ReadFile("sql/0025_proxy_family_0145.sql")
+	b, err := os.ReadFile("sql/0025_proxy_family.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestProxyFamilyMigration0145(t *testing.T) {
 }
 
 func TestFabricServerBridgeMigration0146(t *testing.T) {
-	b, err := os.ReadFile("sql/0026_fabric_server_bridge_0146.sql")
+	b, err := os.ReadFile("sql/0026_fabric_server_bridge.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ func TestFabricServerBridgeMigration0146(t *testing.T) {
 }
 
 func TestForgeNeoForgeServerBridgeMigration0147(t *testing.T) {
-	b, err := os.ReadFile("sql/0027_forge_neoforge_server_bridge_0147.sql")
+	b, err := os.ReadFile("sql/0027_forge_neoforge_server_bridge.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestForgeNeoForgeServerBridgeMigration0147(t *testing.T) {
 }
 
 func TestZeroPatchTopologyHandoffMigration0148(t *testing.T) {
-	b, err := os.ReadFile("sql/0028_zero_patch_topology_handoff_0148.sql")
+	b, err := os.ReadFile("sql/0028_zero_patch_topology_handoff.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -300,7 +300,7 @@ func TestApplyUsesSessionAdvisoryLock(t *testing.T) {
 }
 
 func TestServerBridgePublicMatrixHAHardeningMigration0149(t *testing.T) {
-	b, err := os.ReadFile("sql/0029_serverbridge_public_matrix_ha_hardening_0149.sql")
+	b, err := os.ReadFile("sql/0029_serverbridge_public_matrix_ha_hardening.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +318,7 @@ func TestServerBridgePublicMatrixHAHardeningMigration0149(t *testing.T) {
 }
 
 func TestGuardAttestationChallengePurposeMigration0161(t *testing.T) {
-	b, err := os.ReadFile("sql/0031_guard_attestation_challenge_purposes_0161.sql")
+	b, err := os.ReadFile("sql/0031_guard_attestation_challenge_purposes.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -337,7 +337,7 @@ func TestGuardAttestationChallengePurposeMigration0161(t *testing.T) {
 }
 
 func TestGuardAttestationV2Migration01810(t *testing.T) {
-	b, err := os.ReadFile("sql/0032_guard_attestation_v2_01810.sql")
+	b, err := os.ReadFile("sql/0032_guard_attestation_v2_.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +356,7 @@ func TestGuardAttestationV2Migration01810(t *testing.T) {
 }
 
 func TestServerBridgeMigrationStabilization01410(t *testing.T) {
-	b, err := os.ReadFile("sql/0030_serverbridge_migration_stabilization_01410.sql")
+	b, err := os.ReadFile("sql/0030_serverbridge_migration_stabilization.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,7 +377,7 @@ func TestServerBridgeMigrationStabilization01410(t *testing.T) {
 }
 
 func TestServerBridgeRuntimeIdentityMigration0192(t *testing.T) {
-	b, err := os.ReadFile("sql/0033_serverbridge_runtime_identity_0192.sql")
+	b, err := os.ReadFile("sql/0033_serverbridge_runtime_identity.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +400,7 @@ func TestServerBridgeRuntimeIdentityMigration0192(t *testing.T) {
 }
 
 func TestServerBridgeTelemetryMigration0193(t *testing.T) {
-	b, err := os.ReadFile("sql/0034_serverbridge_telemetry_0193.sql")
+	b, err := os.ReadFile("sql/0034_serverbridge_telemetry.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -422,7 +422,7 @@ func TestServerBridgeTelemetryMigration0193(t *testing.T) {
 }
 
 func TestServerBridgeEventStreamMigration0194(t *testing.T) {
-	b, err := os.ReadFile("sql/0035_serverbridge_event_stream_0194.sql")
+	b, err := os.ReadFile("sql/0035_serverbridge_event_stream.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -443,7 +443,7 @@ func TestServerBridgeEventStreamMigration0194(t *testing.T) {
 }
 
 func TestServerBridgeControlAPIMigration0195(t *testing.T) {
-	b, err := os.ReadFile("sql/0036_serverbridge_control_api_0195.sql")
+	b, err := os.ReadFile("sql/0036_serverbridge_control_api.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -464,7 +464,7 @@ func TestServerBridgeControlAPIMigration0195(t *testing.T) {
 }
 
 func TestServerBridgeTopologyRouting2Migration0196(t *testing.T) {
-	b, err := os.ReadFile("sql/0037_serverbridge_topology_routing2_0196.sql")
+	b, err := os.ReadFile("sql/0037_serverbridge_topology_routing2_.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -490,7 +490,7 @@ func TestServerBridgeTopologyRouting2Migration0196(t *testing.T) {
 }
 
 func TestServerBridgePlayerSessionIntegration3Migration0197(t *testing.T) {
-	b, err := os.ReadFile("sql/0038_serverbridge_player_session_integration3_0197.sql")
+	b, err := os.ReadFile("sql/0038_serverbridge_player_session_integration3_.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -511,7 +511,7 @@ func TestServerBridgePlayerSessionIntegration3Migration0197(t *testing.T) {
 }
 
 func TestUniversalServerAdaptersMigration0198(t *testing.T) {
-	b, err := os.ReadFile("sql/0039_universal_server_adapters_0198.sql")
+	b, err := os.ReadFile("sql/0039_universal_server_adapters.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -529,7 +529,7 @@ func TestUniversalServerAdaptersMigration0198(t *testing.T) {
 }
 
 func TestServerBridgeHAControlPlaneMigration01911(t *testing.T) {
-	b, err := os.ReadFile("sql/0040_serverbridge_ha_control_plane_01911.sql")
+	b, err := os.ReadFile("sql/0040_serverbridge_ha_control_plane.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -542,7 +542,7 @@ func TestServerBridgeHAControlPlaneMigration01911(t *testing.T) {
 }
 
 func TestServerBridge3GAMigration0200(t *testing.T) {
-	b, err := os.ReadFile("sql/0041_serverbridge3_ga_0200.sql")
+	b, err := os.ReadFile("sql/0041_serverbridge3_ga.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -555,7 +555,7 @@ func TestServerBridge3GAMigration0200(t *testing.T) {
 }
 
 func TestExtensionsRegistryMigration0203(t *testing.T) {
-	b, err := os.ReadFile("sql/0043_extensions_registry_0203.sql")
+	b, err := os.ReadFile("sql/0043_extensions_registry.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -581,7 +581,7 @@ func TestExtensionsRegistryMigration0203(t *testing.T) {
 }
 
 func TestExtensionsInstallLifecycleMigration0204(t *testing.T) {
-	b, err := os.ReadFile("sql/0044_extensions_install_lifecycle_0204.sql")
+	b, err := os.ReadFile("sql/0044_extensions_install_lifecycle.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -598,7 +598,7 @@ func TestExtensionsInstallLifecycleMigration0204(t *testing.T) {
 }
 
 func TestExtensionsEventsHooksMigration0206(t *testing.T) {
-	b, err := os.ReadFile("sql/0045_extensions_events_hooks_0206.sql")
+	b, err := os.ReadFile("sql/0045_extensions_events_hooks.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -618,7 +618,7 @@ func TestExtensionsEventsHooksMigration0206(t *testing.T) {
 }
 
 func TestExtensionsCapabilitySecurityMigration0207(t *testing.T) {
-	b, err := os.ReadFile("sql/0046_extensions_capability_security_0207.sql")
+	b, err := os.ReadFile("sql/0046_extensions_capability_security.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -634,7 +634,7 @@ func TestExtensionsCapabilitySecurityMigration0207(t *testing.T) {
 }
 
 func TestExtensionsDependenciesUpdatesMigration02011(t *testing.T) {
-	b, err := os.ReadFile("sql/0047_extensions_dependencies_updates_02011.sql")
+	b, err := os.ReadFile("sql/0047_extensions_dependencies_updates.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -650,7 +650,7 @@ func TestExtensionsDependenciesUpdatesMigration02011(t *testing.T) {
 }
 
 func TestExtensionsTrustRecoveryCertificationMigration02012(t *testing.T) {
-	b, err := os.ReadFile("sql/0048_extensions_trust_recovery_certification_02012.sql")
+	b, err := os.ReadFile("sql/0048_extensions_trust_recovery_certification.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -666,7 +666,7 @@ func TestExtensionsTrustRecoveryCertificationMigration02012(t *testing.T) {
 }
 
 func TestExtensionsGAMigration0210(t *testing.T) {
-	b, err := os.ReadFile("sql/0049_extensions_ga_0210.sql")
+	b, err := os.ReadFile("sql/0049_extensions_ga.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -679,7 +679,7 @@ func TestExtensionsGAMigration0210(t *testing.T) {
 }
 
 func TestHonestValidationTrustMigration0212(t *testing.T) {
-	b, err := os.ReadFile("sql/0051_honest_validation_trust_0212.sql")
+	b, err := os.ReadFile("sql/0051_honest_validation_trust.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -695,7 +695,7 @@ func TestHonestValidationTrustMigration0212(t *testing.T) {
 }
 
 func TestAuthorizationFoundationMigration0211(t *testing.T) {
-	b, err := os.ReadFile("sql/0050_authorization_scopes_identity_0211.sql")
+	b, err := os.ReadFile("sql/0050_authorization_scopes_identity.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -712,7 +712,7 @@ func TestAuthorizationFoundationMigration0211(t *testing.T) {
 }
 
 func TestDurableBoundariesMigration0213(t *testing.T) {
-	b, err := os.ReadFile("sql/0052_durable_boundaries_0213.sql")
+	b, err := os.ReadFile("sql/0052_durable_boundaries.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -733,7 +733,7 @@ func TestDurableBoundariesMigration0213(t *testing.T) {
 }
 
 func TestComponentTopologyDatabaseGuard0242(t *testing.T) {
-	b, err := os.ReadFile("sql/0062_component_topology_presets_0242.sql")
+	b, err := os.ReadFile("sql/0062_component_topology_presets.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -745,7 +745,7 @@ func TestComponentTopologyDatabaseGuard0242(t *testing.T) {
 }
 
 func TestDependencyConflictMigrationGuard0243(t *testing.T) {
-	b, err := os.ReadFile("sql/0063_dependency_conflict_resolver_0243.sql")
+	b, err := os.ReadFile("sql/0063_dependency_conflict_resolver.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -759,7 +759,7 @@ func TestDependencyConflictMigrationGuard0243(t *testing.T) {
 // Обслуживание 0.25.11 развёртывается только вместе с разграничением по арендам в
 // БД.
 func TestTextureLifecycleMigration02511(t *testing.T) {
-	b, err := os.ReadFile("sql/0074_texture_lifecycle_recovery_02511.sql")
+	b, err := os.ReadFile("sql/0074_texture_lifecycle_recovery.sql")
 	if err != nil {
 		t.Fatal(err)
 	}

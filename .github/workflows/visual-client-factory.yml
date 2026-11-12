@@ -6,7 +6,7 @@ on:
       - 'services/api/**'
       - 'cli/**'
       - 'deploy/production/docker-compose.yml'
-      - '.github/workflows/visual-client-factory-02710.yml'
+      - '.github/workflows/visual-client-factory.yml'
       - 'VERSION'
   pull_request:
     paths:
@@ -14,7 +14,7 @@ on:
       - 'services/api/**'
       - 'cli/**'
       - 'deploy/production/docker-compose.yml'
-      - '.github/workflows/visual-client-factory-02710.yml'
+      - '.github/workflows/visual-client-factory.yml'
 permissions:
   contents: read
 jobs:
@@ -27,7 +27,7 @@ jobs:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
       - name: Проверить форматирование Go
-        run: test -z "$(gofmt -l services/api/internal/httpapi/client_factory_builder_02710*.go)"
+        run: test -z "$(gofmt -l services/api/internal/httpapi/client_factory_builder*.go)"
       - name: Проверить API на реальных пакетах
         working-directory: services/api
         run: go test ./internal/httpapi -run 'TestFactoryBuilder.*02710|TestBuildWorkspaceDirectoryStageAndMaterialize0226' -count=1 -timeout=8m

@@ -280,7 +280,7 @@ func TestAuthlibClassloader0279RejectSignedAuthlib(t *testing.T) {
 	}
 	target := "libraries/com/mojang/authlib/1.0/authlib-1.0.jar"
 	putLegacyTestFile0278(t, stage, target, signed)
-	if _, err := mirrorPatchAuthlib0274(stage, target, source, sha256HexBytes(signed), sha256HexBytes(overlay), strings.Repeat("0", 64)); err == nil || !strings.Contains(err.Error(), "signed") {
+	if _, err := mirrorPatchAuthlib0274(stage, target, source, sha256HexBytes(signed), sha256HexBytes(overlay), strings.Repeat("0", 64)); err == nil || !strings.Contains(err.Error(), "Подписанный архив authlib нельзя изменять") {
 		t.Fatalf("допущена неподходящая подписанная библиотека авторизации: %v", err)
 	}
 	if _, err := mirrorCheckedHash0274(filepath.Join(stage, filepath.FromSlash(target)), sha256HexBytes(signed)); err != nil {

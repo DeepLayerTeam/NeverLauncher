@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from verified_targets_0360 import Blocked, CHECKS, DOMAIN, TARGETS, paths, verify
+from verified_targets_variant2 import Blocked, CHECKS, DOMAIN, TARGETS, paths, verify
 
 COMMIT = "a" * 40
 NOW = datetime(2026, 10, 28, 19, 0, tzinfo=timezone.utc)

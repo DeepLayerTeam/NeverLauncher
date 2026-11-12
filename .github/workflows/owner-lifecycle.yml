@@ -7,14 +7,14 @@ on:
       - 'apps/admin/**'
       - 'scripts/acceptance/**'
       - 'services/api/internal/httpapi/**'
-      - '.github/workflows/owner-lifecycle-03513.yml'
+      - '.github/workflows/owner-lifecycle.yml'
   push:
     paths:
       - 'VERSION'
       - 'apps/admin/**'
       - 'scripts/acceptance/**'
       - 'services/api/internal/httpapi/**'
-      - '.github/workflows/owner-lifecycle-03513.yml'
+      - '.github/workflows/owner-lifecycle.yml'
 permissions:
   contents: read
 jobs:
@@ -31,7 +31,7 @@ jobs:
       - name: "Проверка жизненного цикла релиза с аутентифицированными API-запросами"
         working-directory: apps/admin
         run: |
-          node --experimental-strip-types --test tests/owner-lifecycle-03513.test.mjs tests/release-workspace.test.mjs tests/everyday-lifecycle.test.mjs
+          node --experimental-strip-types --test tests/owner-lifecycle.test.mjs tests/release-workspace.test.mjs tests/everyday-lifecycle.test.mjs
       - name: "Установка точных зависимостей Admin, проверка типов и промышленная сборка интерфейса"
         working-directory: apps/admin
         run: |
@@ -40,7 +40,7 @@ jobs:
           npm test
       - name: "Проверка исполнимости 54 ссылок G/M для текущей версии"
         run: |
-          python3 scripts/acceptance/ux_0351.py audit
+          python3 scripts/acceptance/ux.py audit
           python3 -m unittest discover -s scripts/acceptance -p 'test_*.py' -v
           python3 scripts/version/manage.py check
   real-backend-owner-acceptance:
@@ -59,7 +59,7 @@ jobs:
           go build -tags launcher_nopgx ./cmd/launcher-api
       - name: "HTTP-сценарий владельца и игрока во временной среде с аутентификацией"
         run: |
-          bash scripts/acceptance/run_owner_player_0351.sh "$RUNNER_TEMP/03513-owner-player.json"
+          bash scripts/acceptance/run_owner_player.sh "$RUNNER_TEMP/03513-owner-player.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -4,9 +4,9 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from runtime_capabilities_03410 import host_identity, evaluate
-from run_native_validation_03410 import export_reports
-from process_group_03410 import group_flags
+from runtime_capabilities import host_identity, evaluate
+from run_native_validation import export_reports
+from process_group import group_flags
 
 
 class Capabilities(unittest.TestCase):

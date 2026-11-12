@@ -30,7 +30,7 @@ func TestClientStateCASPreventsStaleUpdate0228(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = u.apply(updaterRequest0156{Root: root, Namespace: "client-package", FromVersion: "", ToVersion: "2", ExpectedStateSHA256: before})
-	if err == nil || !strings.Contains(err.Error(), "conflict") {
+	if err == nil || !strings.Contains(err.Error(), "Конфликт обновления клиента") {
 		t.Fatalf("ожидался конфликт устаревшего состояния: %v", err)
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, "client-state.json"))

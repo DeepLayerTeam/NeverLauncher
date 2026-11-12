@@ -130,10 +130,10 @@ func TestServerBridgeDetectPaper0199(t *testing.T) {
 
 func TestServerBridgeDetectHybridFailsClosed0199(t *testing.T) {
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "mohist-1.21.1.jar"), []byte("hybrid"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "mohist-1.21.1.jar"), []byte("гибридное ядро"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := detectServerBridgePlatform0199(root, ""); err == nil || !strings.Contains(strings.ToLower(err.Error()), "hybrid") {
+	if _, err := detectServerBridgePlatform0199(root, ""); err == nil || !strings.Contains(strings.ToLower(err.Error()), "гибридное ядро") {
 		t.Fatalf("Гибридное ядро не было отклонено: %v", err)
 	}
 }

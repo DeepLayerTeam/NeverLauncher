@@ -46,12 +46,12 @@ python3 scripts/rc/production_rc.py --output /secure/evidence/SINGLE_NODE_GA_RC.
 12. Измеренная репрезентативная мощность и заявленные ограничения.
 13. Реально выполненная быстрая эксплуатационная проверка по инструкции.
 
-Подписанный отчёт — внешний JSON-документ, который конвейер выпуска никогда не генерирует из тестового шаблона с результатом PASS. Его формат проверяет `scripts/ga/single_node_ga_0330.py`: `schema` равен `launcher-single-node-ga-attestation-v1`, `version` — `0.33.0`, `source_commit` — точному полному Git SHA, `rc_receipt_sha256` — действительному дайджесту файла RC; `operator` идентифицирует независимого проверяющего, `environment` содержит требуемые наблюдения, `checks` связывает **все 13** ID сценариев с `pass`, а `tested_artifacts` закрепляет три SHA-256: `launcher-api-linux-x64`, `launcher-cli-linux-x64` и `launcher-linux-x64-0.33.0.tar.gz`. Сборщик и проверяющий сравнивают эти хеши с точными поставляемыми байтами и запрещают подмену непроверенной сборкой. Оператор подписывает **точные исходные байты JSON** отдельным ключом Ed25519. Файл `.sig` содержит подпись base64. Соответствующий открытый ключ передаётся по независимому каналу и должен **отличаться** от ключа подписи выпуска.
+Подписанный отчёт — внешний JSON-документ, который конвейер выпуска никогда не генерирует из тестового шаблона с результатом PASS. Его формат проверяет `scripts/ga/single_node_ga.py`: `schema` равен `launcher-single-node-ga-attestation-v1`, `version` — `0.33.0`, `source_commit` — точному полному Git SHA, `rc_receipt_sha256` — действительному дайджесту файла RC; `operator` идентифицирует независимого проверяющего, `environment` содержит требуемые наблюдения, `checks` связывает **все 13** ID сценариев с `pass`, а `tested_artifacts` закрепляет три SHA-256: `launcher-api-linux-x64`, `launcher-cli-linux-x64` и `launcher-linux-x64-0.33.0.tar.gz`. Сборщик и проверяющий сравнивают эти хеши с точными поставляемыми байтами и запрещают подмену непроверенной сборкой. Оператор подписывает **точные исходные байты JSON** отдельным ключом Ed25519. Файл `.sig` содержит подпись base64. Соответствующий открытый ключ передаётся по независимому каналу и должен **отличаться** от ключа подписи выпуска.
 
 Пример проверки (завершится отказом без настоящих утверждённых свидетельств):
 
 ```sh
-python3 scripts/ga/single_node_ga_0330.py \
+python3 scripts/ga/single_node_ga.py \
   --evidence-dir /secure/evidence \
   --public-key /secure/trust/independent-ga.pub \
   --commit "$(git rev-parse HEAD)" \
@@ -102,7 +102,7 @@ launcher release publish-check /secure/release-0.33.0 \
 Запустите регрессионные тесты проверяющего без внешних аккаунтов:
 
 ```sh
-python3 -m unittest discover -s scripts/ga -p test_single_node_ga_0330.py -v
+python3 -m unittest discover -s scripts/ga -p test_single_node_ga.py -v
 python3 -m unittest discover -s scripts/rc -p test_production_rc.py -v
 ```
 

@@ -4,25 +4,25 @@ on:
     paths:
       - 'services/api/internal/fileauth/**'
       - 'services/api/internal/fileauthlive/**'
-      - 'services/api/internal/httpapi/fileauth_live_0426_test.go'
+      - 'services/api/internal/httpapi/fileauth_live_test.go'
       - 'services/api/internal/localpassword/**'
       - 'services/api/internal/httpapi/federation_112.go'
       - 'services/api/internal/httpapi/auth.go'
-      - 'services/api/internal/repository/local_auth_0295*'
-      - 'services/api/cmd/local-auth-0295/**'
-      - '.github/workflows/local-auth-fileauth-rehash-0295.yml'
+      - 'services/api/internal/repository/local_auth*'
+      - 'services/api/cmd/local-auth/**'
+      - '.github/workflows/local-auth-fileauth-rehash.yml'
       - 'services/api/go.*'
   pull_request:
     paths:
       - 'services/api/internal/fileauth/**'
       - 'services/api/internal/fileauthlive/**'
-      - 'services/api/internal/httpapi/fileauth_live_0426_test.go'
+      - 'services/api/internal/httpapi/fileauth_live_test.go'
       - 'services/api/internal/localpassword/**'
       - 'services/api/internal/httpapi/federation_112.go'
       - 'services/api/internal/httpapi/auth.go'
-      - 'services/api/internal/repository/local_auth_0295*'
-      - 'services/api/cmd/local-auth-0295/**'
-      - '.github/workflows/local-auth-fileauth-rehash-0295.yml'
+      - 'services/api/internal/repository/local_auth*'
+      - 'services/api/cmd/local-auth/**'
+      - '.github/workflows/local-auth-fileauth-rehash.yml'
       - 'services/api/go.*'
 permissions:
   contents: read
@@ -53,7 +53,7 @@ jobs:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
       - name: Проверить форматирование Go
-        run: test -z "$(gofmt -l internal/fileauth internal/fileauthlive internal/localpassword internal/repository/local_auth_0295* internal/httpapi/local_auth_0295_test.go internal/httpapi/federation_112.go internal/httpapi/auth.go cmd/local-auth-0295)"
+        run: test -z "$(gofmt -l internal/fileauth internal/fileauthlive internal/localpassword internal/repository/local_auth* internal/httpapi/local_auth_test.go internal/httpapi/federation_112.go internal/httpapi/auth.go cmd/local-auth)"
       - name: Проверить реальный парсер FileAuth, векторы хеширования и вход со старым паролем
         run: go test -race -count=1 -timeout=8m ./internal/fileauth ./internal/localpassword ./internal/httpapi -run '(0295|0426)$'
       - name: "Проверить реальную интеграцию провайдера FileAuth и HTTP-федерации"
@@ -61,6 +61,6 @@ jobs:
       - name: "Проверить атомарный импорт PostgreSQL, UUID, конфликты и интеграцию CAS"
         run: go test -count=1 -timeout=8m ./internal/repository -run '^TestFileAuthImportPostgres0295$' -v
       - name: Скомпилировать CLI и Backend
-        run: go build ./cmd/local-auth-0295 ./cmd/launcher-api
+        run: go build ./cmd/local-auth ./cmd/launcher-api
       - name: Проверить регрессии ядра
         run: go test -count=1 -timeout=8m ./internal/federation ./internal/repository ./internal/httpapi

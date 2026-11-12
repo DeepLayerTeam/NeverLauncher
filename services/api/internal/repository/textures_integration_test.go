@@ -65,7 +65,7 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	migration, err := os.ReadFile("../dbmigrate/sql/0067_texture_identity_0251.sql")
+	migration, err := os.ReadFile("../dbmigrate/sql/0067_texture_identity.sql")
 	if err != nil {
 		t.Fatal(err)
 	}

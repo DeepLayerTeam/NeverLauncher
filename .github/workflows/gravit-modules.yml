@@ -3,14 +3,14 @@ on:
   push:
     paths:
       - 'services/api/internal/gravitmodules/**'
-      - 'services/api/internal/repository/migration_modules_0338*'
-      - 'services/api/internal/httpapi/migration_modules_0338*'
-      - 'services/api/internal/httpapi/migration_modules_0446*'
+      - 'services/api/internal/repository/migration_modules*'
+      - 'services/api/internal/httpapi/migration_modules*'
+      - 'services/api/internal/httpapi/migration_modules*'
       - 'services/api/internal/dbmigrate/sql/0096*'
-      - 'cli/cmd/launcher/migration_modules_0338*'
-      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'cli/cmd/launcher/migration_modules*'
+      - 'apps/admin/src/admin/MigrationCenter.tsx'
       - 'schemas/openapi*'
-      - '.github/workflows/gravit-modules-0338.yml'
+      - '.github/workflows/gravit-modules.yml'
   pull_request:
   workflow_dispatch:
 permissions:

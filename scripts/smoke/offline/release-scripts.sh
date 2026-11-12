@@ -25,8 +25,8 @@ python3 -m py_compile \
   scripts/guard_ci/matrix.py \
   scripts/guard_ci/stage_release.py \
   scripts/guard_ci/test_matrix.py \
-  scripts/smoke/offline/guard-ci-release-certification-0139.py \
-  scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py
+  scripts/smoke/offline/guard-ci-release-certification.py \
+  scripts/smoke/offline/linux-x64-arm64-production-packages.py
 
 # Архив исходников — производственный артефакт, а не просто помощник с проверенным
 # синтаксисом. Убедитесь, что актуальные правила, входы сертификации и каноническая

@@ -20,9 +20,9 @@ def require(text, needles, label):
 
 
 api_migration = read(
-    "services/api/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql"
+    "services/api/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge.sql"
 )
-cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql")
+cli_migration = resource_read_text(root, "cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge.sql")
 if api_migration != cli_migration:
     raise SystemExit("Миграции Forge/NeoForge API/CLI 0.14.7 отличаются")
 require(
@@ -154,7 +154,7 @@ require(
     "Метаданные NeoForge только для сервера",
 )
 backend = read("services/api/internal/httpapi/server_bridge.go")
-integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
+integrity = read("services/api/internal/httpapi/serverbridge_integrity.go")
 config = read("services/api/internal/config/config.go")
 manifest = read("services/api/internal/httpapi/bridge_plugins.go")
 require(
@@ -221,7 +221,7 @@ require(
     ['"fabric"', '"forge"', '"neoforge"'],
     "Типы Forge и NeoForge в OpenAPI",
 )
-tests = read("services/api/internal/httpapi/serverbridge_forge_neoforge_0147_test.go")
+tests = read("services/api/internal/httpapi/serverbridge_forge_neoforge_test.go")
 require(
     tests,
     [
@@ -319,7 +319,7 @@ for text, label in (
     require(
         text,
         [
-            "serverbridge-forge-neoforge-0147.py",
+            "serverbridge-forge-neoforge.py",
             "run-forge-neoforge-server-bridge-migration-e2e.sh",
         ],
         f"0.14.7 {label} wiring",

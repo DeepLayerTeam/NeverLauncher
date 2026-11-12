@@ -19,7 +19,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "e2e/extensions"))
-from aggregate_04212 import validate, TARGETS  # noqa: E402
+from aggregate import validate, TARGETS  # noqa: E402
 
 PACKAGES = {
     "java-host": ("launcher-example-java-host.nlext", "backend/java-host.jar"),

@@ -21,11 +21,11 @@ if base < (0, 19, 12):
     raise SystemExit(
         f"Security & Certification: требуется версия не ниже 0.19.12, получено {version}"
     )
-security = read("services/api/internal/httpapi/server_bridge_security_01912.go")
-identity = read("services/api/internal/httpapi/server_bridge_identity_0142.go")
-protocol = read("services/api/internal/httpapi/server_bridge_protocol_0191.go")
-events = read("services/api/internal/httpapi/server_bridge_events_0194.go")
-control = read("services/api/internal/httpapi/server_bridge_control_0195.go")
+security = read("services/api/internal/httpapi/server_bridge_security.go")
+identity = read("services/api/internal/httpapi/server_bridge_identity.go")
+protocol = read("services/api/internal/httpapi/server_bridge_protocol.go")
+events = read("services/api/internal/httpapi/server_bridge_events.go")
+control = read("services/api/internal/httpapi/server_bridge_control.go")
 client = read(
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/LauncherApiClient.java"
 )
@@ -39,14 +39,14 @@ build = read("scripts/build/bridge-plugins.sh")
 cert = read("serverbridge/certify_release.py")
 cli = read("cli/cmd/launcher/serverbridge_release.go")
 contracts = read("scripts/contracts/generate_openapi.py")
-tests = read("services/api/internal/httpapi/server_bridge_security_01912_test.go")
-event_tests = read("services/api/internal/httpapi/server_bridge_events_0194_test.go")
+tests = read("services/api/internal/httpapi/server_bridge_security_test.go")
+event_tests = read("services/api/internal/httpapi/server_bridge_events_test.go")
 harness = read(
     "e2e/java/ru/launcher/bridge/common/ServerBridgeSecurityCertification01912Harness.java"
 )
 preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
-e2e = read("e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh")
+e2e = read("e2e/scripts/run-serverbridge-security-certification-e2e.sh")
 
 require(
     security,
@@ -274,14 +274,14 @@ if (
 ):
     raise SystemExit("Отсутствует: «полная сквозная матрица ServerBridge 3»")
 for text, needle, label in [
-    (preflight, "serverbridge-security-certification-01912.py", "preflight gate"),
+    (preflight, "serverbridge-security-certification.py", "preflight gate"),
     (
         preflight,
-        "run-serverbridge-security-certification-01912-e2e.sh",
+        "run-serverbridge-security-certification-e2e.sh",
         "preflight E2E",
     ),
-    (ci, "serverbridge-security-certification-01912.py", "CI gate"),
-    (ci, "run-serverbridge-security-certification-01912-e2e.sh", "CI E2E"),
+    (ci, "serverbridge-security-certification.py", "CI gate"),
+    (ci, "run-serverbridge-security-certification-e2e.sh", "CI E2E"),
 ]:
     if needle not in text:
         raise SystemExit(f"{label}: отсутствует {needle}")

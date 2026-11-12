@@ -24,7 +24,7 @@ import sys
 import tempfile
 import zipfile
 
-import component_upgrade_0458 as native
+import component_upgrade as native
 
 TARGET = '0.48.0'
 # Поддерживаемая версия здесь означает допустимый формат входных данных для нативного обновлятора,

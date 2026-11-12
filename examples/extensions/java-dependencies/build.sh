@@ -16,7 +16,7 @@ Main-Class: ru.launcher.sdk.host.JavaExtensionHost
 Launcher-Extension-Class: example.extension.DependencyExtension
 MANIFEST
 "$jar" --create --file "$work/build/host-unbundled.jar" --manifest "$work/build/manifest.txt" -C sdk/java/core/build/classes . -C "$work/build/extension" .
-python3 scripts/java/package_dependencies_0482.py --host "$work/build/host-unbundled.jar" \
+python3 scripts/java/package_dependencies.py --host "$work/build/host-unbundled.jar" \
   --output "$work/build/package/backend/java-dependencies.jar" \
   --library "org.example:greeter@1.2.3@>=1.0 <2.0@$work/build/greeter.jar"
 cp "$work/launcher-extension.json" "$work/build/package/launcher-extension.json"

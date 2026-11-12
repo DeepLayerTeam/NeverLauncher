@@ -4,12 +4,12 @@ on:
     paths:
       - 'apps/desktop/**'
       - 'VERSION'
-      - '.github/workflows/desktop-authentication-02610.yml'
+      - '.github/workflows/desktop-authentication.yml'
   push:
     paths:
       - 'apps/desktop/**'
       - 'VERSION'
-      - '.github/workflows/desktop-authentication-02610.yml'
+      - '.github/workflows/desktop-authentication.yml'
   workflow_dispatch:
 
 permissions:

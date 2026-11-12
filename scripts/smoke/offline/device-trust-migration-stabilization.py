@@ -32,9 +32,9 @@ if version_tuple < (0, 12, 10):
     raise SystemExit(f"Версия: требуется версия не ниже 0.12.10, получено {version}")
 
 migration_api = read(
-    "services/api/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql"
+    "services/api/internal/dbmigrate/sql/0018_device_trust_stabilization.sql"
 )
-migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql")
+migration_cli = resource_read_text(ROOT, "cli/internal/dbmigrate/sql/0018_device_trust_stabilization.sql")
 if migration_api != migration_cli:
     raise SystemExit("Миграция 0018 API/CLI 0.12.10 отличается")
 require(
@@ -58,7 +58,7 @@ require(
     "Миграция стабилизации 0.12.10",
 )
 
-repo_devices = read("services/api/internal/repository/devices_0121.go")
+repo_devices = read("services/api/internal/repository/devices.go")
 repo_postgres = read("services/api/internal/repository/postgres.go")
 require(
     repo_devices,
@@ -134,7 +134,7 @@ preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
 workflow = read(".github/workflows/device-trust.yml")
 for text, label in [(preflight, "preflight"), (ci, "main CI")]:
-    if "device-trust-migration-stabilization-01210.py" not in text:
+    if "device-trust-migration-stabilization.py" not in text:
         raise SystemExit(f"0.12.10: проверка выпуска не подключена к {label}")
     if "run-device-trust-migration-e2e.sh" not in text:
         raise SystemExit(f"0.12.10: E2E-проверка обновления не подключена к {label}")

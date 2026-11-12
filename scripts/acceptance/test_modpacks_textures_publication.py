@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import modpacks_textures_publication_0526 as acceptance
+import modpacks_textures_publication as acceptance
 
 
 class ModpackPublicationTests0526(unittest.TestCase):

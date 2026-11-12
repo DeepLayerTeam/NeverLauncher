@@ -2,11 +2,11 @@ name: Launcher 0.45.8 — обновление компонентов
 on:
   push:
     paths:
-      - 'scripts/operations/component_upgrade_0458.py'
-      - 'scripts/operations/test_component_upgrade_0458.py'
-      - 'scripts/operations/dr_03512.py'
+      - 'scripts/operations/component_upgrade.py'
+      - 'scripts/operations/test_component_upgrade.py'
+      - 'scripts/operations/dr.py'
       - 'docs/releases/0.45.8-component-upgrade.md'
-      - '.github/workflows/component-upgrade-0458.yml'
+      - '.github/workflows/component-upgrade.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -22,9 +22,9 @@ jobs:
       - name: Проверить настоящую замену байтов на хосте и негативные промышленные сценарии оркестрации
         run: |
           set -euo pipefail
-          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_component_upgrade_0458.py -v
-          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_db_upgrade_0457.py -v
-          python3 -m py_compile scripts/operations/component_upgrade_0458.py scripts/operations/dr_03512.py
+          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_component_upgrade.py -v
+          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_db_upgrade.py -v
+          python3 -m py_compile scripts/operations/component_upgrade.py scripts/operations/dr.py
           python3 scripts/version/manage.py check
       - name: "Проверить полные конфигурации Compose для стандартного и сетевого отказоустойчивого режимов"
         run: |
