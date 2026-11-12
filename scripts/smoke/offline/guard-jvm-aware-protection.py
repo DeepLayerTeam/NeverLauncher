@@ -86,7 +86,7 @@ require(
     "runtime/runtime/src/windows_module_guard.rs",
     [
         "jvm_aware: crate::WindowsJvmAwareProtectionReport",
-        "expected JVM_AWARE_READY as fifth event",
+        "пятым событием ожидалось JVM_AWARE_READY",
         "jvm_aware_report_from_event",
         "GUARD_CERTIFIED_JAVA_MAJORS",
         "non-JVM executable-memory transition",

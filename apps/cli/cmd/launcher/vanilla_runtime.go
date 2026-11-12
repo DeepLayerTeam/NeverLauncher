@@ -1183,7 +1183,7 @@ func validateContentRange(value string, expectedStart, expectedTotal int64) erro
 		return fmt.Errorf("некорректный Content-Range %q", value)
 	}
 	if start != expectedStart || end < start || (expectedTotal > 0 && total != expectedTotal) || (expectedTotal > 0 && end >= expectedTotal) {
-		return fmt.Errorf("Несовпадение: Content-Range: %q", value)
+		return fmt.Errorf("Несовпадение заголовка Content-Range: %q", value)
 	}
 	return nil
 }

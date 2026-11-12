@@ -111,7 +111,7 @@ def main() -> int:
         parent,
         [
             "hook_engine: crate::WindowsHookEngineReport",
-            "expected HOOK_READY as first event",
+            "первым событием ожидалось HOOK_READY",
             "hook_digest_from_event",
             "MODULE_EVENT_REASON_HOOK_HEARTBEAT",
             "MODULE_EVENT_REASON_HOOK_TAMPER",
@@ -119,7 +119,7 @@ def main() -> int:
             "hooked_slot_count",
             "intercepted_call_count",
             "integrity_check_count",
-            "Hook Engine integrity violation",
+            "Нарушение целостности подсистемы перехвата Guard",
             "fail_closed",
         ],
         "Проверка готовности, свидетельств и блокировки при ошибке в родительском процессе",

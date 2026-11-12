@@ -95,7 +95,7 @@ def main() -> int:
         parent,
         [
             "memory_integrity: crate::WindowsMemoryIntegrityReport",
-            "expected MEMORY_READY as second event",
+            "вторым событием ожидалось MEMORY_READY",
             "memory_report_from_event",
             "MODULE_EVENT_REASON_MEMORY_HEARTBEAT",
             "MODULE_EVENT_REASON_MEMORY_TAMPER",
@@ -131,7 +131,7 @@ def main() -> int:
             "report.module_guard.memory_integrity.active",
             "report.memory_integrity.integrity_check_count >= 2",
             "guard_memory_integrity_fail_closed_on_executable_image_code_page_drift",
-            "executable image code-page drift must be fail-closed",
+            "изменение страниц кода исполняемого образа должно блокироваться",
         ],
         "регрессионные тесты целостности памяти JVM Windows",
     )

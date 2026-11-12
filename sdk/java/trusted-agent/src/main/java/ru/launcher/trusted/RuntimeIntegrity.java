@@ -105,7 +105,7 @@ final class RuntimeIntegrity0505 implements ClassFileTransformer {
                 throw new SecurityException("Guard запрещает пустой путь к классам JVM или шаблон со звёздочкой");
             Path path = new File(item).toPath().toAbsolutePath().normalize();
             if (!path.startsWith(root) || !"code".equals(kinds.get(path)))
-                throw new SecurityException("Путь к классам JVM Guard не подписан: " + path);
+                throw new SecurityException("Путь к классам JVM Guard не охвачен подписью: " + path);
             check(path);
         }
     }

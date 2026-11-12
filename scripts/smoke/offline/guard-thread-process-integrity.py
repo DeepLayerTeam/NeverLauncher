@@ -109,7 +109,7 @@ def main() -> int:
         parent,
         [
             "thread_process_integrity: crate::WindowsThreadProcessIntegrityReport",
-            "expected THREAD_PROCESS_READY as third event",
+            "третьим событием ожидалось THREAD_PROCESS_READY",
             "thread_process_report_from_event",
             "runtime_policy.verify_process_tree(pid)",
             "MODULE_EVENT_REASON_THREAD_PROCESS_HEARTBEAT",
@@ -151,7 +151,7 @@ def main() -> int:
             "guard_thread_process_integrity_tracks_job_bound_descendant_processes",
             "descendant_process_peak >= 1",
             "guard_thread_integrity_fail_closed_on_private_executable_thread_start",
-            "private executable thread start must be fail-closed",
+            "запуск потока из приватной исполняемой памяти должен блокироваться",
             "bind_runtime_policy(&runtime_policy)",
         ],
         "регрессионные тесты подмены потоков и дерева процессов JVM Windows",

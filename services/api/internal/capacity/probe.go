@@ -161,7 +161,7 @@ func (r *Report) evaluatePostgres(p PostgreSQL) {
 		r.issue("warning", "jobs.expired_leases", fmt.Sprint(p.ExpiredJobLeases), "> 0 просроченных аренд выполняющихся заданий", "Проверьте сбои воркеров и механизм изоляции прежнего владельца; не повторяйте автоматически неидемпотентные операции")
 	}
 	if p.PendingOutbox >= QueueWarningSize {
-		r.issue("warning", "outbox.pending", fmt.Sprint(p.PendingOutbox), ">= 500 ожидающих событий", "Проверьте диспетчер outbox и подтверждения потребителей; сохраните идемпотентность для доставки не реже одного раза")
+		r.issue("warning", "outbox.pending", fmt.Sprint(p.PendingOutbox), ">= 500 ожидающих событий", "Проверьте обработчик исходящей очереди и подтверждения получателей; сохраните идемпотентность при доставке не реже одного раза")
 	}
 }
 func probePostgres(ctx context.Context, db *sql.DB) (PostgreSQL, error) {

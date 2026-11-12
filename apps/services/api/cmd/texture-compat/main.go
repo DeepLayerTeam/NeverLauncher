@@ -245,7 +245,7 @@ func certify02512(ctx context.Context, client *http.Client, opt options02512) (r
 		return report, err
 	}
 	if err := rsa.VerifyPKCS1v15(key, crypto.SHA1, digest[:], sig); err != nil {
-		return report, fmt.Errorf("Некорректное значение: «подпись текстуры RSA»: %w", err)
+		return report, fmt.Errorf("Некорректная подпись текстуры RSA: %w", err)
 	}
 	report.SignatureValid = true
 	report.ProfileID = uid

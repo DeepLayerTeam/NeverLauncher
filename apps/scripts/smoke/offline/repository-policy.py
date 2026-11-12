@@ -535,10 +535,10 @@ for required in [
 for required in [
     "TestDeviceManagementRevokeOthersAndChallengeInvalidation0125",
     "TestDeviceManagementSelfRevokeIsPermanentAndIdempotent0125",
-    "pre-revocation challenge completed after revoke",
-    "revoked device key was re-enrolled",
-    "repeat revoke is not idempotent",
-    "self-revoked session remained active",
+    "Запрос подтверждения, созданный до отзыва, успешно завершился после отзыва",
+    "Отозванный ключ устройства зарегистрирован повторно",
+    "Повторный отзыв не является идемпотентным",
+    "Сессия осталась активной после самостоятельного отзыва",
 ]:
     if required not in device_management_test:
         fail(f"0.12.5 отсутствуют регрессионные тесты управления устройствами: {required}")
@@ -1639,13 +1639,13 @@ for forbidden in [
         fail("device-trust/targets.json не должен содержать вручную изменяемый статус PASS")
 for required in [
     "verify_result",
-    "missing required device trust result",
+    "Отсутствует обязательный результат проверки доверия к устройствам",
     "evidenceSha256",
-    "evidence SHA-256 mismatch",
+    "контрольная сумма SHA-256 свидетельства {name} не совпадает",
     "vendorHardwareProvenance",
     "headless-ci-does-not-prove-os-secure-storage-runtime",
     "safe-basename",
-    "exact commit/run ID",
+    "точного идентификатора коммита и запуска",
 ]:
     if required not in device_trust_matrix:
         fail(f"0.12.9 матрица доверия в агрегаторе отсутствует механизм усиленной защиты: {required}")
@@ -2519,7 +2519,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "LAUNCHER_MANAGED_JRE_MANIFEST_SHA256",
         "exact vendor archive SHA-256",
         "ensure_managed_archive",
-        "Managed JRE javaEntry mismatch",
+        "javaEntry управляемой JRE не указывает на bin/java",
     ]:
         if required not in jre_runtime_0155:
             fail(f"0.15.5 Runtime Managed JRE consumer — не завершено: {required}")
@@ -5169,7 +5169,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "report.load_events >= 1",
         "report.heartbeat_count >= 1",
         "guard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots",
-        "unsigned module outside trusted roots must be fail-closed",
+        "неподписанный модуль вне доверенных каталогов должен блокироваться",
         "report.violation_count >= 1",
     ]:
         if required not in module_test_0183:
@@ -5241,12 +5241,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in hook_sensor_0184:
             fail(f"0.18.4 Hook Engine жизненный цикл датчика — не завершено: {required}")
     for required in [
-        "expected HOOK_READY as first event",
+        "первым событием ожидалось HOOK_READY",
         "hook_engine: crate::WindowsHookEngineReport",
         "hooked_slot_count",
         "intercepted_call_count",
         "integrity_check_count",
-        "Hook Engine integrity violation",
+        "Нарушение целостности подсистемы перехвата Guard",
         "fail_closed",
     ]:
         if required not in hook_parent_0184:
@@ -5333,7 +5333,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.5 Memory Integrity жизненный цикл датчика — не завершено: {required}")
     for required in [
         "memory_integrity: crate::WindowsMemoryIntegrityReport",
-        "expected MEMORY_READY as second event",
+        "вторым событием ожидалось MEMORY_READY",
         "memory_report_from_event",
         "Memory Integrity runtime tampering detected",
         "fail_closed",
@@ -5348,7 +5348,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.5 Memory Integrity отчёт — отсутствует: {required}")
     for required in [
         "guard_memory_integrity_fail_closed_on_executable_image_code_page_drift",
-        "executable image code-page drift must be fail-closed",
+        "изменение страниц кода исполняемого образа должно блокироваться",
         "report.memory_integrity.integrity_check_count >= 2",
     ]:
         if required not in memory_test_0185:
@@ -5442,7 +5442,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.6 Process Integrity серверная часть — не завершено: {required}")
     for required in [
         "thread_process_integrity: crate::WindowsThreadProcessIntegrityReport",
-        "expected THREAD_PROCESS_READY as third event",
+        "третьим событием ожидалось THREAD_PROCESS_READY",
         "thread_process_report_from_event",
         "runtime_policy.verify_process_tree(pid)",
         "Thread & Process Integrity suspicious runtime transition detected",
@@ -5466,7 +5466,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard_thread_process_integrity_tracks_job_bound_descendant_processes",
         "descendant_process_peak >= 1",
         "guard_thread_integrity_fail_closed_on_private_executable_thread_start",
-        "private executable thread start must be fail-closed",
+        "запуск потока из приватной исполняемой памяти должен блокироваться",
     ]:
         if required not in thread_test_0186:
             fail(
@@ -5560,7 +5560,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.7 JVM граница инструментирования — не завершено: {required}")
     for required in [
         "debug_instrumentation: crate::WindowsDebugInstrumentationReport",
-        "expected DEBUG_INSTRUMENTATION_READY as fourth event",
+        "четвёртым событием ожидалось DEBUG_INSTRUMENTATION_READY",
         "debug_instrumentation_report_from_event",
         "unwanted debug/instrumentation boundary detected",
         "fail_closed",
@@ -5578,7 +5578,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable",
         "guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach",
-        "live debugger attach must be fail-closed",
+        "подключение отладчика к работающему процессу должно блокироваться",
         "GUARD_DEBUG_PROBE_EXE",
     ]:
         if required not in debug_test_0187:
@@ -5656,7 +5656,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.8 JVM-Aware жизненный цикл датчика — не завершено: {required}")
     for required in [
         "jvm_aware: crate::WindowsJvmAwareProtectionReport",
-        "expected JVM_AWARE_READY as fifth event",
+        "пятым событием ожидалось JVM_AWARE_READY",
         "jvm_aware_report_from_event",
         "GUARD_CERTIFIED_JAVA_MAJORS",
         "non-JVM executable-memory transition",
@@ -5743,7 +5743,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in continuous_stream_0189:
             fail(f"0.18.9 Continuous Guard жизненный цикл датчика — не завершено: {required}")
     for required in [
-        "expected CONTINUOUS_READY as sixth event",
+        "шестым событием ожидалось CONTINUOUS_READY",
         "advance_continuous_event_chain",
         "write_continuous_guard_ack",
         "event-chain cross-check mismatch",
@@ -5764,7 +5764,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.9 Continuous Guard отчёт — не завершено: {required}")
     for required in [
         "guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat",
-        "every Sensor heartbeat must receive exactly one Guard ACK",
+        "На каждый сигнал работоспособности датчика должно приходиться ровно одно подтверждение Guard",
         "GUARD_CONTINUOUS_GUARD_VERSION",
     ]:
         if required not in continuous_test_0189:

@@ -165,7 +165,7 @@ func handleExtensionRegistry0203(args []string) error {
 		}
 		id, versionValue, ok := parseRegistryCoordinate0203(args[1])
 		if !ok {
-			return errors.New("install требует координату id@version")
+			return errors.New("Для команды install требуется координата id@version")
 		}
 		scope := strings.TrimSpace(flagValue(args, "--scope", "global"))
 		scopeID := strings.TrimSpace(flagValue(args, "--scope-id", ""))

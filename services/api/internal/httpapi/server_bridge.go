@@ -459,7 +459,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	join, ok := s.State.ServerBridge.hasJoined(username, serverID)
 	if !ok {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-miss"), Actor: server.ID, Action: "serverbridge:has-joined:miss", Target: username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusNotFound, "активная join-сессия не найдена")
+		writeError(w, http.StatusNotFound, "активный сеанс подключения к серверу не найден")
 		return
 	}
 	if join.IdentityRealm == "official" {

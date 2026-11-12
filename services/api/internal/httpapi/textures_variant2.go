@@ -154,7 +154,7 @@ func textureMultipartError0252(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusRequestEntityTooLarge, "Размер multipart-загрузки превышает ограничение")
 		return
 	}
-	writeError(w, http.StatusBadRequest, "Некорректная multipart-загрузка")
+	writeError(w, http.StatusBadRequest, "Некорректная загрузка составных данных")
 }
 
 func (s Server) textureBlobGet0252(w http.ResponseWriter, r *http.Request) {

@@ -362,7 +362,7 @@ func (s Server) factoryCreate02710(w http.ResponseWriter, r *http.Request) {
 	}
 	entries, listErr := os.ReadDir(filepath.Join(root, "jobs"))
 	if listErr != nil && !errors.Is(listErr, os.ErrNotExist) {
-		writeError(w, 503, "Не удалось проверить хранилище Client Factory")
+		writeError(w, 503, "Не удалось проверить хранилище сборки клиентов")
 		return
 	}
 	ownJobs := 0

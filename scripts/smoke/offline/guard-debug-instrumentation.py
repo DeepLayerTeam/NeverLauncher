@@ -104,7 +104,7 @@ require(
     "runtime/runtime/src/windows_module_guard.rs",
     [
         "debug_instrumentation: crate::WindowsDebugInstrumentationReport",
-        "expected DEBUG_INSTRUMENTATION_READY as fourth event",
+        "четвёртым событием ожидалось DEBUG_INSTRUMENTATION_READY",
         "debug_instrumentation_report_from_event",
         "unwanted debug/instrumentation boundary detected",
         "fail_closed",
@@ -128,7 +128,7 @@ require(
     [
         "guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable",
         "guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach",
-        "live debugger attach must be fail-closed",
+        "подключение отладчика к работающему процессу должно блокироваться",
         "GUARD_DEBUG_PROBE_EXE",
     ],
 )

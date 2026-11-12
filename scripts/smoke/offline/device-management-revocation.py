@@ -56,10 +56,10 @@ need('services/api/internal/httpapi/device_management_0125_test.go', [
     'TestDeviceManagementRevokeOthersAndChallengeInvalidation0125',
     'TestDeviceManagementSelfRevokeIsPermanentAndIdempotent0125',
     'revoke-others',
-    'pre-revocation challenge completed after revoke',
-    'revoked device key was re-enrolled',
-    'repeat revoke is not idempotent',
-    'self-revoked session remained active',
+    'Запрос подтверждения, созданный до отзыва, успешно завершился после отзыва',
+    'Отозванный ключ устройства зарегистрирован повторно',
+    'Повторный отзыв не является идемпотентным',
+    'Сессия осталась активной после самостоятельного отзыва',
 ])
 need('apps/desktop/src/main.tsx', [
     'loadManagedDevices',

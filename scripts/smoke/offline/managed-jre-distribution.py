@@ -58,7 +58,7 @@ require(
         "inspectMacOSMachOBytes0154",
         "exact-vendor-archive-sha256",
         "DELIVERY_MANIFEST.json",
-        "Managed JRE artifact %s is not bound",
+        "Артефакт управляемой JRE %s не связан с DELIVERY_MANIFEST.json",
     ],
     "Проверка управляемой среды Java",
 )
@@ -70,10 +70,10 @@ require(
         "ensure_managed_java_from_distribution",
         "LAUNCHER_MANAGED_JRE_MANIFEST",
         "LAUNCHER_MANAGED_JRE_MANIFEST_SHA256",
-        "remote Managed JRE manifest требует",
-        "Managed JRE target must preserve exact vendor archive SHA-256",
+        "Для удалённого манифеста управляемой JRE требуется",
+        "Целевой выпуск управляемой JRE должен сохранять точный SHA-256 архива поставщика",
         "ensure_local_archive",
-        "Managed JRE javaEntry mismatch",
+        "javaEntry управляемой JRE не указывает на bin/java",
     ],
     "Использование управляемой Java в Runtime",
 )

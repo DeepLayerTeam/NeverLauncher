@@ -107,7 +107,7 @@ def main() -> int:
             "report.load_events >= 1",
             "report.heartbeat_count >= 1",
             "guard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots",
-            "unsigned module outside trusted roots must be fail-closed",
+            "неподписанный модуль вне доверенных каталогов должен блокироваться",
             "report.violation_count >= 1",
         ],
         "Регрессионные тесты загрузки DLL в настоящей JVM и применения политик",

@@ -63,7 +63,7 @@ func (s Server) evaluatePublishReadiness0385(ctx context.Context, lookup package
 		add("signed-file-set-mismatch", release.ID, "Подписанный список файлов не совпадает с содержимым пакета.", "Создайте новый корректный пакет и подпишите его после загрузки файлов.")
 	}
 	if err := validateCompatibilityManifest(release.Manifest); err != nil {
-		add("manifest-compatibility-invalid", release.ID, err.Error(), "Исправьте параметры Minecraft/loader/Java и создайте новую подписанную сборку.")
+		add("manifest-compatibility-invalid", release.ID, err.Error(), "Исправьте параметры Minecraft, загрузчика и Java и создайте новую подписанную сборку.")
 	}
 	md, mdErr := manifestDigest0212(release.Manifest)
 	fd, fdErr := artifactDigest0212(lookup.Files)
