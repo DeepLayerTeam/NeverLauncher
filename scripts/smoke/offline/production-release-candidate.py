@@ -66,7 +66,7 @@ require(
     build,
     [
         "PRODUCTION_RC_REQUIRED",
-        "Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort",
+        "Промышленный кандидат в выпуск требует полного набора подтверждений CI: совместимость, доверие к устройствам и Guard",
         'git -C "${ROOT_DIR}" diff --quiet HEAD --',
         "release candidate-verify",
         "PRODUCTION_RELEASE_CANDIDATE.json",

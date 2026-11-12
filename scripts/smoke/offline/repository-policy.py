@@ -297,12 +297,12 @@ for legacy in [
     if (ROOT / "services/api/internal/httpapi" / legacy).exists():
         fail(f"legacy handler должен быть удалён из production tree: {legacy}")
 if "compatibility-matrix" not in preflight:
-    fail("preflight не запускает compatibility matrix definition/hardening tests")
+    fail("Предварительная проверка не запускает тесты определения и усиления защиты матрицы совместимости")
 if (
     "federation-e2e" not in preflight
     or "scripts/test/federation-e2e.py" not in preflight
 ):
-    fail("preflight не запускает federation E2E release gate")
+    fail("Предварительная проверка не запускает обязательную сквозную проверку федерации перед выпуском")
 if "LAUNCHER_PREFLIGHT_FEDERATION_POSTGRES" not in preflight:
     fail("strict preflight не умеет запускать PostgreSQL multi-instance federation E2E")
 federation_routes = read("services/api/internal/httpapi/routes_auth.go")
@@ -402,11 +402,11 @@ for forbidden in [
             f"0.12.2 Закрытый ключ устройства попал в React/localStorage: {forbidden}"
         )
 if "device-key-storage.py" not in preflight:
-    fail("preflight не запускает 0.12.2 device key / OS secure storage gate")
+    fail("Предварительная проверка не запускает обязательную проверку ключа устройства и защищённого хранилища ОС 0.12.2")
 if "scripts/smoke/offline/device-key-storage.py" not in ci:
-    fail("CI не запускает 0.12.2 device key / OS secure storage gate")
+    fail("CI не запускает обязательную проверку ключа устройства и защищённого хранилища ОС 0.12.2")
 if "cargo test --manifest-path src-tauri/Cargo.toml" not in ci:
-    fail("CI не запускает Tauri device-key unit tests")
+    fail("CI не запускает модульные тесты ключа устройства в Tauri")
 
 # В 0.12.3 аппаратные идентичности используют настоящий неэкспортируемый P-256-ключ
 # платформы с явным переходом на программный режим. Метаданные аппаратной привязки не
@@ -666,7 +666,7 @@ for required in ["LAUNCHER_PREFLIGHT_STRICT", "LAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")
 if "release doctor" not in ci.lower():
-    fail("CI не запускает release doctor")
+    fail("CI не запускает диагностику выпуска")
 if "LAUNCHER_CORS_ALLOWED_ORIGINS" not in ci:
     fail("CI Compose validation не задаёт обязательный CORS origin")
 
@@ -763,7 +763,7 @@ for required in [
     "releaseArtifacts(ver)",
 ]:
     if required not in release_commands:
-        fail(f"release verify не содержит strict required-artifact gate: {required}")
+        fail(f"В проверке выпуска отсутствует строгая проверка обязательных артефактов: {required}")
 
 for rel in [
     "scripts/release/source-package.py",
@@ -798,7 +798,7 @@ if (
     or "windows-production-signed:" in ci
     or "macos-production-notarized:" in ci
 ):
-    fail("ordinary main CI не должен зависеть от publish-only signing credentials")
+    fail("Обычный CI основной ветки не должен зависеть от учётных данных подписи, предназначенных только для публикации")
 if (
     "production-e2e:" not in ci
     or "release-bundle"
@@ -936,7 +936,7 @@ for required in [
         fail(f"В проверке «инвариант устойчивого жизненного цикла отката» отсутствует обязательный компонент: {required}")
 if "FOR UPDATE" not in postgres_repo or "status <> 'published'" not in postgres_repo:
     fail(
-        "PostgreSQL immutable guard должен использовать row locking и conditional mutation"
+        "Защита неизменяемости в PostgreSQL должна использовать блокировку строк и условное изменение данных"
     )
 for required in [
     "UpdateVersionStatus",
@@ -947,7 +947,7 @@ for required in [
     if required not in immutable_tests:
         fail(f"repository immutable regression-test не покрывает {required}")
 if "TestPublishedPackageIsImmutable" not in package_product_tests:
-    fail("HTTP immutable published-release regression-test отсутствует")
+    fail("Отсутствует регрессионный HTTP-тест неизменяемости опубликованного выпуска")
 if "lockPackageMutation" not in package_mutation_lock:
     fail("package storage+metadata mutation serialization отсутствует")
 
@@ -972,7 +972,7 @@ for legacy in [
     if legacy in package_commands:
         fail(f"client lifecycle содержит удалённую status-only заглушку: {legacy}")
 if "TestClientLifecycleInstallRepairCleanupRollback" not in product_tests:
-    fail("client lifecycle end-to-end regression-test отсутствует")
+    fail("Отсутствует сквозной регрессионный тест жизненного цикла клиента")
 
 for required in [
     "buildDesktopPackage",
@@ -987,7 +987,7 @@ if "checksums are populated by the native release build" in read(
 ):
     fail("desktop package вернулся к placeholder checksum")
 if "TestDesktopPackageRequiresRealArtifactAndDetectsTampering" not in product_tests:
-    fail("desktop package integrity regression-test отсутствует")
+    fail("Отсутствует регрессионный тест целостности пакета Desktop")
 
 for required in [
     "ed25519.GenerateKey",
@@ -1003,7 +1003,7 @@ for forbidden in ["rotation-policy", "attestation-plan"]:
     if forbidden in security_commands or forbidden in security_keyring:
         fail(f"security key lifecycle содержит declaration-only status: {forbidden}")
 if "TestKeyRotationAttestationAndRevocation" not in product_tests:
-    fail("key rotation/revocation/attestation regression-test отсутствует")
+    fail("Отсутствует регрессионный тест ротации, отзыва и аттестации ключей")
 
 for required in [
     "SPDX-2.3",
@@ -1031,13 +1031,13 @@ for required in [
     if required not in build_release:
         fail(f"release bundle не включает реальный Desktop package: {required}")
 if "launcher-desktop-package-" not in release_commands:
-    fail("release manifest не требует Desktop package artifact")
+    fail("Манифест выпуска не требует артефакт пакета Desktop")
 if "PROVENANCE.json.sig" not in release_commands:
-    fail("release verify не требует signed provenance attestation")
+    fail("Проверка выпуска не требует подписанного подтверждения происхождения")
 if "TestDependencySBOMAndProvenanceUseRealInputs" not in product_tests:
-    fail("dependency SBOM/provenance regression-test отсутствует")
+    fail("Отсутствует регрессионный тест перечня зависимостей SBOM и подтверждения происхождения")
 if "TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext" not in product_tests:
-    fail("standalone first-run regression-test отсутствует")
+    fail("Отсутствует регрессионный тест первого автономного запуска")
 
 # 9. E2E настоящего клиента Minecraft: проверка выпуска обязана подготовить и
 # запустить реальный клиент Mojang, а не ограничиваться искусственной Java-фикстурой.
@@ -1231,7 +1231,7 @@ if (
     or "xvfb" not in ci
     or "Minecraft Client E2E" not in ci
 ):
-    fail("CI не содержит блокирующий actual Minecraft Client E2E gate")
+    fail("В CI отсутствует обязательная сквозная проверка настоящего клиента Minecraft")
 
 
 # 10. Публичная матрица совместимости CI 0.10.6 и усиление защиты: цели не

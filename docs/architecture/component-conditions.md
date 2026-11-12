@@ -17,5 +17,5 @@
 
 - `cd services/api && go test ./internal/model ./internal/dbmigrate`
 - `cd cli && go test ./internal/dbmigrate`
-- `cd runtime/runtime && cargo test` (требуется Rust toolchain)
+- `cd runtime/runtime && cargo test` (требуется набор инструментов Rust)
 - `cd apps/desktop && npm ci && npm run build`

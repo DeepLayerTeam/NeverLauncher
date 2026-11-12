@@ -93,7 +93,7 @@ for suffix in (
 ):
     require(
         "/api/v1/admin/extension-hosts" + suffix in routes,
-        f"host admin Отсутствует маршрут: {suffix}",
+        f"В административном API хоста отсутствует маршрут: {suffix}",
     )
 
 cli = read("cli/cmd/launcher/extension_host_0205.go")

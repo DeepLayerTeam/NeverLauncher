@@ -38,7 +38,7 @@ require(
         'journal.Phase = "committed"',
         'journal.Phase = "rolling-back"',
         'journal.Phase = "rolled-back"',
-        "source должен быть regular file и не symlink",
+        "Источник должен быть обычным файлом, а не символической ссылкой",
         "updater refuses symlink parent",
         "replaceFileAtomicPortable",
         "Sync()",

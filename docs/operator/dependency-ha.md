@@ -184,7 +184,7 @@ sudo python3 /opt/launcher/scripts/operations/dependency_ha_0513.py edge-drill \
 
 **Фактические результаты**: измерить RTO/RPO для PostgreSQL, Redis,
 S3 и ingress отдельно; подтвердить состояние миров, UUID, identities,
-реплик и durable jobs; сверить количество подтверждённых writes до/после.
+реплик и сохраняемых заданий; сверить количество подтверждённых записей до/после.
 Механизм outage probe не утверждает сохранность всех данных по одному контрольному объекту,
 и не заменяет проверку power-off, разделения сети, Redis lease-split или
 выполнения JVM/gameplay. Split-brain и fencing относятся к 0.51.4,

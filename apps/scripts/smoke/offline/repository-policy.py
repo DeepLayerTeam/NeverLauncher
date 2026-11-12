@@ -124,7 +124,7 @@ for required in [
     if required not in release_migration:
         fail(f"0.12.0 в миграции федерации выпуска отсутствует инвариант: {required}")
 if "0012_device_trust_core_0121.sql" not in api_files:
-    fail("0.12.1 отсутствует миграция Device Trust Core")
+    fail("0.12.1 отсутствует миграция ядра доверия к устройствам")
 device_migration = api_files["0012_device_trust_core_0121.sql"].read_text(
     encoding="utf-8"
 )
@@ -297,12 +297,12 @@ for legacy in [
     if (ROOT / "services/api/internal/httpapi" / legacy).exists():
         fail(f"legacy handler должен быть удалён из production tree: {legacy}")
 if "compatibility-matrix" not in preflight:
-    fail("preflight не запускает compatibility matrix definition/hardening tests")
+    fail("Предварительная проверка не запускает тесты определения и усиления защиты матрицы совместимости")
 if (
     "federation-e2e" not in preflight
     or "scripts/test/federation-e2e.py" not in preflight
 ):
-    fail("preflight не запускает federation E2E release gate")
+    fail("Предварительная проверка не запускает обязательную сквозную проверку федерации перед выпуском")
 if "LAUNCHER_PREFLIGHT_FEDERATION_POSTGRES" not in preflight:
     fail("strict preflight не умеет запускать PostgreSQL multi-instance federation E2E")
 federation_routes = read("services/api/internal/httpapi/routes_auth.go")
@@ -402,11 +402,11 @@ for forbidden in [
             f"0.12.2 Закрытый ключ устройства попал в React/localStorage: {forbidden}"
         )
 if "device-key-storage.py" not in preflight:
-    fail("preflight не запускает 0.12.2 device key / OS secure storage gate")
+    fail("Предварительная проверка не запускает обязательную проверку ключа устройства и защищённого хранилища ОС 0.12.2")
 if "scripts/smoke/offline/device-key-storage.py" not in ci:
-    fail("CI не запускает 0.12.2 device key / OS secure storage gate")
+    fail("CI не запускает обязательную проверку ключа устройства и защищённого хранилища ОС 0.12.2")
 if "cargo test --manifest-path src-tauri/Cargo.toml" not in ci:
-    fail("CI не запускает Tauri device-key unit tests")
+    fail("CI не запускает модульные тесты ключа устройства в Tauri")
 
 # В 0.12.3 аппаратные идентичности используют настоящий неэкспортируемый P-256-ключ
 # платформы с явным переходом на программный режим. Метаданные аппаратной привязки не
@@ -546,7 +546,7 @@ if (
     "device-management-revocation.py" not in preflight
     or "scripts/smoke/offline/device-management-revocation.py" not in ci
 ):
-    fail("0.12.5 device management — проверка не подключена к предварительным проверкам и CI")
+    fail("0.12.5 управление устройствами — проверка не подключена к предварительным проверкам и CI")
 if "Device Management + Revocation gate OK" not in device_management_gate:
     fail("0.12.5 проверка управления устройствами не завершена")
 
@@ -598,7 +598,7 @@ if (
     "session-device-risk-0126.py" not in preflight
     or "scripts/smoke/offline/session-device-risk-0126.py" not in ci
 ):
-    fail("0.12.6 session/device risk — проверка не подключена к предварительным проверкам и CI")
+    fail("0.12.6 риски сеанса и устройства — проверка не подключена к предварительным проверкам и CI")
 if "Session <-> Device binding + risk integration gate OK" not in session_device_gate:
     fail("0.12.6 проверка рисков сеанса и устройства не завершена")
 
@@ -666,7 +666,7 @@ for required in ["LAUNCHER_PREFLIGHT_STRICT", "LAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")
 if "release doctor" not in ci.lower():
-    fail("CI не запускает release doctor")
+    fail("CI не запускает диагностику выпуска")
 if "LAUNCHER_CORS_ALLOWED_ORIGINS" not in ci:
     fail("CI Compose validation не задаёт обязательный CORS origin")
 
@@ -936,7 +936,7 @@ for required in [
         fail(f"отсутствует инвариант надёжного жизненного цикла отката: {required}")
 if "FOR UPDATE" not in postgres_repo or "status <> 'published'" not in postgres_repo:
     fail(
-        "PostgreSQL immutable guard должен использовать row locking и conditional mutation"
+        "Защита неизменяемости в PostgreSQL должна использовать блокировку строк и условное изменение данных"
     )
 for required in [
     "UpdateVersionStatus",
@@ -947,7 +947,7 @@ for required in [
     if required not in immutable_tests:
         fail(f"repository immutable regression-test не покрывает {required}")
 if "TestPublishedPackageIsImmutable" not in package_product_tests:
-    fail("HTTP immutable published-release regression-test отсутствует")
+    fail("Отсутствует регрессионный HTTP-тест неизменяемости опубликованного выпуска")
 if "lockPackageMutation" not in package_mutation_lock:
     fail("package storage+metadata mutation serialization отсутствует")
 
@@ -972,7 +972,7 @@ for legacy in [
     if legacy in package_commands:
         fail(f"client lifecycle содержит удалённую status-only заглушку: {legacy}")
 if "TestClientLifecycleInstallRepairCleanupRollback" not in product_tests:
-    fail("client lifecycle end-to-end regression-test отсутствует")
+    fail("Отсутствует сквозной регрессионный тест жизненного цикла клиента")
 
 for required in [
     "buildDesktopPackage",
@@ -987,7 +987,7 @@ if "checksums are populated by the native release build" in read(
 ):
     fail("desktop package вернулся к placeholder checksum")
 if "TestDesktopPackageRequiresRealArtifactAndDetectsTampering" not in product_tests:
-    fail("desktop package integrity regression-test отсутствует")
+    fail("Отсутствует регрессионный тест целостности пакета Desktop")
 
 for required in [
     "ed25519.GenerateKey",
@@ -1003,7 +1003,7 @@ for forbidden in ["rotation-policy", "attestation-plan"]:
     if forbidden in security_commands or forbidden in security_keyring:
         fail(f"security key lifecycle содержит declaration-only status: {forbidden}")
 if "TestKeyRotationAttestationAndRevocation" not in product_tests:
-    fail("key rotation/revocation/attestation regression-test отсутствует")
+    fail("Отсутствует регрессионный тест ротации, отзыва и аттестации ключей")
 
 for required in [
     "SPDX-2.3",
@@ -1031,13 +1031,13 @@ for required in [
     if required not in build_release:
         fail(f"release bundle не включает реальный Desktop package: {required}")
 if "launcher-desktop-package-" not in release_commands:
-    fail("release manifest не требует Desktop package artifact")
+    fail("Манифест выпуска не требует артефакт пакета Desktop")
 if "PROVENANCE.json.sig" not in release_commands:
-    fail("release verify не требует signed provenance attestation")
+    fail("Проверка выпуска не требует подписанного подтверждения происхождения")
 if "TestDependencySBOMAndProvenanceUseRealInputs" not in product_tests:
-    fail("dependency SBOM/provenance regression-test отсутствует")
+    fail("Отсутствует регрессионный тест перечня зависимостей SBOM и подтверждения происхождения")
 if "TestStandaloneFirstRunUsesPinnedImagesWithoutBuildContext" not in product_tests:
-    fail("standalone first-run regression-test отсутствует")
+    fail("Отсутствует регрессионный тест первого автономного запуска")
 
 # 9. E2E настоящего клиента Minecraft: проверка выпуска обязана подготовить и
 # запустить реальный клиент Mojang, а не ограничиваться искусственной Java-фикстурой.
@@ -1231,7 +1231,7 @@ if (
     or "xvfb" not in ci
     or "Minecraft Client E2E" not in ci
 ):
-    fail("CI не содержит блокирующий actual Minecraft Client E2E gate")
+    fail("В CI отсутствует обязательная сквозная проверка настоящего клиента Minecraft")
 
 
 # 10. Публичная матрица совместимости CI 0.10.6 и усиление защиты: цели не
@@ -1608,7 +1608,7 @@ if (
     "cross-platform-key-recovery-0128.py" not in preflight
     or "scripts/smoke/offline/cross-platform-key-recovery-0128.py" not in ci
 ):
-    fail("0.12.8 key recovery — проверка не подключена к предварительным проверкам и CI")
+    fail("0.12.8 восстановление ключа — проверка не подключена к предварительным проверкам и CI")
 
 
 # В 0.12.9: E2E доверенных устройств и публичная матрица доверия. PASS допустим только по
@@ -1732,11 +1732,11 @@ if (
     "device-trust-e2e-matrix-0129.py" not in preflight
     or "scripts/smoke/offline/device-trust-e2e-matrix-0129.py" not in ci
 ):
-    fail("0.12.9 Device Trust matrix — проверка не подключена к предварительным проверкам и CI")
+    fail("0.12.9 матрица доверия к устройствам — проверка не подключена к предварительным проверкам и CI")
 if "run-device-trust-e2e.sh" not in ci or "RUN_DEVICE_TRUST_E2E" not in preflight:
     fail("0.12.9 Связка строгих производственных E2E-проверок настроена не полностью")
 if "Device Trust E2E + public trust matrix 0.12.9+ gate OK" not in device_trust_gate:
-    fail("0.12.9+ mandatory Device Trust release — обязательная проверка не завершена")
+    fail("0.12.9+ выпуск подсистемы доверия к устройствам — обязательная проверка не завершена")
 
 
 # В 0.12.10: миграция и стабилизация. Обновление строго со схемы 0.12.9 —
@@ -1823,7 +1823,7 @@ if (
         "0.12.10 Свидетельства миграции не сохраняются процессами CI и публичной политики доверия к устройствам"
     )
 if "Device Trust migration + stabilization 0.12.10 gate OK" not in stabilization_gate:
-    fail("0.12.10 mandatory migration stabilization release — обязательная проверка не завершена")
+    fail("0.12.10 стабилизационный выпуск миграции — обязательная проверка не завершена")
 
 
 # В 0.16.1: исправление назначений запросов Guard Attestation в PostgreSQL. Без
@@ -1835,7 +1835,7 @@ guard_purpose_migration_cli = read(
     "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
 )
 if guard_purpose_migration_api != guard_purpose_migration_cli:
-    fail("0.16.1 API/CLI Guard challenge-purpose migration 0031 различается")
+    fail("0.16.1 миграция 0031 назначения запроса Guard различается между API и CLI")
 for required in [
     "device_challenges_purpose_check",
     "guard-attest-v1",
@@ -1880,7 +1880,7 @@ guard_v2_migration_cli = read(
     "cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql"
 )
 if guard_v2_migration_api != guard_v2_migration_cli:
-    fail("0.18.10 API/CLI Guard Attestation v2 migration 0032 различается")
+    fail("0.18.10 миграция 0032 аттестации Guard v2 различается между API и CLI")
 for required in [
     "guard-attest-v2",
     "guard-continuous-join-v2",
@@ -1969,9 +1969,9 @@ if (
     "guard-integrity-evidence-0132.py" not in preflight
     or "guard-integrity-evidence-0132.py" not in ci
 ):
-    fail("0.13.2 integrity evidence — проверка не подключена к предварительным проверкам и CI")
+    fail("0.13.2 свидетельства целостности — проверка не подключена к предварительным проверкам и CI")
 if "Integrity Evidence v1 gate OK" not in integrity_gate_0132:
-    fail("0.13.2 mandatory integrity evidence — обязательная проверка не завершена")
+    fail("0.13.2 свидетельства целостности — обязательная проверка не завершена")
 
 # В 0.13.3: контроль политик процесса и выполнения Guard Windows. Защитные
 # меры Guard применяются до Tokio; Java запускается приостановленной внутри
@@ -2019,9 +2019,9 @@ if (
     "guard-process-policy-0133.py" not in preflight
     or "guard-process-policy-0133.py" not in ci
 ):
-    fail("0.13.3 process policy — проверка не подключена к предварительным проверкам и CI")
+    fail("0.13.3 политика процессов — проверка не подключена к предварительным проверкам и CI")
 if "runtime/process policy 0.13.3 gate OK" not in policy_gate_0133:
-    fail("0.13.3 mandatory process policy release — обязательная проверка не завершена")
+    fail("0.13.3 выпуск политики процессов — обязательная проверка не завершена")
 
 
 # В 0.13.9: кроссплатформенная CI-матрица Guard и сертификация выпуска.
@@ -2092,16 +2092,16 @@ for required in [
     if required not in ci and required != "Guard CI matrix":
         fail(f"0.13.9 CI matrix wiring — отсутствует: {required}")
 if "guard-certification:" not in ci:
-    fail("0.13.9 aggregate Guard certification CI job отсутствует")
+    fail("0.13.9 отсутствует сводное задание сертификации Guard в CI")
 if (
     "guard-ci-release-certification-0139.py" not in preflight
     or "guard-ci-release-certification-0139.py" not in ci
 ):
-    fail("0.13.9 Guard release certification — проверка не подключена к предварительным проверкам и CI")
+    fail("0.13.9 сертификация выпуска Guard — проверка не подключена к предварительным проверкам и CI")
 if "cross-platform Guard CI matrix + release certification gate" not in guard_gate_0139:
-    fail("0.13.9 mandatory Guard release — обязательная проверка не завершена")
+    fail("0.13.9 выпуск Guard — обязательная проверка не завершена")
 if not (ROOT / "cli/cmd/launcher/guard_ci_release_test.go").is_file():
-    fail("0.13.9 Guard release certification — отсутствуют регрессионные тесты")
+    fail("0.13.9 сертификация выпуска Guard — отсутствуют регрессионные тесты")
 
 
 # В 0.14.2: криптографические идентичности узлов. Привилегированный трафик
@@ -2192,7 +2192,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
                 f"0.14.2 В E2E миграции отсутствует проверка логического значения PostgreSQL: {required}"
             )
     if "Cryptographic Node Identities gate" not in crypto_gate_0142:
-        fail("0.14.2 mandatory cryptographic identity release — обязательная проверка не завершена")
+        fail("0.14.2 выпуск криптографической идентификации — обязательная проверка не завершена")
 
 # В 0.14.3: одноразовые билеты входа. Разрешение привязано к идентичности,
 # атомарно используется единожды и содержит сохраняемое доказательство погашения.
@@ -2261,7 +2261,7 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 3):
                 f"0.14.3 В E2E миграции отсутствует проверка логического значения PostgreSQL: {required}"
             )
     if "One-Time Join Tickets gate" not in ticket_gate_0143:
-        fail("0.14.3 mandatory one-time join ticket release — обязательная проверка не завершена")
+        fail("0.14.3 выпуск одноразового билета подключения — обязательная проверка не завершена")
 
 
 # В 0.15.1: производственная поставка начинается с инвентаря, сформированного по
@@ -3232,7 +3232,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in tests_0158:
             fail(f"0.15.8 verification — отсутствуют регрессионные тесты: {required}")
     if "Release Verification v2 + trust/key lifecycle gate: OK" not in gate_0158:
-        fail("0.15.8 mandatory verification — проверка не завершена")
+        fail("0.15.8 обязательная проверка не завершена")
     if (
         "release-verification-v2-trust-lifecycle-0158.py" not in preflight
         or "release-verification-v2-trust-lifecycle-0158.py" not in ci
@@ -3330,9 +3330,9 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
         "exact-commit-public-device-trust-matrix" not in dt_runtime
         or "0018_device_trust_stabilization_01210" not in dt_runtime
     ):
-        fail("0.13.0 runtime Device Trust release contract не завершена")
+        fail("0.13.0 контракт выпуска доверия к устройствам в Runtime не реализован полностью")
     if "deviceTrustRelease0130" not in dt_targets_0130:
-        fail("0.13.0 публичный Device Trust targets do not require release acceptance")
+        fail("0.13.0 для публичных целей доверия к устройствам не требуется приёмка выпуска")
     if "LAUNCHER_DEVICE_TRUST_MATRIX_FILE" not in build_release_0130:
         fail("0.13.0 build-release не может включить матрицу Device Trust")
     if (
@@ -3659,9 +3659,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     if "Minecraft Compatibility II GA 0.17.0 gate: OK" not in ga_gate_0170:
         fail("0.17.0 mandatory Minecraft Compatibility II GA — проверка не завершена")
     if "java16_17_0170v2" not in ga_gate_0170:
-        fail("0.17.0v2 complete Java 16/17 Vanilla gate отсутствует")
+        fail("0.17.0v2 отсутствует полная проверка Vanilla на Java 16/17")
     if "0.17.0v3 Java 21/25 grid" not in ga_gate_0170:
-        fail("0.17.0v3 complete Java 21/25 Vanilla gate отсутствует")
+        fail("0.17.0v3 отсутствует полная проверка Vanilla на Java 21/25")
     for required in [
         "java21_25Vanilla0170v3Releases",
         "expectedJavaMajorForVanilla0170v3",
@@ -4532,7 +4532,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if f"e2e/runtime/{evidence}" not in native_workflow_0178:
             fail(f"0.17.8 Процесс проверки совместимости не сохраняет {evidence}")
     if "Loader-native E2E 0.17.8 gate: OK" not in native_gate_0178:
-        fail("0.17.8 mandatory loader-native E2E — проверка не завершена")
+        fail("0.17.8 обязательная сквозная проверка нативного загрузчика не завершена")
     if (
         "loader-native-e2e-0178.py" not in preflight
         or "loader-native-e2e-0178.py" not in ci
@@ -5092,7 +5092,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in sensor_test_0182:
             fail(f"0.18.2 Guard Sensor Java integration regression — отсутствует: {required}")
     if "Guard Sensor 0.18.2 gate: OK" not in sensor_gate_0182:
-        fail("0.18.2 mandatory Guard Sensor — проверка не завершена")
+        fail("0.18.2 обязательная проверка датчика Guard не завершена")
     if "guard-sensor-0182.py" not in preflight or "guard-sensor-0182.py" not in ci:
         fail("0.18.2 Guard Sensor — проверка не подключена к предварительным проверкам и CI")
     for required in [
@@ -5177,7 +5177,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 f"0.18.3 Отсутствует регрессионная интеграционная проверка Module Guard в Windows: {required}"
             )
     if "Module Guard 0.18.3 gate: OK" not in module_gate_0183:
-        fail("0.18.3 mandatory Module Guard — проверка не завершена")
+        fail("0.18.3 обязательная проверка защиты модулей Guard не завершена")
     if (
         "guard-module-guard-0183.py" not in preflight
         or "guard-module-guard-0183.py" not in ci
@@ -5481,7 +5481,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in thread_probe_0186:
             fail(f"0.18.6 Thread Integrity adversarial fixture — не завершено: {required}")
     if "Thread & Process Integrity 0.18.6 gate: OK" not in thread_gate_0186:
-        fail("0.18.6 mandatory Thread & Process Integrity — проверка не завершена")
+        fail("0.18.6 обязательная проверка целостности потоков и процессов не завершена")
     if (
         "guard-thread-process-integrity-0186.py" not in preflight
         or "guard-thread-process-integrity-0186.py" not in ci
@@ -5594,7 +5594,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in debug_probe_0187:
             fail(f"0.18.7 debugger adversarial fixture — не завершено: {required}")
     if "Debug & Instrumentation Guard 0.18.7 gate: OK" not in debug_gate_0187:
-        fail("0.18.7 mandatory Debug & Instrumentation Guard — проверка не завершена")
+        fail("0.18.7 обязательная проверка защиты от отладки и инструментирования не завершена")
     if (
         "guard-debug-instrumentation-0187.py" not in preflight
         or "guard-debug-instrumentation-0187.py" not in ci
@@ -5772,7 +5772,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 f"0.18.9 Отсутствует регрессионная интеграционная проверка Continuous Guard в Windows: {required}"
             )
     if "Continuous Guard 0.18.9 gate: OK" not in continuous_gate_0189:
-        fail("0.18.9 mandatory Continuous Guard — проверка не завершена")
+        fail("0.18.9 обязательная проверка непрерывной защиты Guard не завершена")
     if (
         "guard-continuous-guard-0189.py" not in preflight
         or "guard-continuous-guard-0189.py" not in ci
@@ -5815,7 +5815,7 @@ for required in (
     if required not in adversarial_runner_01811:
         fail(f"0.18.11 Windows Adversarial CI runner — отсутствует инвариант: {required}")
 if not re.search(r'"cargo"\s*,\s*"test"\s*,\s*"--manifest-path"\s*,\s*"runtime/runtime/Cargo.toml"', adversarial_runner_01811):
-    fail("0.18.11 Windows Adversarial CI не выполняет real Cargo tests")
+    fail("0.18.11 CI проверки атак в Windows не выполняет настоящие тесты Cargo")
 for required in [
     "test_valid_result_is_accepted",
     "test_tampered_scenario_is_rejected",

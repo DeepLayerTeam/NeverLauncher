@@ -19,10 +19,10 @@
 
 ## Сохранение и восстановление
 
-`GET /api/v1/release-drafts?projectId=...` возвращает доступные владельцу черновики. `POST /api/v1/release-drafts` создаёт запись, `GET /api/v1/release-drafts/{id}` читает, `PUT` сохраняет с optimistic revision, `DELETE` удаляет **только черновик**. `GET /api/v1/release-drafts/{id}/operation` восстанавливает связь с операцией публикации даже если браузер закрылся до сохранения `jobId` в черновике: постоянный ключ `release-workspace-{draftId}` ведёт к одному durable job. После потери ответа операции пользователь может возобновить наблюдение и безопасно повторить запрос с тем же ключом, не создавая второй публикации. Отмена возможна только до фактического исполнения.
+`GET /api/v1/release-drafts?projectId=...` возвращает доступные владельцу черновики. `POST /api/v1/release-drafts` создаёт запись, `GET /api/v1/release-drafts/{id}` читает, `PUT` сохраняет с оптимистической проверкой ревизии, `DELETE` удаляет **только черновик**. `GET /api/v1/release-drafts/{id}/operation` восстанавливает связь с операцией публикации даже если браузер закрылся до сохранения `jobId` в черновике: постоянный ключ `release-workspace-{draftId}` ведёт к одному сохраняемому заданию. После потери ответа операции пользователь может возобновить наблюдение и безопасно повторить запрос с тем же ключом, не создавая второй публикации. Отмена возможна только до фактического исполнения.
 
 ## Применение миграции и проверки
 
-Перед развёртыванием выполнить стандартный migration apply для Backend; `0053_release_workspace_0218.sql` применяется с контрольной суммой, как и все предыдущие миграции. Рекомендуемые проверки: `cd services/api && go test ./internal/httpapi ./internal/repository -run 'TestRelease' -count=1`, `cd apps/admin && npm ci && npm run test && npm run build`, `python3 scripts/version/manage.py check`.
+Перед развёртыванием выполнить стандартное применение миграций для Backend; `0053_release_workspace_0218.sql` применяется с контрольной суммой, как и все предыдущие миграции. Рекомендуемые проверки: `cd services/api && go test ./internal/httpapi ./internal/repository -run 'TestRelease' -count=1`, `cd apps/admin && npm ci && npm run test && npm run build`, `python3 scripts/version/manage.py check`.
 
 Архив исходников 0.21.8 был подготовлен без доступного npm registry и Go module cache, поэтому полная промышленная сборка и E2E должны быть выполнены в CI перед выкладкой.

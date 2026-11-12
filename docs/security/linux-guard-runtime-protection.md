@@ -2,7 +2,7 @@
 
 ## Исполняемый маршрут
 
-После проверки подписи release manifest, подписанной Guard compatibility policy и выбора компонентов Runtime создаёт `LiveGameGuard0506` с точными SHA-256 активных JAR и native files. Перед стартом игры он поднимает отдельный Guard-процесс через существующий Unix socket + SO_PEERCRED + HMAC IPC, проверяет его состояние и **не принимает прозрачную перезагрузку Guard во время игры**.
+После проверки подписи манифеста выпуска, подписанной политики совместимости Guard и выбора компонентов Runtime создаёт `LiveGameGuard0506` с точными SHA-256 активных JAR и нативных файлов. Перед стартом игры он поднимает отдельный Guard-процесс через существующий сокет Unix + SO_PEERCRED + HMAC IPC, проверяет его состояние и **не принимает прозрачную перезагрузку Guard во время игры**.
 
 Игровой процесс создаётся с `PR_SET_PDEATHSIG(SIGKILL)`, `PR_SET_NO_NEW_PRIVS`, `RLIMIT_CORE=0`, собственной группу процессов. После `spawn` `LinuxRuntimeGuard0508` привязывается к PID и starttime из `/proc/<pid>/stat`, inode и SHA-256 реального исполняемого Java; читает `/proc/<pid>/status` (PPid, TracerPid, NoNewPrivs), фактические argv, executable mappings (`maps`) и открытые JAR/native objects (`fd`). Файлы в игровом каталоге сверяются со списком SHA-256, полученным **из уже проверенного** manifest/policy. Несовпадение, неизвестная ELF-библиотека, подозрительная замена открытого inode, tracer, потеря Guard IPC или нарушение процесса приводит к `trust-blocked` и остановке группы игрового процесса.
 
@@ -22,7 +22,7 @@ python3 scripts/tests/guard_runtime_integrity_0505.py
 python3 scripts/tests/continuous_game_protection_0506.py
 ```
 
-Отдельные native CI runs — `linux-x64` и `linux-arm64`. `XDG_RUNTIME_DIR` должен быть каталогом текущего UID с разрешениями `0700`, release `guard` должен находиться рядом с запускающим Runtime/Desktop и быть частью проверенного подписанного Linux package manifest. Установка без полного релизного пакета не считается подтверждённой.
+Отдельные запуски CI на нативных узлах — `linux-x64` и `linux-arm64`. `XDG_RUNTIME_DIR` должен быть каталогом текущего UID с разрешениями `0700`, выпускаемый `guard` должен находиться рядом с запускающим Runtime/Desktop и быть частью проверенного подписанного манифеста пакета Linux. Установка без полного релизного пакета не считается подтверждённой.
 
 ## Границы и выпуск
 
