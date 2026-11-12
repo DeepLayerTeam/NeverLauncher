@@ -232,7 +232,7 @@ fn validate_hardware_record(record: &SecureDeviceKeyRecord) -> Result<(SignerHan
     }
     let (signer, provider) = hardware_signer(&record.hardware_label)?;
     if !record.hardware_provider.is_empty() && provider != record.hardware_provider {
-        return Err(format!("Аппаратный провайдер изменился: сохранённый={} текущий={provider}", record.hardware_provider));
+        return Err(format!("Поставщик аппаратных ключей изменился: сохранённый={} текущий={provider}", record.hardware_provider));
     }
     let public = signer.public_key(&record.hardware_label)
         .map_err(|e| format!("Не удалось получить открытый ключ аппаратного устройства: {e}"))?;

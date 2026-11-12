@@ -119,7 +119,7 @@ func migrationRequest0493(client *http.Client, method, address, token, source st
 		return 0, nil, err
 	}
 	if len(raw) > 16<<20 {
-		return 0, nil, errors.New("Размер ответа Backend превысил 16 МиБ")
+		return 0, nil, errors.New("Размер ответа серверной части превысил 16 МиБ")
 	}
 	return res.StatusCode, raw, nil
 }
@@ -138,7 +138,7 @@ func migrationJSON0493(client *http.Client, method, endpoint, token, source stri
 		Data json.RawMessage `json:"data"`
 	}{}
 	if err = json.Unmarshal(body, &wrapper); err != nil || len(wrapper.Data) == 0 {
-		return false, errors.New("Отсутствует: данные миграции Backend")
+		return false, errors.New("Отсутствуют данные миграции серверной части")
 	}
 	if err = json.Unmarshal(wrapper.Data, target); err != nil {
 		return false, err

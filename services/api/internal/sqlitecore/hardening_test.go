@@ -14,7 +14,7 @@ func TestSQLiteCore0471RejectsUnversionedForeignDatabase(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "legacy.db")
 	store, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path})
 	if err != nil {
-		if strings.Contains(err.Error(), "unsupported SQLite filesystem") {
+		if strings.Contains(err.Error(), "Неподдерживаемая файловая система SQLite") {
 			t.Skip(err)
 		}
 		t.Fatal(err)

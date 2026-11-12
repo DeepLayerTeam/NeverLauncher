@@ -724,7 +724,7 @@ def main() -> int:
         "--desktop", type=Path, help="Скомпилированный исполняемый файл Tauri Desktop"
     )
     parser.add_argument(
-        "--api-url", help="URL API только для чтения; настоящий Backend должен работать"
+        "--api-url", help="URL API только для чтения; серверная часть должна работать"
     )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repetitions", type=int, default=3)
@@ -736,7 +736,7 @@ def main() -> int:
         help="Явно разрешить реальные сетевые/дисковые записи объёмом 1 и 10 ГиБ",
     )
     parser.add_argument(
-        "--api-pid", type=int, help="PID локального процесса Backend для измерения CPU/RAM"
+        "--api-pid", type=int, help="PID локального серверного процесса для измерения нагрузки процессора и памяти"
     )
     parser.add_argument("--api-requests", type=int, default=100)
     parser.add_argument("--api-workers", type=int, default=8)

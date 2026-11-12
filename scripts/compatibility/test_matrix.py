@@ -1218,7 +1218,7 @@ class MatrixToolTests(unittest.TestCase):
 
             proc = self.aggregate(path, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("evidence files are incomplete", proc.stderr)
+            self.assertIn("Неполный набор файлов доказательств", proc.stderr)
 
     def test_0178_aggregate_rejects_missing_loader_native_join(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1277,7 +1277,7 @@ class MatrixToolTests(unittest.TestCase):
 
             proc = self.aggregate(path, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("evidence files are incomplete", proc.stderr)
+            self.assertIn("Неполный набор файлов доказательств", proc.stderr)
 
     def test_01710_aggregate_rejects_missing_loader_cache_recovery(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1320,7 +1320,7 @@ class MatrixToolTests(unittest.TestCase):
 
             proc = self.aggregate(path, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("evidence files are incomplete", proc.stderr)
+            self.assertIn("Неполный набор файлов доказательств", proc.stderr)
 
 
 class EvidenceUploadRetryContractTests(unittest.TestCase):

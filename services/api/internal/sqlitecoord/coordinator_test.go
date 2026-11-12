@@ -47,7 +47,7 @@ func openTestCoordinator(t *testing.T, path string) *Coordinator {
 	return c
 }
 func isUnsupportedFS(e error) bool {
-	return e != nil && strings.Contains(e.Error(), "unsupported SQLite filesystem")
+	return e != nil && strings.Contains(e.Error(), "Неподдерживаемая файловая система SQLite")
 }
 
 func TestRateLimitAtomicAndRestart(t *testing.T) {

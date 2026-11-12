@@ -193,7 +193,7 @@ def run_runtime_observed(cmd, result_file, env, deadline, observer):
 
 
 def native_json(cmd, destination, env):
-    """Запускать закреплённый Runtime с ограниченным структурированным stdout; без оболочки."""
+    """Запускать закреплённый Runtime без командной оболочки, ограничивая объём структурированного вывода."""
     completed = subprocess.run(
         cmd,
         stdout=subprocess.PIPE,
@@ -436,7 +436,7 @@ def execute(args):
             or adopted["importedFiles"] < 1
         ):
             raise RuntimeError(
-                "Принятие Runtime подготовленного пакета не подтверждено как автономная транзакция релиза"
+                "Не подтверждено автономное транзакционное применение подготовленного пакета средой Runtime"
             )
         report["stages"][stage_name] = {
             "status": "passed",
@@ -1134,7 +1134,7 @@ def main():
     parser.add_argument(
         "--preset",
         default="",
-        help="Обязательный именованный пресет Backend или подписанный выбор @custom",
+        help="Обязательный именованный набор настроек серверной части или подписанный выбор @custom",
     )
     parser.add_argument(
         "--auth-mode",

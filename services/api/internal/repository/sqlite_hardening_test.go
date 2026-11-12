@@ -61,7 +61,7 @@ func TestSQLiteHTTP0471RejectsUnrelatedDatabaseAndMissingSnapshot(t *testing.T) 
 	path := filepath.Join(t.TempDir(), "existing.db")
 	store, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path})
 	if err != nil {
-		if strings.Contains(err.Error(), "unsupported SQLite filesystem") {
+		if strings.Contains(err.Error(), "Неподдерживаемая файловая система SQLite") {
 			t.Skip(err)
 		}
 		t.Fatal(err)
@@ -87,7 +87,7 @@ func TestSQLiteHTTP0471HealthVerifiesDocumentAndCache(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "state.db")
 	repo, err := OpenSQLiteHTTPRepository0372(ctx, path, "")
 	if err != nil {
-		if strings.Contains(err.Error(), "unsupported SQLite filesystem") {
+		if strings.Contains(err.Error(), "Неподдерживаемая файловая система SQLite") {
 			t.Skip(err)
 		}
 		t.Fatal(err)

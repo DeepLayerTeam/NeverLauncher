@@ -893,7 +893,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 		}
 		var envelope ExtensionPackageSignature0202
 		if err := decodeStrictJSON0202(signatureBytes, &envelope); err != nil {
-			return nil, fmt.Errorf("Декодирование: signature.ed25519: %w", err)
+			return nil, fmt.Errorf("Не удалось декодировать signature.ed25519: %w", err)
 		}
 		if envelope.SchemaVersion != "1.0" || envelope.Algorithm != "Ed25519" || envelope.SigningDomain != extensionSigningDomain0202() || envelope.PackageIdentity != descriptor.PackageIdentity {
 			return nil, errors.New("метаданные signature.ed25519 не соответствуют идентификатору и формату пакета")

@@ -73,7 +73,7 @@ class TestGAReleaseApproval(unittest.TestCase):
 
     def test_tampered_module_evidence_blocked(self):
         write(self.root / 'M17.evidence', b'changed')
-        with self.assertRaisesRegex(gate.Blocked, 'signed evidence file missing or changed'):
+        with self.assertRaisesRegex(gate.Blocked, 'Подписанный файл доказательства отсутствует или изменён'):
             gate.verify_approval(self.root, self.approval, self.sig, self.pubfile, self.report)
 
     def test_missing_module_not_accepted(self):

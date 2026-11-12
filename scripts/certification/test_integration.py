@@ -59,7 +59,7 @@ class IntegrationCertificationTests(unittest.TestCase):
                 path.write_text(json.dumps(obj))
                 files.append(path)
             self.assertTrue(review(files,SHA)['crossPlatformIntegrationGatesPassed'])
-            with self.assertRaisesRegex(ValueError,'missing required operating systems'):
+            with self.assertRaisesRegex(ValueError,'Отсутствуют обязательные операционные системы'):
                 review(files[:-1],SHA)
             with self.assertRaisesRegex(ValueError,'wrong schema'):
                 review(files,'b'*40)

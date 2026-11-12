@@ -105,7 +105,7 @@ func run(args []string, output io.Writer, input io.Reader) error {
 func runOnline(args []string, output io.Writer, input io.Reader) error {
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
-	endpoint := flags.String("api", os.Getenv("LAUNCHER_API_URL"), "HTTPS-адрес Backend")
+	endpoint := flags.String("api", os.Getenv("LAUNCHER_API_URL"), "HTTPS-адрес серверной части")
 	tokenEnv := flags.String("token-env", "LAUNCHER_ADMIN_ACCESS_TOKEN", "Переменная окружения с Bearer-токеном администратора")
 	email := flags.String("email", "", "Адрес электронной почты новой учётной записи")
 	displayName := flags.String("name", "", "Отображаемое имя")

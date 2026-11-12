@@ -134,12 +134,12 @@ def within(root: Path, child: object) -> Path:
 def preflight(config: dict, output: Path) -> list[dict]:
     require(config.get("format") == FORMAT, "Некорректный формат набора эталонных проверок")
     backend = config.get("backend")
-    require(isinstance(backend, str), "Требуется базовый HTTPS-адрес Backend")
+    require(isinstance(backend, str), "Требуется базовый HTTPS-адрес серверной части")
     origin = urlsplit(backend)
     require(origin.scheme == "https" and bool(origin.hostname) and origin.username is None
             and origin.password is None and origin.path in ("", "/")
             and not origin.query and not origin.fragment and backend.rstrip("/") == backend,
-            "Для пробного запуска нужен HTTPS-адрес Backend без пути и параметров")
+            "Для пробного запуска нужен HTTPS-адрес серверной части без пути и параметров")
     checked_file(config.get("launcher"), config.get("launcherSha256"), 256 << 20)
     require(os.access(config["launcher"], os.X_OK), "CLI лаунчера не является исполняемым файлом")
     require(isinstance(config.get("projects"), list) and len(config["projects"]) == 3,

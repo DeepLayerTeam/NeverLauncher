@@ -109,7 +109,7 @@ class PlayerCycle0398Test(unittest.TestCase):
 
     def test_no_game_cycle_cannot_be_certified(self):
         with patch('verify_player_cycle_0398.verify_game_cycle',side_effect=ValueError('Не найдена виртуальная машина Java (JVM)')):
-            with self.assertRaisesRegex(ValueError,'missing JVM'):self.pass_test()
+            with self.assertRaisesRegex(ValueError,'Не найдена виртуальная машина Java'):self.pass_test()
 
     def test_wrong_realm_and_client_are_not_accepted(self):
         self.edit('result.json',lambda d:d['minecraft'].update({'client':'protocol-probe'}))

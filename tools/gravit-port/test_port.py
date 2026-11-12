@@ -48,7 +48,7 @@ public final class Module extends LauncherModule {
         self.assertEqual((location / "launcher-extension.json").read_bytes(), self.manifest.read_bytes())
         again = subprocess.run(self.cmd(), cwd=ROOT, capture_output=True, text=True)
         self.assertNotEqual(again.returncode, 0)
-        self.assertIn("destination already exists", again.stderr)
+        self.assertIn("Целевой объект уже существует", again.stderr)
 
     def test_unsupported_gravit_api_fails_compilation(self):
         self.source.joinpath("Module.java").write_text('''package example;

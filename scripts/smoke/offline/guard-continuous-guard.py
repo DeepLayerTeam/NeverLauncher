@@ -47,8 +47,8 @@ require(
         "advance_event_chain",
         "cross_check_event",
         "wait_for_guard_ack",
-        "Guard-ACK HMAC mismatch",
-        "Guard-ACK event-chain mismatch",
+        "Несовпадение: HMAC подтверждения непрерывного контроля Guard",
+        "Несовпадение: цепочка событий подтверждения непрерывного контроля Guard",
     ],
 )
 require(
@@ -70,11 +70,11 @@ require(
     "runtime/runtime/src/windows_module_guard.rs",
     [
         "continuous_guard: crate::WindowsContinuousGuardReport",
-        "expected CONTINUOUS_READY as sixth event",
+        "шестым событием ожидалось CONTINUOUS_READY",
         "advance_continuous_event_chain",
         "write_continuous_guard_ack",
-        "event-chain cross-check mismatch",
-        "guard-sequence mismatch",
+        "Не совпадают результаты перекрёстной проверки цепочки событий непрерывного контроля Guard",
+        "нарушение последовательности Guard",
         "sensor_event_chain_sha256",
         "last_cross_check_sha256",
     ],
@@ -103,7 +103,7 @@ require(
         "sensor_heartbeat_count",
         "guard_heartbeat_count",
         "cross_check_count",
-        "every Sensor heartbeat must receive exactly one Guard ACK",
+        "На каждый сигнал работоспособности датчика должно приходиться ровно одно подтверждение Guard",
     ],
 )
 require(

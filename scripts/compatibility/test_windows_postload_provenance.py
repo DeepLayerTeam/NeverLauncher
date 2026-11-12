@@ -151,8 +151,8 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         )
         self.assertIn("GUARD_ACK_TIMEOUT: Duration = Duration::from_secs(35)", source)
         self.assertIn("mac.verify_slice", source)
-        self.assertIn("Guard-ACK sequence mismatch", source)
-        self.assertIn("Guard-ACK event-chain mismatch", source)
+        self.assertIn("нарушение последовательности Guard-ACK", source)
+        self.assertIn("Несовпадение: цепочка событий подтверждения непрерывного контроля Guard", source)
         self.assertIn("Guard-ACK heartbeat timeout", source)
 
     def test_lwjgl_native_is_pinned_to_materialized_platform_directory(self):
@@ -211,7 +211,7 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         self.assertLess(ack, stream)
         self.assertGreater(ack, 12)
         self.assertIn("mac.verify_slice", sensor)
-        self.assertIn("Guard-ACK event-chain mismatch", sensor)
+        self.assertIn("Несовпадение: цепочка событий подтверждения непрерывного контроля Guard", sensor)
 
     def test_abort_diagnostics_include_rejected_reason(self):
         source = (ROOT / "runtime/guard-sensor/src/lib.rs").read_text(encoding="utf-8")

@@ -271,7 +271,7 @@ func (s Server) packageRuntimeEvidence0212(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if len(e.EvidenceHashes) == 0 {
-		writeError(w, http.StatusBadRequest, "Поле runtime evidenceHashes не может быть пустым")
+		writeError(w, http.StatusBadRequest, "Поле evidenceHashes свидетельств среды выполнения не может быть пустым")
 		return
 	}
 	for name, digest := range e.EvidenceHashes {

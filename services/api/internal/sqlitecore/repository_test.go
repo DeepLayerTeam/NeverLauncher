@@ -36,7 +36,7 @@ func openTest(t *testing.T) (*Repository, string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	r, e := Open(ctx, sqlitedurable.Options{Path: path})
-	if e != nil && strings.Contains(e.Error(), "unsupported SQLite filesystem") && os.Getenv("LAUNCHER_SQLITE_TEST_ROOT") == "" {
+	if e != nil && strings.Contains(e.Error(), "Неподдерживаемая файловая система SQLite") && os.Getenv("LAUNCHER_SQLITE_TEST_ROOT") == "" {
 		t.Skipf("Требуется каталог на файловой системе ext4/xfs/btrfs: %v", e)
 	}
 	if e != nil {

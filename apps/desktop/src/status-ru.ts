@@ -706,7 +706,7 @@ export function statusRuDesktop(value: string | null | undefined): string {
     "authenticate": "Аутентификация",
     "authlib-patch-source": "Источник исправления Authlib",
     "authlib-transform-provenance": "Происхождение изменений Authlib",
-    "backend-eligible-not-published": "Backend допущен, но не опубликован",
+    "backend-eligible-not-published": "Серверная часть допущена к выпуску, но не опубликована",
     "backup-verified": "Резервная копия проверена",
     "banned": "Заблокирован",
     "bridge-plugins-ready": "Плагины ServerBridge готовы",

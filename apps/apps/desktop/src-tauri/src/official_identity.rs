@@ -784,7 +784,7 @@ impl IdentityManager {
                 access_token:record.native.as_ref().unwrap().minecraft_token.clone(),user_type:"msa".into(),auth_server_base_url:String::new()});
         }
         let (response, record) = self.associated(&base, &id, access, "/launch-credentials", Method::POST, None, None).await?;
-        if response.data.get("realm").and_then(Value::as_str) != Some("official-minecraft") { return Err("Backend вернул неофициальную игровую сессию".into()); }
+        if response.data.get("realm").and_then(Value::as_str) != Some("official-minecraft") { return Err("Серверная часть вернула неофициальный игровой сеанс".into()); }
         let cred: MinecraftLaunchCredentials = serde_json::from_value(response.data.clone()).map_err(|_| "Некорректный ответ с учётными данными для запуска Minecraft".to_string())?;
         if cred.user_type != "msa" || !cred.auth_server_base_url.is_empty() || !uuid_valid(&cred.uuid)
             || !cred.uuid.eq_ignore_ascii_case(&record.profile.id) || cred.username != record.profile.name

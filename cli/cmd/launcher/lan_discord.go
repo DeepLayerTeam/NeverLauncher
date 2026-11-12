@@ -27,7 +27,7 @@ func handleLAN0308(args []string) error {
 	cmd := args[0]
 	f := flag.NewFlagSet("lan "+cmd, flag.ContinueOnError)
 	name := f.String("instance", "Launcher", "Экземпляр DNS-SD (ASCII)")
-	endpoint := f.String("url", "", "HTTPS-адрес Backend")
+	endpoint := f.String("url", "", "HTTPS-адрес серверной части")
 	fingerprint := f.String("fingerprint", "", "Отпечаток сертификата TLS по SHA-256 (hex)")
 	pin := f.String("pin", "", "Отдельно настроенный закреплённый отпечаток сертификата")
 	duration := f.Duration("timeout", 3*time.Second, "Тайм-аут обнаружения (1–30 с)")

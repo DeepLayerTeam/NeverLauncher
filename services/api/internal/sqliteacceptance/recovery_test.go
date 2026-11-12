@@ -38,7 +38,7 @@ func TestThreeDatabasesRecoverCommittedStateAfterAbruptExit0471(t *testing.T) {
 	}
 	probe, err := sqlitedurable.Open(context.Background(), sqlitedurable.Options{Path: filepath.Join(root, "fs-probe.db")})
 	if err != nil {
-		if strings.Contains(err.Error(), "unsupported SQLite filesystem") && os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1" {
+		if strings.Contains(err.Error(), "Неподдерживаемая файловая система SQLite") && os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1" {
 			t.Skip(err)
 		}
 		t.Fatal(err)

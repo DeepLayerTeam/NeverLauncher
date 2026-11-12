@@ -53,7 +53,7 @@ class APIClient:
         следующем процессе — повторное воспроизведение, а не новая повторная аутентификация.
         """
         if path.is_symlink():
-            raise RuntimeError("Файл счётчика Passkey является символической ссылкой и отклонён")
+            raise RuntimeError("Файл счётчика ключа доступа является символической ссылкой и отклонён")
         if path.exists():
             payload = json.loads(path.read_text(encoding="utf-8"))
             count = payload.get("signCount") if isinstance(payload, dict) else None
@@ -231,12 +231,12 @@ class APIClient:
         data = begin["data"]
         public_key = data.get("publicKey")
         if not isinstance(public_key, dict):
-            raise RuntimeError("В ответе дополнительной проверки Passkey отсутствует publicKey")
+            raise RuntimeError("В ответе дополнительной проверки ключа доступа отсутствует поле publicKey")
         transaction = str(data.get("transactionToken", ""))
         challenge = str(public_key.get("challenge", ""))
         if not transaction or not challenge:
             raise RuntimeError(
-                "В ответе дополнительной проверки Passkey отсутствуют транзакция или challenge"
+                "В ответе дополнительной проверки ключа доступа отсутствует транзакция или проверочное значение"
             )
         proc = subprocess.run(
             [

@@ -336,7 +336,7 @@ func worldBackupQuiesce02810(root, policy string) error {
 		lock, lockErr := readServerBridgeHostLock01910(paths["lock"])
 		if lockErr == nil {
 			if lock.Identity == "" || hostIdentityMatches0282(lock.PID, lock.Identity) || updaterProcessAlive0156(lock.PID) {
-				return errors.New("Блокировка супервизора Host существует без Runtime: резервное копирование небезопасно")
+				return errors.New("Блокировка диспетчера хоста существует без Runtime: резервное копирование небезопасно")
 			}
 		} else if !errors.Is(lockErr, os.ErrNotExist) {
 			return fmt.Errorf("Не удалось проверить блокировку диспетчера хоста: %w", lockErr)

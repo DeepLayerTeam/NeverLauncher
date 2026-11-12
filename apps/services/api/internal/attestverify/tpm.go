@@ -251,7 +251,7 @@ func parseAttest(raw []byte, expected [32]byte, name []byte) error {
 		return e
 	}
 	if !bytes.Equal(extra, expected[:]) {
-		return errors.New("Несоответствие: TPM аттестация nonce/session/binding")
+		return errors.New("Несовпадение одноразового значения, сеанса или привязки при аттестации TPM")
 	}
 	if e = verifyTPMClockInfo(&t); e != nil {
 		return e

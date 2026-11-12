@@ -873,7 +873,7 @@ mod imp {
                 MODULE_EVENT_REASON_MEMORY_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "Guard Memory Integrity: обнаружено вмешательство в Runtime".to_string()
+                        "Guard: обнаружено нарушение целостности памяти Runtime".to_string()
                     } else {
                         format!("Проверка целостности памяти Guard обнаружила изменение Runtime: {detail}")
                     })
@@ -924,7 +924,7 @@ mod imp {
                 MODULE_EVENT_REASON_THREAD_PROCESS_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "Guard Thread & Process Integrity: обнаружен подозрительный переход состояния Runtime".to_string()
+                        "Guard: при проверке целостности потоков и процессов обнаружен подозрительный переход состояния Runtime".to_string()
                     } else {
                         format!(
                             "Guard: обнаружен подозрительный переход Runtime: {detail}"

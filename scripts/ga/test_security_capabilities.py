@@ -144,7 +144,7 @@ class SecurityGATests(unittest.TestCase):
         # Прежняя подписанная квитанция для шести платформ не является доказательством живой игры.
         self.approval["version"] = "0.43.8"
         self.sign()
-        with self.assertRaisesRegex(ValueError, "missing mandatory security capability evidence"):
+        with self.assertRaisesRegex(ValueError, "Отсутствует обязательное свидетельство возможностей защиты"):
             verify_all(self.evidence, self.approval, now=NOW)
 
     def test_signed_preflight_refuses_incomplete_security(self):
@@ -173,7 +173,7 @@ class SecurityGATests(unittest.TestCase):
         trace = self.trace()
         trace["runtimeLogSha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
         self.update_trace("linux-x64", "securityDeviceTrust", trace)
-        with self.assertRaisesRegex(ValueError, "missing or extra native observations"):
+        with self.assertRaisesRegex(ValueError, "Отсутствуют обязательные или присутствуют лишние нативные наблюдения"):
             self.check()
 
     def test_foreign_run_or_attempt_denied(self):

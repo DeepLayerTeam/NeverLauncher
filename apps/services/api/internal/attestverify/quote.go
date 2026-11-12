@@ -179,7 +179,7 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 	}
 	expected := ExpectedQuoteData0315(b, p.ID, policyHash)
 	if !bytes.Equal(qualifier, expected[:]) {
-		return fail("Несовпадение nonce, сеанса, эпохи или политики TPM Quote")
+		return fail("Несовпадение одноразового значения, сеанса, эпохи или политики TPM Quote")
 	}
 	if err = verifyTPMClockInfo(&q); err != nil {
 		return fail("Небезопасные или неполные данные часов либо прошивки TPM Quote")

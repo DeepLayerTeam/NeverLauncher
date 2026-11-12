@@ -1122,7 +1122,7 @@ if (
     fail("Восстановление начальной конфигурации Paper не должно сбрасывать состояние PostgreSQL, Redis и безопасности")
 for required in [
     "hashlib.sha256",
-    "backend checksum mismatch after upload",
+    "Контрольная сумма Backend после загрузки не совпадает",
     "local package file changed before upload",
     "manifestSettings",
     "response.status == 429",
@@ -1256,8 +1256,8 @@ for forbidden in [
         )
 for required in [
     "verify_result",
-    "missing required result",
-    "loader result did not resolve to a concrete immutable version",
+    "Отсутствует обязательный результат",
+    "Не удалось определить конкретную неизменяемую версию загрузчика",
     "actualClient",
     "signedManifest",
     "cleanSync",
@@ -1311,7 +1311,7 @@ if "LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}" not in e2e_compose
         "Профиль сервера E2E должен соответствовать целевой платформе совместимости, а не быть жёстко привязан к Vanilla"
     )
 if (
-    "symlink package path is forbidden" not in e2e_publish
+    "Путь пакета не может быть символической ссылкой" not in e2e_publish
     or "resolve(strict=True)" not in e2e_publish
 ):
     fail("Публикатор E2E должен отклонять неоднозначные символические ссылки и пути до загрузки")
@@ -1408,7 +1408,7 @@ if (
 for required in [
     "paperHealthy",
     "exitCode",
-    "evidence files are incomplete",
+    "Неполный набор файлов доказательств",
     "evidence manifestLoader mismatch",
 ]:
     if required not in compat_tool:
@@ -1421,7 +1421,7 @@ for required in [
 compat_hardening = read("cli/cmd/launcher/compatibility_hardening.go")
 for required in [
     "resolveVanillaMetadataWithRecovery",
-    "latest/snapshot metadata recovery запрещён",
+    "восстановление из метаданных latest/snapshot запрещено",
     "quarantineCompatibilityArtifact",
     "fetchVerifiedBytesWithLocalCache",
 ]:
@@ -1544,7 +1544,7 @@ for required in [
     "exact-commit",
     "ArtifactRedirectHandler",
     "ARTIFACT_REDIRECT_SUFFIXES",
-    "artifact redirect host is not trusted",
+    "Хост перенаправления артефакта не является доверенным",
     "Never forward the GitHub bearer token",
 ]:
     if required not in release_cert_fetch:
@@ -1917,7 +1917,7 @@ attestation_v2_bridge = read("services/api/internal/httpapi/server_bridge.go")
 for required in [
     "continuousGuardRequiredForJoin01810",
     "validateContinuousGuardTicketForMinecraftSession01810",
-    "Continuous Guard Attestation v2 policy unavailable",
+    "Политика непрерывной аттестации Guard v2 недоступна",
 ]:
     if required not in attestation_v2_bridge:
         fail(f"В проверке «0.18.10 ServerBridge непрерывная привязка подтверждений» отсутствует обязательный компонент: {required}")
@@ -2060,7 +2060,7 @@ for required in [
     "os.replace",
     "sha256_file",
     "exact Guard CI-certified artifacts",
-    "missing certified platform artifacts",
+    "Отсутствуют сертифицированные артефакты платформ",
 ]:
     if required not in guard_stage_0139:
         fail(f"Неполная реализация «0.13.9 подготовка точных артефактов»: {required}")
@@ -5729,7 +5729,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "PeekNamedPipe",
         "advance_event_chain",
         "wait_for_guard_ack",
-        "Guard-ACK HMAC mismatch",
+        "Несовпадение: HMAC подтверждения непрерывного контроля Guard",
     ]:
         if required not in continuous_sensor_0189:
             fail(f"Неполная реализация «0.18.9 Continuous Guard Sensor серверная часть»: {required}")

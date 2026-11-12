@@ -283,8 +283,8 @@ async fn command_java(args: &[String]) -> Result<serde_json::Value, String> {
 
 fn read_manifest_required(args: &[String]) -> Result<Manifest, String> {
     let path = PathBuf::from(required_flag(args, "--manifest")?);
-    let bytes = std::fs::read(&path).map_err(|err| format!("не удалось прочитать manifest {}: {err}", path.display()))?;
-    serde_json::from_slice::<Manifest>(&bytes).map_err(|err| format!("manifest {} повреждён: {err}", path.display()))
+    let bytes = std::fs::read(&path).map_err(|err| format!("Не удалось прочитать манифест {}: {err}", path.display()))?;
+    serde_json::from_slice::<Manifest>(&bytes).map_err(|err| format!("Манифест {} повреждён: {err}", path.display()))
 }
 
 fn required_flag(args: &[String], name: &str) -> Result<String, String> {

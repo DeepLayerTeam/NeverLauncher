@@ -51,4 +51,4 @@ cd apps/desktop && npm ci && npm run test:textures
 cd ../../services/api && go test ./internal/httpapi -run 'TestYggdrasilDelivery0394|TestSignedTextureProtocol0256' -count=1
 ```
 
-Для живой приёмки нужны работающий HTTPS Backend с опубликованным PostgreSQL-хранилищем текстур, RSA-ключом Yggdrasil, проверенным `authlib-injector` JAR и реальный Minecraft-клиент/сервер. Тесты HTTP+WebCrypto подтверждают транспорт/подпись/хеш, но **не заменяют визуальную проверку игрового процесса**. Если Go toolchain, реальные игровые аккаунты или сервер отсутствуют, runtime/GA не может считаться завершённым.
+Для приёмки на работающей системе нужны работающая серверная часть с HTTPS с опубликованным PostgreSQL-хранилищем текстур, RSA-ключом Yggdrasil, проверенным `authlib-injector` JAR и реальный Minecraft-клиент/сервер. Тесты HTTP+WebCrypto подтверждают транспорт и подпись/хеш, но **не заменяют визуальную проверку игрового процесса**. Если набор инструментов Go, реальные игровые аккаунты или сервер отсутствуют, runtime/GA не может считаться завершённым.

@@ -760,7 +760,7 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	var currentSubject string
 	err := r.db.QueryRow(`SELECT subject FROM auth_identities WHERE user_id=$1 AND provider=$2 AND issuer=$3`, identity.UserID, identity.Provider, identity.Issuer).Scan(&currentSubject)
 	if err == nil && currentSubject != identity.Subject {
-		return model.AuthIdentity{}, fmt.Errorf("%w: provider %s уже связан с другим subject для пользователя", ErrConflict, identity.Provider)
+		return model.AuthIdentity{}, fmt.Errorf("%w: поставщик %s уже связан с другим идентификатором субъекта этого пользователя", ErrConflict, identity.Provider)
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return model.AuthIdentity{}, err

@@ -50,7 +50,7 @@ var auditIdentifier0491 = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}
 
 func integrationAuditCommand0491(args []string) error {
 	fs := flag.NewFlagSet("integration-audit", flag.ContinueOnError)
-	backend := fs.String("backend", "", "HTTPS-адрес Backend (или HTTP для числового loopback-адреса)")
+	backend := fs.String("backend", "", "HTTPS-адрес серверной части (или HTTP для числового loopback-адреса)")
 	project := fs.String("project", "", "Идентификатор существующего проекта")
 	run := fs.String("run", "", "Идентификатор существующего запуска миграции Gravit")
 	extension := fs.String("extension", "", "Идентификатор установленного и запущенного расширения Java Host")

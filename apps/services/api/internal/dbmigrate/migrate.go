@@ -186,7 +186,7 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 	}
 	defer lockConn.Close()
 	if _, err := lockConn.ExecContext(ctx, `SELECT pg_advisory_lock(718033100100)`); err != nil {
-		return Status{}, fmt.Errorf("Не удалось получить рекомендательную блокировку миграции: %w", err)
+		return Status{}, fmt.Errorf("Не удалось получить согласованную блокировку миграции: %w", err)
 	}
 	defer func() {
 		unlockCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -626,7 +626,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "Guard: не удалось получить список участников Job Object Runtime: {}",
+                "Guard: не удалось получить список процессов объекта задания Runtime: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -686,12 +686,12 @@ mod windows_impl {
             has_entry = unsafe { Process32NextW(snapshot.0, &mut entry) } != 0;
         }
         if !parent_by_pid.contains_key(&root_pid) {
-            return Err(format!("Корневой PID Runtime Guard {root_pid} отсутствует в снимке процессов"));
+            return Err(format!("Корневой процесс Runtime с PID {root_pid} отсутствует в снимке процессов Guard"));
         }
         let job_members = job_process_ids(job)?;
         if !job_members.contains(&root_pid) {
             return Err(format!(
-                "Guard: нарушена целостность дерева процессов — корневой PID Runtime {root_pid} отсутствует в Job Object"
+                "Guard: нарушена целостность дерева процессов — корневой процесс Runtime с PID {root_pid} отсутствует в объекте задания"
             ));
         }
 
@@ -716,7 +716,7 @@ mod windows_impl {
             if process.is_null() {
                 if pid == root_pid {
                     return Err(format!(
-                        "Guard: не удалось открыть корневой процесс Runtime с PID {pid} для проверки Job Object: {}",
+                        "Guard: не удалось открыть корневой процесс Runtime с PID {pid} для проверки объекта задания: {}",
                         std::io::Error::last_os_error()
                     ));
                 }
@@ -741,7 +741,7 @@ mod windows_impl {
             if exit_code != STILL_ACTIVE_EXIT_CODE {
                 unsafe { let _ = CloseHandle(process); }
                 if pid == root_pid {
-                    return Err(format!("Корневой PID Runtime Guard {pid} завершился во время проверки Job Object"));
+                    return Err(format!("Корневой процесс Runtime с PID {pid} завершился во время проверки объекта задания Guard"));
                 }
                 continue;
             }
@@ -771,7 +771,7 @@ mod windows_impl {
                     continue;
                 }
                 return Err(format!(
-                    "Guard: нарушена целостность дерева процессов — дочерний PID {pid} вышел из Job Object Runtime"
+                    "Guard: нарушена целостность дерева процессов — дочерний процесс с PID {pid} вышел из объекта задания Runtime"
                 ));
             }
             unsafe { let _ = CloseHandle(process); }
@@ -827,7 +827,7 @@ mod windows_impl {
         let job_handle = unsafe { CreateJobObjectW(null(), null()) };
         if job_handle.is_null() {
             return Err(format!(
-                "Не удалось создать Job Object для Runtime Windows: {}",
+                "Не удалось создать объект задания Windows для Runtime: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -845,7 +845,7 @@ mod windows_impl {
         };
         if set_ok == 0 {
             return Err(format!(
-                "Не удалось настроить политику Job Object Runtime Windows: {}",
+                "Не удалось настроить политику объекта задания Windows для Runtime: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -862,7 +862,7 @@ mod windows_impl {
         let membership_ok = unsafe { IsProcessInJob(process_handle, job.raw(), &mut in_job) };
         if membership_ok == 0 || in_job == 0 {
             return Err(format!(
-                "Не удалось проверить принадлежность процесса Runtime к Job Object Windows: {}",
+                "Не удалось проверить принадлежность процесса Runtime к объекту задания Windows: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -879,7 +879,7 @@ mod windows_impl {
         };
         if query_ok == 0 {
             return Err(format!(
-                "Не удалось проверить политику Job Object Runtime Windows: {}",
+                "Не удалось проверить политику объекта задания Windows для Runtime: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -894,7 +894,7 @@ mod windows_impl {
                 | windows_sys::Win32::System::JobObjects::JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK)
             != 0
         {
-            return Err("Job Object в Windows Runtime неожиданно допускает выход процессов из группы".to_string());
+            return Err("Объект задания Windows для Runtime неожиданно допускает выход процессов из группы".to_string());
         }
 
         resume_primary_thread(pid)?;

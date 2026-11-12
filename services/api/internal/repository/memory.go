@@ -776,7 +776,7 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 		}
 		if item.UserID == identity.UserID && item.Provider == identity.Provider && item.Issuer == identity.Issuer {
 			if item.Subject != identity.Subject {
-				return model.AuthIdentity{}, fmt.Errorf("%w: provider %s уже связан с другим subject для пользователя", ErrConflict, identity.Provider)
+				return model.AuthIdentity{}, fmt.Errorf("%w: поставщик %s уже связан с другим идентификатором субъекта этого пользователя", ErrConflict, identity.Provider)
 			}
 			if identity.ID == "" {
 				identity.ID = item.ID

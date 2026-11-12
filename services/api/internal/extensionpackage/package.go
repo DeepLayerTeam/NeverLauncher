@@ -492,7 +492,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	}
 	var signature Signature
 	if err := strictJSON0203(signatureBytes, &signature); err != nil {
-		return nil, fmt.Errorf("Декодирование: signature.ed25519: %w", err)
+		return nil, fmt.Errorf("Не удалось декодировать signature.ed25519: %w", err)
 	}
 	if signature.SchemaVersion != "1.0" || signature.Algorithm != "Ed25519" || signature.SigningDomain != signingDomain0203() || signature.PackageIdentity != descriptor.PackageIdentity {
 		return nil, errors.New("Метаданные signature.ed25519 не соответствуют идентификатору или формату пакета")

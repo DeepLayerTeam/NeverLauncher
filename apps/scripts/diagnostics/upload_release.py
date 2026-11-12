@@ -177,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
     # Только после успешного завершения ВСЕХ загрузок; source maps не должны утекать в распространяемые пакеты.
     for sm in js_maps:
         sm.unlink()
-    print(f"Релиз Sentry {release} загружен; удалено {len(js_maps)} закрытых карт JS")
+    print(f"Выпуск Sentry {release} загружен; удалено {len(js_maps)} закрытых карт исходного кода JavaScript")
     return 0
 
 
