@@ -17,7 +17,7 @@ func TestJavaAuthRPCMethodWhitelist0485(t *testing.T) {
 	}
 	for _, method := range []string{"auth.session.issue", "auth.minecraft.entitlement", "auth.token.mint", "unsafe.eval"} {
 		_, err := s.CallJavaRPC0304(context.Background(), Key{}, method, json.RawMessage(`{}`))
-		if err == nil || !strings.Contains(err.Error(), "unsupported Java RPC method") {
+		if err == nil || !strings.Contains(err.Error(), "Неподдерживаемый метод Java RPC") {
 			t.Errorf("Неожиданно разрешён метод %s: %v", method, err)
 		}
 	}

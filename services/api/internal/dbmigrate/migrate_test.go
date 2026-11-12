@@ -52,14 +52,14 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 	unknown := catalogChecksums(t)
 	unknown["9999_future"] = "deadbeef"
 	st, err = EvaluateApplied(unknown)
-	if err == nil || st.Compatible || !strings.Contains(err.Error(), "unknown to this binary") {
+	if err == nil || st.Compatible || !strings.Contains(err.Error(), "неизвестные этому исполняемому файлу") {
 		t.Fatalf("Миграция из будущей версии не была отклонена: статус=%+v ошибка=%v", st, err)
 	}
 
 	unverified := catalogChecksums(t)
 	unverified["0009_minecraft_auth_compat_2_0119"] = ""
 	st, err = EvaluateApplied(unverified)
-	if err == nil || st.Compatible || !strings.Contains(err.Error(), "without sealed checksum") {
+	if err == nil || st.Compatible || !strings.Contains(err.Error(), "без зафиксированной контрольной суммы") {
 		t.Fatalf("Незафиксированная контрольная сумма не отклонена: статус=%+v ошибка=%v", st, err)
 	}
 

@@ -1697,7 +1697,7 @@ for required in [
     '"--user-handle=$(jq -er',
 ]:
     if required not in device_trust_e2e:
-        fail(f"Device Trust E2E передаёт непрозрачные аргументы WebAuthn небезопасно: {required}")
+        fail(f"Сквозная проверка доверия к устройству передаёт непрозрачные аргументы WebAuthn небезопасно: {required}")
 for required in [
     "webauthn.create",
     "webauthn.get",
@@ -1706,7 +1706,7 @@ for required in [
     '"openssl", "dgst", "-sha256", "-sign"',
 ]:
     if required not in device_trust_webauthn:
-        fail(f"0.12.9 WebAuthn Device Trust E2E helper — не завершено: {required}")
+        fail(f"0.12.9 вспомогательная утилита сквозной проверки доверия к устройству WebAuthn — не завершено: {required}")
 for required in [
     "matrix.py plan",
     "runs-on: ${{ matrix.runner }}",
@@ -1856,7 +1856,7 @@ for required in [
     "guardPurposeMigrationSealed:true",
 ]:
     if required not in guard_migration_e2e:
-        fail(f"0.16.1 Guard challenge-purpose PostgreSQL E2E — отсутствует: {required}")
+        fail(f"0.16.1 сквозная проверка PostgreSQL назначения запроса Guard — отсутствует: {required}")
 
 guard_attestation_backend_0161 = read(
     "services/api/internal/httpapi/guard_attestation_0134.go"
@@ -1868,7 +1868,7 @@ for required in [
     "ticketExpires := canonicalGuardAttestationTime0134",
 ]:
     if required not in guard_attestation_backend_0161:
-        fail(f"0.16.1 Guard Attestation канонизация временной метки — отсутствует: {required}")
+        fail(f"0.16.1 канонизация отметки времени аттестации Guard — отсутствует: {required}")
 
 
 # В 0.18.10: Guard Attestation v2 требует фиксированных назначений запросов и билетов для
@@ -1888,7 +1888,7 @@ for required in [
     "guard-launch-v1",
 ]:
     if required not in guard_v2_migration_api:
-        fail(f"0.18.10 Guard Attestation v2 migration — отсутствует инвариант: {required}")
+        fail(f"0.18.10 миграция аттестации Guard v2 — отсутствует инвариант: {required}")
 for required in [
     "0032_guard_attestation_v2_01810",
     "dtmig-guard-attest-v2",
@@ -1898,7 +1898,7 @@ for required in [
     "guardAttestationV2MigrationSealed:true",
 ]:
     if required not in guard_migration_e2e:
-        fail(f"0.18.10 Guard Attestation v2 PostgreSQL E2E — отсутствует: {required}")
+        fail(f"0.18.10 сквозная проверка PostgreSQL аттестации Guard v2 — отсутствует: {required}")
 attestation_v2_backend = read(
     "services/api/internal/httpapi/guard_attestation_v2_01810.go"
 )
@@ -1912,7 +1912,7 @@ for required in [
     '"launcherSha256"',
 ]:
     if required not in attestation_v2_backend:
-        fail(f"0.18.10 Guard Attestation v2 серверный инвариант — отсутствует: {required}")
+        fail(f"0.18.10 серверный инвариант аттестации Guard v2 — отсутствует: {required}")
 attestation_v2_bridge = read("services/api/internal/httpapi/server_bridge.go")
 for required in [
     "continuousGuardRequiredForJoin01810",
@@ -1928,7 +1928,7 @@ for required in [
     "build_windows_attestation_v2",
 ]:
     if required not in attestation_v2_runtime:
-        fail(f"0.18.10 Guard Attestation v2 инвариант среды исполнения — отсутствует: {required}")
+        fail(f"0.18.10 инвариант среды исполнения аттестации Guard v2 — отсутствует: {required}")
 if (
     "guard-attestation-v2-01810.py" not in preflight
     or "guard-attestation-v2-01810.py" not in ci
@@ -2043,7 +2043,7 @@ for required in [
     '"artifactHashesVerified"',
 ]:
     if required not in guard_targets_0139:
-        fail(f"0.13.9 Guard CI targets — не завершено: {required}")
+        fail(f"0.13.9 целевые платформы CI Guard — не завершено: {required}")
 for required in [
     '"commit"',
     '"runId"',
@@ -2081,7 +2081,7 @@ for required in [
     "scripts/guard_ci/stage_release.py",
 ]:
     if required not in build_release_0139:
-        fail(f"0.13.9 build-release Guard certification — не завершено: {required}")
+        fail(f"0.13.9 сертификация Guard при сборке выпуска — не завершено: {required}")
 for required in [
     "guard-ci-release-certification-0139.py",
     "Guard CI matrix",
@@ -3538,7 +3538,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "PRODUCTION_DELIVERY_RELEASE_REQUIRED",
         "PRODUCTION_DELIVERY_RELEASE.json",
         "release production-verify",
-        "immutable version segment",
+        "неизменяемый сегмент версии",
     ]:
         if required not in build_0160:
             fail(f"0.16.0 интеграция промышленной сборки — не завершено: {required}")

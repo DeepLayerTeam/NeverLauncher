@@ -226,7 +226,7 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	auditReason := "проверенный нормализованный PNG " + event
 	if source == "managed-gravit-import" {
 		auditActor = "system:gravit-texture-import"
-		auditReason = "Gravit TextureProvider migration source=" + input.GravitSourceID + " row=" + input.GravitRowID
+		auditReason = "Миграция TextureProvider Gravit: источник=" + input.GravitSourceID + " row=" + input.GravitRowID
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO texture_assignment_revisions(assignment_id,revision,snapshot,actor_user_id,reason,event)
       VALUES($1,$2,$3,$4,$5,$6)`, assignment.ID, assignment.Revision, snapshot, auditActor, auditReason, event); err != nil {

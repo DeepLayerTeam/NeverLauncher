@@ -292,7 +292,7 @@ fn resolve_conditional_0244(cat:&ComponentCatalog,preset:&str,env:&ComponentEnvi
     let explicit=!base.is_empty()||!cat.default_preset.is_empty();
     for c in &mut modified.components {
         if let Some(reason)=condition_unavailable_0244(c,env)? {
-            if c.required{return Err(format!("Условие не выполнено: обязательный компонент {}: {reason}",c.id))}
+            if c.required{return Err(format!("Не удалось подготовить обязательный компонент {}: {reason}",c.id))}
             if !explicit{c.default=false;}
         }
     }

@@ -112,7 +112,7 @@ pub struct MacOSRuntimeGuard0509 {
 
 impl MacOSRuntimeGuard0509 {
     pub fn attach(pid: u32, java: &Path) -> Result<Self, String> {
-        let expected = fs::canonicalize(java).map_err(|e|format!("Отсутствует: настроенная Java для Guard в macOS: {e}"))?;
+        let expected = fs::canonicalize(java).map_err(|e|format!("Не найдена настроенная Java для Guard в macOS: {e}"))?;
         let actual = actual_executable(pid)?;
         if expected != actual { return Err(format!("Неожиданный исполняемый файл JVM в macOS Guard: {}",actual.display())); }
         let identity = process_identity(pid)?;

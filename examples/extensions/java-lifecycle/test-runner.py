@@ -116,7 +116,7 @@ if __name__ == "__main__":
             assert proc.returncode in (0, 128 + signal.SIGTERM), (
                 f"Расширение Java завершилось с кодом {proc.returncode}: {err}"
             )
-        assert "Java extension started" in out and "Java extension stopped" in out, (
+        assert "Java-расширение запущено" in out and "Java-расширение остановлено" in out, (
             f"отсутствуют обратные вызовы жизненного цикла: {out}"
         )
         if os.name != "nt":

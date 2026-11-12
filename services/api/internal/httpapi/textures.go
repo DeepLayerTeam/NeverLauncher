@@ -100,7 +100,7 @@ func (s Server) textureSelectionPatch0251(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if input.ProfileUUID != "" && minecraftID119(input.ProfileUUID) != minecraftID119(profile.UUID) {
-		writeError(w, http.StatusForbidden, "Minecraft profile не принадлежит пользователю")
+		writeError(w, http.StatusForbidden, "Профиль Minecraft не принадлежит пользователю")
 		return
 	}
 	if input.ExpectedRevision < 1 || input.Active == nil || (input.Model != "classic" && input.Model != "slim") || (input.Visibility != "public" && input.Visibility != "private" && input.Visibility != "unlisted") {

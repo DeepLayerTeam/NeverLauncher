@@ -172,7 +172,7 @@ func versionedPublicBaseURL0160(raw, ver string) (string, error) {
 		}
 	}
 	if !found {
-		return "", fmt.Errorf("Публичный базовый URL production-среды должен содержать неизменяемый сегмент версии %q или %q: %s", ver, "v"+ver, base)
+		return "", fmt.Errorf("Публичный базовый URL промышленной среды должен содержать неизменяемый сегмент версии %q или %q: %s", ver, "v"+ver, base)
 	}
 	return base, nil
 }

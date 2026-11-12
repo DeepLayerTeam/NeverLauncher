@@ -69,7 +69,7 @@ func TestProductionReleaseCandidate01511RejectsInjectedFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "injected.bin"), []byte("unexpected"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := verifyProductionReleaseCandidateDocument01511(dir, "0.15.11"); err == nil || !strings.Contains(err.Error(), "cohort size mismatch") {
+	if _, err := verifyProductionReleaseCandidateDocument01511(dir, "0.15.11"); err == nil || !strings.Contains(err.Error(), "Размер набора кандидата производственного релиза не совпадает") {
 		t.Fatalf("Принят файл, добавленный после сертификации: %v", err)
 	}
 }

@@ -38,7 +38,7 @@ require(
         "forgeLegacy1122_0174",
         "forgeLegacy1710_0175",
         "neoForgeCompatibilityII0176",
-        "outside the certified GA support surface",
+        "не входит в сертифицированный набор GA",
         "requires Java",
     ],
     "Политика поддержки Runtime для GA",

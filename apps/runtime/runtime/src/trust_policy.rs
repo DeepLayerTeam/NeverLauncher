@@ -71,7 +71,7 @@ fn read_policy(root_key:&str)->Result<(Policy,String),String>{
         if k.id.is_empty() || k.id.len()>100 || !["game","component","bootstrap","release"].contains(&k.role.as_str()) || !["active","verify-only","revoked"].contains(&k.status.as_str()) {return Err("Некорректная роль или состояние ключа доверия".into())}
         if hex::decode(&k.public_key).map_err(|e|e.to_string())?.len()!=32 || !seen.insert(k.public_key.to_ascii_lowercase()) {return Err("Повторяющийся или некорректный ключ доверия".into())}
         let start=parse_utc(&k.not_before)?;if start>expires{return Err("Ключ доверия начинает действовать после истечения срока политики".into())}
-        if k.status=="verify-only" {let end=parse_utc(&k.verify_until)?;if end<=start || end>expires || end-start>90*86400 {return Err("Некорректное значение: ограниченный период пересечения действия ключей".into())}}
+        if k.status=="verify-only" {let end=parse_utc(&k.verify_until)?;if end<=start || end>expires || end-start>90*86400 {return Err("Некорректный период одновременного действия ключей".into())}}
     }
     Ok((p,hex::encode(Sha256::digest(&payload))))
 }

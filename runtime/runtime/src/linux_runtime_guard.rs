@@ -401,7 +401,7 @@ mod tests {
             expected_jvm_args:vec!["8".into()],
         };
         let result=guard.verify();
-        assert!(result.unwrap_err().contains("unauthorized game module"));
+        assert!(result.unwrap_err().contains("неразрешённый модуль игры"));
         let _ = child.kill().await;
         let _ = child.wait().await;
         let _ = fs::remove_dir_all(root);

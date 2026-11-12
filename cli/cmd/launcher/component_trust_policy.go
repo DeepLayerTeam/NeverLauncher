@@ -122,7 +122,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 		if k.Status == "verify-only" {
 			u, e := strictTime02312(k.VerifyUntil)
 			if e != nil || !u.After(t) || u.Sub(t) > 90*24*time.Hour || u.After(expiry) {
-				return p, "", errors.New("Некорректное значение: ограниченный период пересечения действия ключей")
+				return p, "", errors.New("Некорректный период одновременного действия ключей")
 			}
 		}
 		if k.Status == "active" {

@@ -227,7 +227,7 @@ pub async fn ensure_managed_java_from_distribution(
         let expected = normalize_sha256(expected)?;
         let actual = hex::encode(Sha256::digest(&manifest_bytes));
         if actual != expected {
-            return Err(format!("Несовпадение SHA-256 манифеста Managed JRE: получено {actual}, ожидалось {expected}"));
+            return Err(format!("Несовпадение SHA-256 манифеста управляемой JRE: получено {actual}, ожидалось {expected}"));
         }
     } else if archive_base.is_remote() {
         return Err("Для удалённого манифеста управляемой JRE требуется LAUNCHER_MANAGED_JRE_MANIFEST_SHA256/--manifest-sha256".to_string());
@@ -544,7 +544,7 @@ async fn install_managed_java_archive(
     if let Some(expected) = expected_java_entry {
         if java_relative != expected {
             let _ = fs::remove_dir_all(&staging).await;
-            return Err(format!("Несовпадение javaEntry Managed JRE: извлечено={java_relative}, в манифесте={expected}"));
+            return Err(format!("Несовпадение пути Java в управляемой JRE: извлечено={java_relative}, в манифесте={expected}"));
         }
     }
     self_test_java(&java, required_major, platform_os, platform_arch).await?;

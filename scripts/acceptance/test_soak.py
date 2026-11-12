@@ -84,7 +84,7 @@ class SoakTests(unittest.TestCase):
                  mock.patch.object(m.inventory,'verify_compatibility',
                                    side_effect=[{'resultSha256':'a'*64},
                                                 {'resultSha256':'b'*64}]):
-                with self.assertRaisesRegex(m.Blocked,'copied Minecraft session evidence'):
+                with self.assertRaisesRegex(m.Blocked,'Скопированное свидетельство сессии Minecraft'):
                     m.session_archive({'loader':'vanilla'},destination,
                         SimpleNamespace(commit='a'*40,run_id='42',attempt=1))
 

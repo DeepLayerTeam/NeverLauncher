@@ -121,7 +121,7 @@ pub fn validate_windows_guard_policy_report(
     ] {
         if actual & required != required {
             return Err(format!(
-                "Guard: политика Windows {name} не соответствует профилю {expected_profile}: required=0x{required:08x}, actual=0x{actual:08x}"
+                "Guard: политика Windows {name} не соответствует профилю {expected_profile}: требуется=0x{required:08x}, фактически=0x{actual:08x}"
             ));
         }
     }
@@ -853,7 +853,7 @@ mod windows_impl {
         let assign_ok = unsafe { AssignProcessToJobObject(job.raw(), process_handle) };
         if assign_ok == 0 {
             return Err(format!(
-                "Runtime Windows: не удалось назначить процесс в Guard Job Object: {}",
+                "Среда выполнения Windows: не удалось включить процесс в объект задания Guard: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -886,7 +886,7 @@ mod windows_impl {
         let actual_limits = observed.BasicLimitInformation.LimitFlags;
         if actual_limits & JOB_LIMITS_REQUIRED != JOB_LIMITS_REQUIRED {
             return Err(format!(
-                "Runtime Windows: ограничения Job Object заданы не полностью: required=0x{JOB_LIMITS_REQUIRED:08x}, actual=0x{actual_limits:08x}"
+                "Среда выполнения Windows: ограничения объекта задания заданы не полностью: требуется=0x{JOB_LIMITS_REQUIRED:08x}, фактически=0x{actual_limits:08x}"
             ));
         }
         if actual_limits
@@ -966,7 +966,7 @@ mod windows_impl {
             has_entry = unsafe { Thread32Next(snapshot.0, &mut entry) } != 0;
         }
         Err(format!(
-            "Runtime Windows: основной поток не найден при приостановленном процессе {pid}"
+            "Среда выполнения Windows: основной поток не найден в приостановленном процессе {pid}"
         ))
     }
 }

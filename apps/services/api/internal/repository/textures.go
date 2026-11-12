@@ -373,7 +373,7 @@ func (r *SQLRepository) EnsureTextureIdentity0251(ctx context.Context, profile m
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO texture_assignment_revisions(assignment_id,revision,snapshot,actor_user_id,reason,event)
       SELECT id,revision,jsonb_build_object('source',source,'kind',kind,'externalUrl',external_url,'model',model,'visibility',visibility,'active',active,'projectId',project_id,'blobDigest',blob_digest),user_id,
-      '0.25.0 lazy ServerBridge URL migration','legacy-import' FROM texture_assignments WHERE realm='local-project' AND profile_uuid=$1 AND user_id=$2
+      '0.25.0 отложенная миграция URL ServerBridge','legacy-import' FROM texture_assignments WHERE realm='local-project' AND profile_uuid=$1 AND user_id=$2
       ON CONFLICT(assignment_id,revision) DO NOTHING`, profile.UUID, profile.UserID)
 	if err != nil {
 		return err

@@ -67,6 +67,6 @@ func handleExtensionHost0205(args []string) error {
 		}
 		return writeOrPrintJSON(out, payload)
 	default:
-		return fmt.Errorf("неизвестная extension host подкоманда: %s", command)
+		return fmt.Errorf("Неизвестная подкоманда хоста расширений: %s", command)
 	}
 }

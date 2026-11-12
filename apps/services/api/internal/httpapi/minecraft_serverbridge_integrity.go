@@ -205,7 +205,7 @@ func (s Server) requireMinecraftIntegrityForBridgeSession0135(userID, launcherSe
 	}
 	session, _, _, err := s.validateMinecraftToken119(minecraftAccessToken)
 	if err != nil {
-		return model.MinecraftSession{}, errors.New("Minecraft session недействительна")
+		return model.MinecraftSession{}, errors.New("Сеанс Minecraft недействителен")
 	}
 	if session.UserID != strings.TrimSpace(userID) || session.LauncherSessionID != strings.TrimSpace(launcherSessionID) || strings.TrimSpace(session.TrustedDeviceID) != strings.TrimSpace(trustedDeviceID) || session.BindingEpoch != bindingEpoch {
 		return model.MinecraftSession{}, errors.New("сеанс Minecraft не соответствует сеансу Launcher и привязке устройства")

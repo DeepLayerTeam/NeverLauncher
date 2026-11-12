@@ -11,7 +11,7 @@ python3 scripts/operations/db_upgrade_0457.py sqlite --help
 python3 scripts/operations/db_upgrade_0457.py postgres --help
 ```
 
-Для PostgreSQL перед запуском требуется остановка писателей, отдельные `--source-env`/`--target-env`, `--snapshot`, точное подтверждение `--project`/`--confirm` и `--maintenance-approved`; запишите проверенную предыдущую версию. Нельзя выполнять миграцию под живыми mixed-version API/worker репликами.
+Для PostgreSQL перед запуском требуется остановка писателей, отдельные `--source-env`/`--target-env`, `--snapshot`, точное подтверждение `--project`/`--confirm` и `--maintenance-approved`; запишите проверенную предыдущую версию. Нельзя выполнять миграцию под живыми репликами API и рабочих процессов разных версий.
 
 ## API/Admin/CLI/ServerBridge/клиенты/расширения
 

@@ -96,7 +96,7 @@ def main():
         child.terminate()
         out, err = child.communicate(timeout=8)
         assert child.returncode in (0, 143, -15), (child.returncode, out, err)  # JVM после SIGTERM обычно завершается с кодом 143
-        assert "Real extension JAR dependency loaded: dependency-loaded-0482" in out, (out, err)
+        assert "Загружена настоящая JAR-зависимость расширения: dependency-loaded-0482" in out, (out, err)
         print("PASS: реальный запуск java -jar → закреплённая зависимость → Extension.start() → аутентифицированный хост → сигнал активности → RPC → остановка")
     finally:
         if child.poll() is None:

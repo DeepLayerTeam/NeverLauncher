@@ -1081,7 +1081,7 @@ impl IdentityManager {
             let (profile, native) = self.verified_native_grant(client_id,&grant).await.map_err(|e|e.message().to_string())?;
             let current = self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
             verify_session_binding_0396(&current.data, session)?;
-            if current.data.get("enabled").and_then(Value::as_bool) == Some(false) || current.data.get("browserEnabled").and_then(Value::as_bool) == Some(false) || current.data.get("clientId").and_then(Value::as_str) != Some(client_id) { return Err("Авторизация отключена или Client ID изменён".into()); }
+            if current.data.get("enabled").and_then(Value::as_bool) == Some(false) || current.data.get("browserEnabled").and_then(Value::as_bool) == Some(false) || current.data.get("clientId").and_then(Value::as_str) != Some(client_id) { return Err("Авторизация отключена или идентификатор клиента изменён".into()); }
             let _vault = self.vault_lock.lock().await;
             // Удерживайте блокировку процесса до сохранения: отменённый вход нельзя фиксировать.
             let flows = self.browser.lock().map_err(|_| "Нативный менеджер учётных данных заблокирован")?;

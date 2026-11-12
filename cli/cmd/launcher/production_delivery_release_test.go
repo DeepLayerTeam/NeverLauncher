@@ -67,7 +67,7 @@ func TestProductionDeliveryRelease0160RejectsUnversionedPublicOrigin(t *testing.
 	dir := t.TempDir()
 	ver := "0.16.0"
 	writeProductionReleaseFixture0160(t, dir, ver, "https://downloads.example.invalid/launcher/stable")
-	if err := writeProductionDeliveryRelease0160(dir, ver); err == nil || !strings.Contains(err.Error(), "immutable version segment") {
+	if err := writeProductionDeliveryRelease0160(dir, ver); err == nil || !strings.Contains(err.Error(), "неизменяемый сегмент версии") {
 		t.Fatalf("Ожидался отказ для неизменяемого URL, получено %v", err)
 	}
 }

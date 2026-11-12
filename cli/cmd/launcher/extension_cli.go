@@ -102,7 +102,7 @@ func handleExtensionCLI0209(args []string) error {
 		fmt.Print(script)
 		return nil
 	default:
-		return fmt.Errorf("неизвестная extension cli подкоманда: %s", command)
+		return fmt.Errorf("Неизвестная подкоманда CLI расширений: %s", command)
 	}
 }
 

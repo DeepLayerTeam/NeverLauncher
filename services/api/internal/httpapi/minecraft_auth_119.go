@@ -345,7 +345,7 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 	}
 	session, token, profile, err := s.issueMinecraftSessionWithTrustAndIntegrity119(user, claims.SessionID, req.ClientToken, trust.TrustedDeviceID, trust.BindingEpoch, integritySnapshot)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать Minecraft session")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать сеанс Minecraft")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("minecraft-session"), Actor: user.Email, Action: "minecraft:session:issued", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -374,7 +374,7 @@ func (s Server) minecraftProfileCurrent119(w http.ResponseWriter, r *http.Reques
 	}
 	profile, err := s.ensureMinecraftProfile119(user)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось получить Minecraft profile")
+		writeError(w, http.StatusInternalServerError, "Не удалось получить профиль Minecraft")
 		return
 	}
 	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
