@@ -264,7 +264,7 @@ if "useState('admin@launcher.local')" in admin_ui or "useState('admin')" in admi
 if "req.Password == s.Config." in admin_handlers:
     fail("вход администратора допускает резервный пароль из конфигурации")
 if (
-    "используется local storage" in api_main
+    "используется локальное хранилище" in api_main
     or "return storage.NewLocalStorage(cfg.StorageLocalPath)"
     in api_main.split('case "s3", "s3-compatible":', 1)[-1].split("default:", 1)[0]
 ):
@@ -736,7 +736,7 @@ for required in [
 ]:
     if required not in compose:
         fail(
-            f"промышленная конфигурация Compose: отсутствует deterministic volume ownership gate: {required}"
+            f"промышленная конфигурация Compose: отсутствует проверка предсказуемого назначения владельца томов: {required}"
         )
 
 for required in [
@@ -747,15 +747,15 @@ for required in [
     "KeyFingerprint",
 ]:
     if required not in release_signing:
-        fail(f"release signing не реализует настоящий Ed25519 primitive: {required}")
+        fail(f"подписание выпуска не реализует настоящий криптографический примитив Ed25519: {required}")
 if "ключ из комплекта поставки не считается корневым ключом доверия" not in release_signing:
-    fail("release verification должен требовать внешний trusted public key")
+    fail("проверка выпуска должна требовать внешний доверенный открытый ключ")
 for forbidden in [
     '[]byte(hex.EncodeToString(sum[:])+"  SHA256SUMS\\n")',
     'SHA256SUMS.sig"), []byte(hex.EncodeToString',
 ]:
     if forbidden in release_commands or forbidden in release_signing:
-        fail("release signature снова сведена к checksum вместо Ed25519")
+        fail("подпись выпуска снова сведена к контрольной сумме вместо Ed25519")
 for required in [
     "required artifact",
     'artifact.Status != "present"',
@@ -786,7 +786,7 @@ if (
     "LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE" not in build_release
     or "LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in build_release
 ):
-    fail("build-release должен требовать внешний Ed25519 private/public key")
+    fail("build-release должен требовать внешнюю пару закрытого и открытого ключей Ed25519")
 if (
     "release-bundle:" not in production_release_workflow
     or "Build and cryptographically verify complete release bundle"
@@ -804,9 +804,9 @@ if (
     or "release-bundle"
     in ci.split("production-e2e:", 1)[1].split("needs:", 1)[1].split("\n", 1)[0]
 ):
-    fail("main functional E2E должен выполняться независимо от production signing")
+    fail("основной функциональный сквозной тест должен выполняться независимо от подписания промышленного выпуска")
 if "LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in release_bundle_gate:
-    fail("release-bundle smoke gate не требует trusted Ed25519 public key")
+    fail("экспресс-проверка пакета выпуска не требует доверенного открытого ключа Ed25519")
 
 for legacy_helper in [
     "packagePipelinePayload",
@@ -814,7 +814,7 @@ for legacy_helper in [
     "packagePipelinePublishPayload",
 ]:
     if legacy_helper in package_commands:
-        fail(f"CLI pipeline содержит статический legacy helper: {legacy_helper}")
+        fail(f"конвейер CLI содержит статическую устаревшую вспомогательную функцию: {legacy_helper}")
 for required in [
     "/validate",
     "/sign",
@@ -833,12 +833,12 @@ for required in [
 ]:
     if required not in security_commands:
         fail(
-            f"CLI storage/migrate operation не связан с production Backend primitive: {required}"
+            f"операция CLI для хранилища или миграции не связана с рабочим механизмом серверной части: {required}"
         )
 for required in ["verifyReleaseBundle", "verifyDetachedEd25519"]:
     if required not in security_commands:
         fail(
-            f"security verify-signature не выполняет cryptographic verification: {required}"
+            f"security verify-signature не выполняет криптографическую проверку: {required}"
         )
 for required in [
     "/health",
@@ -857,7 +857,7 @@ for required in [
 ]:
     if required not in install_commands:
         fail(
-            f"install first-run не является standalone/pinned production deployment: {required}"
+            f"install first-run не обеспечивает автономное промышленное развёртывание с закреплёнными версиями: {required}"
         )
 for name in ["docker-compose.yml", "nginx.conf", "env.production.example"]:
     canonical = ROOT / "deploy/production" / name
@@ -1079,7 +1079,7 @@ for forbidden in [
 ]:
     if forbidden in e2e_script:
         fail(
-            f"реальная сквозная проверка Minecraft сравнивает PostgreSQL ::text boolean с устаревшим psql token t: {forbidden}"
+            f"реальная сквозная проверка Minecraft сравнивает логическое значение PostgreSQL ::text с устаревшим обозначением t в psql: {forbidden}"
         )
 for required in [
     '$fingerprint_match" == "true"',
@@ -1329,7 +1329,7 @@ runtime_compat = read("runtime/runtime/src/compatibility.rs")
 forge_runtime = read("cli/cmd/launcher/forge_runtime.go")
 forge_runtime_tests = read("cli/cmd/launcher/forge_runtime_test.go")
 if not (ROOT / "runtime/runtime/src/bin/runtime.rs").is_file():
-    fail("Отсутствует «Cargo declares runtime binary but src/bin/runtime.rs»")
+    fail("Отсутствует «в Cargo объявлен исполняемый файл Runtime, но отсутствует src/bin/runtime.rs»")
 for required in [
     "acquireCompatibilityMaterializationLock",
     "compatibilityGET",
@@ -1401,7 +1401,7 @@ for required in [
             f"Отсутствует регрессионная защита изоляции модулей NeoForge BootstrapLauncher в Runtime: {required}"
         )
 if (
-    "runtime record java path вышел за Managed Java root через symlink"
+    "Путь к Java в записи среды выполнения выходит за пределы управляемой Java через символическую ссылку"
     not in managed_java
 ):
     fail("Проверка кеша управляемой Java должна предотвращать выход через символическую ссылку")
@@ -1961,7 +1961,7 @@ for required in [
     if required not in guard_0132:
         fail(f"В проверке «0.13.2 аутентифицированный IPC целостности» отсутствует обязательный компонент: {required}")
 if (
-    "launch заблокирован: Guard Windows Integrity Evidence v1 недоступен"
+    "Запуск заблокирован: подтверждение целостности Guard v1 для Windows недоступно"
     not in desktop_0132
 ):
     fail("0.13.2: запуск Desktop не блокируется при отказе сбора свидетельств целостности")
@@ -1971,7 +1971,7 @@ if (
 ):
     fail("Проверка «0.13.2 обязательная проверка подтверждений целостности» не подключена к предварительным проверкам и CI")
 if "Integrity Evidence v1 gate OK" not in integrity_gate_0132:
-    fail("Не завершена реализация «0.13.2 обязательная проверка: integrity evidence gate»")
+    fail("Не завершена реализация «0.13.2 обязательная проверка подтверждений целостности»")
 
 # В 0.13.3: контроль политик процесса и выполнения Guard Windows. Защитные
 # меры Guard применяются до Tokio; Java запускается приостановленной внутри
@@ -1995,7 +1995,7 @@ for required in [
     "ResumeThread",
 ]:
     if required not in policy_0133:
-        fail(f"В проверке «0.13.3 Windows runtime/process policy» отсутствует необходимый механизм: {required}")
+        fail(f"В проверке «0.13.3 политика среды выполнения и процессов Windows» отсутствует необходимый механизм: {required}")
 for required in [
     "process-policy",
     "process_policy_enforced",
@@ -2011,7 +2011,7 @@ for required in [
     if required not in supervisor_0133:
         fail(f"В проверке «0.13.3 применение политики наблюдателя среды исполнения» отсутствует обязательный компонент: {required}")
 if (
-    "launch заблокирован: Guard Windows process policy verification failed"
+    "Запуск заблокирован: не удалось проверить политику процессов Guard для Windows"
     not in desktop_0133
 ):
     fail("0.13.3: запуск Desktop не блокируется при отказе проверки политики процессов")
@@ -2438,7 +2438,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Accepted",
     ]:
         if required not in macos_packager_0154:
-            fail(f"Неполная реализация «0.15.4 macOS packager/evidence generator»: {required}")
+            fail(f"Неполная реализация «0.15.4 упаковщик и генератор подтверждений macOS»: {required}")
     for required in [
         "LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR",
         "MACOS_DUAL_ARCH_REQUIRED",
@@ -2974,7 +2974,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "matching-server.json",
     ]:
         if required not in matching_case_01610:
-            fail(f"Неполная реализация «0.16.10 real client/matching server E2E»: {required}")
+            fail(f"Неполная реализация «0.16.10 сквозная проверка реального клиента и соответствующего сервера»: {required}")
     for required in [
         "LAUNCHER_COMPAT_MATCHING_SERVER",
         "run-vanilla-matching-e2e.sh",
@@ -3072,7 +3072,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "unified-transactional-updater-core-0156.py" not in preflight
         or "unified-transactional-updater-core-0156.py" not in ci
     ):
-        fail("Проверка «0.15.6 updater gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.15.6 проверка обновления» не подключена к предварительным проверкам и CI")
     if ci.count("update self-test") < 4:
         fail("0.15.6: в CI отсутствуют нативные самопроверки Runtime обновляющего компонента")
 
@@ -3211,7 +3211,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.15.8 Release Verification v2»: {required}")
     for required in ["TrustEpoch", "reg.TrustEpoch++", 'Status: "active"']:
         if required not in keyring_0158:
-            fail(f"Неполная реализация «0.15.8 trust/key lifecycle registry»: {required}")
+            fail(f"Неполная реализация «0.15.8 реестр доверия и жизненного цикла ключей»: {required}")
     for required in [
         "verifyReleaseBundleWithTrustState",
         "release-verification-v2-trust-lifecycle-anti-rollback",
@@ -3224,7 +3224,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "LAUNCHER_RELEASE_TRUST_STATE_FILE",
     ]:
         if required not in build_release_0158:
-            fail(f"В проверке «0.15.8 production release trust input» отсутствует обязательный компонент: {required}")
+            fail(f"В проверке «0.15.8 исходные данные доверия промышленного выпуска» отсутствует обязательный компонент: {required}")
     for required in [
         "TestReleaseVerificationV2TrustLifecycleAndAntiRollback",
         "TestReleaseTrustPolicyRejectsTampering",
@@ -3232,12 +3232,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in tests_0158:
             fail(f"Отсутствуют регрессионные тесты «0.15.8 verification»: {required}")
     if "Release Verification v2 + trust/key lifecycle gate: OK" not in gate_0158:
-        fail("Не завершена реализация «0.15.8 обязательная проверка: verification gate»")
+        fail("Не завершена реализация «0.15.8 обязательная проверка допуска»")
     if (
         "release-verification-v2-trust-lifecycle-0158.py" not in preflight
         or "release-verification-v2-trust-lifecycle-0158.py" not in ci
     ):
-        fail("Проверка «0.15.8 verification gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.15.8 проверка допуска» не подключена к предварительным проверкам и CI")
 
 
 # В 0.15.9: публичная матрица производственной поставки показывает полный перечень
@@ -3330,7 +3330,7 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
         "exact-commit-public-device-trust-matrix" not in dt_runtime
         or "0018_device_trust_stabilization_01210" not in dt_runtime
     ):
-        fail("Не завершена реализация «0.13.0 runtime Device Trust release contract»")
+        fail("Не завершена реализация «0.13.0 контракт выпуска доверия к устройствам для Runtime»")
     if "deviceTrustRelease0130" not in dt_targets_0130:
         fail("0.13.0: публичные цели Device Trust не требуют приёмки выпуска")
     if "LAUNCHER_DEVICE_TRUST_MATRIX_FILE" not in build_release_0130:
@@ -3408,7 +3408,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "migration-stabilization-01510.py" not in preflight
         or "migration-stabilization-01510.py" not in ci
     ):
-        fail("Проверка «0.15.10 stabilization gate» не подключена к предварительным проверкам и CI")
+        fail("Проверка «0.15.10 проверка стабилизации» не подключена к предварительным проверкам и CI")
 
 
 # В 0.15.11: кандидат производственного выпуска фиксирует весь набор до подписи
@@ -3467,12 +3467,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             )
     for required in [
         "release-${VERSION}",
-        "неоднозначный mixed artifact layout",
-        "ожидался ровно один release-${VERSION}",
-        "artifact payload относится не к ${VERSION}",
-        "nested artifact layout содержит неожиданные top-level files/symlinks",
-        "release-${VERSION} payload содержит symlink",
-        "flat artifact payload содержит symlink",
+        "неоднозначная структура артефакта: одновременно присутствуют маркер плоского размещения и каталог release-*",
+        "ожидался ровно один каталог данных release-${VERSION}",
+        "содержимое артефакта относится не к ${VERSION}",
+        "вложенная структура артефакта содержит неожиданные файлы или символические ссылки на верхнем уровне",
+        "данные выпуска release-${VERSION} содержат символическую ссылку",
+        "плоский пакет артефакта содержит символическую ссылку",
     ]:
         if required not in artifact_layout_01511:
             fail(f"Неполная реализация «0.15.11 механизм определения точной структуры артефакта»: {required}")

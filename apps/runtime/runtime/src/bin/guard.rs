@@ -70,12 +70,12 @@ async fn run(args: Vec<String>) -> Result<(), String> {
         );
         #[cfg(target_os = "linux")]
         println!(
-            "Guard {}\nИспользование: guard --socket <private unix socket> --parent-pid <pid>\nНачальный секрет: ровно 32 исходных байта через стандартный ввод.",
+            "Guard {}\nИспользование: guard --socket <закрытый сокет Unix> --parent-pid <pid>\nНачальный секрет: ровно 32 исходных байта через стандартный ввод.",
             env!("CARGO_PKG_VERSION")
         );
         #[cfg(target_os = "macos")]
         println!(
-            "Guard {}\nИспользование: guard --socket <private unix socket> --parent-pid <pid>\nНачальный секрет: ровно 32 исходных байта через стандартный ввод.",
+            "Guard {}\nИспользование: guard --socket <закрытый сокет Unix> --parent-pid <pid>\nНачальный секрет: ровно 32 исходных байта через стандартный ввод.",
             env!("CARGO_PKG_VERSION")
         );
         return Ok(());

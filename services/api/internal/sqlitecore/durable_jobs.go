@@ -35,7 +35,7 @@ func durableHash(raw []byte) (string, error) {
 		raw = []byte(`{}`)
 	}
 	if len(raw) > 1024*1024 || !json.Valid(raw) {
-		return "", errors.New("durable payload: требуется «корректный JSON размером не более 1 МиБ»")
+		return "", errors.New("данные сохраняемого задания: требуется корректный JSON размером не более 1 МиБ")
 	}
 	// Сохраняйте точные байты JSON: повтор обязан передавать идентичную исходную
 	// полезную нагрузку.

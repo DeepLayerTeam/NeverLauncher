@@ -301,7 +301,7 @@ func handleRelease(args []string) error {
 			"version":       ver,
 			"platform":      "артефакты выпуска",
 			"steps": []string{
-				"проверить VERSION, исходники и release artifacts (Markdown документация необязательна)",
+				"проверить VERSION, исходники и артефакты выпуска (документация Markdown необязательна)",
 				"запустить release doctor",
 				"собрать комплект выпуска",
 				"проверить RELEASE_MANIFEST.json и SHA256SUMS",
@@ -440,7 +440,7 @@ func releaseDoctor() error {
 	}
 	printJSON(map[string]any{"version": reportedVersion, "status": status, "productionReady": false, "next": "LAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh", "checks": checks})
 	if failed {
-		return errors.New("release doctor обнаружил отсутствующие или несогласованные production-компоненты")
+		return errors.New("release doctor обнаружил отсутствующие или несогласованные компоненты промышленной сборки")
 	}
 	return nil
 }

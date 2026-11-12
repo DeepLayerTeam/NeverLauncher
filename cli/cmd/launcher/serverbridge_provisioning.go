@@ -710,7 +710,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 		path = explicit
 	} else {
 		if artifactDir == "" {
-			return bridgeArtifact0199{}, errors.New("укажите --artifact <jar> или --artifact-dir <release/artifact directory>")
+			return bridgeArtifact0199{}, errors.New("укажите --artifact <jar> или --artifact-dir <каталог выпуска или артефакта>")
 		}
 		entries, err := os.ReadDir(artifactDir)
 		if err != nil {

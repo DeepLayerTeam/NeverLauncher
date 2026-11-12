@@ -583,7 +583,7 @@ func componentUpdateInstallRoot0157(currentDesktop, explicitRoot string, manifes
 		return root, "", err
 	}
 	if currentDesktop == "" {
-		return "", "", errors.New("component update: требуется «--root or --current-desktop»")
+		return "", "", errors.New("component update: требуется «--root или --current-desktop»")
 	}
 	abs, err := filepath.Abs(currentDesktop)
 	if err != nil {

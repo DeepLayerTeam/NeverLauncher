@@ -251,7 +251,7 @@ def verify_package_metadata(
         desktop_hash != artifacts["launcher"]["sha256"]
         or guard_hash != artifacts["guard"]["sha256"]
     ):
-        die("package manifest SHA-256: не совпадает с emitted Desktop/Guard artifacts")
+        die("SHA-256 манифеста пакета не совпадает с собранными артефактами Desktop/Guard")
     allowlist = load_json(allowlist_path)
     expected_policy_platform = {
         "linux": "linux",

@@ -54,7 +54,7 @@ def scan_content(name: str, data: bytes) -> list[str]:
     issues: list[str] = []
     for pat in CONTENT_PATTERNS:
         if pat.search(data):
-            issues.append(f"{name}: обнаружен private key/access-key pattern")
+            issues.append(f"{name}: обнаружены признаки закрытого ключа или ключа доступа")
     for match in ENV_SECRET.finditer(data):
         value = match.group(1).strip().strip(b"\"'").lower()
         if (
@@ -92,7 +92,7 @@ def scan_tar(path: Path) -> list[str]:
             name = member.name
             if member.issym() or member.islnk() or not member.isfile():
                 issues.append(
-                    f"{name}: links/special files запрещены в release archive"
+                    f"{name}: ссылки и специальные файлы запрещены в архиве выпуска"
                 )
                 continue
             if suspicious_path(name):

@@ -18,7 +18,7 @@ required = [
 ]
 for rel in required:
     if not resource_exists(ROOT, rel):
-        raise SystemExit(f"Отсутствует: «0.19.6 production file»: {rel}")
+        raise SystemExit(f"Отсутствует: «0.19.6 рабочий файл»: {rel}")
 proto = (
     ROOT / "services/api/internal/httpapi/server_bridge_protocol_0191.go"
 ).read_text()

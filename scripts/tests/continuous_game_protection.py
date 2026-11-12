@@ -38,7 +38,7 @@ public class Game {
    for (Thread t : Thread.getAllStackTraces().keySet()) {
     if (t.getName().equals("launcher-runtime-integrity-0505")) {t.interrupt();found=true;}
    }
-   if(!found) throw new IllegalStateException("integrity monitor not running");
+   if(!found) throw new IllegalStateException("монитор целостности не запущен");
   }
   Thread.sleep(args.length==0 ? 3500 : 9000);
  }

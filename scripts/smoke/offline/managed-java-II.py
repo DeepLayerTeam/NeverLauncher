@@ -34,7 +34,7 @@ require(
         "archive_sha256",
         "ensure_archive",
         "validate_installed_runtime",
-        "runtime record java path вышел за Managed Java root через symlink",
+        "Путь к Java в записи среды выполнения выходит за пределы управляемой Java через символическую ссылку",
     ],
     "Managed Java II в Runtime",
 )

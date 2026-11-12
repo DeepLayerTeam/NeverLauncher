@@ -731,7 +731,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 		}
 	}()
 	if len(reader.File) == 0 || len(reader.File) > extensionPackageMaxFiles0202+5 {
-		return nil, fmt.Errorf("некорректное число .nlext entries: %d", len(reader.File))
+		return nil, fmt.Errorf("некорректное число записей в .nlext: %d", len(reader.File))
 	}
 	caseFolded := map[string]string{}
 	var total uint64
@@ -779,7 +779,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 			continue
 		}
 		if _, allowed := extensionPackageReservedRoot0202[name]; !allowed {
-			return nil, fmt.Errorf("неожиданный top-level .nlext entry: %s", name)
+			return nil, fmt.Errorf("неожиданная запись верхнего уровня в .nlext: %s", name)
 		}
 	}
 
@@ -823,7 +823,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 	}
 	payload := ExtensionPackagePayload0202{FileCount: len(payloadFiles), TotalBytes: payloadTotal, Files: payloadFiles}
 	if payload.FileCount == 0 {
-		return nil, errors.New(".nlext payload пуст")
+		return nil, errors.New("содержимое .nlext пусто")
 	}
 	if err := ensureExtensionEntrypointsInPackage0202(manifest, payloadFiles); err != nil {
 		return nil, err
@@ -896,7 +896,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 			return nil, fmt.Errorf("Декодирование: signature.ed25519: %w", err)
 		}
 		if envelope.SchemaVersion != "1.0" || envelope.Algorithm != "Ed25519" || envelope.SigningDomain != extensionSigningDomain0202() || envelope.PackageIdentity != descriptor.PackageIdentity {
-			return nil, errors.New("signature.ed25519 metadata не соответствует package identity/format")
+			return nil, errors.New("метаданные signature.ed25519 не соответствуют идентификатору и формату пакета")
 		}
 		sig, err := base64.StdEncoding.DecodeString(envelope.Signature)
 		if err != nil || len(sig) != ed25519.SignatureSize {
@@ -952,7 +952,7 @@ func readExtensionZipEntry0202(entry *zip.File, limit int64) ([]byte, error) {
 		return nil, errors.New("Пустая запись ZIP")
 	}
 	if entry.UncompressedSize64 > uint64(limit) {
-		return nil, fmt.Errorf("metadata entry %s превышает limit", entry.Name)
+		return nil, fmt.Errorf("запись метаданных %s превышает ограничение", entry.Name)
 	}
 	reader, err := entry.Open()
 	if err != nil {

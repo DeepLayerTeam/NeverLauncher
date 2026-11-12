@@ -118,7 +118,7 @@ func saveVanillaMetadataCache(root, manifestURL, requested string, manifestBytes
 	}
 	versionSHA1 := sha1.Sum(versionBytes)
 	if !strings.EqualFold(hex.EncodeToString(versionSHA1[:]), selected.SHA1) {
-		return errors.New("version metadata не совпадает с Mojang SHA-1 перед cache commit")
+		return errors.New("метаданные версии не соответствуют SHA-1 Mojang перед сохранением в кэш")
 	}
 	manifestSHA256 := sha256.Sum256(manifestBytes)
 	versionSHA256 := sha256.Sum256(versionBytes)

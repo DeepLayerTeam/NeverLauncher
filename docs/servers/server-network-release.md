@@ -2,7 +2,7 @@
 
 ## Что реально проверяется
 
-Путь выполнения остаётся исполняемым: Admin → Backend (PostgreSQL) → TLS RemoteControl → Host Supervisor → JVM → ServerBridge → proxy/game adapter. Никакая положительная запись в manifest, OpenAPI, YAML или `result.json` **сама по себе не является** подтверждением исполнения.
+Путь выполнения остаётся исполняемым: Admin → Backend (PostgreSQL) → TLS RemoteControl → Host Supervisor → JVM → ServerBridge → адаптер прокси-сервера или игры. Никакая положительная запись в manifest, OpenAPI, YAML или `result.json` **сама по себе не является** подтверждением исполнения.
 
 **Исполняемые команды приёмки:**
 

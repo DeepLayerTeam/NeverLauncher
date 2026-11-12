@@ -320,7 +320,7 @@ func (s Server) backupStorageObjects880(stage string) (int, error) {
 			for _, item := range files {
 				reader, size, err := s.Storage.Open(project.ID, version.ID, item.Path)
 				if err != nil {
-					return count, fmt.Errorf("storage object %s/%s/%s недоступен: %w", project.ID, version.ID, item.Path, err)
+					return count, fmt.Errorf("объект хранилища %s/%s/%s недоступен: %w", project.ID, version.ID, item.Path, err)
 				}
 				rel := filepath.ToSlash(filepath.Join("storage", project.ID, version.ID, filepath.FromSlash(item.Path)))
 				dst, err := safeBackupJoin880(stage, rel)

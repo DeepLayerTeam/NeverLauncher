@@ -32,7 +32,7 @@ if (
     or expected.get("26.3") != 25
 ):
     raise SystemExit(
-        "Forge Modern 0.17.3 canonical processor-based release grid: проверка или реализация не завершена"
+        "Forge Modern 0.17.3 каноническая матрица выпусков на основе процессоров: проверка или реализация не завершена"
     )
 
 target_doc = json.loads(read("compatibility/targets.json"))

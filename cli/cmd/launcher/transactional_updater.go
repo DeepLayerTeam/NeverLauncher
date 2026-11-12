@@ -214,20 +214,20 @@ func (u *transactionalUpdater0156) acquireLock(force bool) error {
 		}
 		lockRaw, readErr := os.ReadFile(u.lockPath)
 		if readErr != nil {
-			return fmt.Errorf("updater lock уже существует и не читается: %w", readErr)
+			return fmt.Errorf("файл блокировки обновления уже существует и недоступен для чтения: %w", readErr)
 		}
 		var existing updaterLock0156
 		if json.Unmarshal(lockRaw, &existing) == nil && existing.PID > 0 && updaterProcessAlive0156(existing.PID) && !force {
 			return fmt.Errorf("updater занят процессом pid=%d", existing.PID)
 		}
 		if !force && existing.PID <= 0 {
-			return errors.New("updater lock повреждён; используйте update recover --force")
+			return errors.New("файл блокировки обновления повреждён; используйте update recover --force")
 		}
 		if err := os.Remove(u.lockPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("удаление устаревшей блокировки средства обновления: %w", err)
 		}
 	}
-	return errors.New("не удалось получить updater lock")
+	return errors.New("не удалось получить блокировку обновления")
 }
 
 func (u *transactionalUpdater0156) releaseLock() {
@@ -241,7 +241,7 @@ func (u *transactionalUpdater0156) releaseLock() {
 
 func (u *transactionalUpdater0156) prepareLocked(req updaterRequest0156) (*updaterJournal0156, error) {
 	if !u.lockHeld {
-		return nil, errors.New("updater lock не удерживается")
+		return nil, errors.New("блокировка обновления не удерживается")
 	}
 	if strings.TrimSpace(req.Namespace) == "" {
 		req.Namespace = "default"
@@ -872,7 +872,7 @@ func normalizeUpdaterRequest0156(files []updaterFileSpec0156, remove []string) (
 			return nil, nil, fmt.Errorf("Некорректная контрольная сумма SHA-256 обновления для %s", rel)
 		}
 		if len(file.Data) == 0 && file.Data == nil && strings.TrimSpace(file.Source) == "" {
-			return nil, nil, fmt.Errorf("updater source отсутствует для %s", rel)
+			return nil, nil, fmt.Errorf("источник обновления отсутствует для %s", rel)
 		}
 		file.Path = rel
 		file.SHA256 = strings.ToLower(file.SHA256)
@@ -928,7 +928,7 @@ func copyUpdaterSource0156(src, dst string, mode os.FileMode) error {
 		return err
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return errors.New("source должен быть regular file и не symlink")
+		return errors.New("источник должен быть обычным файлом, а не символической ссылкой")
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err

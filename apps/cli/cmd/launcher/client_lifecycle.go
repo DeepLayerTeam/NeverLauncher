@@ -492,7 +492,7 @@ func loadClientSnapshot(root, target string) (string, clientLifecycleSnapshot, e
 	}
 	sort.Strings(ids)
 	if len(ids) == 0 {
-		return "", clientLifecycleSnapshot{}, errors.New("rollback snapshot отсутствует")
+		return "", clientLifecycleSnapshot{}, errors.New("снимок для отката отсутствует")
 	}
 	id := target
 	if id == "" || id == "previous" || id == "latest" {

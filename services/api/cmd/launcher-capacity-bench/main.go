@@ -57,7 +57,7 @@ func safeURL(s string, remote bool) (string, error) {
 		host := u.Hostname()
 		ip := net.ParseIP(host)
 		if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
-			return "", errors.New("remote target: требуется --allow-remote")
+			return "", errors.New("для удалённой цели требуется --allow-remote")
 		}
 	}
 	return u.String(), nil

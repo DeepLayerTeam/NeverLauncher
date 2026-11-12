@@ -1858,7 +1858,7 @@ fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
 
 fn safe_component(value: &str) -> Result<String, String> {
     let trimmed = value.trim();
-    if trimmed.is_empty() || trimmed.contains('/') || trimmed.contains('\\') || trimmed == "." || trimmed == ".." { return Err(format!("небезопасный path component: {value}")); }
+    if trimmed.is_empty() || trimmed.contains('/') || trimmed.contains('\\') || trimmed == "." || trimmed == ".." { return Err(format!("небезопасный компонент пути: {value}")); }
     Ok(trimmed.to_string())
 }
 

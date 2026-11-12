@@ -114,7 +114,7 @@ func verifyGuardRuntimePolicy0317(policy guardReleasePolicy0134, platform string
 		return "", err
 	}
 	if kind != "windows" {
-		return "", errors.New("continuous Guard runtime verification: требуется Windows")
+		return "", errors.New("для непрерывной проверки Guard в среде выполнения требуется Windows")
 	}
 	profiles := policy.RuntimeProfiles[kind]
 	if len(profiles) == 0 {

@@ -353,7 +353,7 @@ func compatApply0279(ctx context.Context, stage string, p factoryPlan0271, req c
 	}
 	lock := compatLock0279{SchemaVersion: compatSchema0279, AuthMode: req.AuthMode, JavaMajor: p.Java.Major, ParentInstallPlanSHA256: p.ReproducibilitySHA256, AddOpens: req.AddOpens}
 	if req.AuthMode == "yggdrasil" && !allowAuthAgent {
-		return nil, errors.New("custom Yggdrasil agent: требуется «--allow-auth-agent true»")
+		return nil, errors.New("пользовательский агент Yggdrasil: требуется «--allow-auth-agent true»")
 	}
 	actions := []mirrorAction0274{}
 	install := func(entry compatInputArtifact0279, prefix string) (compatArtifact0279, error) {

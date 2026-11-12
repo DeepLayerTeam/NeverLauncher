@@ -262,7 +262,7 @@ flow = e2e[
     e2e.index("flow_for_server() {") : e2e.index("flow_for_server velocity-e2e-p3")
 ]
 if flow.index("neoforge)") < flow.index("forge)"):
-    raise SystemExit("NeoForge probe mode: требуется «явное указание после режима Forge»")
+    raise SystemExit("режим проверки NeoForge: требуется «явное указание после режима Forge»")
 require(
     probe,
     [

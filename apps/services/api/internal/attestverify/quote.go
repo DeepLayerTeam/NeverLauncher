@@ -50,7 +50,7 @@ func LoadPCRPolicy0315(path string, now time.Time) (PCRPolicyFile0315, string, e
 		return out, "", err
 	}
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0022 != 0 || st.Size() <= 0 || st.Size() > 1<<20 {
-		return out, "", errors.New("PCR policy file: требуется обычный файл без права записи для группы и остальных пользователей")
+		return out, "", errors.New("файл политики PCR: требуется обычный файл без права записи для группы и остальных пользователей")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {

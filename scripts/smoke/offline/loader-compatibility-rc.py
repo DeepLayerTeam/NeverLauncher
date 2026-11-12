@@ -139,7 +139,7 @@ expected_families = {
 }
 if dict(family_counts) != expected_families:
     raise SystemExit(
-        f"Loader Compatibility RC family coverage: несоответствие — {dict(family_counts)} != {expected_families}"
+        f"Охват семейств загрузчиков кандидата на выпуск: несоответствие — {dict(family_counts)} != {expected_families}"
     )
 platforms = {(row.get("os"), row.get("arch")) for row in targets}
 expected_platforms = {
@@ -152,7 +152,7 @@ expected_platforms = {
 }
 if platforms != expected_platforms:
     raise SystemExit(
-        f"Loader Compatibility RC platform coverage: несоответствие — {sorted(platforms)}"
+        f"Охват платформ кандидата на выпуск с совместимыми загрузчиками: несоответствие — {sorted(platforms)}"
     )
 if {row.get("javaMajor") for row in targets} != {8, 16, 17, 21, 25}:
     raise SystemExit("Кандидат совместимости загрузчиков должен покрывать Java 8/16/17/21/25")

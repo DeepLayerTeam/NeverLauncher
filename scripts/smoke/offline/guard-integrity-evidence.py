@@ -24,7 +24,7 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 2):
-    raise SystemExit(f"Guard integrity evidence: требуется версия не ниже 0.13.2, получено {version}")
+    raise SystemExit(f"Подтверждение целостности Guard: требуется версия не ниже 0.13.2, получено {version}")
 
 cargo = read("runtime/runtime/Cargo.toml")
 require(
@@ -93,7 +93,7 @@ require(
     [
         "GuardIntegrityEvidence",
         ".integrity_evidence()",
-        "launch заблокирован: Guard Windows Integrity Evidence v1 недоступен",
+        "Запуск заблокирован: подтверждение целостности Guard v1 для Windows недоступно",
         "guard_integrity_evidence",
     ],
     "Подключение строгой проверки целостности в Desktop",

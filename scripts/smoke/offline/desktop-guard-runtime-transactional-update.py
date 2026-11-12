@@ -10,7 +10,7 @@ core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 7):
     raise SystemExit(
-        f"Desktop/Guard/Runtime transactional update: требуется версия не ниже 0.15.7, получено {VERSION}"
+        f"Транзакционное обновление Desktop/Guard/Runtime: требуется версия не ниже 0.15.7, получено {VERSION}"
     )
 
 

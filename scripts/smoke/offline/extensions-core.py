@@ -22,7 +22,7 @@ if version < (0, 20, 1):
 
 schema = json.loads(read("schemas/launcher-extension.schema.json"))
 if schema.get("properties", {}).get("schemaVersion", {}).get("const") != "2.0":
-    raise SystemExit("canonical extension schema: требуется «2.0»")
+    raise SystemExit("каноническая схема расширения: требуется «2.0»")
 
 require(
     "services/api/internal/dbmigrate/sql/0042_extensions_core_0201.sql",

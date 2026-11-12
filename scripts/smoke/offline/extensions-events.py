@@ -136,7 +136,7 @@ for path in (
     "/api/v1/admin/extension-events/subscriptions",
     "/api/v1/admin/extension-events/dead-letters",
 ):
-    require(path in routes, f"Admin event diagnostics Отсутствует маршрут: {path}")
+    require(path in routes, f"Диагностика событий Admin: отсутствует маршрут: {path}")
 
 schema = read("schemas/launcher-extension-events.schema.json")
 require(

@@ -12,7 +12,7 @@ Backend содержит операции хранения и выдачи Minec
 
 ## Где искать реализацию
 
-- `services/api/internal/httpapi/` — обработчики textures и соответствующие auth checks.
+- `services/api/internal/httpapi/` — обработчики текстур и соответствующие проверки авторизации.
 - `schemas/openapi.yaml` — публичный контракт маршрутов.
 - `apps/admin/` и `apps/desktop/` — текущие интерфейсы.
 - [Функции клиентского запуска](../clients/profiles-and-launch.md) и [модель доверия](../security/trust-model.md).

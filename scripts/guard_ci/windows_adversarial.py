@@ -83,7 +83,7 @@ SCENARIOS = (
         "startup-instrumentation",
         "adversarial",
         "guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable",
-        "JDWP/javaagent/agentlib/foreign agentpath блокируются до spawn",
+        "JDWP, javaagent, agentlib и сторонний agentpath блокируются до запуска процесса",
     ),
     Scenario(
         "live-debugger",

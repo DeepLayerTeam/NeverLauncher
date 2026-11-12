@@ -102,7 +102,7 @@ func secureClientDestination(root, relative string) (string, error) {
 		return "", fmt.Errorf("Чтение сведений о корне клиента: %w", err)
 	}
 	if rootInfo.Mode()&os.ModeSymlink != 0 || !rootInfo.IsDir() {
-		return "", errors.New("client root должен быть реальным каталогом")
+		return "", errors.New("корневой путь клиента должен указывать на реальный каталог")
 	}
 	current := absoluteRoot
 	parts := strings.Split(filepath.ToSlash(relative), "/")

@@ -63,7 +63,7 @@ func VerifyTrustPolicy(raw []byte, rootHex string, now time.Time) (TrustPolicy, 
 	}
 	root, e := hex.DecodeString(strings.TrimSpace(rootHex))
 	if e != nil || len(root) != 32 {
-		return p, "", errors.New("trusted embedded root: требуется ключ Ed25519 длиной 32 байта")
+		return p, "", errors.New("для встроенного доверенного корневого ключа требуется ключ Ed25519 длиной 32 байта")
 	}
 	var env TrustPolicyEnvelope
 	if e = decodeStrict(raw, &env); e != nil {

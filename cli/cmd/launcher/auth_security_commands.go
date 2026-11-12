@@ -302,14 +302,14 @@ func handleBackup(args []string) error {
 		} else if ok {
 			return writeOrPrintJSON(out, payload)
 		}
-		return errors.New("backup status требует --backend <url> и --token/LAUNCHER_TOKEN для product-проверки")
+		return errors.New("backup status требует --backend <url> и --token/LAUNCHER_TOKEN для проверки в рабочей системе")
 	case "create":
 		if payload, ok, err := adminBackendPost(args, "/api/v1/operations/backups", nil); err != nil {
 			return err
 		} else if ok {
 			return writeOrPrintJSON(out, payload)
 		}
-		return errors.New("backup create требует --backend <url> и --token/LAUNCHER_TOKEN; локальный dry-run больше не считается product backup")
+		return errors.New("backup create требует --backend <url> и --token/LAUNCHER_TOKEN; локальный пробный запуск больше не считается рабочей резервной копией")
 	case "inspect":
 		backupID := flagValue(args, "--id", "")
 		if backupID == "" && len(args) > 1 && !strings.HasPrefix(args[1], "--") {

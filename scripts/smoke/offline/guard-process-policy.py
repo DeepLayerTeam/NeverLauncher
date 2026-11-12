@@ -120,7 +120,7 @@ require(
         "status.process_policy_enforced",
         "GUARD_WINDOWS_PROCESS_POLICY_VERSION",
         ".process_policy()",
-        "launch заблокирован: Guard Windows process policy verification failed",
+        "Запуск заблокирован: не удалось проверить политику процессов Guard для Windows",
         "guard_process_policy",
     ],
     "Проверка политики Desktop перед запуском",
@@ -145,7 +145,7 @@ if "guard-process-policy-0133.py" not in ci:
     raise SystemExit("Guard 0.13.3: проверка политики процессов не подключена к CI")
 if "guard-process-policy-0133.py" not in preflight:
     raise SystemExit(
-        "Guard 0.13.3 process policy gate: не подключено к предварительной проверке релиза"
+        "Проверка политики процессов Guard 0.13.3: не подключена к предварительной проверке релиза"
     )
 require(
     ci,

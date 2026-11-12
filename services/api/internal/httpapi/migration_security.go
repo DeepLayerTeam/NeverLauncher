@@ -45,7 +45,7 @@ func migrationSigner0336(cfg config.Config) (string, string, error) {
 	}
 	seed, err := hex.DecodeString(strings.TrimSpace(cfg.ManifestSigningPrivateKey))
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return "", "", errors.New("new Never Ed25519 manifest signing seed: требуется «настроенный»")
+		return "", "", errors.New("необходимо настроить исходное значение Ed25519 для подписи нового манифеста Never")
 	}
 	public := ed25519.NewKeyFromSeed(seed).Public().(ed25519.PublicKey)
 	digest := sha256.Sum256(public)

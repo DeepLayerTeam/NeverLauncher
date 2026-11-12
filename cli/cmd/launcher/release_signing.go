@@ -143,7 +143,7 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 	}
 	provenance := filepath.Join(dir, "PROVENANCE.json")
 	if _, err := os.Stat(provenance); err != nil {
-		return fmt.Errorf("PROVENANCE.json обязателен для signed attestation: %w", err)
+		return fmt.Errorf("PROVENANCE.json обязателен для подписанного подтверждения: %w", err)
 	}
 	return signDetachedFileWithKey(provenance, filepath.Join(dir, "PROVENANCE.json.sig"), privateKey)
 }
@@ -269,7 +269,7 @@ func loadEd25519PublicKey(path string) (ed25519.PublicKey, error) {
 func decodeKeyMaterial(value string) ([]byte, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return nil, errors.New("key file пуст")
+		return nil, errors.New("файл ключа пуст")
 	}
 	if decoded, err := hex.DecodeString(value); err == nil {
 		return decoded, nil
@@ -314,7 +314,7 @@ func verifyDetachedEd25519(path, signaturePath, publicKeyPath string) (map[strin
 	} else if decoded, err := hex.DecodeString(text); err == nil {
 		sig = decoded
 	} else {
-		return nil, errors.New("detached signature должна быть base64 или hex")
+		return nil, errors.New("отдельная подпись должна быть в формате base64 или hex")
 	}
 	if len(sig) != ed25519.SignatureSize || !ed25519.Verify(pub, data, sig) {
 		return nil, errors.New("Проверка подписи Ed25519 завершилась ошибкой")

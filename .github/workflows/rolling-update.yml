@@ -35,7 +35,7 @@ jobs:
       - name: "Проверить неизменность каталога миграций PostgreSQL и версии релиза"
         run: |
           set -euo pipefail
-          PYTHONPATH=scripts/operations python3 -c 'import nn1_compat_0516 as n; c, d=n.migration_catalog(); assert len(c) >= 100; print("pinned SQL SHA-256:",d)'
+          PYTHONPATH=scripts/operations python3 -c 'import nn1_compat_0516 as n; c, d=n.migration_catalog(); assert len(c) >= 100; print("закреплённый SHA-256 SQL:",d)'
           python3 scripts/version/manage.py check
       - uses: actions/setup-go@v6
         with:

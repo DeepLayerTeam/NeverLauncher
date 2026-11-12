@@ -7,7 +7,7 @@ version = (root / "VERSION").read_text(encoding="utf-8").strip()
 parts = tuple(int(x) for x in version.split("-", 1)[0].split("+", 1)[0].split(".")[:3])
 if parts < (0, 19, 2):
     raise SystemExit(
-        f"ServerBridge runtime identity: требуется версия не ниже 0.19.2, получено {version}"
+        f"Идентификация среды выполнения ServerBridge: требуется версия не ниже 0.19.2, получено {version}"
     )
 
 
