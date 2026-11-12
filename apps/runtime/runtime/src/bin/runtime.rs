@@ -239,7 +239,7 @@ async fn command_certify_vanilla(args: &[String]) -> Result<serde_json::Value, S
         .map_err(|_| "--max-runtime-seconds должен быть целым числом секунд".to_string())?;
     let matching_server = optional_flag(args, "--server");
     let matching_server_port = optional_flag(args, "--server-port")
-        .map(|value| value.parse::<u16>().map_err(|_| "--server-port должен быть TCP port 1..65535".to_string()))
+        .map(|value| value.parse::<u16>().map_err(|_| "Параметр --server-port должен задавать порт TCP от 1 до 65535".to_string()))
         .transpose()?;
     let result = certify_vanilla_compatibility(
         &root,

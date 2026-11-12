@@ -234,7 +234,7 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 	// зарегистрировать второй ключ. Преемственность ключа требует ротации с доказательством старым
 	// ключом либо восстановления с новым устойчивым к фишингу подтверждением учётной записи.
 	if session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub); !ok || session.TrustedDeviceID != "" || session.DeviceTrustState != "unverified" {
-		writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"code": http.StatusConflict, "message": "сессия уже привязана к trusted device; используйте key rotation или key recovery", "rotationBegin": "/api/v1/auth/devices/key-rotation/begin", "recoveryBegin": "/api/v1/auth/devices/key-recovery/begin"}})
+		writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"code": http.StatusConflict, "message": "Сеанс уже привязан к доверенному устройству; используйте ротацию или восстановление ключа", "rotationBegin": "/api/v1/auth/devices/key-rotation/begin", "recoveryBegin": "/api/v1/auth/devices/key-recovery/begin"}})
 		return
 	}
 	var req deviceRegisterBeginRequest0121
@@ -357,7 +357,7 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 	}
 	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось обновить access token")
+		writeError(w, http.StatusInternalServerError, "Не удалось обновить токен доступа")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "device-register-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: claims.Email, Action: "auth:device:register", Target: device.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
@@ -464,7 +464,7 @@ func (s Server) authDeviceVerifyComplete0121(w http.ResponseWriter, r *http.Requ
 	}
 	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось обновить access token")
+		writeError(w, http.StatusInternalServerError, "Не удалось обновить токен доступа")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"device": sanitizeTrustedDevice0121(device), "session": session, "accessToken": accessToken}})

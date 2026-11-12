@@ -681,7 +681,7 @@ func clientPackageUpload(packagePath, clientDir, storageDir, prefix string) (map
 			return nil, err
 		}
 		if remoteSum != file.SHA256 || remoteSize != file.Size {
-			return nil, fmt.Errorf("Несоответствие: %s: удалённый checksum/size", file.Path)
+			return nil, fmt.Errorf("Несоответствие: %s: контрольная сумма или размер удалённого файла", file.Path)
 		}
 		uploadedBytes += size
 		uploaded = append(uploaded, map[string]any{"path": file.Path, "sha256": file.SHA256, "size": size, "objectKey": filepath.ToSlash(filepath.Join(prefix, file.Path)), "status": "uploaded"})

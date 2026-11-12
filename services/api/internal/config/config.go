@@ -433,11 +433,11 @@ func ValidateProduction(cfg Config) error {
 			Releases      map[string]guardRelease `json:"releases"`
 		}
 		if err := json.Unmarshal([]byte(guardAllowlistRaw), &document); err != nil || document.SchemaVersion != "2.0" || len(document.Releases) == 0 {
-			problems = append(problems, "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON должен быть Guard release policy schemaVersion=2.0")
+			problems = append(problems, "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON должен содержать политику выпуска Guard с schemaVersion=2.0")
 		} else {
 			for version, release := range document.Releases {
 				if strings.TrimSpace(version) == "" || release.ProtocolVersion != 4 || len(release.Platforms) == 0 {
-					problems = append(problems, fmt.Sprintf("Guard release policy %q должна содержать protocolVersion=4 и platforms", version))
+					problems = append(problems, fmt.Sprintf("Политика выпуска Guard %q должна содержать protocolVersion=4 и platforms", version))
 					continue
 				}
 				for platform, platformPolicy := range release.Platforms {
@@ -451,11 +451,11 @@ func ValidateProduction(cfg Config) error {
 						for _, value := range []string{pair.GuardSHA256, pair.LauncherSHA256} {
 							value = strings.TrimSpace(value)
 							if len(value) != 64 {
-								problems = append(problems, fmt.Sprintf("Guard release policy %q platform %q содержит SHA-256 неверной длины", version, platform))
+								problems = append(problems, fmt.Sprintf("Политика выпуска Guard %q для платформы %q содержит SHA-256 неверной длины", version, platform))
 								break
 							}
 							if _, err := hex.DecodeString(value); err != nil {
-								problems = append(problems, fmt.Sprintf("Guard release policy %q platform %q содержит невалидный SHA-256", version, platform))
+								problems = append(problems, fmt.Sprintf("Политика выпуска Guard %q для платформы %q содержит невалидный SHA-256", version, platform))
 								break
 							}
 						}
@@ -555,27 +555,27 @@ func ValidateProduction(cfg Config) error {
 		} else {
 			for version, entry := range bridgeAllowlist {
 				if strings.TrimSpace(version) == "" || len(entry.VelocitySHA256) == 0 || len(entry.PaperSHA256) == 0 || len(entry.PurpurSHA256) == 0 {
-					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q должна содержать velocitySha256, paperSha256 и purpurSha256", version))
+					problems = append(problems, fmt.Sprintf("Политика выпуска ServerBridge %q должна содержать velocitySha256, paperSha256 и purpurSha256", version))
 					continue
 				}
 				if bridgeReleaseRequiresBukkitFamily0144(version) && (len(entry.BukkitSHA256) == 0 || len(entry.SpigotSHA256) == 0 || len(entry.FoliaSHA256) == 0) {
-					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q для 0.14.4+ должна содержать bukkitSha256, spigotSha256 и foliaSha256", version))
+					problems = append(problems, fmt.Sprintf("Политика выпуска ServerBridge %q для 0.14.4+ должна содержать bukkitSha256, spigotSha256 и foliaSha256", version))
 					continue
 				}
 				if bridgeReleaseRequiresProxyFamily0145(version) && (len(entry.BungeeCordSHA256) == 0 || len(entry.WaterfallSHA256) == 0) {
-					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q для 0.14.5+ должна содержать bungeeCordSha256 и waterfallSha256", version))
+					problems = append(problems, fmt.Sprintf("Политика выпуска ServerBridge %q для 0.14.5+ должна содержать bungeeCordSha256 и waterfallSha256", version))
 					continue
 				}
 				if bridgeReleaseRequiresFabric0146(version) && len(entry.FabricSHA256) == 0 {
-					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q для 0.14.6+ должна содержать fabricSha256", version))
+					problems = append(problems, fmt.Sprintf("Политика выпуска ServerBridge %q для 0.14.6+ должна содержать fabricSha256", version))
 					continue
 				}
 				if bridgeReleaseRequiresForgeFamily0147(version) && (len(entry.ForgeSHA256) == 0 || len(entry.NeoForgeSHA256) == 0) {
-					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q для 0.14.7+ должна содержать forgeSha256 и neoforgeSha256", version))
+					problems = append(problems, fmt.Sprintf("Политика выпуска ServerBridge %q для 0.14.7+ должна содержать forgeSha256 и neoforgeSha256", version))
 					continue
 				}
 				if bridgeReleaseRequiresUniversalAdapters0198(version) && (len(entry.QuiltSHA256) == 0 || len(entry.SpongeSHA256) == 0 || len(entry.VanillaSHA256) == 0) {
-					problems = append(problems, fmt.Sprintf("ServerBridge release policy %q для 0.19.8+ должна содержать quiltSha256, spongeSha256 и vanillaSha256", version))
+					problems = append(problems, fmt.Sprintf("Политика выпуска ServerBridge %q для 0.19.8+ должна содержать quiltSha256, spongeSha256 и vanillaSha256", version))
 					continue
 				}
 				values := make([]string, 0, len(entry.VelocitySHA256)+len(entry.BungeeCordSHA256)+len(entry.WaterfallSHA256)+len(entry.BukkitSHA256)+len(entry.SpigotSHA256)+len(entry.PaperSHA256)+len(entry.PurpurSHA256)+len(entry.FoliaSHA256)+len(entry.FabricSHA256)+len(entry.ForgeSHA256)+len(entry.NeoForgeSHA256)+len(entry.QuiltSHA256)+len(entry.SpongeSHA256)+len(entry.VanillaSHA256))
@@ -596,11 +596,11 @@ func ValidateProduction(cfg Config) error {
 				for _, value := range values {
 					value = strings.TrimSpace(value)
 					if len(value) != 64 {
-						problems = append(problems, fmt.Sprintf("ServerBridge release policy %q содержит SHA-256 неверной длины", version))
+						problems = append(problems, fmt.Sprintf("Политика выпуска ServerBridge %q содержит SHA-256 неверной длины", version))
 						break
 					}
 					if _, err := hex.DecodeString(value); err != nil {
-						problems = append(problems, fmt.Sprintf("ServerBridge release policy %q содержит невалидный SHA-256", version))
+						problems = append(problems, fmt.Sprintf("Политика выпуска ServerBridge %q содержит невалидный SHA-256", version))
 						break
 					}
 				}

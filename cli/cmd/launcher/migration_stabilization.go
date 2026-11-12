@@ -48,7 +48,7 @@ func resolveReleaseTrustStatePath01510(path string) string {
 func withReleaseTrustStateLock01510(path string, fn func() error) error {
 	path = resolveReleaseTrustStatePath01510(path)
 	if path == "" {
-		return errors.New("0.15.10 Release Verification требует persistent trust state для serialized verification")
+		return errors.New("Проверка выпуска 0.15.10 требует постоянного хранения состояния доверия для последовательной проверки")
 	}
 	abs, err := filepath.Abs(path)
 	if err != nil {

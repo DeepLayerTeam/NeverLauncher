@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-BUNDLE_DIR="${1:?Укажите каталог release bundle}"
+BUNDLE_DIR="${1:?Укажите каталог комплекта выпуска}"
 PUBLIC_KEY="${LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-${LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-${2:-}}}"
 TRUST_STATE="${LAUNCHER_RELEASE_TRUST_STATE_FILE:-${3:-}}"
 TRUST_POLICY="${LAUNCHER_RELEASE_TRUST_POLICY_FILE:-${4:-}}"

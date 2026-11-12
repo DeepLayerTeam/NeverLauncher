@@ -2283,7 +2283,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "normalizeDeliveryArchitecture",
         "verifyDeliveryManifest0151",
         "resolveDeliveryArtifacts0151",
-        "checksum/size mismatch",
+        "Контрольная сумма или размер артефакта поставки",
     ]:
         if required not in delivery_0151:
             fail(f"Неполная реализация «0.15.1 delivery implementation»: {required}")

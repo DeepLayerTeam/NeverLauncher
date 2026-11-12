@@ -281,7 +281,7 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		return fmt.Errorf("Ошибка пакета Windows %s: %w", arch, err)
 	}
 	if target.Package.Size != actualPackageSize || !strings.EqualFold(target.Package.SHA256, actualPackageHash) {
-		return fmt.Errorf("Несоответствие: Windows %s пакет checksum/size", arch)
+		return fmt.Errorf("Несоответствие: Windows %s пакет контрольная сумма или размер", arch)
 	}
 	manifestPath, err := safeDeliveryArtifactPath(dir, target.Package.Manifest)
 	if err != nil {

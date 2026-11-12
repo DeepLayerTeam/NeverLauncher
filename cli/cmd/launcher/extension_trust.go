@@ -136,7 +136,7 @@ func handleExtensionEmergency02012(args []string) error {
 		return writeOrPrintJSON(out, p)
 	case "disable":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("emergency disable требует extension id")
+			return errors.New("emergency disable требует идентификатор расширения")
 		}
 		reason := strings.TrimSpace(flagValue(args, "--reason", ""))
 		if reason == "" {

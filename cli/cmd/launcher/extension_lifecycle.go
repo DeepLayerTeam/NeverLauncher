@@ -73,7 +73,7 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "enable", "disable", "uninstall", "rollback":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-			return fmt.Errorf("extension %s требует extension id", command)
+			return fmt.Errorf("extension %s требует идентификатор расширения", command)
 		}
 		id := args[0]
 		if parsed, _, ok := parseRegistryCoordinate0203(id); ok {
@@ -86,7 +86,7 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		return writeOrPrintJSON(out, payload)
 	case "update":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-			return errors.New("extension update требует extension id или id@version")
+			return errors.New("extension update требует идентификатор расширения или id@version")
 		}
 		id, versionValue, hasVersion := parseRegistryCoordinate0203(args[0])
 		if !hasVersion {

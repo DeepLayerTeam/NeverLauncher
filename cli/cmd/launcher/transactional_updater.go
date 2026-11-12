@@ -1000,7 +1000,7 @@ func verifyUpdaterFile0156(path string, expectedSize int64, expectedSHA string) 
 		return err
 	}
 	if size != expectedSize || !strings.EqualFold(sum, expectedSHA) {
-		return fmt.Errorf("Несоответствие: checksum/size: size=%d/%d sha256=%s/%s", size, expectedSize, sum, strings.ToLower(expectedSHA))
+		return fmt.Errorf("Несоответствие: контрольная сумма или размер: size=%d/%d sha256=%s/%s", size, expectedSize, sum, strings.ToLower(expectedSHA))
 	}
 	return nil
 }

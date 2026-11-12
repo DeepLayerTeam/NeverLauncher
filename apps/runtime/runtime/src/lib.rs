@@ -1283,7 +1283,7 @@ pub async fn launch_with_timeout_matching_authenticated(
 pub async fn load_launch_history(root: &Path) -> Result<Vec<LaunchHistoryEntry>, String> {
     let path = root.join("logs").join("launch-history.jsonl");
     if fs::metadata(&path).await.is_err() { return Ok(Vec::new()); }
-    let data = fs::read_to_string(&path).await.map_err(|err| format!("не удалось прочитать launch history: {err}"))?;
+    let data = fs::read_to_string(&path).await.map_err(|err| format!("Не удалось прочитать историю запусков: {err}"))?;
     Ok(data.lines().filter(|line| !line.trim().is_empty()).filter_map(|line| serde_json::from_str::<LaunchHistoryEntry>(line).ok()).collect())
 }
 
@@ -1798,12 +1798,12 @@ fn validate_compatibility_resolution_trust(manifest: &Manifest, resolution: &Com
 
 async fn read_log_tail(path: &Path, max_bytes: u64) -> Result<String, String> {
     let mut file = fs::File::open(path).await.map_err(|err| format!("не удалось открыть журнал среды выполнения: {err}"))?;
-    let len = file.metadata().await.map_err(|err| format!("не удалось получить размер runtime log: {err}"))?.len();
+    let len = file.metadata().await.map_err(|err| format!("Не удалось получить размер журнала среды выполнения: {err}"))?.len();
     if len > max_bytes {
         file.seek(SeekFrom::Start(len - max_bytes)).await.map_err(|err| format!("не удалось изменить позицию чтения журнала среды выполнения: {err}"))?;
     }
     let mut data = Vec::with_capacity(len.min(max_bytes) as usize);
-    file.read_to_end(&mut data).await.map_err(|err| format!("не удалось прочитать runtime log: {err}"))?;
+    file.read_to_end(&mut data).await.map_err(|err| format!("Не удалось прочитать журнал среды выполнения: {err}"))?;
     Ok(String::from_utf8_lossy(&data).to_string())
 }
 
@@ -1811,10 +1811,10 @@ async fn append_launch_history(root: &Path, entry: &LaunchHistoryEntry) -> Resul
     let logs_dir = root.join("logs");
     fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
     let path = logs_dir.join("launch-history.jsonl");
-    let mut line = serde_json::to_string(entry).map_err(|err| format!("не удалось сериализовать launch history: {err}"))?;
+    let mut line = serde_json::to_string(entry).map_err(|err| format!("Не удалось сериализовать историю запусков: {err}"))?;
     line.push('\n');
-    let mut file = fs::OpenOptions::new().create(true).append(true).open(&path).await.map_err(|err| format!("не удалось открыть launch history: {err}"))?;
-    file.write_all(line.as_bytes()).await.map_err(|err| format!("не удалось записать launch history: {err}"))
+    let mut file = fs::OpenOptions::new().create(true).append(true).open(&path).await.map_err(|err| format!("Не удалось открыть историю запусков: {err}"))?;
+    file.write_all(line.as_bytes()).await.map_err(|err| format!("Не удалось записать историю запусков: {err}"))
 }
 
 async fn sha256_file(path: &Path) -> Result<String, String> {

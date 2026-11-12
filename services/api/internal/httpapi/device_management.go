@@ -195,7 +195,7 @@ func (s Server) authDeviceRevokeOthers0125(w http.ResponseWriter, r *http.Reques
 	}
 	current, err := s.Repo.GetTrustedDevice(claims.Sub, currentDeviceID)
 	if err != nil || current.Status != "active" || current.TrustState != "verified" {
-		writeError(w, http.StatusConflict, "текущее trusted device больше не активно")
+		writeError(w, http.StatusConflict, "Текущее доверенное устройство больше не активно")
 		return
 	}
 	var req deviceRevokeRequest0125

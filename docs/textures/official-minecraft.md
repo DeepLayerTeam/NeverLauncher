@@ -21,7 +21,7 @@ Launcher 0.25.7 предоставляет **независимую** интег
 | Получить официальные скины/плащи | GET `/api/v1/minecraft/official/profile` | Зашифрованный привязанный сеанс |
 | Загрузить официальный скин | POST `/api/v1/minecraft/official/skin` | Привязанный сеанс; multipart `file` (PNG), `variant` (`classic` или `slim`) |
 | Сбросить официальный скин | DELETE `/api/v1/minecraft/official/skin` | Привязанный сеанс |
-| Выбрать принадлежащий пользователю плащ | PUT `/api/v1/minecraft/official/cape` | Привязанный сеанс; JSON `{"capeId":"<one of profile.capes[].id>"}` |
+| Выбрать принадлежащий пользователю плащ | PUT `/api/v1/minecraft/official/cape` | Привязанный сеанс; JSON `{"capeId":"<один из profile.capes[].id>"}` |
 | Скрыть активный плащ | DELETE `/api/v1/minecraft/official/cape` | Привязанный сеанс |
 | Начать официальную игру Minecraft | POST `/api/v1/minecraft/official/launch-credentials` | Привязанный сеанс; проверка идентичности Minecraft только для чтения |
 

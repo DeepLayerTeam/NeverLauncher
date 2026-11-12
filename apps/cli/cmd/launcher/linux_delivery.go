@@ -201,7 +201,7 @@ func verifyLinuxPackageManifest0153(dir, ver, arch string) (LinuxPackageManifest
 			return LinuxPackageManifest0153{}, "", fmt.Errorf("Ошибка артефакта Linux %s (%s): %w", arch, artifact.Name, err)
 		}
 		if artifact.Size <= 0 || artifact.Size != actualSize || !validDeliverySHA256(artifact.SHA256) || !strings.EqualFold(artifact.SHA256, actualHash) {
-			return LinuxPackageManifest0153{}, "", fmt.Errorf("Несоответствие: Linux %s артефакт %s checksum/size", arch, artifact.Name)
+			return LinuxPackageManifest0153{}, "", fmt.Errorf("Несоответствие: Linux %s артефакт %s контрольная сумма или размер", arch, artifact.Name)
 		}
 		elf, err := inspectLinuxELFFile0153(path)
 		if err != nil || elf.Architecture != arch || elf.MachineText != expectedMachine {

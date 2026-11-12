@@ -350,7 +350,7 @@ func (s Server) backupStorageObjects880(stage string) (int, error) {
 					return count, readerErr
 				}
 				if size >= 0 && written != size {
-					return count, fmt.Errorf("storage object %s имеет размер %d вместо %d", item.Path, written, size)
+					return count, fmt.Errorf("Объект хранилища %s имеет размер %d вместо %d", item.Path, written, size)
 				}
 				count++
 			}
@@ -443,14 +443,14 @@ func (s Server) restoreStorageObjectsSequential880(root string) (int, error) {
 func restoreLocalStorageAtomic880(sourceRoot, liveRoot string) (int, error) {
 	liveRoot = filepath.Clean(strings.TrimSpace(liveRoot))
 	if liveRoot == "" || liveRoot == "." || liveRoot == string(os.PathSeparator) {
-		return 0, fmt.Errorf("небезопасный local storage root для restore: %q", liveRoot)
+		return 0, fmt.Errorf("Небезопасный корневой каталог локального хранилища для восстановления: %q", liveRoot)
 	}
 	absLive, err := filepath.Abs(liveRoot)
 	if err != nil {
 		return 0, err
 	}
 	if info, err := os.Lstat(absLive); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return 0, errors.New("local storage root не может быть symlink при atomic restore")
+		return 0, errors.New("Корневой каталог локального хранилища не может быть символической ссылкой при атомарном восстановлении")
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return 0, err
 	}
@@ -515,7 +515,7 @@ func copyStorageTree880(srcRoot, dstRoot string) (int, error) {
 			return os.MkdirAll(dst, 0o755)
 		}
 		if entry.Type()&os.ModeSymlink != 0 || !entry.Type().IsRegular() {
-			return fmt.Errorf("storage backup содержит неподдерживаемый тип: %s", rel)
+			return fmt.Errorf("Резервная копия хранилища содержит неподдерживаемый тип: %s", rel)
 		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
@@ -831,7 +831,7 @@ func inspectOperationsBackup880(path string) (operationsBackupManifest880, error
 		}
 		var manifest operationsBackupManifest880
 		if err := json.NewDecoder(io.LimitReader(tr, 4<<20)).Decode(&manifest); err != nil {
-			return operationsBackupManifest880{}, fmt.Errorf("manifest backup повреждён: %w", err)
+			return operationsBackupManifest880{}, fmt.Errorf("Манифест резервной копии повреждён: %w", err)
 		}
 		return manifest, nil
 	}
@@ -908,11 +908,11 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 			return fail(err)
 		}
 		if len(actual) >= maxBackupMembers880 || hdr.Size < 0 || hdr.Size > maxUncompressedBackup880-unpackedBytes {
-			return fail(errors.New("backup archive превышает допустимые размеры"))
+			return fail(errors.New("Архив резервной копии превышает допустимые размеры"))
 		}
 		unpackedBytes += hdr.Size
 		if hdr.Typeflag != tar.TypeReg && hdr.Typeflag != tar.TypeRegA {
-			return fail(fmt.Errorf("backup archive содержит неподдерживаемый тип %d для %s", hdr.Typeflag, hdr.Name))
+			return fail(fmt.Errorf("Архив резервной копии содержит неподдерживаемый тип %d для %s", hdr.Typeflag, hdr.Name))
 		}
 		dst, err := safeBackupJoin880(stage, hdr.Name)
 		if err != nil {
@@ -935,7 +935,7 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 			return fail(closeErr)
 		}
 		if written != hdr.Size {
-			return fail(fmt.Errorf("размер %s не совпадает с tar header", hdr.Name))
+			return fail(fmt.Errorf("Размер %s не совпадает с заголовком TAR", hdr.Name))
 		}
 		actual[filepath.ToSlash(hdr.Name)] = operationsBackupFile880{Path: filepath.ToSlash(hdr.Name), Size: written, SHA256: hex.EncodeToString(h.Sum(nil))}
 	}
@@ -948,7 +948,7 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 		return fail(fmt.Errorf("manifest.json повреждён: %w", err))
 	}
 	if manifest.BackupID != expectedBackupID {
-		return fail(fmt.Errorf("backupId в manifest (%s) не совпадает с ожидаемым %s", manifest.BackupID, expectedBackupID))
+		return fail(fmt.Errorf("backupId в манифесте (%s) не совпадает с ожидаемым %s", manifest.BackupID, expectedBackupID))
 	}
 	expected := make(map[string]operationsBackupFile880, len(manifest.Files))
 	for _, item := range manifest.Files {
@@ -958,10 +958,10 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 		expected[item.Path] = item
 		got, ok := actual[item.Path]
 		if !ok {
-			return fail(fmt.Errorf("%s отсутствует в backup archive", item.Path))
+			return fail(fmt.Errorf("%s отсутствует в архиве резервной копии", item.Path))
 		}
 		if got.Size != item.Size || !strings.EqualFold(got.SHA256, item.SHA256) {
-			return fail(fmt.Errorf("Несоответствие: %s: checksum/size", item.Path))
+			return fail(fmt.Errorf("Несоответствие: %s: контрольная сумма или размер", item.Path))
 		}
 	}
 	for name := range actual {
@@ -969,7 +969,7 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 			continue
 		}
 		if _, ok := expected[name]; !ok {
-			return fail(fmt.Errorf("backup archive содержит незаявленный файл %s", name))
+			return fail(fmt.Errorf("Архив резервной копии содержит незаявленный файл %s", name))
 		}
 	}
 	return stage, manifest, nil
@@ -978,11 +978,11 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 func safeBackupJoin880(root, rel string) (string, error) {
 	rel = filepath.ToSlash(strings.TrimSpace(rel))
 	if rel == "" || rel == "." || strings.HasPrefix(rel, "/") || strings.Contains(rel, "\\") {
-		return "", fmt.Errorf("небезопасный путь в backup archive: %q", rel)
+		return "", fmt.Errorf("Небезопасный путь в архиве резервной копии: %q", rel)
 	}
 	clean := filepath.ToSlash(filepath.Clean(rel))
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.Contains(clean, "/../") {
-		return "", fmt.Errorf("небезопасный путь в backup archive: %q", rel)
+		return "", fmt.Errorf("Небезопасный путь в архиве резервной копии: %q", rel)
 	}
 	rootAbs, err := filepath.Abs(root)
 	if err != nil {
@@ -1000,7 +1000,7 @@ func safeBackupJoin880(root, rel string) (string, error) {
 
 func createPostgresDump880(parent context.Context, dsn, output string) error {
 	if _, err := exec.LookPath("pg_dump"); err != nil {
-		return errors.New("pg_dump не найден; production backup требует postgresql-client")
+		return errors.New("pg_dump не найден; резервное копирование в промышленной среде требует postgresql-client")
 	}
 	env, _, err := postgresCommandEnvironment880(dsn)
 	if err != nil {
@@ -1018,7 +1018,7 @@ func createPostgresDump880(parent context.Context, dsn, output string) error {
 
 func restorePostgresDump880(parent context.Context, dsn, dumpPath string) error {
 	if _, err := exec.LookPath("pg_restore"); err != nil {
-		return errors.New("pg_restore не найден; production restore требует postgresql-client")
+		return errors.New("pg_restore не найден; восстановление в промышленной среде требует postgresql-client")
 	}
 	env, database, err := postgresCommandEnvironment880(dsn)
 	if err != nil {

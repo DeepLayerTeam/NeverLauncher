@@ -250,7 +250,7 @@ func verifyMacOSPackageManifest0154(dir, ver, arch string, requireSigned bool, e
 			return MacOSPackageManifest0154{}, "", fmt.Errorf("Артефакт macOS %s (%s): %w", arch, artifact.Name, err)
 		}
 		if artifact.Size <= 0 || artifact.Size != actualSize || !validDeliverySHA256(artifact.SHA256) || !strings.EqualFold(artifact.SHA256, actualHash) {
-			return MacOSPackageManifest0154{}, "", fmt.Errorf("Несоответствие: macOS %s артефакт %s checksum/size", arch, artifact.Name)
+			return MacOSPackageManifest0154{}, "", fmt.Errorf("Несоответствие: macOS %s артефакт %s контрольная сумма или размер", arch, artifact.Name)
 		}
 		macho, err := inspectMacOSMachOFile0154(path)
 		if err != nil || macho.Architecture != arch || macho.CPUTypeText != cpuText || !macho.HasCodeSignature {
@@ -366,7 +366,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 		return err
 	}
 	if evidencePackage.Size <= 0 || evidencePackage.Size != actualSize || !validDeliverySHA256(evidencePackage.SHA256) || !strings.EqualFold(evidencePackage.SHA256, actualHash) {
-		return fmt.Errorf("Несоответствие: macOS %s пакет checksum/size", arch)
+		return fmt.Errorf("Несоответствие: macOS %s пакет контрольная сумма или размер", arch)
 	}
 	entries, err := readZipEntries0154(packagePath)
 	if err != nil {

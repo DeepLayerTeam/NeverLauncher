@@ -223,7 +223,7 @@ func (s Server) writeRiskRequirement0126(w http.ResponseWriter, claims authClaim
 	case "reattest":
 		writeJSON(w, http.StatusPreconditionRequired, map[string]any{"error": map[string]any{
 			"code":             http.StatusPreconditionRequired,
-			"message":          "требуется свежая device attestation",
+			"message":          "Требуется актуальная аттестация устройства",
 			"riskState":        claims.RiskState,
 			"riskScore":        claims.RiskScore,
 			"riskAction":       claims.RiskAction,

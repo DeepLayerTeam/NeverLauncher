@@ -246,7 +246,7 @@ func handlePackaging(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("packaging verify требует путь к release bundle")
+			return errors.New("packaging verify требует путь к комплекту выпуска")
 		}
 		report, err := packaging940Verify(dir)
 		if err != nil {
@@ -259,7 +259,7 @@ func handlePackaging(args []string) error {
 			dir = args[1]
 		}
 		if dir == "" {
-			return errors.New("packaging sign требует путь к release bundle")
+			return errors.New("packaging sign требует путь к комплекту выпуска")
 		}
 		if err := signReleaseBundle(dir, flagValue(args, "--private-key", "")); err != nil {
 			return err

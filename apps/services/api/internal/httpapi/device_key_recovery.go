@@ -136,7 +136,7 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 	}
 	if mode == "recover" && ((oldDevice.Status == "revoked" && session.TrustedDeviceID != "") ||
 		(session.TrustedDeviceID != "" && session.TrustedDeviceID != oldDevice.ID)) {
-		writeError(w, http.StatusConflict, "восстановление требует независимую сессию без чужой device binding")
+		writeError(w, http.StatusConflict, "Для восстановления необходим независимый сеанс без привязки к чужому устройству")
 		return
 	}
 	if mode == "rotate" && oldDevice.ID != session.TrustedDeviceID {
@@ -144,7 +144,7 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 		return
 	}
 	if oldDevice.KeyFingerprint == newPub.fingerprint {
-		writeError(w, http.StatusConflict, "replacement требует новую device identity; повторное использование старого ключа запрещено")
+		writeError(w, http.StatusConflict, "Для замены необходима новая идентификация устройства; повторное использование старого ключа запрещено")
 		return
 	}
 	name := strings.TrimSpace(req.Name)
@@ -165,7 +165,7 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 
 	newDeviceID, err := randomToken("dev")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать replacement device id")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать идентификатор нового устройства")
 		return
 	}
 	challengeID, err := randomToken("dkr")
@@ -187,7 +187,7 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 		"oldFingerprint": oldDevice.KeyFingerprint, "issuedAt": now.Format(time.RFC3339Nano), "expiresAt": expires.Format(time.RFC3339Nano),
 	}}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), entry); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить replacement challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить запрос проверки замены устройства")
 		return
 	}
 	payload := deviceKeyReplacementPayload0128(mode, challenge, claims.Sub, claims.SessionID, oldDevice.ID, oldDevice.KeyFingerprint, newDeviceID, newPub.fingerprint, algorithm, binding, provider, now, expires)
@@ -227,7 +227,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	purpose := "key-" + mode
 	ch, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, oldDeviceID, purpose, deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "replacement challenge недействителен, истёк или уже использован")
+		writeError(w, http.StatusUnauthorized, "Запрос проверки замены устройства недействителен, истёк или уже использован")
 		return
 	}
 	if metadataString0121(ch.Metadata, "sessionId") != claims.SessionID {
@@ -237,7 +237,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	issuedAt, err1 := time.Parse(time.RFC3339Nano, metadataString0121(ch.Metadata, "issuedAt"))
 	expiresAt, err2 := time.Parse(time.RFC3339Nano, metadataString0121(ch.Metadata, "expiresAt"))
 	if err1 != nil || err2 != nil || !expiresAt.After(now) {
-		writeError(w, http.StatusUnauthorized, "replacement challenge freshness повреждена")
+		writeError(w, http.StatusUnauthorized, "Повреждены данные о сроке действия запроса проверки замены устройства")
 		return
 	}
 	newDeviceID := metadataString0121(ch.Metadata, "newDeviceId")
@@ -250,19 +250,19 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	payload := deviceKeyReplacementPayload0128(mode, req.Challenge, claims.Sub, claims.SessionID, oldDeviceID, oldFingerprint, newDeviceID, newFingerprint, algorithm, binding, provider, issuedAt, expiresAt)
 	newPub, err := decodeDevicePublicKey0123(newPublicKey, algorithm)
 	if err != nil || newPub.fingerprint != newFingerprint {
-		writeError(w, http.StatusInternalServerError, "replacement public key metadata повреждена")
+		writeError(w, http.StatusInternalServerError, "Повреждены метаданные открытого ключа нового устройства")
 		return
 	}
 	// Ранее отозванный отпечаток нельзя повторно зарегистрировать через
 	// устаревшую процедуру замены, даже если между началом и завершением
 	// подставили другое активное устройство.
 	if oldDevice.KeyFingerprint == newFingerprint || newDeviceID == oldDeviceID || oldFingerprint != oldDevice.KeyFingerprint {
-		writeError(w, http.StatusConflict, "device identity или replacement binding изменились")
+		writeError(w, http.StatusConflict, "Идентификация устройства или привязка замены изменились")
 		return
 	}
 	sessionBeforeReplace, active := s.State.AuthSessions.get(claims.SessionID, claims.Sub)
 	if !active || sessionBeforeReplace.Status != "active" {
-		writeError(w, http.StatusUnauthorized, "replacement session больше не активна")
+		writeError(w, http.StatusUnauthorized, "Сеанс замены устройства больше не активен")
 		return
 	}
 	if mode == "recover" && oldDevice.Status == "revoked" && (oldDevice.RevokedAt.IsZero() || !sessionBeforeReplace.AuthTime.After(oldDevice.RevokedAt)) {
@@ -271,11 +271,11 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	}
 	if mode == "recover" && ((oldDevice.Status == "revoked" && sessionBeforeReplace.TrustedDeviceID != "") ||
 		(sessionBeforeReplace.TrustedDeviceID != "" && sessionBeforeReplace.TrustedDeviceID != oldDeviceID)) {
-		writeError(w, http.StatusConflict, "recovery session не независима от старого устройства")
+		writeError(w, http.StatusConflict, "Сеанс восстановления не является независимым от прежнего устройства")
 		return
 	}
 	if err := verifyDeviceSignature0123(newPub, payload, req.NewSignature); err != nil {
-		writeError(w, http.StatusUnauthorized, "новый device key не подтвердил владение")
+		writeError(w, http.StatusUnauthorized, "Не подтверждено владение новым ключом устройства")
 		return
 	}
 	if mode == "rotate" {
@@ -285,12 +285,12 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 			return
 		}
 		if err := verifyDeviceSignature0123(oldPub, payload, req.OldSignature); err != nil {
-			writeError(w, http.StatusUnauthorized, "исходный device key не подтвердил rotation")
+			writeError(w, http.StatusUnauthorized, "Исходный ключ устройства не подтвердил ротацию")
 			return
 		}
 		session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub)
 		if !ok || session.TrustedDeviceID != oldDeviceID || session.DeviceTrustState != "verified" {
-			writeError(w, http.StatusConflict, "текущая session больше не привязана к исходному device")
+			writeError(w, http.StatusConflict, "Текущий сеанс больше не привязан к исходному устройству")
 			return
 		}
 	}
@@ -302,7 +302,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		result, err = atomicRepo.ReplaceTrustedDeviceKey(r.Context(), claims.Sub, oldDeviceID, claims.SessionID, mode, reason, replacement, now)
 		if err != nil {
 			log.Printf("Ошибка: «атомарная замена ключа устройства %s»: %v", mode, err)
-			writeError(w, http.StatusConflict, "не удалось атомарно заменить device key")
+			writeError(w, http.StatusConflict, "Не удалось атомарно заменить ключ устройства")
 			return
 		}
 	} else {
@@ -322,9 +322,9 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		}
 		if err != nil {
 			if errors.Is(err, repository.ErrConflict) {
-				writeError(w, http.StatusConflict, "replacement device key уже зарегистрирован")
+				writeError(w, http.StatusConflict, "Ключ нового устройства уже зарегистрирован")
 			} else {
-				writeError(w, http.StatusInternalServerError, "не удалось сохранить replacement device")
+				writeError(w, http.StatusInternalServerError, "Не удалось сохранить новое устройство")
 			}
 			return
 		}
@@ -338,7 +338,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 					}
 				}
 			}
-			writeError(w, http.StatusConflict, "не удалось перепривязать session к replacement device")
+			writeError(w, http.StatusConflict, "Не удалось перепривязать сеанс к новому устройству")
 			return
 		}
 		if oldDevice.Status == "active" {
@@ -347,13 +347,13 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 			oldDevice.ReplacementReason = mode
 			if _, err = s.Repo.SaveTrustedDevice(r.Context(), oldDevice); err != nil {
 				_, _ = s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, replacement.ID, "replacement-link-failed")
-				writeError(w, http.StatusConflict, "не удалось сохранить связь device replacement")
+				writeError(w, http.StatusConflict, "Не удалось сохранить связь замены устройства")
 				return
 			}
 		}
 		rev, revokeErr := s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, oldDeviceID, reason)
 		if revokeErr != nil {
-			writeError(w, http.StatusInternalServerError, "replacement создан, но revoke исходного device завершился ошибкой")
+			writeError(w, http.StatusInternalServerError, "Новое устройство создано, но отзыв доверия к исходному устройству завершился ошибкой")
 			return
 		}
 		applyDeviceRevocationCascade0125(s, claims.Sub, oldDeviceID, reason, &rev)
@@ -381,7 +381,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	}
 	session, err = s.reconcileSessionDeviceRisk0126(r, session)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "replacement завершён, но session отозвана risk policy")
+		writeError(w, http.StatusUnauthorized, "Замена завершена, но сеанс отозван политикой оценки риска")
 		return
 	}
 	user, err := s.Repo.GetUser(claims.Sub)
@@ -391,7 +391,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	}
 	access, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось выпустить access token после replacement")
+		writeError(w, http.StatusInternalServerError, "Не удалось выпустить токен доступа после замены устройства")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "device-key-" + mode + "-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: claims.Email, Action: "auth:device:key-" + mode, Target: oldDeviceID + "->" + newDeviceID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})

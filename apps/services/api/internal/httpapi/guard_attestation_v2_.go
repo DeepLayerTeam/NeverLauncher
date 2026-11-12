@@ -318,7 +318,7 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 	}
 	state, _ := effectiveDeviceAttestation0124(device, time.Now().UTC())
 	if state != "verified" {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation v2 требует свежую device attestation")
+		writeError(w, http.StatusPreconditionFailed, "Для аттестации Guard v2 требуется актуальная аттестация устройства")
 		return
 	}
 	minecraftSessionID := ""
@@ -332,12 +332,12 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 	}
 	challengeID, err := randomToken("ngav2")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать Guard Attestation v2 challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать запрос аттестации Guard v2")
 		return
 	}
 	challenge, err := randomToken("ngcv2")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось создать Guard Attestation v2 challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось создать запрос аттестации Guard v2")
 		return
 	}
 	now := canonicalGuardAttestationTime0134(time.Now())
@@ -347,7 +347,7 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 		"keyFingerprint": device.KeyFingerprint, "minecraftSessionId": minecraftSessionID, "guardReleasePolicySchema": policySchema, "guardProtocolVersion": strconv.FormatUint(uint64(protocolVersion), 10), "guardPlatform": "windows",
 	}, CreatedAt: now, ExpiresAt: expires}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), entry); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить Guard Attestation v2 challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить запрос аттестации Guard v2")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
@@ -371,7 +371,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	}
 	var req guardAttestationV2CompleteRequest01810
 	if err := decodeDeviceJSON0121(w, r, &req, 512<<10); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный Guard Attestation v2 JSON")
+		writeError(w, http.StatusBadRequest, "Некорректный JSON аттестации Guard v2")
 		return
 	}
 	req.LauncherVersion = strings.TrimSpace(req.LauncherVersion)
@@ -392,7 +392,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 		return
 	}
 	if !isWindowsDevicePlatform0134(device.Platform) {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation v2 разрешена только для Windows trusted device")
+		writeError(w, http.StatusPreconditionFailed, "Аттестация Guard v2 разрешена только для доверенного устройства Windows")
 		return
 	}
 	policySchema, protocolVersion, _, err := policy.metadataForPlatform0140(device.Platform)
@@ -402,7 +402,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	}
 	state, _ := effectiveDeviceAttestation0124(device, time.Now().UTC())
 	if state != "verified" {
-		writeError(w, http.StatusPreconditionFailed, "device attestation freshness истекла")
+		writeError(w, http.StatusPreconditionFailed, "Срок действия аттестации устройства истёк")
 		return
 	}
 	if req.Attestation.ChallengeID != strings.TrimSpace(req.ChallengeID) {
@@ -421,17 +421,17 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	}
 	payload := guardDeviceSigningPayloadV201810(req.Challenge, claims, device, req.LauncherVersion, req.Attestation, req.ChallengeExpiresAt)
 	if err := verifyDeviceSignature0123(pub, payload, req.Signature); err != nil {
-		writeError(w, http.StatusUnauthorized, "Guard Attestation v2 device signature недействительна")
+		writeError(w, http.StatusUnauthorized, "Подпись устройства для аттестации Guard v2 недействительна")
 		return
 	}
 	stored, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, deviceID, guardAttestationV2Purpose01810, deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "Guard Attestation v2 challenge недействителен, истёк или уже использован")
+		writeError(w, http.StatusUnauthorized, "Запрос аттестации Guard v2 недействителен, истёк или уже использован")
 		return
 	}
 	releaseBindingMatches := metadataString0121(stored.Metadata, "guardReleasePolicySchema") == policySchema && metadataString0121(stored.Metadata, "guardProtocolVersion") == strconv.FormatUint(uint64(protocolVersion), 10) && metadataString0121(stored.Metadata, "guardPlatform") == "windows"
 	if metadataString0121(stored.Metadata, "sessionId") != claims.SessionID || metadataString0121(stored.Metadata, "bindingEpoch") != strconv.FormatInt(claims.BindingEpoch, 10) || metadataString0121(stored.Metadata, "launcherVersion") != req.LauncherVersion || metadataString0121(stored.Metadata, "keyFingerprint") != device.KeyFingerprint || !releaseBindingMatches || req.ChallengeExpiresAt != stored.ExpiresAt.UTC().Format(time.RFC3339Nano) {
-		writeError(w, http.StatusUnauthorized, "Guard Attestation v2 challenge больше не соответствует session/device/release binding")
+		writeError(w, http.StatusUnauthorized, "Запрос аттестации Guard v2 больше не соответствует привязке сеанса, устройства и выпуска")
 		return
 	}
 	if err := validateGuardAttestationV201810(req.Attestation, req.ChallengeID, req.Challenge, policy, device.Platform, now, stored.CreatedAt.UTC()); err != nil {

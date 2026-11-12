@@ -286,7 +286,7 @@ func normalizeCanonicalExtension0201(m CanonicalExtensionManifest0201) (Canonica
 		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("schemaVersion должен быть 2.0")
 	}
 	if !canonicalExtensionID0201.MatchString(m.ID) {
-		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("некорректный extension id %q", m.ID)
+		return CanonicalExtensionManifest0201{}, "", fmt.Errorf("Некорректный идентификатор расширения %q", m.ID)
 	}
 	if m.Name == "" || len(m.Name) > 160 {
 		return CanonicalExtensionManifest0201{}, "", errors.New("name обязателен и не должен превышать 160 символов")

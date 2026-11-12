@@ -303,10 +303,10 @@ func handleRelease(args []string) error {
 			"steps": []string{
 				"проверить VERSION, исходники и release artifacts (Markdown документация необязательна)",
 				"запустить release doctor",
-				"собрать release bundle",
+				"собрать комплект выпуска",
 				"проверить RELEASE_MANIFEST.json и SHA256SUMS",
 				"создать SHA256SUMS.sig",
-				"загрузить артефакты в release bundle",
+				"загрузить артефакты в комплект выпуска",
 			},
 			"artifacts": artifacts,
 		}

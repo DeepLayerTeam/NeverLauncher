@@ -134,7 +134,7 @@ func (s Server) authDeviceAttestationBegin0124(w http.ResponseWriter, r *http.Re
 		ExpiresAt: challengeExpires,
 	}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), entry); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить attestation challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить запрос аттестации")
 		return
 	}
 
@@ -195,7 +195,7 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 	now := time.Now().UTC()
 	ch, err := s.Repo.ConsumeDeviceChallenge(r.Context(), req.ChallengeID, claims.Sub, deviceID, "attest", deviceChallengeHash0121(req.Challenge), now)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "attestation challenge недействителен, истёк или уже использован")
+		writeError(w, http.StatusUnauthorized, "Запрос аттестации недействителен, истёк или уже использован")
 		return
 	}
 	if metadataString0121(ch.Metadata, "sessionId") != claims.SessionID ||
@@ -208,7 +208,7 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 	}
 	validUntil, err := time.Parse(time.RFC3339Nano, metadataString0121(ch.Metadata, "attestationValidUntil"))
 	if err != nil || !validUntil.After(now) || validUntil.After(ch.CreatedAt.Add(deviceAttestationValidity0124+time.Second)) {
-		writeError(w, http.StatusUnauthorized, "attestation freshness window повреждён или истёк")
+		writeError(w, http.StatusUnauthorized, "Данные о сроке действия аттестации повреждены или срок истёк")
 		return
 	}
 	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
@@ -228,7 +228,7 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 			writeError(w, http.StatusConflict, "устройство больше не активно")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить device attestation")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить аттестацию устройства")
 		return
 	}
 	device, err = s.Repo.TouchTrustedDevice(r.Context(), claims.Sub, deviceID, clientIP(r), r.UserAgent())
@@ -253,7 +253,7 @@ func (s Server) authDeviceAttestationComplete0124(w http.ResponseWriter, r *http
 	}
 	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось обновить access token")
+		writeError(w, http.StatusInternalServerError, "Не удалось обновить токен доступа")
 		return
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{

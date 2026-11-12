@@ -321,7 +321,7 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 	var guardTicket model.DeviceChallenge
 	guardRequired, err := s.guardAttestationRequiredForSession0134(claims)
 	if err != nil {
-		writeError(w, http.StatusPreconditionFailed, "не удалось определить Guard policy для trusted device")
+		writeError(w, http.StatusPreconditionFailed, "Не удалось определить политику Guard для доверенного устройства")
 		return
 	}
 	var integritySnapshot *minecraftIntegritySnapshot0135

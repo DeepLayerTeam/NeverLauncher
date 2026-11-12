@@ -29,7 +29,7 @@ func handleExtensionSecurity0207(command string, args []string) error {
 		return writeOrPrintJSON(out, p)
 	}
 	if len(args) < 1 || strings.HasPrefix(args[0], "--") {
-		return fmt.Errorf("extension %s требует extension id", command)
+		return fmt.Errorf("extension %s требует идентификатор расширения", command)
 	}
 	id := args[0]
 	scope := flagValue(args, "--scope", "global")

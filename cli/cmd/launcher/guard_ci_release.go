@@ -406,7 +406,7 @@ func verifyGuardCICertificationInBundle(dir, ver string) error {
 		return err
 	}
 	if stored.SchemaVersion != expected.SchemaVersion || stored.ProductVersion != expected.ProductVersion || stored.Repository != expected.Repository || stored.Commit != expected.Commit || stored.RunID != expected.RunID || stored.MatrixSHA256 != expected.MatrixSHA256 || stored.TargetsSHA256 != expected.TargetsSHA256 || stored.Policy != expected.Policy || stored.VendorSigningClaim != expected.VendorSigningClaim {
-		return errors.New("GUARD_CI_CERTIFICATION не соответствует embedded matrix/targets")
+		return errors.New("GUARD_CI_CERTIFICATION не соответствует встроенной матрице и списку целевых платформ")
 	}
 	if !reflect.DeepEqual(stored.RequiredTargetIDs, expected.RequiredTargetIDs) || !reflect.DeepEqual(stored.PassedTargetIDs, expected.PassedTargetIDs) || !reflect.DeepEqual(stored.CertifiedArtifacts, expected.CertifiedArtifacts) {
 		return errors.New("Наборы целевых платформ и артефактов GUARD_CI_CERTIFICATION не совпадают")

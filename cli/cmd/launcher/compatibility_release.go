@@ -1369,7 +1369,7 @@ func verifyCompatibilityCertificationInBundle(dir, ver string) error {
 		return err
 	}
 	if stored.SchemaVersion != expected.SchemaVersion || stored.ProductVersion != expected.ProductVersion || stored.Repository != expected.Repository || stored.Commit != expected.Commit || stored.RunID != expected.RunID || stored.MatrixSHA256 != expected.MatrixSHA256 || stored.TargetsSHA256 != expected.TargetsSHA256 || stored.Policy != expected.Policy {
-		return errors.New("COMPATIBILITY_CERTIFICATION не соответствует embedded matrix/targets")
+		return errors.New("COMPATIBILITY_CERTIFICATION не соответствует встроенной матрице и списку целевых платформ")
 	}
 	if strings.Join(stored.RequiredTargetIDs, "\x00") != strings.Join(expected.RequiredTargetIDs, "\x00") ||
 		strings.Join(stored.PassedTargetIDs, "\x00") != strings.Join(expected.PassedTargetIDs, "\x00") ||

@@ -74,7 +74,7 @@ func handleExtensionUpdates02011(args []string) error {
 		return writeOrPrintJSON(out, resp)
 	case "unpin":
 		if len(args) < 2 || strings.HasPrefix(args[1], "--") {
-			return errors.New("updates unpin требует extension id")
+			return errors.New("updates unpin требует идентификатор расширения")
 		}
 		q := url.Values{}
 		q.Set("scope", scope)

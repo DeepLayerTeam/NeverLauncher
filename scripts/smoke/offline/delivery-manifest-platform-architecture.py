@@ -35,7 +35,7 @@ require(
         "verifyDeliveryManifest0151",
         "resolveDeliveryArtifacts0151",
         "deliveryTargetCompatible",
-        "checksum/size mismatch",
+        "Контрольная сумма или размер артефакта поставки",
     ],
     "Реализация поставки",
 )

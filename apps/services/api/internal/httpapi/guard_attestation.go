@@ -800,7 +800,7 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 	}
 	state, _ := effectiveDeviceAttestation0124(device, time.Now().UTC())
 	if state != "verified" {
-		writeError(w, http.StatusPreconditionFailed, "Guard Attestation требует свежую challenge-response device attestation")
+		writeError(w, http.StatusPreconditionFailed, "Для аттестации Guard требуется актуальная аттестация устройства по схеме «запрос — ответ»")
 		return
 	}
 
@@ -831,7 +831,7 @@ func (s Server) authGuardAttestationBegin0134(w http.ResponseWriter, r *http.Req
 		CreatedAt: now, ExpiresAt: expires,
 	}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), entry); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить Guard Attestation challenge")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить запрос аттестации Guard")
 		return
 	}
 	attestationSchema, evidenceSchema, processPolicySchema, _ := guardSchemasForPlatform0138(device.Platform)
@@ -904,7 +904,7 @@ func (s Server) authGuardAttestationComplete0134(w http.ResponseWriter, r *http.
 	}
 	state, _ := effectiveDeviceAttestation0124(device, time.Now().UTC())
 	if state != "verified" {
-		writeError(w, http.StatusPreconditionFailed, "device attestation freshness истекла")
+		writeError(w, http.StatusPreconditionFailed, "Срок действия аттестации устройства истёк")
 		return
 	}
 	if req.Attestation.ChallengeID != strings.TrimSpace(req.ChallengeID) {
