@@ -35,7 +35,7 @@ func TestControlDomains0281ClosedDispatchTable(t *testing.T) {
 	}
 	for _, action := range []string{BackendControl, HostProcess, HostExec} {
 		if !IsControlAction(action) || IsProjectAction(action) {
-			t.Fatalf("Действие сервера/backend %q ошибочно ограничено областью проекта", action)
+			t.Fatalf("Действие серверной части %q ошибочно ограничено областью проекта", action)
 		}
 	}
 }

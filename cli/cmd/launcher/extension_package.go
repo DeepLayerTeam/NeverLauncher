@@ -836,7 +836,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 	manifestStoredDigest := sha256.Sum256(manifestBytes)
 	expectedChecksums := extensionChecksumsBytes0202(hex.EncodeToString(manifestStoredDigest[:]), payloadFiles)
 	if !bytes.Equal(checksumsBytes, expectedChecksums) {
-		return nil, errors.New("checksums.sha256 не соответствует manifest/payload")
+		return nil, errors.New("Файл checksums.sha256 не соответствует манифесту или содержимому пакета")
 	}
 	analysis.ChecksumsBytes = checksumsBytes
 

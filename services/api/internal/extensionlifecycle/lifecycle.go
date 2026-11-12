@@ -403,7 +403,7 @@ func activateStaged0204(current, stage, backup string) (func(), error) {
 			return nil, err
 		}
 		if pathExists0204(backup) {
-			return nil, errors.New("Уже существует: резервная копия расширения путь")
+			return nil, errors.New("Путь резервной копии расширения уже существует")
 		}
 		if err := os.Rename(current, backup); err != nil {
 			return nil, err
@@ -433,7 +433,7 @@ func deactivateCurrent0204(current, backup string) (func(), error) {
 		return nil, err
 	}
 	if pathExists0204(backup) {
-		return nil, errors.New("Уже существует: резервная копия расширения путь")
+		return nil, errors.New("Путь резервной копии расширения уже существует")
 	}
 	if err := os.Rename(current, backup); err != nil {
 		return nil, err
@@ -521,7 +521,7 @@ func (m *Manager) commitWithLockfile0204(ctx context.Context, before model.Exten
 		return next, err
 	}
 	if err := atomicWrite0204(lockPath, actualBytes, 0o640); err != nil {
-		return next, fmt.Errorf("Изменение жизненного цикла сохранено, но обновление lockfile не удалось: %w", err)
+		return next, fmt.Errorf("Изменение жизненного цикла сохранено, но не удалось обновить файл фиксации версий: %w", err)
 	}
 	m.pruneBackups0204(Scope{Scope: tr.Scope, ScopeID: tr.ScopeID}, tr.ExtensionID)
 	return next, nil
@@ -938,7 +938,7 @@ func (m *Manager) VerifyLockfile(ctx context.Context, id string, scope Scope) er
 		return err
 	}
 	if lock.ExtensionID != state.ExtensionID || lock.Scope != state.Scope || lock.ScopeID != state.ScopeID || lock.DesiredVersion != state.DesiredVersion || lock.CurrentVersion != state.CurrentVersion || lock.DesiredState != state.DesiredState || lock.CurrentState != state.CurrentState || lock.PackageIdentity != state.PackageIdentity || lock.CurrentPackageIdentity != state.CurrentPackageIdentity || lock.Generation != state.Generation {
-		return errors.New("Постоянный lockfile расширений не соответствует состоянию репозитория")
+		return errors.New("Сохранённый файл фиксации версий расширений не соответствует состоянию репозитория")
 	}
 	if state.CurrentState != model.ExtensionInstallStateAbsent && !pathExists0204(currentDir0204(m.Root, scope, id)) {
 		return errors.New("Согласно репозиторию расширение активно, но каталог текущего содержимого отсутствует")

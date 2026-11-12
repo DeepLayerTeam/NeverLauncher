@@ -273,7 +273,7 @@ func (p *securityPostgres111) generateRecoveryCodesForMethod117(userID string, c
 	defer cancel()
 	var active bool
 	if err := p.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM mfa_methods WHERE id=$1 AND user_id=$2 AND status='enabled')`, methodID, userID).Scan(&active); err != nil || !active {
-		return nil, errors.New("MFA method не активен")
+		return nil, errors.New("Метод многофакторной аутентификации неактивен")
 	}
 	tx, err := p.db.BeginTx(ctx, nil)
 	if err != nil {

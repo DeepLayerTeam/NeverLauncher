@@ -14,7 +14,7 @@ func TestLocalStorageSaveOpenHealth(t *testing.T) {
 		t.Fatalf("Save вернул ошибку: %v", err)
 	}
 	if key != "project/version/mods/example.jar" || size != 7 {
-		t.Fatalf("неожиданный key/size: %q %d", key, size)
+		t.Fatalf("неожиданные ключ или размер: %q %d", key, size)
 	}
 	reader, openedSize, err := store.Open("project", "version", "mods/example.jar")
 	if err != nil {

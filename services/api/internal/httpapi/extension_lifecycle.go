@@ -136,7 +136,7 @@ func writeLifecycleError0204(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusConflict, err.Error())
 	default:
 		msg := strings.ToLower(err.Error())
-		if strings.Contains(msg, "already") || strings.Contains(msg, "locked") || strings.Contains(msg, "not activated") || strings.Contains(msg, "not installed") || strings.Contains(msg, "no restorable") || strings.Contains(msg, "yanked") {
+		if strings.Contains(msg, "already") || strings.Contains(msg, "locked") || strings.Contains(msg, "not activated") || strings.Contains(msg, "not installed") || strings.Contains(msg, "no restorable") || strings.Contains(msg, "yanked") || strings.Contains(msg, "уже установлено") || strings.Contains(msg, "уже заблокирована") || strings.Contains(msg, "не активировано") || strings.Contains(msg, "не установлено") || strings.Contains(msg, "нет резервной копии расширения, пригодной для восстановления") || strings.Contains(msg, "отозванную версию") {
 			writeError(w, http.StatusConflict, err.Error())
 		} else {
 			writeError(w, http.StatusBadRequest, err.Error())

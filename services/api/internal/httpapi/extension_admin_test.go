@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -98,5 +99,29 @@ func TestAdminEntrypointServedFromEnabledVerifiedInstall0208(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "connect-src 'none'") || !strings.Contains(rec.Body.String(), "parent.postMessage") {
 		t.Fatalf("Неожиданное тело ответа: %s", rec.Body.String())
+	}
+}
+
+// Проверка русских сообщений жизненного цикла и совместимости со старыми версиями.
+func TestLifecycleLocalizedConflictStatus(t *testing.T) {
+	cases := []struct {
+		message string
+		status  int
+	}{
+		{"Расширение example уже установлено; используйте обновление", http.StatusConflict},
+		{"Операция жизненного цикла расширения уже заблокирована: global/example", http.StatusConflict},
+		{"Расширение не активировано; используйте установку", http.StatusConflict},
+		{"Расширение не установлено", http.StatusConflict},
+		{"Нет резервной копии расширения, пригодной для восстановления", http.StatusConflict},
+		{"Отозванную версию из реестра устанавливать нельзя", http.StatusConflict},
+		{"extension not installed", http.StatusConflict},
+		{"Некорректное значение: ID расширения", http.StatusBadRequest},
+	}
+	for _, tc := range cases {
+		w := httptest.NewRecorder()
+		writeLifecycleError0204(w, errors.New(tc.message))
+		if w.Code != tc.status {
+			t.Errorf("Сообщение %q: получен статус %d, ожидался %d", tc.message, w.Code, tc.status)
+		}
 	}
 }

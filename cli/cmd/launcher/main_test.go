@@ -130,7 +130,7 @@ func TestReleasePackageCreatesFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := run([]string{"release", "verify", out, "--public-key", publicPath}); err == nil {
-		t.Fatal("release verify обязан отклонять bundle без required Runtime artifact")
+		t.Fatal("Команда release verify должна отклонять комплект без обязательного артефакта Runtime")
 	}
 }
 

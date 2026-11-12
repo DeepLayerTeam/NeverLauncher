@@ -196,7 +196,7 @@ func handleRuntime(args []string) error {
 		}
 		return nil
 	default:
-		return fmt.Errorf("неизвестная runtime-подкоманда: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда runtime: %s", args[0])
 	}
 }
 
@@ -439,7 +439,7 @@ func runtimeMatrix740() map[string]any {
 			{"feature": "Полная матрица реальных клиентов для 53 выпусков Legacy Vanilla версии 0.17.0v1", "status": "implemented"},
 			{"feature": "Полная матрица реальных клиентов Vanilla для 9 выпусков на Java 16/17 (0.17.0v2)", "status": "implemented"},
 			{"feature": "Матрица реальных клиентов NeoForge Compatibility II с процессорами для 1.20.1–26.2", "status": "implemented"},
-			{"feature": "Закрепление разрешения загрузчика с проверкой SHA-256 источника, данных и runtime-профиля", "status": "implemented"},
+			{"feature": "Закрепление разрешения загрузчика с проверкой SHA-256 источника, данных и профиля среды выполнения", "status": "implemented"},
 			{"feature": "Клиенты Fabric/Quilt/Forge/NeoForge для Windows/Linux/macOS x64/ARM64 с проверкой дерева нативных файлов", "status": "implemented"},
 			{"feature": "Проверка поддержки загрузчиков Fabric/Quilt/Forge/NeoForge и устаревших Forge 1.7.10/1.12.2 в Runtime", "status": "implemented"},
 		},

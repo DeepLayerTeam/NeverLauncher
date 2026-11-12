@@ -253,7 +253,7 @@ func (s Server) extensionEmergencyDisable02012(w http.ResponseWriter, r *http.Re
 		}
 	}
 	install, err := s.lifecycleManager0204().Disable(r.Context(), id, scope)
-	if err != nil && !errors.Is(err, repository.ErrNotFound) && !strings.Contains(strings.ToLower(err.Error()), "not installed") {
+	if err != nil && !errors.Is(err, repository.ErrNotFound) && !strings.Contains(strings.ToLower(err.Error()), "not installed") && !strings.Contains(strings.ToLower(err.Error()), "не установлено") {
 		writeError(w, 500, "Аварийная блокировка активна, но сохранить отключение не удалось: "+err.Error())
 		return
 	}

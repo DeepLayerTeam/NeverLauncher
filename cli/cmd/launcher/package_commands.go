@@ -579,13 +579,13 @@ func verifyClientPackage(path string) (map[string]any, error) {
 			path := fmt.Sprint(f["path"])
 			sha := fmt.Sprint(f["sha256"])
 			if path == "" || path == "<nil>" {
-				errs = append(errs, "файл без path")
+				errs = append(errs, "Файл без пути")
 			}
 			if strings.Contains(path, "..") || strings.HasPrefix(path, "/") {
-				errs = append(errs, "небезопасный path: "+path)
+				errs = append(errs, "Небезопасный путь: "+path)
 			}
 			if seen[path] {
-				errs = append(errs, "дублирующийся path: "+path)
+				errs = append(errs, "Повторяющийся путь: "+path)
 			}
 			seen[path] = true
 			if len(sha) != 64 {

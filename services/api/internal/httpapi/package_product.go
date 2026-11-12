@@ -498,12 +498,12 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	manifest.RollbackSource = nil // произвольное историческое содержимое не считается откатом без привилегированного задания отката
 	signed, err := s.signManifest(manifest)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось подписать manifest: "+err.Error())
+		writeError(w, http.StatusInternalServerError, "Не удалось подписать манифест: "+err.Error())
 		return
 	}
 	updated, err := s.Repo.UpdateVersionManifest(lookup.Release.ProjectID, lookup.Release.ID, signed)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить подписанный manifest: "+err.Error())
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить подписанный манифест: "+err.Error())
 		return
 	}
 	updated, err = s.Repo.UpdateVersionStatus(updated.ProjectID, updated.ID, "signed")
@@ -532,7 +532,7 @@ func (s Server) packageStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
-		writeError(w, http.StatusConflict, "package должен иметь криптографически проверенный Ed25519 manifest перед stage: "+err.Error())
+		writeError(w, http.StatusConflict, "Перед подготовкой пакет должен содержать манифест с криптографически проверенной подписью Ed25519: "+err.Error())
 		return
 	}
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)

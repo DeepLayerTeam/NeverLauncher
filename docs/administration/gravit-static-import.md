@@ -7,7 +7,7 @@
 Оба маршрута требуют `project:write` в целевом проекте; для изменения дополнительно необходимо `release:prepare`.
 
 - `POST /api/v1/admin/projects/{projectId}/profiles/inspect-gravit` (только чтение).
-- `POST /api/v1/admin/projects/{projectId}/profiles/import-gravit` (создание нового профиля и приватной Build Workspace).
+- `POST /api/v1/admin/projects/{projectId}/profiles/import-gravit` (создание нового профиля и закрытого рабочего пространства сборки).
 
 Пример запроса проверки:
 
@@ -28,7 +28,7 @@
 }
 ```
 
-Ответ содержит `data.format=launcher.gravit-import-report.v1`, точный исходный SHA-256, `ready`, детерминированный поэлементный список `fields`, `summary`, нормализованный `profile` Launcher, `settings`, совместимые с Build Workspace, и описания серверов для ручной регистрации. `inspect-gravit` **ничего не сохраняет**. Неизвестные поля и небезопасные преобразования получают `blocked`; поля, требующие решения оператора, — `manual`. Оба состояния препятствуют импорту.
+Ответ содержит `data.format=launcher.gravit-import-report.v1`, точный исходный SHA-256, `ready`, детерминированный поэлементный список `fields`, `summary`, нормализованный `profile` Launcher, `settings`, совместимые с рабочим пространством сборки, и описания серверов для ручной регистрации. `inspect-gravit` **ничего не сохраняет**. Неизвестные поля и небезопасные преобразования получают `blocked`; поля, требующие решения оператора, — `manual`. Оба состояния препятствуют импорту.
 
 Для фиксации отправьте **те же** исходные данные и дополнительно:
 

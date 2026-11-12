@@ -145,7 +145,7 @@ func handleLoader(args []string) error {
 		}
 		payload = map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "loader": loader, "minecraftVersion": minecraftVersion, "status": "compatible", "constraints": loaderCompatibility(loader), "runtime": []string{"version-json", "loader-metadata", "installer-profile", "libraries", "natives", "launch-plan", "delivery"}}
 	default:
-		return fmt.Errorf("неизвестная loader-подкоманда: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда loader: %s", args[0])
 	}
 	if out != "" && out != "-" {
 		return writeJSONFile(out, payload)
@@ -367,7 +367,7 @@ func validateLoaderProfile(loader, minecraftVersion, loaderVersion, metadataPath
 	var errs []string
 	var warnings []string
 	if !isSupportedLoader(loader) {
-		errs = append(errs, "неподдерживаемый loader")
+		errs = append(errs, "Неподдерживаемый загрузчик")
 	}
 	if minecraftVersion == "" {
 		errs = append(errs, "minecraftVersion обязателен")

@@ -250,7 +250,7 @@ func (s *S3Storage) newSignedRequestWithHeaders0253(ctx context.Context, method,
 func (s *S3Storage) objectURL(key string) (*url.URL, error) {
 	base, err := url.Parse(s.cfg.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("некорректный S3 endpoint: %w", err)
+		return nil, fmt.Errorf("некорректный адрес конечной точки S3: %w", err)
 	}
 	if s.cfg.PathStyle {
 		base.Path = joinURLPath(base.Path, s.cfg.Bucket, key)

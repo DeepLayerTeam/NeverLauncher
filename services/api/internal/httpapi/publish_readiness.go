@@ -88,7 +88,7 @@ func (s Server) evaluatePublishReadiness0385(ctx context.Context, lookup package
 			add("stable-runtime-target-blocked", target, coverage.TargetBlockers[target], "Запустите необходимую проверку на целевой платформе и загрузите подписанное ValidationEvidence v4 от доверенного независимого аттестатора.")
 		}
 		if !coverage.Eligible && len(keys) == 0 {
-			add("stable-runtime-ineligible", release.ID, "Обязательная runtime-сертификация не пройдена.", "Обновите результаты проверки обязательных targets.")
+			add("stable-runtime-ineligible", release.ID, "Обязательная сертификация среды выполнения не пройдена.", "Обновите результаты проверки обязательных целевых платформ.")
 		}
 	} else if err := s.validatePublishEvidenceContext0213(ctx, lookup); err != nil {
 		add("runtime-policy-unsatisfied", release.ID, err.Error(), "Выполните обязательные проверки политики, загрузите проверенное свидетельство Runtime и повторите проверку.")

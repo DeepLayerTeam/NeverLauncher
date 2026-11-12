@@ -316,7 +316,7 @@ func handleRelease(args []string) error {
 		printJSON(plan)
 		return nil
 	default:
-		return fmt.Errorf("неизвестная release-подкоманда: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда release: %s", args[0])
 	}
 }
 

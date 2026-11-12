@@ -361,7 +361,7 @@ func (s Server) authPasskeyDelete117(w http.ResponseWriter, r *http.Request) {
 	}
 	policy := s.State.Passkeys.policy(claims.Sub)
 	if s.State.Passkeys.countByUser(claims.Sub) <= 1 && (policy == mfaPhishingResistant117 || (policy == mfaRequired117 && !s.State.Security.totpEnabled(claims.Sub))) {
-		writeError(w, http.StatusConflict, "сначала снизьте MFA policy или добавьте другой активный MFA method")
+		writeError(w, http.StatusConflict, "Сначала смягчите политику многофакторной аутентификации или добавьте другой активный метод")
 		return
 	}
 	if err := s.State.Passkeys.revoke(r.PathValue("credentialId"), claims.Sub); err != nil {
@@ -420,7 +420,7 @@ func (s Server) authMFAPolicy117(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.State.Passkeys.setPolicy(claims.Sub, target); err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить MFA policy")
+		writeError(w, http.StatusInternalServerError, "Не удалось сохранить политику многофакторной аутентификации")
 		return
 	}
 	s.audit(r, claims.Email, "auth:mfa:policy", target)

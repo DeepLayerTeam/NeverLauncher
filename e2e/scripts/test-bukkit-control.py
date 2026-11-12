@@ -228,8 +228,8 @@ public final class Control0415Harness {
   } finally {plugin.onDisable();}
  }
  public static void main(String[] args)throws Exception {
-  for(String brand:List.of("Spigot","Paper","Purpur","Folia")){test(brand);System.out.println(brand+" command-path PASS");}
-  System.out.println("Bukkit-family offline test PASS ("+assertions+" assertions)");
+  for(String brand:List.of("Spigot","Paper","Purpur","Folia")){test(brand);System.out.println(brand+": путь выполнения команды проверен");}
+  System.out.println("Автономная проверка семейства Bukkit пройдена (проверок: "+assertions+")");
  }
 }
 """,

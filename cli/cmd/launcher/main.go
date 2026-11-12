@@ -448,7 +448,7 @@ func handleManifest(args []string) error {
 		printJSON(diff)
 		return nil
 	default:
-		return fmt.Errorf("неизвестная manifest-подкоманда: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда manifest: %s", args[0])
 	}
 }
 

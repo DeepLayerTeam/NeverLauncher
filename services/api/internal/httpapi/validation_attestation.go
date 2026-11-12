@@ -318,7 +318,7 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if !manifestFilesMatch0212(lookup.Release.Manifest, lookup.Files) {
-		deny(errors.New("Несоответствие: manifest/file"))
+		deny(errors.New("Манифест не соответствует файлу"))
 		return
 	}
 	check, e := s.Repo.LatestIntegrityCheck(r.Context(), p.PackageID)

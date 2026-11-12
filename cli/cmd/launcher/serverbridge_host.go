@@ -149,7 +149,7 @@ func handleServerBridgeHost01910(args []string) error {
 	case "logs":
 		return logsServerBridgeHost01910(args[1:])
 	default:
-		return fmt.Errorf("неизвестная server-bridge host подкоманда: %s", args[0])
+		return fmt.Errorf("Неизвестная подкоманда server-bridge host: %s", args[0])
 	}
 }
 

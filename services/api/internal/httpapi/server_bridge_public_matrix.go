@@ -79,7 +79,7 @@ func (s Server) serverBridgePublicMatrix0149(w http.ResponseWriter, r *http.Requ
 				"topologyFreshnessSeconds": 120,
 			},
 			"evidence": map[string]any{
-				"policy":                  "Результаты CI привязаны к точному коммиту; поле coverage различает runtime-e2e и build-compatibility",
+				"policy":                  "Результаты CI привязаны к точному коммиту; поле coverage различает сквозную проверку среды выполнения (runtime-e2e) и совместимость сборки (build-compatibility)",
 				"runtimeEvidenceArtifact": "launcher-minecraft-client-e2e-evidence",
 				"matrixSource":            "serverbridge/targets.json",
 			},
