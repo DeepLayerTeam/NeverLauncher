@@ -236,7 +236,7 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 	}()
 	fmt.Fprintln(output, "Ссылка для входа в личную учётную запись Microsoft (откройте в системном браузере):")
 	fmt.Fprintln(output, authURL)
-	fmt.Fprintln(output, "Адрес перенаправления: http://localhost/minecraft-poc/callback (нативный/публичный клиент; порт loopback назначается динамически).")
+	fmt.Fprintln(output, "Адрес перенаправления: http://localhost/minecraft-poc/callback (нативный/публичный клиент; порт петлевого интерфейса назначается динамически).")
 	if opt.OpenBrowser {
 		if err := openBrowser(authURL); err != nil {
 			fmt.Fprintln(output, "Не удалось автоматически открыть браузер. Используйте ссылку выше.")

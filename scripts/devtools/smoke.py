@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Реальный smoke-тест CLI: javac → анализ и преобразование JAR → процесс JVM → фикстуры HTTP-аутентификации."""
+"""Реальная экспресс-проверка CLI: javac → анализ и преобразование JAR → процесс JVM → фикстуры HTTP-аутентификации."""
 
 import argparse
 import json

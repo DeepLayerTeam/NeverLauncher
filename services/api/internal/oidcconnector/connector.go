@@ -276,7 +276,7 @@ func (c *Connector) doTokenRequest(ctx context.Context, endpoint string, form ur
 		}
 	}
 	if !strings.EqualFold(out.TokenType, "Bearer") || out.AccessToken == "" {
-		return tokenResponse{}, authconnector.NewError(authconnector.ErrMisconfigured, "В ответе OIDC отсутствует Bearer access_token")
+		return tokenResponse{}, authconnector.NewError(authconnector.ErrMisconfigured, "В ответе OIDC отсутствует токен доступа Bearer (access_token)")
 	}
 	return out, nil
 }

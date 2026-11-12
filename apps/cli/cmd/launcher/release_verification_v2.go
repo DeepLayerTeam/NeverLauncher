@@ -524,7 +524,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 		return releaseVerificationV2Context{}, errors.New("Проверка подписи Ed25519 выпуска v2 завершилась ошибкой")
 	}
 	if err := verifyDetachedFileWithKey(filepath.Join(dir, "PROVENANCE.json"), filepath.Join(dir, "PROVENANCE.json.sig"), pub); err != nil {
-		return releaseVerificationV2Context{}, fmt.Errorf("Подтверждение происхождения Release v2: %w", err)
+		return releaseVerificationV2Context{}, fmt.Errorf("Подтверждение происхождения выпуска v2: %w", err)
 	}
 	if err := precheckTrustState0158(trustStatePath, rootFP, currentPolicy.Epoch, env.ReleaseVersion, env.ReleaseManifestSHA256); err != nil {
 		return releaseVerificationV2Context{}, err

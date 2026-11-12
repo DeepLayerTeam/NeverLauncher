@@ -1511,7 +1511,7 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
             }
         }
     }
-    if classpath_entries.is_empty() && manifest.runtime.launch.modulepath_entries.is_empty() { return Err("classpath/modulepath пуст: JAR-файлы для запуска не найдены".to_string()); }
+    if classpath_entries.is_empty() && manifest.runtime.launch.modulepath_entries.is_empty() { return Err("Путь классов или модулей пуст: JAR-файлы для запуска не найдены".to_string()); }
     let mut jvm_args = manifest.runtime.jvm_args.clone();
     if !jvm_args.iter().any(|arg| arg.starts_with("-Djava.library.path=")) {
         let natives_dir = if manifest.runtime.launch.natives_directory.trim().is_empty() { "natives" } else { manifest.runtime.launch.natives_directory.as_str() };
@@ -1944,7 +1944,7 @@ mod tests {
         assert!(validate_runtime_constraints_0223(&m).is_err(), "Размер кучи превышает максимум");
         m.runtime.jvm_args.clear();
         m.runtime.launch.classpath_entries = vec!["libraries/missing.jar".into()];
-        assert!(validate_runtime_constraints_0223(&m).is_err(), "Неподписанный classpath");
+        assert!(validate_runtime_constraints_0223(&m).is_err(), "Неподписанный путь классов");
         m.runtime.launch.classpath_entries = vec!["libraries/fixture.jar".into()];
         m.runtime.launch.environment_allowlist = vec!["JAVA_TOOL_OPTIONS".into()];
         assert!(validate_runtime_constraints_0223(&m).is_err(), "Внедрение через переменные окружения Java");

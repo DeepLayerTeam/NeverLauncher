@@ -173,7 +173,7 @@ def preflight(config: dict, output: Path) -> list[dict]:
         live = json_file(stage / "live-session.json", 16384)
         require(isinstance(live.get("rconAddress"), str) and
                 (live["rconAddress"].startswith("127.") or live["rconAddress"].startswith("[::1]:")),
-                "RCON должен быть привязан к локальному интерфейсу loopback")
+                "RCON должен быть привязан к локальному петлевому интерфейсу")
         for file in ("source-snapshot.json", "target-snapshot.json", "rcon-password"):
             regular_bytes(stage / file, 4 << 20)
         require(stage.joinpath("rcon-password").stat().st_mode & 0o077 == 0,

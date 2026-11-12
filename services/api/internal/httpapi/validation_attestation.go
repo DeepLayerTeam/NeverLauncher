@@ -168,7 +168,7 @@ func verifyValidation0345(p signedValidation0345, publicKey string) error {
 }
 func matchObservation0345(p validationPayload0345, run model.StagedRuntimeRun0342) error {
 	if run.RunID != p.RunID || run.PackageID != p.PackageID || run.ManifestSHA256 != p.ManifestSHA256 || run.ArtifactSHA256 != p.ArtifactSHA256 {
-		return errors.New("Результат запуска не совпадает с сохранённым неизменяемым снимком staging-окружения")
+		return errors.New("Результат запуска не совпадает с сохранённым неизменяемым снимком среды подготовки")
 	}
 	begin, e := time.Parse(time.RFC3339Nano, p.StartedAt)
 	if e != nil || !begin.Equal(run.StartedAt) {

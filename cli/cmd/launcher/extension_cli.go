@@ -191,7 +191,7 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		}
 	}
 	if !declared {
-		return fmt.Errorf("namespace %s не объявляет команду %s", namespace, command)
+		return fmt.Errorf("Пространство имён %s не объявляет команду %s", namespace, command)
 	}
 	body := map[string]any{"scope": scope, "scopeId": scopeID, "command": command, "args": argv}
 	data, _ := json.Marshal(body)

@@ -20,7 +20,7 @@ func TestDevTools03010PolicyDenied(t *testing.T) {
 func TestDevTools03010NoNetworkOnInvalidInput(t *testing.T) {
 	t.Setenv("LAUNCHER_DEVTOOLS_TEST_MODE", "1")
 	err := handleDevTools03010([]string{"auth", "serve", "--ack-test-only", "--listen", "0.0.0.0:0", "--duration", "2s"})
-	if err == nil || !strings.Contains(err.Error(), "loopback") {
+	if err == nil || !strings.Contains(err.Error(), "петлевого интерфейса") {
 		t.Fatalf("Ожидался запрет привязки к публичному интерфейсу: %v", err)
 	}
 	if e := handleDevTools03010([]string{"jar", "strip-debug", "--input", "missing.jar", "--output", os.DevNull}); e == nil {

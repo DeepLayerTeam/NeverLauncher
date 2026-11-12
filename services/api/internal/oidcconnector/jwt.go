@@ -164,7 +164,7 @@ func verifyIDTokenWithPolicy(raw string, keys []jwk, cfg RuntimeConfig, discover
 	if requireNonce {
 		nonce, _ := claims["nonce"].(string)
 		if nonce == "" || nonce != expectedNonce {
-			return verifiedToken{}, fmt.Errorf("Значение nonce в ID-токене не совпадает")
+			return verifiedToken{}, fmt.Errorf("Одноразовое значение (nonce) в токене идентификации не совпадает")
 		}
 	}
 	return verifiedToken{Header: header, Claims: claims}, nil

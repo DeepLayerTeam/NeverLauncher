@@ -59,7 +59,7 @@ func ValidatePublishAddress(raw string) (*url.URL, error) {
 	}
 	ip := net.ParseIP(u.Hostname()).To4()
 	if ip == nil || ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() {
-		return nil, errors.New("URL публикации должен содержать активный локальный IPv4-адрес, отличный от loopback")
+		return nil, errors.New("URL публикации должен содержать активный локальный IPv4-адрес, отличный от адреса петлевого интерфейса")
 	}
 	ips, err := ipForInterface()
 	if err != nil {

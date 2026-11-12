@@ -223,7 +223,7 @@ func postGravitAssessment0332(endpoint, token, sourcePath, claimedVersion, out s
 	if u.Scheme != "https" {
 		host := u.Hostname()
 		if u.Scheme != "http" || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
-			return errors.New("Для ZIP Gravit и токена администратора требуется HTTPS (кроме явного loopback-IP)")
+			return errors.New("Для ZIP Gravit и токена администратора требуется HTTPS (кроме явно указанного IP-адреса петлевого интерфейса)")
 		}
 	}
 	source, err := os.Open(sourcePath)

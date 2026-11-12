@@ -31,10 +31,10 @@ func ValidateLoopbackRedirect(redirect string) error {
 		return errors.New("Адрес перенаправления должен быть http://localhost:<port>/minecraft-poc/callback (или 127.0.0.1)")
 	}
 	if u.Hostname() != "localhost" && net.ParseIP(u.Hostname()) == nil {
-		return errors.New("Хост перенаправления не является loopback-адресом")
+		return errors.New("Хост перенаправления не является адресом петлевого интерфейса")
 	}
 	if ip := net.ParseIP(u.Hostname()); ip != nil && !ip.IsLoopback() {
-		return errors.New("Хост перенаправления не является loopback-адресом")
+		return errors.New("Хост перенаправления не является адресом петлевого интерфейса")
 	}
 	if u.Port() == "0" {
 		return errors.New("В адресе перенаправления должен быть указан порт")

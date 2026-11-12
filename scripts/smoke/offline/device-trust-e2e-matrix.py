@@ -206,7 +206,7 @@ require(
         "GITHUB_RUN_ID",
         "GITHUB_STEP_SUMMARY",
     ],
-    "публичный workflow доверия устройств",
+    "публичный сценарий проверки доверия к устройствам",
 )
 
 ci = read(".github/workflows/ci.yml")

@@ -10,7 +10,7 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 echo "launcher-package-product-840" > "$TMP_DIR/example.jar"
 TOKEN="$(curl -fsS -X POST "$BASE_URL/api/v1/admin/login" -H 'Content-Type: application/json' -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')"
 if [[ -z "$TOKEN" ]]; then
-  echo "Не удалось получить token" >&2
+  echo "Не удалось получить токен" >&2
   exit 1
 fi
 PACKAGE_ID="$(curl -fsS -X POST "$BASE_URL/api/v1/packages" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "{\"projectId\":\"demo-project\",\"profileId\":\"vanilla\",\"channel\":\"stable\",\"version\":\"${VERSION:-0.10.0}-smoke\"}" | sed -n 's/.*"packageId":"\([^"]*\)".*/\1/p')"

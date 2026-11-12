@@ -106,7 +106,7 @@ func New(baseURL, token string) (*Client, error) {
 	host := u.Hostname()
 	ip := net.ParseIP(host)
 	if u.Scheme != "https" && !(u.Scheme == "http" && (strings.EqualFold(host, "localhost") || ip != nil && ip.IsLoopback())) {
-		return nil, errors.New("Для API требуется HTTPS (HTTP разрешён только для loopback)")
+		return nil, errors.New("Для API требуется HTTPS (HTTP разрешён только для петлевого интерфейса)")
 	}
 	return &Client{BaseURL: strings.TrimRight(baseURL, "/"), Token: token, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
 }

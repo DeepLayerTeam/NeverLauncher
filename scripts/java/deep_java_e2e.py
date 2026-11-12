@@ -29,7 +29,7 @@ FIXTURES = ROOT / 'examples/extensions'
 
 def binary_jar(core: Path, sources: list[Path], main: str, dest: Path,
                work: Path, additional_classpath: list[Path] | None = None) -> None:
-    """Без скрытого classpath или фонового build/classes; только байты внешнего SDK."""
+    """Без скрытого пути классов или фонового каталога build/classes; только байты внешнего SDK."""
     classes = work / 'compiled'
     classes.mkdir(parents=True)
     cp = os.pathsep.join([str(core), *map(str, additional_classpath or [])])

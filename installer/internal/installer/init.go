@@ -36,7 +36,7 @@ func validatePublicURL(raw string) error {
 			return nil
 		}
 	}
-	return errors.New("Публичный URL должен использовать HTTPS (HTTP разрешён только для loopback)")
+	return errors.New("Публичный URL должен использовать HTTPS (HTTP разрешён только для петлевого интерфейса)")
 }
 
 // Init создаёт производственную конфигурацию PostgreSQL одной эксклюзивной

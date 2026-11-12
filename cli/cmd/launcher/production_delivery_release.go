@@ -132,7 +132,7 @@ func productionDeliveryReleaseAnchors0160(dir, ver string) ([]productionDelivery
 		}
 		sum, size, err := hashFile(filepath.Join(dir, name))
 		if err != nil {
-			return nil, fmt.Errorf("Ошибка контрольной точки production-поставки %s: %w", name, err)
+			return nil, fmt.Errorf("Ошибка контрольной точки промышленной поставки %s: %w", name, err)
 		}
 		anchors = append(anchors, productionDeliveryReleaseAnchor0160{Name: name, Size: size, SHA256: strings.ToLower(sum)})
 	}
@@ -215,7 +215,7 @@ func validateProductionTargets0160(targets []DeliveryTarget) error {
 	expected := expectedProductionTargets0160()
 	for i := range expected {
 		if actual[i] != expected[i] {
-			return fmt.Errorf("Несовпадение целевой платформы production-поставки №%d: ожидалось=%s/%s, фактически=%s/%s", i+1, expected[i].Platform, expected[i].Architecture, actual[i].Platform, actual[i].Architecture)
+			return fmt.Errorf("Несовпадение целевой платформы промышленной поставки №%d: ожидалось=%s/%s, фактически=%s/%s", i+1, expected[i].Platform, expected[i].Architecture, actual[i].Platform, actual[i].Architecture)
 		}
 	}
 	return nil
@@ -227,7 +227,7 @@ func buildProductionDeliveryReleaseDocument0160(dir, ver string) (productionDeli
 	}
 	candidate, commit, err := readProductionCandidateForRelease0160(dir, ver)
 	if err != nil {
-		return productionDeliveryRelease0160{}, fmt.Errorf("Ошибка кандидата production-релиза: %w", err)
+		return productionDeliveryRelease0160{}, fmt.Errorf("Ошибка кандидата промышленного выпуска: %w", err)
 	}
 	matrix, err := readPublicProductionDeliveryMatrix0159(filepath.Join(dir, publicProductionDeliveryMatrixFile0159))
 	if err != nil {
@@ -375,7 +375,7 @@ func verifyProductionDeliveryRelease0160(dir, ver string, strict bool) error {
 		return nil
 	}
 	if err := verifyProductionReleaseCandidate01511(dir, ver, true); err != nil {
-		return fmt.Errorf("Не выполнено предварительное условие production-релиза: %w", err)
+		return fmt.Errorf("Не выполнено предварительное условие промышленного выпуска: %w", err)
 	}
 	if err := verifyDeliveryManifest0151(dir, ver); err != nil {
 		return fmt.Errorf("Манифест доставки: %w", err)
@@ -393,7 +393,7 @@ func verifyProductionDeliveryRelease0160(dir, ver string, strict bool) error {
 		return fmt.Errorf("Ошибка управляемой JRE: %w", err)
 	}
 	if err := verifyPublicProductionDeliveryMatrix0159(dir, ver); err != nil {
-		return fmt.Errorf("Ошибка матрицы публичной production-поставки: %w", err)
+		return fmt.Errorf("Ошибка матрицы публичной промышленной поставки: %w", err)
 	}
 	if _, err := loadReleaseTrustPolicy0158(filepath.Join(dir, releaseTrustPolicyFile0158)); err != nil {
 		return fmt.Errorf("Ошибка политики доверия релиза: %w", err)

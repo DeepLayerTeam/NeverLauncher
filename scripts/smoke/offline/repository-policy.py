@@ -1503,7 +1503,7 @@ for required in [
     "LAUNCHER_COMPATIBILITY_MATRIX_FILE",
     "LAUNCHER_SOURCE_COMMIT",
     "release publish-check",
-    "Certification evidence не передан",
+    "Свидетельство сертификации не передано",
 ]:
     if required not in build_release:
         fail(f"Неполная реализация «сертификация совместимости собранного выпуска»: {required}")

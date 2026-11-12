@@ -32,7 +32,7 @@ pub fn identity(credentials: Option<&MinecraftLaunchCredentials>) -> Result<Game
             let loopback = url.host_str().is_some_and(|v| matches!(v,"localhost"|"127.0.0.1"|"[::1]"));
             if (url.scheme() != "https" && !(url.scheme()=="http" && loopback)) ||
                 url.username() != "" || url.password().is_some() || url.query().is_some() || url.fragment().is_some() {
-                return Err("Для аутентификации Yggdrasil требуется HTTPS или HTTP через loopback".into());
+                return Err("Для аутентификации Yggdrasil требуется HTTPS или HTTP через петлевой интерфейс".into());
             }
             Ok(GameIdentity::Yggdrasil)
         }

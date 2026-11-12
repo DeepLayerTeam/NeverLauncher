@@ -68,7 +68,7 @@ func (s Server) evaluatePublishReadiness0385(ctx context.Context, lookup package
 	md, mdErr := manifestDigest0212(release.Manifest)
 	fd, fdErr := artifactDigest0212(lookup.Files)
 	if mdErr != nil || fdErr != nil {
-		add("digest-unavailable", release.ID, "Не удалось вычислить digest манифеста или файлов.", "Проверьте данные пакета и журнал Backend.")
+		add("digest-unavailable", release.ID, "Не удалось вычислить контрольную сумму манифеста или файлов.", "Проверьте данные пакета и журнал Backend.")
 	} else {
 		integrity, err := s.Repo.LatestIntegrityCheck(ctx, release.ID)
 		if err != nil && !errors.Is(err, repository.ErrNotFound) {

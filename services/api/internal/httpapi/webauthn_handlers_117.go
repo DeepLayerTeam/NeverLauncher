@@ -250,7 +250,7 @@ func (s Server) authPasskeyStepUpBegin117(w http.ResponseWriter, r *http.Request
 	}
 	token, err := s.State.Passkeys.createChallenge(claims.Sub, "passkey-step-up", challenge, map[string]any{"sessionId": claims.SessionID})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "не удалось сохранить challenge")
+		writeError(w, http.StatusInternalServerError, "не удалось сохранить проверочный запрос")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"transactionToken": token, "publicKey": s.passkeyAssertionOptions117(challenge, claims.Sub), "expiresInSeconds": int(webauthnChallengeTTL117.Seconds())}})

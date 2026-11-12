@@ -333,7 +333,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	tcp, ok := ln.Addr().(*net.TCPAddr)
 	if !ok || tcp.IP == nil || !tcp.IP.IsLoopback() {
 		_ = ln.Close()
-		return errors.New("Протокол хоста расширений должен прослушивать только loopback")
+		return errors.New("Протокол хоста расширений должен прослушивать только петлевой интерфейс")
 	}
 	s.listener = ln
 	s.baseURL = "http://" + ln.Addr().String()
@@ -1400,7 +1400,7 @@ func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*proc
 	pipeRequest := strings.HasPrefix(r.RemoteAddr, `\\.\pipe\LOCAL\Launcher-Extension-`)
 	macRequest := strings.HasPrefix(r.RemoteAddr, "nlmac:")
 	if !tcpLoopback && !pipeRequest && !macRequest {
-		http.Error(w, "Требуется loopback или аутентифицированный канал изолированной среды", http.StatusForbidden)
+		http.Error(w, "Требуется петлевой интерфейс или аутентифицированный канал изолированной среды", http.StatusForbidden)
 		return nil, false
 	}
 	auth := strings.TrimSpace(r.Header.Get("Authorization"))

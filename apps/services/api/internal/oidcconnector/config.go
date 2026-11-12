@@ -170,7 +170,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		if u.Scheme == "http" {
 			host := strings.ToLower(u.Hostname())
 			if host != "127.0.0.1" && host != "::1" && host != "localhost" {
-				return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: HTTP redirectUri разрешён только для loopback-клиентов", cfg.ID)
+				return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: HTTP в redirectUri разрешён только для клиентов петлевого интерфейса", cfg.ID)
 			}
 		} else if u.Scheme != "https" && !strings.Contains(u.Scheme, ".") && !strings.Contains(u.Scheme, "+") && !strings.Contains(u.Scheme, "-") {
 			return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: схема redirectUri %q запрещена", cfg.ID, u.Scheme)
@@ -202,7 +202,7 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		}
 	}
 	if !hasOpenID {
-		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: scopes должен включать openid", cfg.ID)
+		return RuntimeConfig{}, fmt.Errorf("Коннектор OIDC %q: Поле scopes должно включать openid", cfg.ID)
 	}
 	if len(cfg.HostAllowlist) == 0 {
 		cfg.HostAllowlist = []string{strings.ToLower(issuer.Hostname())}

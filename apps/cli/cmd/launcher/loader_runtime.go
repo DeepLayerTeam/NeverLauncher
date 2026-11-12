@@ -724,7 +724,7 @@ func fetchLimitedBytes(ctx context.Context, client *http.Client, rawURL string, 
 		return nil, err
 	}
 	if int64(len(data)) > max {
-		return nil, fmt.Errorf("response превышает лимит %d bytes", max)
+		return nil, fmt.Errorf("Ответ превышает ограничение в %d байт", max)
 	}
 	return data, nil
 }

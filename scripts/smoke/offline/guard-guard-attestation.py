@@ -164,7 +164,7 @@ require(
     [
         "GuardReleaseAllowlistJSON",
         "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
-        "обязателен в production",
+        "обязателен в промышленной среде",
     ],
     "Настройка списка разрешённых файлов промышленного релиза",
 )

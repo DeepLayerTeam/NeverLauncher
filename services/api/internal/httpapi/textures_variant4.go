@@ -209,7 +209,7 @@ func (s Server) textureSavedDelete0255(w http.ResponseWriter, r *http.Request) {
 	}
 	kind, digest := r.PathValue("kind"), strings.ToLower(r.PathValue("digest"))
 	if (kind != "skin" && kind != "cape") || len(digest) != 64 {
-		writeError(w, http.StatusBadRequest, "Некорректный тип или digest")
+		writeError(w, http.StatusBadRequest, "Некорректный тип или контрольная сумма")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)

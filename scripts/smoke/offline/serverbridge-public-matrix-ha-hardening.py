@@ -51,7 +51,7 @@ consume = repo[
     )
 ]
 if "DELETE FROM server_bridge_node_nonces_v2" in consume:
-    raise SystemExit("Критический участок обработки nonce по-прежнему выполняет глобальную очистку")
+    raise SystemExit("Критический участок обработки одноразовых значений по-прежнему выполняет глобальную очистку")
 public = read(
     "services/api/internal/httpapi/server_bridge_public_matrix_0149.go"
 ) + read("services/api/internal/httpapi/routes_public.go")

@@ -151,10 +151,10 @@ func verifyClientData(cfg VerifyConfig, raw []byte, expectedType string) error {
 	}
 	got, err := base64.RawURLEncoding.DecodeString(cd.Challenge)
 	if err != nil {
-		return errors.New("Недопустимая кодировка запроса challenge WebAuthn")
+		return errors.New("Недопустимая кодировка проверочного запроса WebAuthn")
 	}
 	if !bytes.Equal(got, cfg.Challenge) {
-		return errors.New("Несовпадение запроса challenge WebAuthn")
+		return errors.New("Проверочный запрос WebAuthn не совпадает")
 	}
 	if cd.CrossOrigin {
 		return errors.New("Операция WebAuthn с другого источника отклонена")

@@ -79,7 +79,7 @@ func verifySignedComponentSet02310(manifestPath string, manifest componentUpdate
 	}
 	key, err := hex.DecodeString(strings.TrimSpace(componentSetTrustedKey02310))
 	if err != nil || len(key) != ed25519.PublicKeySize {
-		return errors.New("Корневой доверенный ключ набора компонентов не встроен в средство обновления; обновление production-среды отклонено")
+		return errors.New("Корневой доверенный ключ набора компонентов не встроен в средство обновления; обновление промышленной среды отклонено")
 	}
 	signaturePath := filepath.Join(filepath.Dir(manifestPath), componentSetSignatureFile02310)
 	info, err := os.Lstat(signaturePath)

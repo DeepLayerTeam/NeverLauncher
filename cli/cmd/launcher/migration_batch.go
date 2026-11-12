@@ -89,7 +89,7 @@ func migrationBatchCLI0492(endpoint, token, source, mapping, report, out string)
 	if uri.Scheme != "https" {
 		ip := net.ParseIP(uri.Hostname())
 		if uri.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return errors.New("Источник миграции: требуется HTTPS, кроме локального loopback-адреса")
+			return errors.New("Источник миграции: требуется HTTPS, кроме адреса локального петлевого интерфейса")
 		}
 	}
 	mf, err := os.Lstat(mapping)

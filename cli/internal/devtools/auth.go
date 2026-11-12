@@ -276,7 +276,7 @@ func ListenFixture(addr string, f *FixtureServer) (net.Listener, error) {
 	}
 	ip := net.ParseIP(host)
 	if ip == nil || !ip.IsLoopback() {
-		return nil, fmt.Errorf("Тестовый стенд должен использовать числовой адрес loopback, получен %q", host)
+		return nil, fmt.Errorf("Тестовый стенд должен использовать числовой адрес петлевого интерфейса, получен %q", host)
 	}
 	return net.Listen("tcp", addr)
 }

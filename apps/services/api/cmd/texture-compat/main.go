@@ -107,7 +107,7 @@ func origin02512(raw string, allowLoopback bool) (*url.URL, error) {
 		return u, nil
 	}
 	if u.Scheme != "http" || !allowLoopback || !isLoopback02512(u.Hostname()) {
-		return nil, errors.New("Требуется HTTPS; HTTP разрешён только для явно указанного тестового loopback-адреса")
+		return nil, errors.New("Требуется HTTPS; HTTP разрешён только для явно указанного тестового адреса петлевого интерфейса")
 	}
 	return u, nil
 }

@@ -729,7 +729,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 			}
 		}
 		if len(matches) == 0 {
-			return bridgeArtifact0199{}, fmt.Errorf("в %s нет artifact для platform=%s", artifactDir, platform)
+			return bridgeArtifact0199{}, fmt.Errorf("В %s нет артефакта для platform=%s", artifactDir, platform)
 		}
 		sort.Slice(matches, func(i, j int) bool {
 			return compareSemver0199(extractBridgeVersion0199(matches[i], platform), extractBridgeVersion0199(matches[j], platform)) > 0

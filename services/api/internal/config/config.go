@@ -413,7 +413,7 @@ func ValidateProduction(cfg Config) error {
 	}
 	guardAllowlistRaw := strings.TrimSpace(cfg.GuardReleaseAllowlistJSON)
 	if guardAllowlistRaw == "" {
-		problems = append(problems, "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON обязателен в production")
+		problems = append(problems, "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON обязателен в промышленной среде")
 	} else {
 		type guardArtifactPair struct {
 			GuardSHA256         string `json:"guardSha256"`
@@ -508,7 +508,7 @@ func ValidateProduction(cfg Config) error {
 
 	bridgeAllowlistRaw := strings.TrimSpace(cfg.BridgeReleaseAllowlistJSON)
 	if bridgeAllowlistRaw == "" {
-		problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON обязателен в production")
+		problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON обязателен в промышленной среде")
 	} else {
 		type bridgeReleaseEntry struct {
 			VelocitySHA256   []string `json:"velocitySha256"`
@@ -644,12 +644,12 @@ func ValidateProduction(cfg Config) error {
 		}
 	}
 	if len(cfg.CORSAllowedOrigins) == 0 {
-		problems = append(problems, "LAUNCHER_CORS_ALLOWED_ORIGINS обязателен в production")
+		problems = append(problems, "LAUNCHER_CORS_ALLOWED_ORIGINS обязателен в промышленной среде")
 	}
 	for _, origin := range cfg.CORSAllowedOrigins {
 		origin = strings.TrimSpace(origin)
 		if origin == "*" {
-			problems = append(problems, "CORS wildcard '*' запрещён в production")
+			problems = append(problems, "Шаблон CORS '*' запрещён в промышленной среде")
 			continue
 		}
 		u, parseErr := url.Parse(origin)
@@ -771,7 +771,7 @@ func ValidateProduction(cfg Config) error {
 		problems = append(problems, fmt.Sprintf("неподдерживаемый LAUNCHER_STORAGE_DRIVER=%q", cfg.StorageDriver))
 	}
 	if len(problems) > 0 {
-		return errors.New("небезопасная production-конфигурация: " + strings.Join(problems, "; "))
+		return errors.New("небезопасная конфигурация промышленной среды: " + strings.Join(problems, "; "))
 	}
 	return nil
 }

@@ -353,7 +353,7 @@ func checkBackendURL(raw string) error {
 	}
 	ip := net.ParseIP(u.Hostname())
 	if u.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-		return errors.New("Требуется HTTPS, кроме обращения к числовому адресу loopback")
+		return errors.New("Требуется HTTPS, кроме обращения к числовому адресу петлевого интерфейса")
 	}
 	return nil
 }

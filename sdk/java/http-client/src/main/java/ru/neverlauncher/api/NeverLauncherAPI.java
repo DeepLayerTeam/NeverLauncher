@@ -74,7 +74,7 @@ public final class NeverLauncherAPI {
         if(h==null || u.getUserInfo()!=null || u.getQuery()!=null || u.getFragment()!=null ||
            !(u.getPath().equals("") || u.getPath().equals("/")) ||
            !(u.getScheme().equals("https") || u.getScheme().equals("http") && loop))
-            throw new IllegalArgumentException("Для API требуется HTTPS (HTTP разрешён только через loopback)");
+            throw new IllegalArgumentException("Для API требуется HTTPS (HTTP разрешён только через петлевой интерфейс)");
         this.base=URI.create(u.getScheme()+"://"+u.getRawAuthority());
         this.token=bearerToken==null?"":bearerToken;
         this.http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
