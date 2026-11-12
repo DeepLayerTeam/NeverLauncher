@@ -204,7 +204,7 @@ async function policy0355(
     payload: string;
     rootSignature: string;
   }>(policyText);
-  assert(env.schemaVersion === "1.0", "Неподдерживаемая версия policy");
+  assert(env.schemaVersion === "1.0", "Неподдерживаемая версия политики");
   const raw = base64Decode(env.payload);
   assert(raw.length <= 96 * 1024, "Данные политики доверия слишком велики");
   await verify(
@@ -280,7 +280,7 @@ export async function verifyBootstrap0355(
     );
     assert(
       active && Date.parse(active.notBefore) <= Date.now(),
-      "Подписывающий bootstrap ключ недействителен",
+      "Недействителен ключ подписи данных первичной настройки",
     );
     const signedAt = Date.parse(env.signedAt || "");
     assert(
@@ -309,7 +309,7 @@ export async function verifyBootstrap0355(
       typeof payload.projectId === "string" &&
       typeof payload.profileId === "string" &&
       typeof payload.profilePublicKey === "string",
-    "Недействительная структура bootstrap",
+    "Недействительная структура данных первичной настройки",
   );
   if (env.schemaVersion === "2.0")
     assert(
@@ -329,7 +329,7 @@ export async function signBranding0355(
   const input = await verifyBootstrap0355(signed, root, policyText);
   const next = { ...input.payload, branding: validateBrand0355(branding) };
   const raw = bytes(JSON.stringify(next));
-  assert(raw.length <= 1024 * 1024, "Новый payload превышает лимит bootstrap");
+  assert(raw.length <= 1024 * 1024, "Новые данные превышают предел размера первичной настройки");
   // 32-байтовое исходное значение импортируется без возможности извлечения. Нет сохранения и вызовов Backend.
   const prefix = hex("302e020100300506032b657004220420", 16);
   const pkcs8 = Uint8Array.from([...prefix, ...hex(seedHex.trim(), 32)]);

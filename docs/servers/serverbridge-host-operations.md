@@ -45,7 +45,7 @@ GET /api/v1/server-bridge/servers/survival/host/operations/{operationId}
 GET /api/v1/server-bridge/servers/survival/host/operations/{operationId}?refresh=1
 ```
 
-`refresh=1` повторно читает состояние процесса ОС на хосте и идентичность Runtime ServerBridge, но не отправляет POST в RemoteControl. Состояние `succeeded` требует сохранённую агентом квитанцию `succeeded`, независимое подтверждение соответствующего действующего Supervisor/JVM и (для start/restart) более новый heartbeat ServerBridge от нового Runtime. Пока процесс Java работает, но его адаптер Bridge не зарегистрирован, состояние остаётся `accepted`.
+`refresh=1` повторно читает состояние процесса ОС на хосте и идентичность Runtime ServerBridge, но не отправляет POST в RemoteControl. Состояние `succeeded` требует сохранённую агентом квитанцию `succeeded`, независимое подтверждение соответствующего действующего Supervisor/JVM и (для start/restart) более свежий сигнал активности ServerBridge от нового Runtime. Пока процесс Java работает, но его адаптер Bridge не зарегистрирован, состояние остаётся `accepted`.
 
 Если Backend или хост завершается аварийно в неопределённый момент, в журнале сохраняется `indeterminate`. Другой ключ для сервера блокируется, пока оператор не проверит устойчивую операцию Backend и журнал RemoteControl командой `nl server-bridge host remote inspect --server-root ... --idempotency-key nl-host-<operationId>`. В этом выпуске запрещены автоматический повтор команды, повторное направление по аренде и заявления о подтверждённом успехе. Восстановление после действительно неизвестного исхода требует отдельно аудируемой ручной процедуры.
 

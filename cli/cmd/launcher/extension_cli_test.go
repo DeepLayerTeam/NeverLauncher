@@ -42,7 +42,7 @@ func TestExtensionCLINamespaceCatalogAndInvoke0209(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !invoked {
-		t.Fatal("Endpoint вызова не был вызван")
+		t.Fatal("Маршрут API не был вызван")
 	}
 	script, err := extensionCLICompletion0209("bash", items, srv.URL)
 	if err != nil {

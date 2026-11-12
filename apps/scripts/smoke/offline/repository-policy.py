@@ -72,7 +72,7 @@ for rel, expected in dynamic_version_expectations.items():
     if not path.is_file():
         fail(f"отсутствует интеграция версии: {rel}")
     elif expected not in read(rel):
-        fail(f"{rel}: отсутствует canonical VERSION integration")
+        fail(f"{rel}: отсутствует использование канонического файла VERSION")
 
 for rel in (
     "plugins/velocity-bridge/src/main/resources/velocity-plugin.json",
@@ -2603,7 +2603,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "validate_installed_runtime",
     ]:
         if required not in managed_java_0165:
-            fail(f"0.16.5 Managed Java II runtime — не завершено: {required}")
+            fail(f"0.16.5 Среда выполнения управляемой Java II — не завершена: {required}")
     if "--major <8|16|17|21|25>" not in managed_java_cli_0165:
         fail("0.16.5 CLI управляемой Java II не поддерживает все сертифицированные основные версии")
     for required in [
@@ -3121,7 +3121,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         '"--restart"',
     ]:
         if required not in component_main_0157:
-            fail(f"0.15.7 update CLI integration — не завершено: {required}")
+            fail(f"0.15.7 Интеграция команд обновления — не завершена: {required}")
     for required in [
         "install_launcher_update",
         "guard.shutdown().await",
@@ -3552,7 +3552,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "verifyProductionDeliveryRelease0160",
     ]:
         if required not in public_0160:
-            fail(f"0.16.0 public E2E integration — не завершено: {required}")
+            fail(f"0.16.0 Интеграция публичных сквозных проверок — не завершена: {required}")
     for required in [
         "PRODUCTION_DELIVERY_RELEASE.json",
         "release production-verify",
@@ -4759,7 +4759,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "verifyLoaderCompatibilityReleaseCertificate01711",
     ]:
         if required not in rc_compat_01711:
-            fail(f"0.17.11 compatibility RC integration — не завершено: {required}")
+            fail(f"0.17.11 Интеграция предварительной версии проверок совместимости — не завершена: {required}")
     for required in [
         "loaderCompatibilityReleaseCertificateFile01711",
         "loader-compatibility-rc-full-release-certificate",
@@ -4882,7 +4882,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             "compatibilityLoaderGA0180Required(version)",
         ]:
             if required not in body:
-                fail(f"0.18.0 {name} runtime GA enforcement — не завершено: {required}")
+                fail(f"0.18.0 {name} применение требований промышленной среды выполнения — не завершено: {required}")
     for required in [
         "ga-certified",
         "RuntimeSupportSHA256",

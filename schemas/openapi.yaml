@@ -25487,7 +25487,7 @@
           "pluginSha256": {
             "type": "string",
             "pattern": "^[0-9a-fA-F]{64}$",
-            "description": "Текущий SHA-256 JAR ServerBridge; должен совпадать с принятым измерением heartbeat"
+            "description": "Текущий SHA-256 JAR ServerBridge; должен совпадать с измерением из принятого сигнала активности"
           }
         },
         "additionalProperties": false
@@ -25545,7 +25545,7 @@
           "pluginSha256": {
             "type": "string",
             "pattern": "^[0-9a-fA-F]{64}$",
-            "description": "Текущий SHA-256 JAR ServerBridge; должен совпадать с принятым измерением heartbeat"
+            "description": "Текущий SHA-256 JAR ServerBridge; должен совпадать с измерением из принятого сигнала активности"
           }
         },
         "additionalProperties": false

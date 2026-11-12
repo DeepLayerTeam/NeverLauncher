@@ -72,7 +72,7 @@ for rel, expected in dynamic_version_expectations.items():
     if not path.is_file():
         fail(f"отсутствует интеграция версии: {rel}")
     elif expected not in read(rel):
-        fail(f"{rel}: отсутствует canonical VERSION integration")
+        fail(f"{rel}: отсутствует использование канонического файла VERSION")
 
 for rel in (
     "plugins/velocity-bridge/src/main/resources/velocity-plugin.json",

@@ -752,7 +752,7 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	}
 	existing, lookupErr := r.GetAuthIdentityByIssuer(identity.Provider, identity.Issuer, identity.Subject)
 	if lookupErr == nil && existing.UserID != identity.UserID {
-		return model.AuthIdentity{}, fmt.Errorf("%w: identity %s/%s уже связана с другим пользователем", ErrConflict, identity.Provider, identity.Subject)
+		return model.AuthIdentity{}, fmt.Errorf("%w: учётная запись %s/%s уже связана с другим пользователем", ErrConflict, identity.Provider, identity.Subject)
 	}
 	if lookupErr != nil && !errors.Is(lookupErr, ErrNotFound) {
 		return model.AuthIdentity{}, lookupErr

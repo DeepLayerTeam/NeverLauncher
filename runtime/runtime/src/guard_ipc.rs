@@ -749,7 +749,7 @@ async fn connect_client_pipe(endpoint: &str) -> Result<NamedPipeClient, String> 
             }
             Err(err) => {
                 return Err(format!(
-                    "Guard IPC не появился за {IPC_CONNECT_TIMEOUT_SECS}s ({endpoint}): {err}"
+                    "Канал IPC Guard не появился за {IPC_CONNECT_TIMEOUT_SECS} с ({endpoint}): {err}"
                 ));
             }
         }

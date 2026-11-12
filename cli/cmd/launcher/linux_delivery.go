@@ -115,7 +115,7 @@ func inspectLinuxELFBytes0153(data []byte) (linuxELFInfo0153, error) {
 		return linuxELFInfo0153{}, fmt.Errorf("Класс ELF %d не поддерживается; требуется 64-разрядный исполняемый файл", data[4])
 	}
 	if data[5] != 1 {
-		return linuxELFInfo0153{}, fmt.Errorf("Не поддерживается: порядок байтов ELF %d; требуется little-endian", data[5])
+		return linuxELFInfo0153{}, fmt.Errorf("Не поддерживается порядок байтов ELF %d; требуется порядок от младшего байта к старшему (little-endian)", data[5])
 	}
 	elfType := binary.LittleEndian.Uint16(data[16:18])
 	if elfType != 2 && elfType != 3 {

@@ -313,7 +313,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		if oldDevice.Status == "revoked" {
 			recoveryRepo, ok := s.Repo.(repository.RevokedDeviceRecoveryRepository0435)
 			if !ok {
-				writeError(w, http.StatusConflict, "backend не поддерживает безопасное восстановление отозванного устройства")
+				writeError(w, http.StatusConflict, "серверная часть не поддерживает безопасное восстановление отозванного устройства")
 				return
 			}
 			oldDevice, replacement, err = recoveryRepo.RecoverRevokedTrustedDeviceKey0435(r.Context(), claims.Sub, oldDeviceID, replacement, now)

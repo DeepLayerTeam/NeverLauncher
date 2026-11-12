@@ -276,7 +276,7 @@ func (s Server) packageRuntimeEvidence0212(w http.ResponseWriter, r *http.Reques
 	}
 	for name, digest := range e.EvidenceHashes {
 		if strings.TrimSpace(name) == "" || !validSHA256Hex0212(strings.ToLower(strings.TrimSpace(digest))) {
-			writeError(w, http.StatusBadRequest, "Поле runtime evidenceHashes содержит некорректный SHA-256")
+			writeError(w, http.StatusBadRequest, "Поле evidenceHashes свидетельств среды выполнения содержит некорректный SHA-256")
 			return
 		}
 	}

@@ -596,7 +596,7 @@ async fn save_desktop_config_impl_0352(config: DesktopConfig, complete_for_diges
     let signed=enforce_signed_binding_0352(&mut cfg,parent)?;
     if let Some(p)=signed {
         if let Some(ref desired)=complete_for_digest {
-            if desired!=&p.digest {return Err("Подписанный bootstrap изменился во время проверки установки".into())}
+            if desired!=&p.digest {return Err("Подписанные данные первичной настройки изменились во время проверки установки".into())}
         }
         cfg.onboarding_completed=complete_for_digest.is_some()||old.as_ref().map(|v|v.onboarding_completed&&v.onboarding_bootstrap_digest==p.digest).unwrap_or(false);
         cfg.onboarding_bootstrap_digest=p.digest;

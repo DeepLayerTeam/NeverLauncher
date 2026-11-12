@@ -10,7 +10,7 @@
 | Хранилище | `LAUNCHER_STORAGE_DRIVER`, `LAUNCHER_STORAGE_LOCAL_PATH`, `LAUNCHER_STORAGE_S3_*` | Локальное хранилище или S3 с защищённым доступом |
 | Авторизация | `LAUNCHER_AUTH_TOKEN_SECRET`, `LAUNCHER_AUTH_TOKEN_KEYS_JSON`, `LAUNCHER_AUTH_TOKEN_ACTIVE_KID` | Секреты нельзя хранить в Git |
 | Федерация удостоверений | `LAUNCHER_AUTH_SQL_*`, `LAUNCHER_AUTH_HTTP_*`, `LAUNCHER_AUTH_OIDC_*`, `LAUNCHER_AUTH_MICROSOFT_*` | Не задавайте конфликтующие значения JSON и FILE |
-| WebAuthn и CORS | `LAUNCHER_WEBAUTHN_*`, `LAUNCHER_CORS_ALLOWED_ORIGINS` | Идентификатор RP и Origin должны соответствовать домену |
+| WebAuthn и CORS | `LAUNCHER_WEBAUTHN_*`, `LAUNCHER_CORS_ALLOWED_ORIGINS` | Идентификатор RP и источник должны соответствовать домену |
 | ServerBridge | `LAUNCHER_SERVERBRIDGE_HA_REQUIRED`, `LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON` | Подписанные JAR и смена удостоверений |
 | Guard | `LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`, `LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON` | В рабочем окружении недопустимы пустые корни доверия |
 | Расширения | `LAUNCHER_EXTENSION_*` | Жизненный цикл хоста, разрешения, секреты прав доступа |

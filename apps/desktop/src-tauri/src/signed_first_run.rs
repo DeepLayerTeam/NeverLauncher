@@ -98,7 +98,7 @@ fn verify(payload:&[u8],pubkey:&[u8],sig:&str)->Result<(),String>{
     let key=VerifyingKey::from_bytes(&pubkey.try_into().map_err(|_|"Неверная длина Ed25519 ключа")?)
         .map_err(|_|"Недействительный Ed25519 ключ")?;
     let sig=Signature::from_bytes(&raw.try_into().map_err(|_|"Недействительная подпись")?);
-    key.verify(payload,&sig).map_err(|_|"Подпись bootstrap не прошла проверку Ed25519".into())
+    key.verify(payload,&sig).map_err(|_|"Подпись данных первичной настройки не прошла проверку Ed25519".into())
 }
 fn time_value(s:&str)->Result<OffsetDateTime,String>{
     if s.len()!=20 || !s.ends_with('Z') {return Err("Требуется UTC timestamp RFC3339 без дробной части".into())}

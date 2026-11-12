@@ -51,4 +51,4 @@ nl runtime client-factory verify --client-dir ./output/client-1
 ]
 ```
 
-Для Forge/NeoForge можно указать `--installer-file`, `--installer-sha256`, `--installer-url`, `--java`, `--processor-timeout`, `--processor-sandbox`; для метаданных версий — `--maven-metadata-url`. Параметры разрешения версии и URL доступны также для детерминированного локального тестового HTTP-репозитория. Это не отменяет обязательной проверки настоящего запуска Minecraft на целевой ОС и Java: тесты на локальных артефактах не подтверждают работу всех upstream-версий.
+Для Forge/NeoForge можно указать `--installer-file`, `--installer-sha256`, `--installer-url`, `--java`, `--processor-timeout`, `--processor-sandbox`; для метаданных версий — `--maven-metadata-url`. Параметры разрешения версии и URL доступны также для детерминированного локального тестового HTTP-репозитория. Это не отменяет обязательной проверки настоящего запуска Minecraft на целевой ОС и Java: тесты на локальных артефактах не подтверждают работу всех версий исходных проектов.

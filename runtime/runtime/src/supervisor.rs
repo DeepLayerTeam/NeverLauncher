@@ -200,7 +200,7 @@ impl ProcessSupervisor {
         crate::macos_policy::prepare_runtime_command(&mut command);
         let mut child = command
             .spawn()
-            .map_err(|err| format!("не удалось запустить runtime: {err}"))?;
+            .map_err(|err| format!("не удалось запустить среду выполнения: {err}"))?;
         #[cfg(windows)]
         let runtime_policy = crate::windows_policy::enforce_runtime_process(&mut child)
             .map_err(|err| format!("Запуск заблокирован: не удалось применить политику Runtime и процессов Windows: {err}"))?;

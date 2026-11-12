@@ -108,7 +108,7 @@ sudo systemctl enable --now haproxy keepalived
 Если система имеет другой путь бинарника `systemctl`, адаптировать
 проверку Keepalived и валидировать её вручную до ввода.
 
-В DNS/LB-конфигурации клиентов 0.51.2 задать общие endpoint-адреса:
+В DNS/LB-конфигурации клиентов 0.51.2 задать общие сетевые адреса:
 
 ```dotenv
 LAUNCHER_DATABASE_DSN=postgres://launcher:SECRET@postgres-ha.internal:5432/launcher?sslmode=verify-full

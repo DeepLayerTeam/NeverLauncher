@@ -177,10 +177,10 @@ func invokeExtensionNamespace0209(backend, token string, items []extensionCLICat
 		}
 	}
 	if len(matches) == 0 {
-		return fmt.Errorf("CLI namespace %q не найден для scope %s/%s", namespace, scope, scopeID)
+		return fmt.Errorf("Пространство имён CLI %q не найдено для области %s/%s", namespace, scope, scopeID)
 	}
 	if len(matches) > 1 {
-		return fmt.Errorf("CLI namespace %q неоднозначен; укажите --scope/--scope-id", namespace)
+		return fmt.Errorf("Пространство имён CLI %q неоднозначно; укажите --scope/--scope-id", namespace)
 	}
 	item := matches[0]
 	declared := false
@@ -293,6 +293,6 @@ func extensionCLICompletion0209(shell string, items []extensionCLICatalogItem020
 		}
 		return b.String(), nil
 	default:
-		return "", fmt.Errorf("completion shell должен быть bash, zsh или fish (backend %s)", backend)
+		return "", fmt.Errorf("Для автодополнения требуется оболочка bash, zsh или fish (сервер %s)", backend)
 	}
 }

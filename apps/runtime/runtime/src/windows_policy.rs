@@ -249,7 +249,7 @@ mod windows_impl {
         pub fn verify_process_tree(&self, root_pid: u32) -> Result<RuntimeProcessTreeSnapshot, String> {
             if root_pid != self.report.pid {
                 return Err(format!(
-                    "Guard: корень дерева процессов не соответствует политике: policy={}, requested={root_pid}",
+                    "Guard: корень дерева процессов не соответствует политике: по политике={}, запрошено={root_pid}",
                     self.report.pid
                 ));
             }

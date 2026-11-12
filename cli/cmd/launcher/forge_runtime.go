@@ -1171,7 +1171,7 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 				return best, best, metadataURL, sourceSHA, nil
 			}
 			if bestCompatiblePrerelease != "" {
-				lastSelectionErr = fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s; upstream содержит только prerelease (например %s), который запрещён запрошенной stable-политикой", loader, requested, minecraftVersion, bestCompatiblePrerelease)
+				lastSelectionErr = fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s; источник содержит только предварительный выпуск (например %s), который запрещён выбранной политикой стабильных выпусков", loader, requested, minecraftVersion, bestCompatiblePrerelease)
 			} else {
 				lastSelectionErr = fmt.Errorf("%s не имеет %s версии, совместимой с Minecraft %s", loader, requested, minecraftVersion)
 			}
