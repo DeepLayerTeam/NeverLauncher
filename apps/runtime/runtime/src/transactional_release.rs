@@ -970,7 +970,7 @@ mod tests {
         let next=Release{manifest:new.clone(),installed:vec!["mods/custom.jar".into()],
             id:format!("{:032x}",4),preset:None,plan_sha256:None};
         let error=commit(&root,next,&key,&staged(&root,&new,&[("mods/custom.jar",b"SIGNED")])).unwrap_err();
-        assert!(error.contains("untracked user file"),"{error}");
+        assert!(error.contains("Незарегистрированный пользовательский файл"),"{error}");
         assert_eq!(fs::read(root.join("mods/custom.jar")).unwrap(),b"PLAYER_FILE");
         assert_eq!(fs::read(root.join("mods/old.jar")).unwrap(),b"OLD");
         let _=fs::remove_dir_all(root);
@@ -1293,7 +1293,7 @@ mod tests {
         fs::write(root.join("mods/unowned.jar"),b"SIGNED").unwrap();
         let (_,rx)=watch::channel(Directive::Running);
         let error=install(&m,&root,&key,None,"fail-0246".into(),rx,None).await.unwrap_err();
-        assert!(error.contains("untracked user file"),"{error}");
+        assert!(error.contains("Незарегистрированный пользовательский файл"),"{error}");
         assert_eq!(fs::read(root.join("mods/unowned.jar")).unwrap(),b"SIGNED");
         assert!(pointer(&root).unwrap().active.is_none());
         fs::remove_dir_all(root).unwrap();
@@ -1306,7 +1306,7 @@ mod tests {
         fs::write(root.join("mods/player.jar"),b"MATCH").unwrap();
         let next=Release{manifest:m.clone(),installed:vec!["mods/player.jar".into()],id:format!("{:032x}",94),preset:None,plan_sha256:None};
         let stage=staged(&root,&m,&[("mods/player.jar",b"MATCH")]);
-        assert!(commit(&root,next,&key,&stage).unwrap_err().contains("untracked user file"));
+        assert!(commit(&root,next,&key,&stage).unwrap_err().contains("Незарегистрированный пользовательский файл"));
         assert_eq!(fs::read(root.join("mods/player.jar")).unwrap(),b"MATCH");
         assert!(pointer(&root).unwrap().active.is_none());
         fs::remove_dir_all(root).unwrap();
@@ -1436,7 +1436,7 @@ mod tests {
         let next = Release { manifest: manifest.clone(), installed:vec!["mods/custom.jar".into()], id:format!("{:032x}",60),preset:None,plan_sha256:None };
         let work = staged(&root,&manifest,&[("mods/custom.jar",b"PUBLISHED")]);
         let error = commit(&root,next,&key,&work).unwrap_err();
-        assert!(error.contains("untracked user file"), "{error}");
+        assert!(error.contains("Незарегистрированный пользовательский файл"), "{error}");
         assert_eq!(fs::read(root.join("mods/custom.jar")).unwrap(),b"CUSTOM_PLAYER_DATA");
         assert!(pointer(&root).unwrap().active.is_none());
         let _ = fs::remove_dir_all(root);

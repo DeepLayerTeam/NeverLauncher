@@ -422,7 +422,7 @@ func (c *Connector) doJSON(req *http.Request, out any) error {
 func (c *Connector) validateDiscoveredURL(name, raw string) error {
 	u, err := url.Parse(strings.TrimSpace(raw))
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" {
-		return fmt.Errorf("Для обнаружение конфигурации поставщика OIDC %s требуется: абсолютный URL HTTPS", name)
+		return fmt.Errorf("Для обнаружения конфигурации поставщика OIDC %s требуется: абсолютный URL HTTPS", name)
 	}
 	if !hostAllowed(strings.ToLower(u.Hostname()), c.cfg.HostAllowlist) {
 		return fmt.Errorf("Хост обнаружения %s %q отсутствует в hostAllowlist", name, u.Hostname())

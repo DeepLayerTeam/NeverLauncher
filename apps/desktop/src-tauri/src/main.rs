@@ -1012,7 +1012,7 @@ async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
        channel:manifest.channel.clone(),catalog_digest:digest.clone(),valid_until:0,permissions:Default::default()};
     if !needs_grant {return Ok(empty());}
     let cat=catalog.ok_or("Отсутствует: каталог компонентов с условиями")?;
-    let origin=reqwest::Url::parse(&cfg.backend_url).map_err(|_|"Недопустимый URL Backend")?;
+    let origin=reqwest::Url::parse(&cfg.backend_url).map_err(|_|"Недопустимый URL серверной части")?;
     if origin.scheme()!="https" || origin.username()!="" || origin.password().is_some() ||
        origin.query().is_some() || origin.fragment().is_some() || origin.host_str().is_none() {
         return Err("Для доступа к компоненту необходим HTTPS-адрес серверной части".into());
@@ -1020,7 +1020,7 @@ async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
     let session=load_auth_session(cfg.backend_url.clone()).await?.ok_or("Для доступа к компоненту требуется вход в учётную запись Never")?;
     if session.access_token.is_empty() || session.session_id.is_empty() || session.user_id.is_empty(){return Err("Неполный аутентифицированный сеанс Never".into())}
     let mut url=origin.clone();
-    {let mut segments=url.path_segments_mut().map_err(|_|"Недопустимые сегменты URL Backend")?;
+    {let mut segments=url.path_segments_mut().map_err(|_|"Недопустимые сегменты URL серверной части")?;
       segments.pop_if_empty(); segments.extend(&["api","v1","projects",&manifest.project_id,"profiles",&manifest.profile_id,"component-permissions"]);}
     url.query_pairs_mut().append_pair("channel",&manifest.channel).append_pair("catalogDigest",&cat.digest);
     let client=reqwest::Client::builder().timeout(Duration::from_secs(10)).redirect(reqwest::redirect::Policy::none())

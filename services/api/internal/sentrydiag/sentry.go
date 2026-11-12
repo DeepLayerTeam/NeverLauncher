@@ -40,7 +40,7 @@ func parseDSN(raw string) (destination, error) {
 	}
 	if u.Scheme != "https" { // HTTP допускается только через loopback, что удобно для локальных развёртываний.
 		if u.Scheme != "http" || (u.Hostname() != "localhost" && net.ParseIP(u.Hostname()) == nil || (net.ParseIP(u.Hostname()) != nil && !net.ParseIP(u.Hostname()).IsLoopback())) {
-			return destination{}, errors.New("Для DSN Sentry требуется HTTPS")
+			return destination{}, errors.New("Строка подключения Sentry должна использовать HTTPS")
 		}
 	}
 	segments := strings.Split(strings.Trim(u.EscapedPath(), "/"), "/")

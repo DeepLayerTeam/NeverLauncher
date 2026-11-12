@@ -78,7 +78,7 @@ def validate(config: dict, journal_dir: Path):
     require(config.get("format") == FORMAT, "Формат конфигурации не поддерживается")
     for name in ("runId", "profileId", "channel", "stageId", "releaseId"):
         value = config.get(name)
-        require(isinstance(value, str) and bool(NAME.fullmatch(value) if name in ("profileId", "channel") else ROUTE.fullmatch(value) if name in ("runId", "stageId") else len(value) >= 8), "invalid " + name)
+        require(isinstance(value, str) and bool(NAME.fullmatch(value) if name in ("profileId", "channel") else ROUTE.fullmatch(value) if name in ("runId", "stageId") else len(value) >= 8), "Некорректное значение: " + name)
     require(isinstance(config.get("expectedRevision"), int) and config["expectedRevision"] >= 1, "Требуется ожидаемая редакция маршрута")
     require(isinstance(config.get("inventorySha256"), str) and HEX.fullmatch(config["inventorySha256"]), "Требуется хеш перечня файлов")
     require(isinstance(config.get("targetDigest"), str) and HEX.fullmatch(config["targetDigest"]), "Требуется точный хеш подписанного целевого манифеста")

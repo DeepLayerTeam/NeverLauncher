@@ -131,7 +131,7 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 	}
 	store, ok := backend.(sqliteRuntimeBackend0373)
 	if !ok {
-		return errors.New("Для SQLite среда выполнения требуется: SQLite HTTP репозиторий")
+		return errors.New("Для среды выполнения SQLite требуется HTTP-репозиторий SQLite")
 	}
 	if len(secret) < 32 {
 		return errors.New("Для SQLite Runtime необходимо минимум 32 байта постоянного LAUNCHER_AUTH_TOKEN_SECRET")

@@ -224,7 +224,7 @@ func TestPrestarterDownloadRejectsPartialSymlink(t *testing.T) {
 	if err = os.Symlink(sentinel, path+".part"); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.fetch(context.Background(), a, path+".part", path+".etag"); err == nil || !strings.Contains(err.Error(), "unsafe partial") {
+	if err = s.fetch(context.Background(), a, path+".part", path+".etag"); err == nil || !strings.Contains(err.Error(), "Небезопасная запись частично загруженного файла") {
 		t.Fatalf("Принята символьная ссылка в кеше: %v", err)
 	}
 	data, err := os.ReadFile(sentinel)

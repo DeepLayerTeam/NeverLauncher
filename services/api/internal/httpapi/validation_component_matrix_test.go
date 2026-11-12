@@ -93,7 +93,7 @@ func TestV08ConditionRequiresOSBranches0348(t *testing.T) {
 	release.Manifest.ComponentCatalog = &cat
 	target := testTarget0346(p)
 	target.Preset = "minimal"
-	if err := validateComponentMatrix0348(release.Manifest, []validationTarget0346{target}); err == nil || !strings.Contains(err.Error(), "required component runtime selection") {
+	if err := validateComponentMatrix0348(release.Manifest, []validationTarget0346{target}); err == nil || !strings.Contains(err.Error(), "Для обязательного выбора компонента Runtime") {
 		t.Fatalf("Принято отсутствие условной цели: %v", err)
 	}
 }

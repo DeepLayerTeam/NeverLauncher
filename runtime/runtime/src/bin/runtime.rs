@@ -81,7 +81,7 @@ async fn command_sync(args: &[String]) -> Result<serde_json::Value, String> {
     let ready = download.failed == 0 && files.iter().all(|file| file.status == "ok");
     if !ready {
         return Err(format!(
-            "sync не завершён: failed={}, broken={}",
+            "Синхронизация не завершена: ошибок загрузки={}, повреждённых файлов={}",
             download.failed,
             files.iter().filter(|file| file.status != "ok").count()
         ));

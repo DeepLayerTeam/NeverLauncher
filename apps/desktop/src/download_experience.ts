@@ -139,7 +139,7 @@ export function recovery0354(error: unknown): Recovery0354 {
       action: "retry",
     };
   if (
-    /untracked user file|user-owned|player-owned|conflict with|conflicts with/.test(
+    /untracked user file|user-owned|player-owned|conflict with|conflicts with|незарегистрированный пользовательский файл|конфликт с пользовательским файлом/.test(
       value,
     )
   )

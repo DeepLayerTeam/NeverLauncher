@@ -101,7 +101,7 @@ fn retryable_backend_0396(error: &str) -> bool {
     matches!(error,
         "Сервис официальной авторизации недоступен" |
         "Сервис Microsoft/Minecraft временно недоступен" |
-        "Ошибка чтения official API" |
+        "Ошибка чтения официального API" |
         "Слишком много запросов; повторите позднее")
 }
 
@@ -437,7 +437,7 @@ impl IdentityManager {
     }
     async fn request(&self, base: &Url, access: &str, route: &str, method: Method, ticket: Option<&str>, body: Option<Value>, skin: Option<(Vec<u8>, String)>) -> Result<Response, String> {
         if access.len() < 16 || access.len() > 8192 { return Err("Необходимо войти в Launcher".into()); }
-        let url = base.join(&format!("{PREFIX}{route}")).map_err(|_| "Некорректный official API URL".to_string())?;
+        let url = base.join(&format!("{PREFIX}{route}")).map_err(|_| "Некорректный URL официального API".to_string())?;
         let mut req = self.client.request(method, url).bearer_auth(access);
         if let Some(ticket) = ticket { req = req.header("X-Official-Minecraft-Session", ticket); }
         if let Some(body) = body { req = req.json(&body); }
@@ -454,11 +454,11 @@ impl IdentityManager {
         let retry_after = response.headers().get("Retry-After").and_then(|v| v.to_str().ok())
             .and_then(|v| v.parse::<u64>().ok()).map(|v| v.clamp(5, 3600));
         if response.content_length().is_some_and(|n| n > RESPONSE_LIMIT as u64) {
-            return Err("Official API вернул слишком большой ответ".into());
+            return Err("Официальный API вернул слишком большой ответ".into());
         }
         let mut bytes = Vec::new();
-        while let Some(chunk) = response.chunk().await.map_err(|_| "Ошибка чтения official API".to_string())? {
-            if bytes.len().saturating_add(chunk.len()) > RESPONSE_LIMIT { return Err("Official API вернул слишком большой ответ".into()); }
+        while let Some(chunk) = response.chunk().await.map_err(|_| "Ошибка чтения официального API".to_string())? {
+            if bytes.len().saturating_add(chunk.len()) > RESPONSE_LIMIT { return Err("Официальный API вернул слишком большой ответ".into()); }
             bytes.extend_from_slice(&chunk);
         }
         let payload: Value = serde_json::from_slice(&bytes).map_err(|_| "Официальный API вернул некорректный JSON".to_string())?;
@@ -613,7 +613,7 @@ impl IdentityManager {
         }
         let profile = Self::profile(&result.data)?;
         let ticket = result.data.get("session").and_then(Value::as_str)
-            .filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Official API не выдал защищённую игровую сессию")?;
+            .filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Официальный API не выдал защищённую игровую сессию")?;
         // Удерживайте проверку nonce во время сохранения в хранилище. Отмена не должна
         // состязаться с успешной записью и оставлять привязанный отменённый аккаунт.
         migrate_legacy(&id)?;
@@ -811,7 +811,7 @@ impl IdentityManager {
         let native = record.native.as_ref().ok_or("Отсутствуют данные нативной учётной записи Minecraft")?;
         if config.data.get("enabled").and_then(Value::as_bool) == Some(false) { return Err("Официальная авторизация отключена администратором".into()); }
         if config.data.get("clientId").and_then(Value::as_str) != Some(native.client_id.as_str()) {
-            return Err("Microsoft Client ID проекта изменён: требуется повторный вход".into());
+            return Err("Идентификатор клиента Microsoft для проекта изменён: требуется повторный вход".into());
         }
         if force_refresh || native.minecraft_expires_at <= now().saturating_add(120) ||
             !native.pending_microsoft_access.is_empty() {
@@ -888,7 +888,7 @@ impl IdentityManager {
             verify_session_binding_0396(&config.data, session)?;
             if config.data.get("enabled").and_then(Value::as_bool) == Some(false) || config.data.get("deviceEnabled").and_then(Value::as_bool) == Some(false) { return Err("Авторизация по коду устройства запрещена политикой игрового провайдера".into()); }
             let client_id = config.data.get("clientId").and_then(Value::as_str)
-                .filter(|s|official_browser_0263::valid_client_id(s)).ok_or("Microsoft Client ID не настроен")?.to_owned();
+                .filter(|s|official_browser_0263::valid_client_id(s)).ok_or("Идентификатор клиента Microsoft не настроен")?.to_owned();
             if !self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?.get(&id).is_some_and(|f|f.nonce==nonce) {
                 return Err("Microsoft-авторизация отменена".into());
             }

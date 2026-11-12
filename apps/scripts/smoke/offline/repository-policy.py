@@ -664,7 +664,7 @@ if "Minecraft/ServerBridge trust enforcement gate OK" not in gameplay_trust_gate
 
 for required in ["LAUNCHER_PREFLIGHT_STRICT", "LAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
-        fail(f"preflight не содержит обязательную строгую проверку {required}")
+        fail(f"Предварительная проверка не содержит обязательной строгой проверки {required}")
 if "release doctor" not in ci.lower():
     fail("CI не запускает диагностику выпуска")
 if "LAUNCHER_CORS_ALLOWED_ORIGINS" not in ci:
@@ -678,7 +678,7 @@ for required in [
     "e2e-backups:/var/lib/launcher/backups",
 ]:
     if required not in e2e_compose:
-        fail(f"production E2E не содержит обязательный hardening: {required}")
+        fail(f"Сквозная проверка промышленной среды не содержит обязательной проверки усиления защиты: {required}")
 federation_e2e_compose = read("e2e/docker-compose.federation-e2e.yml")
 for required in [
     "api-a:",
@@ -688,7 +688,7 @@ for required in [
     'LAUNCHER_DATABASE_AUTO_MIGRATE: "false"',
 ]:
     if required not in federation_e2e_compose:
-        fail(f"federation PostgreSQL E2E — не завершено: {required}")
+        fail(f"Сквозная проверка федерации PostgreSQL не завершена: {required}")
 federation_e2e = read("e2e/scripts/run-federation-postgres-e2e.sh")
 for required in [
     "db migrate verify",
@@ -880,7 +880,7 @@ for required in [
 ]:
     if required not in operations_integrity:
         fail(
-            f"проверка согласованности хранилища не выполняет полный проверку целостности: {required}"
+            f"проверка согласованности хранилища не выполняет полную проверку целостности: {required}"
         )
 for required in ["operations/migrations/apply", "isMaintenanceOperation"]:
     if required not in maintenance_go:
@@ -893,7 +893,7 @@ for required in [
 ]:
     if required not in backup_go:
         fail(
-            f"резервное копирование и восстановление не содержит атомарную операцию, безопасную при обслуживании: {required}"
+            f"резервное копирование и восстановление не содержат атомарной операции, безопасную при обслуживании: {required}"
         )
 
 
@@ -2654,8 +2654,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     release_tests_0166 = read("cli/cmd/launcher/compatibility_release_test.go")
     for required in [
         "expectedJavaMajorForVanilla0166",
-        "Mojang metadata не содержит javaVersion.majorVersion",
-        "Mojang metadata Java mismatch",
+        "метаданные Mojang не содержат javaVersion.majorVersion",
+        "Java не соответствует метаданным Mojang",
         "javaMajorFromVersion(selectedID",
     ]:
         if required not in vanilla_0166:
@@ -2663,8 +2663,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "expected_java_major_for_vanilla_0166",
         "resolved_java_major_version(&merged)?",
-        "Mojang metadata Java mismatch",
-        "0.16.6 requires exact Java",
+        "версия Java не соответствует метаданным Mojang",
+        "0.16.6 требуется точная версия Java",
     ]:
         if required not in runtime_0166:
             fail(f"0.16.6 Runtime exact-Java path — не завершено: {required}")
@@ -2716,8 +2716,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     release_tests_0167 = read("cli/cmd/launcher/compatibility_release_test.go")
     for required in [
         "expectedJavaMajorForVanilla0167",
-        "0.16.7 требует exact Java",
-        "Mojang metadata Java mismatch",
+        "0.16.7 требует точной версии Java",
+        "Java не соответствует метаданным Mojang",
     ]:
         if required not in vanilla_0167:
             fail(
@@ -2725,7 +2725,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             )
     for required in [
         "expected_java_major_for_vanilla_0167",
-        "0.16.7 requires exact Java",
+        "0.16.7 требуется точная версия Java",
         "resolved_java_major_version(&merged)?",
     ]:
         if required not in runtime_0167:
@@ -2785,8 +2785,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     release_tests_0168 = read("cli/cmd/launcher/compatibility_release_test.go")
     for required in [
         "expectedJavaMajorForVanilla0168",
-        "0.16.8 требует exact Java",
-        "Mojang metadata Java mismatch",
+        "0.16.8 требует точной версии Java",
+        "Java не соответствует метаданным Mojang",
     ]:
         if required not in vanilla_0168:
             fail(
@@ -2794,7 +2794,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             )
     for required in [
         "expected_java_major_for_vanilla_0168",
-        "0.16.8 requires exact Java",
+        "0.16.8 требуется точная версия Java",
         "resolved_java_major_version(&merged)?",
     ]:
         if required not in runtime_0168:
@@ -3665,7 +3665,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "java21_25Vanilla0170v3Releases",
         "expectedJavaMajorForVanilla0170v3",
-        "0.17.0v3 требует exact Java",
+        "0.17.0v3 требует точной версии Java",
     ]:
         if required not in ga_vanilla_runtime_0170:
             fail(
@@ -3673,7 +3673,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             )
     for required in [
         "expected_java_major_for_vanilla_0170v3",
-        "0.17.0v3 requires exact Java",
+        "0.17.0v3 требуется точная версия Java",
     ]:
         if required not in ga_runtime_0170:
             fail(f"0.17.0v3 Runtime exact-Java path — не завершено: {required}")
@@ -5273,7 +5273,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("0.18.4 Hook Engine — проверка не подключена к предварительным проверкам и CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
-        fail("0.18.4 для Hook Engine отсутствуют проверки Windows и Clippy в CI")
+        fail("0.18.4 для механизма перехвата отсутствуют проверки Windows и Clippy в CI")
 
 
 # В 0.18.5: Memory Integrity постоянно исследует исполняемую память
@@ -5606,7 +5606,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ):
         fail("0.18.7 для Debug Guard отсутствует проверка отладочных атак в CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
-        fail("0.18.7 для Debug Guard отсутствуют реальные проверки Windows и Clippy в CI")
+        fail("0.18.7 для защиты от отладки отсутствуют реальные проверки Windows и Clippy в CI")
 
 
 # В 0.18.8: JVM-Aware Protection связывает переходы исполняемой памяти MEM_PRIVATE

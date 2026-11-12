@@ -20,11 +20,12 @@ test('Неизвестное время завершения не превращ
 test('Ошибки безопасности не советуют обходить доверие или повторять загрузку небезопасных пакетов', () => {
   const error = recovery0354('saved download public key differs from Desktop pinned trust key');
   assert.equal(error.action,'none');
-  assert.match(error.instruction,/подписанный bundle/);
+  assert.match(error.instruction,/подписанный пакет/);
 });
 test('Ошибки диска, сети, целостности и конфликты пользовательских данных предлагают конкретное восстановление', () => {
   assert.equal(recovery0354('insufficient free space').action,'retry');
   assert.equal(recovery0354('[retry:300] HTTP 503').action,'retry');
   assert.equal(recovery0354('staged client file failed SHA-256').action,'repair');
   assert.equal(recovery0354('untracked user file conflicts with new managed path').action,'repair');
+  assert.equal(recovery0354('Незарегистрированный пользовательский файл конфликтует с новым управляемым путём: mods/a.jar').action,'repair');
 });

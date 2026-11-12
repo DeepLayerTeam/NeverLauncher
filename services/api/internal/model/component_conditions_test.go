@@ -76,7 +76,7 @@ func TestImplicitDefaultsAreFilteredBeforeDownload0244(t *testing.T) {
 	}
 	v4.Components[1].Required = true
 	_, err = ResolveCatalogConditional0244(v4, "", env)
-	if err == nil || !strings.Contains(err.Error(), "required component") {
+	if err == nil || !strings.Contains(err.Error(), "Обязательный компонент") {
 		t.Fatalf("Обойдена обязательная проверка: %v", err)
 	}
 }

@@ -168,5 +168,5 @@ func validateCompatibilityManifest(manifest model.Manifest) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Compatibility Engine: signed release не содержит обязательный metadata файл %s", metadataPath)
+	return fmt.Errorf("Механизм совместимости: подписанный релиз не содержит обязательный файл метаданных %s", metadataPath)
 }

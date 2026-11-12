@@ -232,16 +232,16 @@ func (s Server) writeOIDCError115(w http.ResponseWriter, err error) {
 	status := federationHTTPStatus112(err)
 	switch status {
 	case http.StatusBadRequest:
-		writeError(w, status, "OIDC provider не поддерживает browser login")
+		writeError(w, status, "Поставщик OIDC не поддерживает вход через браузер")
 	case http.StatusForbidden:
 		writeError(w, status, "учётная запись недоступна или identity не связана")
 	case http.StatusConflict:
 		writeError(w, status, "Внешняя учётная запись конфликтует с существующей учётной записью; требуется явное связывание")
 	case http.StatusServiceUnavailable:
-		writeError(w, status, "OIDC provider временно недоступен")
+		writeError(w, status, "Поставщик OIDC временно недоступен")
 	default:
 		if status >= 500 {
-			writeError(w, status, "ошибка OIDC provider")
+			writeError(w, status, "ошибка поставщика OIDC")
 		} else {
 			writeError(w, http.StatusUnauthorized, "OIDC авторизация недействительна")
 		}

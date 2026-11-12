@@ -43,63 +43,63 @@ class FailClosedEvidenceTests(unittest.TestCase):
 
     def test_missing_target_fails(self):
         (self.path / 'windows-arm64.json').unlink()
-        with self.assertRaisesRegex(ValueError, 'missing'):
+        with self.assertRaisesRegex(ValueError, 'Отсутствующие и неожиданные платформы'):
             validate(self.path, self.commit, self.version, self.run_id, self.run_attempt)
 
     def test_stale_commit_fails(self):
         report = self.load('linux-arm64')
         report['sourceCommit'] = '0' * 40
         self.write('linux-arm64', report)
-        with self.assertRaisesRegex(ValueError, 'source commit'):
+        with self.assertRaisesRegex(ValueError, 'коммит источников'):
             validate(self.path, self.commit, self.version, self.run_id, self.run_attempt)
 
     def test_fake_pass_missing_tests_fails(self):
         report = self.load('macos-x64')
         del report['checks']['gravit-port']
         self.write('macos-x64', report)
-        with self.assertRaisesRegex(ValueError, 'incomplete'):
+        with self.assertRaisesRegex(ValueError, 'исполняемые тесты завершены не полностью'):
             validate(self.path, self.commit, self.version, self.run_id, self.run_attempt)
 
     def test_missing_negative_signature_fails(self):
         report = self.load('windows-x64')
         report['checks']['java-host']['signing']['tamperDenied'] = False
         self.write('windows-x64', report)
-        with self.assertRaisesRegex(ValueError, 'negative tests'):
+        with self.assertRaisesRegex(ValueError, 'отсутствуют негативные тесты'):
             validate(self.path, self.commit, self.version, self.run_id, self.run_attempt)
 
     def test_blocked_is_not_pass(self):
         report = self.load('macos-arm64')
         report['status'] = 'blocked'
         self.write('macos-arm64', report)
-        with self.assertRaisesRegex(ValueError, 'invalid status'):
+        with self.assertRaisesRegex(ValueError, 'неверный статус'):
             validate(self.path, self.commit, self.version, self.run_id, self.run_attempt)
 
     def test_missing_gravit_audit_fails(self):
         report = self.load('macos-arm64')
         report.pop('gravitMatrixAudit')
         self.write('macos-arm64', report)
-        with self.assertRaisesRegex(ValueError, 'Gravit 19-module'):
+        with self.assertRaisesRegex(ValueError, 'проверка 19 модулей Gravit'):
             validate(self.path, self.commit, self.version, self.run_id, self.run_attempt)
 
     def test_old_version_fails(self):
         report = self.load('linux-x64')
         report['version'] = '0.42.12'
         self.write('linux-x64', report)
-        with self.assertRaisesRegex(ValueError, 'version'):
+        with self.assertRaisesRegex(ValueError, 'версия'):
             validate(self.path, self.commit, self.version, self.run_id, self.run_attempt)
 
     def test_different_run_fails(self):
         report = self.load('windows-x64')
         report['runId'] = '7654321'
         self.write('windows-x64', report)
-        with self.assertRaisesRegex(ValueError, 'run identity'):
+        with self.assertRaisesRegex(ValueError, 'идентификатор запуска CI'):
             validate(self.path, self.commit, self.version, self.run_id, self.run_attempt)
 
     def test_different_attempt_fails(self):
         report = self.load('macos-arm64')
         report['runAttempt'] = '2'
         self.write('macos-arm64', report)
-        with self.assertRaisesRegex(ValueError, 'run identity'):
+        with self.assertRaisesRegex(ValueError, 'идентификатор запуска CI'):
             validate(self.path, self.commit, self.version, self.run_id, self.run_attempt)
 
     def test_certificate_includes_bound_file_hashes(self):

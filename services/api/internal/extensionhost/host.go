@@ -852,7 +852,7 @@ func (s *Supervisor) captureStream(st *processState, stream string, r io.Reader)
 		if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
 			s.failProcess(st, "extension-output-line-limit-exceeded: "+stream, false)
 		} else {
-			s.addLog(st, "host", "warn", stream+" log stream: "+err.Error(), nil)
+			s.addLog(st, "host", "warn", stream+" — поток журнала: "+err.Error(), nil)
 		}
 	}
 }

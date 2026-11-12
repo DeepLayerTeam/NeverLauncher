@@ -1426,14 +1426,14 @@ func secureHTTPClient() *http.Client {
 func validateRemoteURL(raw string) error {
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Hostname() == "" || parsed.Opaque != "" {
-		return fmt.Errorf("некорректный remote URL: %q", raw)
+		return fmt.Errorf("некорректный URL удалённого ресурса: %q", raw)
 	}
 	if parsed.User != nil || parsed.Fragment != "" || strings.ContainsAny(raw, "\r\n\x00") {
-		return fmt.Errorf("remote URL содержит credentials/fragment/control characters: %q", raw)
+		return fmt.Errorf("URL удалённого ресурса содержит учётные данные, фрагмент или управляющие символы: %q", raw)
 	}
 	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
 	if strings.Contains(host, "%") {
-		return fmt.Errorf("remote URL содержит IPv6 zone identifier: %q", raw)
+		return fmt.Errorf("URL удалённого ресурса содержит идентификатор зоны IPv6: %q", raw)
 	}
 	if parsed.Scheme == "https" {
 		if ip := net.ParseIP(host); ip != nil && isPrivateCompatibilityIP(ip) && !allowPrivateCompatibilityUpstream() {
@@ -1446,7 +1446,7 @@ func validateRemoteURL(raw string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("remote URL должен использовать HTTPS: %s", raw)
+	return fmt.Errorf("URL удалённого ресурса должен использовать HTTPS: %s", raw)
 }
 
 func allowPrivateCompatibilityUpstream() bool {
@@ -1970,7 +1970,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0170v2(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v2 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: метаданные Mojang не содержат javaVersion.majorVersion; 0.17.0v2 требует точной версии Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
 			return 0, fmt.Errorf("Несовпадение версии Java в метаданных Mojang для Minecraft %s (0.17.0v2): ожидалась Java %d, указана Java %d", minecraftVersion, expected, metadataMajor)
@@ -1979,7 +1979,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0170v3(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.17.0v3 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: метаданные Mojang не содержат javaVersion.majorVersion; 0.17.0v3 требует точной версии Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
 			return 0, fmt.Errorf("Несовпадение версии Java в метаданных Mojang для Minecraft %s (0.17.0v3): ожидалась Java %d, указана Java %d", minecraftVersion, expected, metadataMajor)
@@ -1988,7 +1988,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0166(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.6 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: метаданные Mojang не содержат javaVersion.majorVersion; 0.16.6 требует точной версии Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
 			return 0, fmt.Errorf("Minecraft %s: Java не соответствует метаданным Mojang (ожидалось %d, получено %d)", minecraftVersion, expected, metadataMajor)
@@ -1997,7 +1997,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0167(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.7 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: метаданные Mojang не содержат javaVersion.majorVersion; 0.16.7 требует точной версии Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
 			return 0, fmt.Errorf("Minecraft %s: Java не соответствует метаданным Mojang (ожидалось %d, получено %d)", minecraftVersion, expected, metadataMajor)
@@ -2006,7 +2006,7 @@ func javaMajorFromVersion(minecraftVersion string, v MojangVersionFile) (int, er
 	}
 	if expected, enforced := expectedJavaMajorForVanilla0168(minecraftVersion); enforced {
 		if metadataMajor == 0 {
-			return 0, fmt.Errorf("Minecraft %s: Mojang metadata не содержит javaVersion.majorVersion; 0.16.8 требует exact Java %d", minecraftVersion, expected)
+			return 0, fmt.Errorf("Minecraft %s: метаданные Mojang не содержат javaVersion.majorVersion; 0.16.8 требует точной версии Java %d", minecraftVersion, expected)
 		}
 		if metadataMajor != expected {
 			return 0, fmt.Errorf("Minecraft %s: Java не соответствует метаданным Mojang (ожидалось %d, получено %d)", minecraftVersion, expected, metadataMajor)

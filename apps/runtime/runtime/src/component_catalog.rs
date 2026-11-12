@@ -641,7 +641,7 @@ mod tests{
   let cat=m.component_catalog.as_ref().unwrap();
   let ids=resolve_graph_v3(cat,"@custom:v1:minimal:+shaders").unwrap();
   assert!(ids.contains("core")&&ids.contains("shaders")&&ids.contains("performance.sodium"));
-  assert!(resolve_graph_v3(cat,"@custom:v1:minimal:-core").unwrap_err().contains("required component"));
+  assert!(resolve_graph_v3(cat,"@custom:v1:minimal:-core").unwrap_err().contains("Обязательный компонент"));
   assert!(resolve_graph_v3(cat,"@custom:v1:minimal:+unsigned").unwrap_err().contains("unsigned component"));
   assert!(resolve_graph_v3(cat,"@custom:v1:quality:-performance.sodium").unwrap_err().contains("required_dependency"));
   assert!(resolve_graph_v3(cat,"@custom:v1:minimal:+shaders,+shaders").unwrap_err().contains("duplicate"));

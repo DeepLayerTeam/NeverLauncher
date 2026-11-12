@@ -1179,7 +1179,7 @@ func serverBridgeMigrateV30200(args []string) error {
 		}
 	}
 	if backend == "" {
-		return errors.New("server-bridge migrate-v3: требуется «URL Backend для проверки поддержки Protocol v3 GA перед заменой артефакта»")
+		return errors.New("server-bridge migrate-v3: требуется «URL серверной части для проверки поддержки стабильной версии протокола v3 перед заменой артефакта»")
 	}
 	capURL := backend + "/api/v1/server-bridge/capabilities?protocols=3&features=" + strings.Join([]string{
 		"protocol.capability-negotiation", "protocol.feature-flags", "protocol.rolling-upgrade-v2",

@@ -193,7 +193,7 @@ if __name__ == "__main__":
             "running": True,
         }, cli.stdout
         assert Handler.hellos == 2 and Handler.readies == 1 and Handler.manifests == 2
-        # Сеансы CLI имеют временные порты обратного вызова; используйте действующий URL Backend.
+        # Сеансы CLI имеют временные порты обратного вызова; используйте действующий URL серверной части.
         Handler.callback = backend_callback
         # Обработчик хоста на живой JVM отклоняет неавторизованный транспорт, неподдерживаемый
         # протокол, необъявленные методы RPC и слишком большие запросы.
