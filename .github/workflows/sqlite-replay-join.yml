@@ -52,7 +52,7 @@ jobs:
           python3 - <<'PY'
           import json,os
           with open(os.environ['RUNNER_TEMP']+'/status.json') as f: j=json.load(f)
-          assert j['status']=='ok' and j['schemaVersion']==326,j
+          assert j['status']=='ok' and j['schemaVersion']==327,j
           assert j['counts']['roles']==8,j
           assert j['counts']['bridge_join_tickets']==0,j
           assert j['counts']['bridge_nonces']==0,j

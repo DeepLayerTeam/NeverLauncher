@@ -150,20 +150,20 @@ class SecurityGATests(unittest.TestCase):
     def test_signed_preflight_refuses_incomplete_security(self):
         self.approval["targets"][0]["checks"].pop("securityLauncherGuard")
         self.sign()
-        with self.assertRaisesRegex(ValueError, "missing mandatory security"):
+        with self.assertRaisesRegex(ValueError, "Отсутствует обязательное свидетельство возможностей защиты"):
             verify_all(self.evidence, self.approval, now=NOW)
 
     def test_denied_scenario_does_not_mean_success_without_observed_deny(self):
         trace = self.trace()
         trace["scenarios"]["staleDeviceEpochDenied"] = "allowed"
         self.update_trace("linux-x64", "securityDeviceTrust", trace)
-        with self.assertRaisesRegex(ValueError, "positive and negative"):
+        with self.assertRaisesRegex(ValueError, "результаты положительного и отрицательного сценариев"):
             self.check()
 
     def test_signed_claim_without_immutable_raw_log_is_denied(self):
         path = self.evidence / "targets/linux-x64/security-0431/securityDeviceTrust.jsonl"
         path.write_bytes(b'claimed PASSED without actual run')
-        with self.assertRaisesRegex(ValueError, "altered security observation log"):
+        with self.assertRaisesRegex(ValueError, "журнал наблюдений защиты был изменён"):
             self.check()
 
     def test_replaced_log_with_matching_hash_but_missing_negative_event_is_denied(self):
@@ -229,7 +229,7 @@ class SecurityGATests(unittest.TestCase):
         trace = self.trace()
         trace["observedAtUtc"] = timevalue(NOW - timedelta(days=2))
         self.update_trace("linux-x64", "securityDeviceTrust", trace)
-        with self.assertRaisesRegex(ValueError, "stale, future"):
+        with self.assertRaisesRegex(ValueError, "устаревшее, датированное будущим или не согласованное наблюдение"):
             self.check()
 
     def test_missing_security_evidence_from_other_platform_denied(self):
@@ -256,7 +256,7 @@ class SecurityGATests(unittest.TestCase):
 
     def test_security_evidence_bundle_missing_or_altered_denied(self):
         destination = self.bundle / "SECURITY_CAPABILITY_EVIDENCE_0431.zip"
-        with self.assertRaisesRegex(ValueError, "missing/unsafe"):
+        with self.assertRaisesRegex(ValueError, "Подписанный архив свидетельств безопасности отсутствует или небезопасен"):
             verify_security_archive(self.bundle, self.approval, 401234, 2, now=NOW)
         path = self.evidence / "targets/linux-arm64/security-0431/securityLauncherGuard.jsonl"
         path.write_bytes(b"tamper")
@@ -270,7 +270,7 @@ class SecurityGATests(unittest.TestCase):
         self.update_trace("linux-x64", "securityDeviceTrust", trace)
         p = self.evidence / "targets/linux-x64/securityDeviceTrust.json"
         p.write_text(p.read_text() + " ")
-        with self.assertRaisesRegex(ValueError, "signed security capability report changed"):
+        with self.assertRaisesRegex(ValueError, "подписанный отчёт о возможностях защиты изменён"):
             self.check()
 
 

@@ -144,7 +144,7 @@ class Backup0518Tests(unittest.TestCase):
                         "nodes": ["node-a", "node-b"], "worlds": [{"name": "game", "backupId": "a" * 32}]}
             (folder / "manifest.json").write_text(json.dumps(manifest))
             os.chmod(folder / "manifest.json", 0o600)
-            with self.assertRaisesRegex(dr.DrillError, "world backup"):
+            with self.assertRaisesRegex(dr.DrillError, "резервной копии игрового мира требуется каталог"):
                 cb.validate_backup(folder)
             (folder / "identity-and-metadata.dump").write_bytes(b"changed")
             with self.assertRaisesRegex(cb.BackupError, "контрольных сумм"):

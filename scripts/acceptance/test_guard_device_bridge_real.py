@@ -59,7 +59,7 @@ class Acceptance0529(unittest.TestCase):
     def test_invalid_rcon_password_and_unbound_interface_rejected(self):
         with self.assertRaisesRegex(vanilla.Blocked, 'только локальный интерфейс'):
             vanilla.rcon('8.8.8.8', 25575, 'this is a password', 'list')
-        with self.assertRaisesRegex(vanilla.Blocked, 'credential'):
+        with self.assertRaisesRegex(vanilla.Blocked, 'закрытые учётные данные RCON'):
             vanilla.rcon('127.0.0.1', 25575, 'secret', 'list')
 
     def test_actual_tcp_rcon_wire_protocol_rejects_wrong_auth_and_truncated_response(self):

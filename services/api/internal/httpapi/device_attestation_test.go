@@ -81,7 +81,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	}
 	begin := deviceTrustData0121(t, beginOut)
 	payload, _ := begin["signingPayload"].(string)
-	if payload == "" || begin["attestationMethod"] != deviceAttestationMethod0124 || begin["hardwareProvenance"] != "not-verified" {
+	if payload == "" || begin["attestationMethod"] != deviceAttestationMethod0124 || begin["hardwareProvenance"] != "not-remotely-verified" {
 		t.Fatalf("Некорректный контракт начала аттестации: %#v", begin)
 	}
 	completeBody := map[string]any{
@@ -103,7 +103,7 @@ func TestDeviceChallengeResponseAttestation0124(t *testing.T) {
 	if device["attestationState"] != "verified" || device["attestationMethod"] != deviceAttestationMethod0124 || device["assurance"] != "challenge-response-attested" {
 		t.Fatalf("Аттестация не сохранена в записи доверенного устройства: %#v", device)
 	}
-	if complete["hardwareProvenance"] != "not-verified" || complete["authorizationElevation"] != false || complete["phishingResistantElevation"] != false {
+	if complete["hardwareProvenance"] != "not-remotely-verified" || complete["authorizationElevation"] != false || complete["phishingResistantElevation"] != false {
 		t.Fatalf("Аттестация необоснованно расширила полномочия или сведения о производителе: %#v", complete)
 	}
 

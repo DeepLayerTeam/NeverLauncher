@@ -43,7 +43,7 @@ func TestTextureURLImportProvenance0254(t *testing.T) {
 	if _, err = db.ExecContext(ctx, setup); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"0067_texture_identity.sql", "0068_texture_upload.sql", "0069_texture_storage.sql", "0070_texture_fetch.sql", "0071_texture_service.sql"} {
+	for _, name := range []string{"0067_texture_identity.sql", "0068_texture_upload.sql", "0069_texture_storage.sql", "0070_texture_fetch.sql", "0071_texture_service.sql", "0072_texture_admin.sql"} {
 		contents, e := os.ReadFile("../dbmigrate/sql/" + name)
 		if e != nil {
 			t.Fatal(e)

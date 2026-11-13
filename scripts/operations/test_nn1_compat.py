@@ -81,7 +81,7 @@ class NN1Admission(unittest.TestCase):
         # Совпадение версий допустимо после остановки последнего старого процесса.
         pairs["a"] = report("a", "0.51.6")
         self.assertEqual(len(set(nn.validate_live_nodes(pairs).values())), 1)
-        with self.assertRaisesRegex(nn.CompatibilityError, "both N and N-1"):
+        with self.assertRaisesRegex(nn.CompatibilityError, "требуются обе версии: N и N-1"):
             nn.validate_live_nodes(pairs, require_mixed=True)
 
     def test_reject_role_split_and_unsupported_versions(self):
@@ -126,7 +126,7 @@ class NN1Admission(unittest.TestCase):
                 nn.dsn_environment(file)
             file.write_text("postgres://user:password123@pg.internal/db?sslmode=verify-full\n")
             with patch.object(nn.subprocess, "run", return_value=types.SimpleNamespace(returncode=0,stdout="replica\n",stderr="")):
-                with self.assertRaisesRegex(nn.CompatibilityError, "writable primary"):
+                with self.assertRaisesRegex(nn.CompatibilityError, "доступный для записи основной узел"):
                     nn.live_pg_migrations(file)
             with patch.object(nn.subprocess, "run", return_value=types.SimpleNamespace(returncode=0,stdout="primary\nshape-mismatch\n",stderr="")):
                 with self.assertRaisesRegex(nn.CompatibilityError, "schema shape"):

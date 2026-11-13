@@ -119,7 +119,7 @@ public class Game {
         process = self.start(harden=False)
         out, err = process.communicate(timeout=15)
         self.assertNotEqual(process.returncode, 0)
-        self.assertIn('Guard для JVM на Linux', err)
+        self.assertIn('Guard Linux JVM', err)
         self.assertNotIn('GAME_STARTED', out)
 
     def test_hardened_game_detects_unauthorized_live_mod(self):
@@ -130,7 +130,7 @@ public class Game {
         (moddir / 'untrusted.jar').write_bytes(b'unapproved module')
         out, err = process.communicate(timeout=15)
         self.assertNotEqual(process.returncode, 0)
-        self.assertIn('Неутверждённый файл Runtime', err)
+        self.assertIn('Неодобренный файл среды выполнения', err)
 
     def test_hardened_game_detects_signed_jar_mutation(self):
         process = self.start(extra=('hold',))

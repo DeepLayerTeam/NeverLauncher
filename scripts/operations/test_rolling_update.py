@@ -72,7 +72,7 @@ class RollingTest(unittest.TestCase):
                     c["services"]["worker"]["environment"]["DATABASE_SECRET"] = "rotated"
                 return c
             with patch.object(ru, "rendered", side_effect=render):
-                with self.assertRaisesRegex(ru.RollingError, "beyond"):
+                with self.assertRaisesRegex(ru.RollingError, "отличается не только закреплённым образом"):
                     ru.validate_stage(self.directory, "launcher")
             def render_other(directory, project, path):
                 c = configuration(A if path.name == ".env" else B)
@@ -99,7 +99,7 @@ class RollingTest(unittest.TestCase):
         self.target.unlink()
         self.target.write_bytes(self.current.read_bytes())
         self.target.chmod(0o600)
-        with self.assertRaisesRegex(ru.RollingError, "identical"):
+        with self.assertRaisesRegex(ru.RollingError, "совпадает с текущим развёртыванием"):
             with patch.object(multi, "resolved_compose"):
                 ru.validate_stage(self.directory, "launcher")
 
@@ -112,7 +112,7 @@ class RollingTest(unittest.TestCase):
     def test_exclusive_backup_cannot_overwrite_prior_source(self):
         backup = self.directory / ru.BACKUP
         ru.exclusive_write(backup, b"previous")
-        with self.assertRaisesRegex(ru.RollingError, "existing"):
+        with self.assertRaisesRegex(ru.RollingError, "Резервная копия или состояние переключения требуют проверки оператором"):
             ru.exclusive_write(backup, b"malicious")
         self.assertEqual(backup.read_bytes(), b"previous")
         self.assertEqual(stat.S_IMODE(backup.stat().st_mode), 0o600)
@@ -127,7 +127,7 @@ class RollingTest(unittest.TestCase):
         ru.journal(self.directory, {"schema": ru.SCHEMA, "phase": "stopping"})
         self.assertEqual(ru.read_journal(self.directory)["phase"], "stopping")
         (self.directory / ru.STATE).write_text("not-json")
-        with self.assertRaisesRegex(ru.RollingError, "Некорректное значение"):
+        with self.assertRaisesRegex(ru.RollingError, "Некорректный локальный журнал восстановления"):
             ru.read_journal(self.directory)
 
     def test_real_docker_command_sequence_and_rollback_on_start_failure(self):
@@ -196,7 +196,7 @@ class RollingTest(unittest.TestCase):
         ru.journal(self.directory, plan)
         ru.exclusive_write(self.directory / ru.BACKUP, b"incorrect")
         with patch.object(ru, "compose") as cmd:
-            with self.assertRaisesRegex(ru.RollingError, "changed"):
+            with self.assertRaisesRegex(ru.RollingError, "резервная копия окружения изменилась"):
                 ru.rollback_host(self.directory, "launcher")
             cmd.assert_not_called()
 
@@ -206,7 +206,7 @@ class RollingTest(unittest.TestCase):
     def test_pair_checks_allow_only_specific_0516_0517_versions(self):
         nn.validate_live_nodes({"a": live_report("a", ru.SOURCE),
                                 "b": live_report("b", ru.TARGET)}, pair=ru.PAIR, require_mixed=True)
-        with self.assertRaisesRegex(nn.CompatibilityError, "unsupported"):
+        with self.assertRaisesRegex(nn.CompatibilityError, "не поддерживается версия готовности"):
             nn.validate_live_nodes({"a": live_report("a", "0.51.5"),
                                     "b": live_report("b", ru.TARGET)}, pair=ru.PAIR)
 
@@ -234,7 +234,7 @@ class RollingTest(unittest.TestCase):
 
     def test_advisory_lock_requires_stable_connection(self):
         lock = ru.PGAdvisoryLock(Path("/nonexistent"))
-        with self.assertRaisesRegex(ru.RollingError, "ended"):
+        with self.assertRaisesRegex(ru.RollingError, "Завершился сеанс блокировки PostgreSQL"):
             lock.ping()
 
     def test_cli_requires_explicit_confirmation_for_mutations(self):
@@ -358,7 +358,7 @@ class ClusterControllerTest(unittest.TestCase):
     def test_unknown_version_aborts_before_mutation(self):
         self.versions["alpha"] = "0.51.5"
         with self.mocks():
-            with self.assertRaisesRegex(nn.CompatibilityError, "unsupported"):
+            with self.assertRaisesRegex(nn.CompatibilityError, "не поддерживается версия готовности"):
                 ru.rollout(self.args)
         self.assertNotIn(("alpha", "local-apply"), self.actions)
 
@@ -383,7 +383,7 @@ class ClusterControllerTest(unittest.TestCase):
                 result["targetImage"] = "registry.example/api@sha256:" + "c" * 64
             return result
         with self.mocks(), patch.object(ru, "remote", side_effect=mismatch):
-            with self.assertRaisesRegex(ru.RollingError, "one target OCI digest"):
+            with self.assertRaisesRegex(ru.RollingError, "единую целевую контрольную сумму OCI"):
                 ru.rollout(self.args)
         self.assertNotIn(("alpha", "local-apply"), self.actions)
         self.assertNotIn(("beta", "local-apply"), self.actions)
@@ -396,14 +396,14 @@ class ClusterControllerTest(unittest.TestCase):
                 result["imageDigestRefs"]["admin"] = "repo/admin@sha256:" + "c" * 64
             return result
         with self.mocks(), patch.object(multi, "remote_call", side_effect=mismatch):
-            with self.assertRaisesRegex(ru.RollingError, "pinned admin image"):
+            with self.assertRaisesRegex(ru.RollingError, "закреплённые значения admin image"):
                 ru.rollout(self.args)
         self.assertNotIn(("alpha", "local-apply"), self.actions)
 
     def test_two_independent_nodes_required(self):
         self.args.node = ["alpha=operator@alpha"]
         with self.mocks():
-            with self.assertRaisesRegex(multi.DeploymentError, "two independent"):
+            with self.assertRaisesRegex(multi.DeploymentError, "два независимых SSH-узла"):
                 ru.rollout(self.args)
         self.assertFalse(self.actions)
 

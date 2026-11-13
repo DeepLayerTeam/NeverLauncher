@@ -69,21 +69,21 @@ class GAVerification0320(unittest.TestCase):
         doc=self.documents[tier]; doc['commit']='f'*40; self.sign(path,doc)
         with self.assertRaisesRegex(ValueError,'не привязаны к точному коммиту и версии релиза'): self.verify()
         doc['commit']=self.commit; doc['generatedAt']=(self.now-dt.timedelta(days=8)).isoformat(); self.sign(path,doc)
-        with self.assertRaisesRegex(ValueError,'stale'): self.verify()
+        with self.assertRaisesRegex(ValueError,'доказательства устарели'): self.verify()
 
     def test_skip_fake_live_and_wrong_platform_rejected(self):
         tier='macos-live'; path=self.root/f'{tier}.json'
         doc=self.documents[tier]; doc['results'][0]['simulated']=True; self.sign(path,doc)
         with self.assertRaisesRegex(ValueError,'режиме имитации'): self.verify()
         doc['results'][0]['simulated']=False; doc['host']['system']='Linux'; self.sign(path,doc)
-        with self.assertRaisesRegex(ValueError,'wrong OS'): self.verify()
+        with self.assertRaisesRegex(ValueError,'не с той ОС'): self.verify()
 
     def test_missing_hardware_scenario_and_fake_pass_rejected(self):
         tier='hardware-live'; path=self.root/f'{tier}.json'
         doc=self.documents[tier]; doc['results'].pop(); self.sign(path,doc)
         with self.assertRaisesRegex(ValueError,'отсутствуют реальные сценарии'): self.verify()
         doc['results'][0]['status']='SKIP'; self.sign(path,doc)
-        with self.assertRaisesRegex(ValueError,'simulated'): self.verify()
+        with self.assertRaisesRegex(ValueError,'в режиме имитации'): self.verify()
 
     def test_offline_missing_named_test_rejected(self):
         tier='offline'; path=self.root/f'{tier}.json'

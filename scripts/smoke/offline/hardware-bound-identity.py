@@ -49,7 +49,7 @@ need('services/api/internal/httpapi/device_trust_test.go', [
 need('services/api/internal/repository/devices.go', [
     'device.KeyAlgorithm != "ed25519" && device.KeyAlgorithm != "p256"',
     'device.KeyBinding != "software" && device.KeyBinding != "hardware"',
-    'hardware-bound device keys must use p256',
+    'Аппаратно привязанные ключи устройства должны использовать p256',
 ])
 need('services/api/internal/dbmigrate/sql/0013_hardware_bound_identities.sql', [
     "key_algorithm IN ('ed25519','p256')",
@@ -59,7 +59,7 @@ need('services/api/internal/dbmigrate/sql/0013_hardware_bound_identities.sql', [
 need('services/api/internal/httpapi/auth.go', [
     'DeviceKeyBinding',
     'DeviceHardwareProvider',
-    'possession/freshness of the registered key, not vendor TPM/Secure Enclave provenance',
+    'Аутентификация подтверждает владение и свежесть зарегистрированного ключа, а не происхождение из TPM/Secure',
 ])
 need('.github/workflows/ci.yml', [
     'scripts/smoke/offline/hardware-bound-identity.py',

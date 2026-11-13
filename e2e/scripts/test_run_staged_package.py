@@ -55,7 +55,7 @@ class StagedRunnerTests(unittest.TestCase):
 
     def test_corrupt_bytes_cannot_materialize(self):
         target = Path(self.tmp.name) / "mods" / "corrupt.jar"
-        with self.assertRaisesRegex(ValueError, "differs from signed snapshot"):
+        with self.assertRaisesRegex(ValueError, "отличается от подписанного снимка"):
             MODULE.download_exact(
                 self.base,
                 "/api/v1/staged-runs/example/files/mod.jar",

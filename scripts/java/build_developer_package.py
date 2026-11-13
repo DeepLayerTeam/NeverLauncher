@@ -14,7 +14,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from scripts.java.developer_e2e_04812 import (verified_repo, executable_from_public_sdk)
+from scripts.java.developer_e2e import (verified_repo, executable_from_public_sdk)
 
 
 def build(repository: Path, destination: Path) -> Path:

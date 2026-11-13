@@ -81,7 +81,7 @@ class V09Tests(unittest.TestCase):
         )
         self.assertEqual(got["packageId"], "older")
         self.assertEqual(signed["version"], "0.34.8")
-        with self.assertRaisesRegex(ValueError, "host-pinned"):
+        with self.assertRaisesRegex(ValueError, "не совпадают с закреплённым на узле SHA-256"):
             extract_pinned_prior(
                 self.zip, "0" * 64, self.root / "forged", self.next, "a" * 64
             )
@@ -89,7 +89,7 @@ class V09Tests(unittest.TestCase):
     def test_archive_path_traversal_and_duplicate(self):
         with zipfile.ZipFile(self.zip, "w") as z:
             z.writestr("../escape", b"bad")
-        with self.assertRaisesRegex(ValueError, "unsafe prior-release"):
+        with self.assertRaisesRegex(ValueError, "Небезопасный элемент архива предыдущего выпуска"):
             extract_pinned_prior(
                 self.zip, digest(self.zip), self.root / "outside", self.next, "a" * 64
             )

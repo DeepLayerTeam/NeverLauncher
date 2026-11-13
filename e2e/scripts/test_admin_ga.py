@@ -25,7 +25,7 @@ class BridgeGAAcceptanceTests(unittest.TestCase):
 
     def test_success_without_confirmed_ack_timestamp_fails(self):
         with patch.object(bridge, 'request', return_value={'command': {'id': 'ctl-1', 'status': 'succeeded'}}):
-            with self.assertRaisesRegex(RuntimeError, 'lacks completedAt'):
+            with self.assertRaisesRegex(RuntimeError, 'отсутствует подтверждение completedAt ACK'):
                 bridge.await_ack('https://example.invalid', '/control', 'token', 'ctl-1', bridge.time.monotonic() + 10)
 
     def test_expired_and_unsupported_are_terminal_failures(self):
@@ -38,7 +38,7 @@ class BridgeGAAcceptanceTests(unittest.TestCase):
         first = {'command': {'id': 'ctl-1', 'serverId': 'server-1'}}
         duplicated = {'command': {'id': 'ctl-2', 'serverId': 'server-1'}, 'idempotentReplay': False}
         with patch.object(bridge, 'request', side_effect=[first, duplicated]):
-            with self.assertRaisesRegex(RuntimeError, 'Duplicate ServerBridge'):
+            with self.assertRaisesRegex(RuntimeError, 'Повторный запрос команды ServerBridge'):
                 bridge.execute('https://example.invalid', 'server-1', 'token', 'server.save', {})
 
     def test_drain_requires_explicit_disposable_server_confirmation(self):
@@ -46,7 +46,7 @@ class BridgeGAAcceptanceTests(unittest.TestCase):
                'E2E_PROJECT_ID': 'project', 'E2E_SERVERBRIDGE_NODE_ID': 'server-1',
                'E2E_DESTRUCTIVE_STAGING_ACK': 'no'}
         with patch.dict(bridge.os.environ, env):
-            with self.assertRaisesRegex(RuntimeError, 'Refusing drain'):
+            with self.assertRaisesRegex(RuntimeError, 'Остановка обслуживания запрещена'):
                 bridge.main()
 
 

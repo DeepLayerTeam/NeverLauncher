@@ -18,6 +18,8 @@ func (r *MemoryRepository) CreateProfileExclusive0225(p model.Profile) (model.Pr
 	}
 	p.ID = strings.TrimSpace(p.ID)
 	p.Name = strings.TrimSpace(p.Name)
+	// Назначение профиля по умолчанию — отдельная операция.
+	p.IsDefault = false
 	var err error
 	if p, err = model.NormalizeProfileV2(p); err != nil {
 		return model.Profile{}, err
@@ -48,6 +50,8 @@ func (r *SQLRepository) CreateProfileExclusive0225(p model.Profile) (model.Profi
 	}
 	p.ID = strings.TrimSpace(p.ID)
 	p.Name = strings.TrimSpace(p.Name)
+	// Назначение профиля по умолчанию — отдельная операция.
+	p.IsDefault = false
 	var err error
 	if p, err = model.NormalizeProfileV2(p); err != nil {
 		return model.Profile{}, err

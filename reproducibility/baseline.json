@@ -1,5 +1,9 @@
 {
   "files": {
+    ".gitattributes": {
+      "sha256": "887cbfa21dfd4dabdee5b55246ae23abcf7f77b17971f1fe6df795db54c4572d",
+      "size": 1350
+    },
     ".github/workflows/acceptance-inventory.yml": {
       "sha256": "88a4e4edaafbc3e2f9d439a7e4f0469f4225dbcafe916d5e164ead8b5a2d1688",
       "size": 2364
@@ -629,8 +633,8 @@
       "size": 3144
     },
     ".github/workflows/production-rc.yml": {
-      "sha256": "5c6eba0c8982a7a7d03565925d3e2949ed97a337673ff91f0439e48592ad74ab",
-      "size": 6161
+      "sha256": "a4c0f35030330953fa5fae928b6d54aa8c22cfc2be4dbb370bf0d38dd371d962",
+      "size": 6242
     },
     ".github/workflows/production-release-candidate.yml": {
       "sha256": "0ffa47b305b8a1f15b82ce9f07c43695eca1b5452e3a48a40d700ebdce403883",
@@ -737,11 +741,11 @@
       "size": 3004
     },
     ".github/workflows/sqlite-auth.yml": {
-      "sha256": "38f6f181b5c3185b49cba1be5a1836720965aae943a5ef97503f509f0d8d38fc",
+      "sha256": "445834e0a61750b291b5622249d5326fba8a2e9346dae4325493d20759d44b5d",
       "size": 3201
     },
     ".github/workflows/sqlite-backup.yml": {
-      "sha256": "ee0affacd9274adf391cb899243ce1472e55799051e831f33877d81f808558b7",
+      "sha256": "26c514be7e1db449ae7ceb9ea3d584a09ecd6d55d766960e83d3dd9f23d5a292",
       "size": 4250
     },
     ".github/workflows/sqlite-coordinator.yml": {
@@ -749,7 +753,7 @@
       "size": 2135
     },
     ".github/workflows/sqlite-core.yml": {
-      "sha256": "e75e1097b9230ca15f301e738bbb08f521fd2db407b647882df3154e07730654",
+      "sha256": "8eee11766ac47cfcbb336e739c14d7cee5f6cda2597625ae3cc66da0f59a6dfe",
       "size": 3539
     },
     ".github/workflows/sqlite-dep00.yml": {
@@ -757,11 +761,11 @@
       "size": 1791
     },
     ".github/workflows/sqlite-durable.yml": {
-      "sha256": "bc4a5d892da4f461448a4efac9aa13f8eeded172d8abab2fc88458fca9f9a278",
+      "sha256": "a2ecc96d8381aed281f33a6eabd22f640084894ae09bc3e89c5d1f8491d2c6d0",
       "size": 4955
     },
     ".github/workflows/sqlite-full-state.yml": {
-      "sha256": "7fdc8cea54926459023813bcc6072f0ff3317824a93383084a3aed50ffe72776",
+      "sha256": "a9fcab18cc923b5f5f57738859a713e3e86476b9006cca06adf600fc1f1cd3d8",
       "size": 2796
     },
     ".github/workflows/sqlite-pg-recovery.yml": {
@@ -773,7 +777,7 @@
       "size": 4422
     },
     ".github/workflows/sqlite-replay-join.yml": {
-      "sha256": "2c6060aeac5124c77c1106d8267a7b9c0d4146f883eee72485fc58fd297b4c06",
+      "sha256": "b7ad3060636d8313757209be9c3d6c824e66b0d9a5cc57863296517dccb4a41b",
       "size": 3182
     },
     ".github/workflows/stable-runtime-gate.yml": {
@@ -789,8 +793,8 @@
       "size": 2559
     },
     ".github/workflows/texture-certification.yml": {
-      "sha256": "662e5b336f73c1783778f66df3f359c8cdce141af05e2abd5f626d43e2efd48e",
-      "size": 7961
+      "sha256": "f2667b24431d80b40ea89e46c837145beddf064f46c1ecad631946bf98fbd30b",
+      "size": 8318
     },
     ".github/workflows/texture-lifecycle.yml": {
       "sha256": "582ac73c94759726760909d8d30d1c8d05ee5f8eee2d2db1669475c74b7b127b",
@@ -821,8 +825,8 @@
       "size": 3485
     },
     ".github/workflows/visual-client-factory.yml": {
-      "sha256": "58bc42ff92b1f725bb50632f16f79413cc64504335097392d5de97888acf3235",
-      "size": 3052
+      "sha256": "098f9f0ca264c85f2a3ffbf9808666eac8d5df6fc3eb842a84b0818f11e79990",
+      "size": 3163
     },
     ".github/workflows/windows-extension-sandbox.yml": {
       "sha256": "624caa1dcf0f9b369e5f21dd4170c76dc1ec6b9788281205c7e1cab554bd1e11",
@@ -1020,6 +1024,10 @@
       "sha256": "d9d8015457bc00939837d42f7139fcca0298238781e12c21a9c17dca48a7f55b",
       "size": 4468
     },
+    "scripts/ci/build-minio.sh": {
+      "sha256": "e88b28a4afc8ff0dadb58d21128ceee89681a853440ef9f393a48f25b31053e3",
+      "size": 1001
+    },
     "scripts/ci/required_jobs.py": {
       "sha256": "7b639652b5fa1fc1b1b837d8257335019e794f2c8cc701b7f2975901ca60dd15",
       "size": 8075
@@ -1129,8 +1137,8 @@
       "size": 9884
     },
     "scripts/release/inputs_guard.py": {
-      "sha256": "6a5ca866111501ff654f9e4a7faa52ea0f7801b2a943ec361ffdbda1624657af",
-      "size": 7464
+      "sha256": "ff47ef7342bf404fa22d3c62432e6ff2ef0ef64ba6d75667448285ca89169b87",
+      "size": 7511
     },
     "scripts/release/linux-package.py": {
       "sha256": "0e49eadfbff96d9c3e44335e27d77b9c43349886fd1e68371788de79bd8806b6",
@@ -1337,8 +1345,8 @@
       "size": 8883
     },
     "scripts/smoke/offline/repository-policy.py": {
-      "sha256": "b014d70b8cd8fd637abd3b62a18b7255f375bfd21a054dff0e720ce7e88c32ab",
-      "size": 326439
+      "sha256": "dae5829ed810afa1406ab54126c4b385a09e80a78d8df201a27ebe4d204fc48e",
+      "size": 326448
     },
     "scripts/smoke/offline/serverbridge-forge-neoforge.py": {
       "sha256": "a40efb51383c74d5d289055890411d5b1dd6b646e8ea5bc4a07d543473c551a7",

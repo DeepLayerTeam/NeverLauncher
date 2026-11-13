@@ -719,10 +719,11 @@ mod concurrent_operations_tests {
         let second = std::env::temp_dir().join(format!("nl-b-{:016x}", rand::random::<u64>()));
         fs::create_dir_all(&first).await.unwrap();
         fs::create_dir_all(&second).await.unwrap();
-        let shared_cache = std::env::temp_dir().join(format!("nl-host-shared-{:016x}", rand::random::<u64>()));
+        let first_cache = std::env::temp_dir().join(format!("nl-host-shared-{:016x}", rand::random::<u64>()));
+        let second_cache = std::env::temp_dir().join(format!("nl-host-second-{:016x}", rand::random::<u64>()));
         let (left, right) = tokio::join!(
-            run_with_store(&manifest, &first, DownloadLimits::default(), None, "test-one".into(), watch::channel(Directive::Running).1, CacheStore::at(shared_cache.clone())),
-            run_with_store(&manifest, &second, DownloadLimits::default(), None, "test-two".into(), watch::channel(Directive::Running).1, CacheStore::at(shared_cache.clone()))
+            run_with_store(&manifest, &first, DownloadLimits::default(), None, "test-one".into(), watch::channel(Directive::Running).1, CacheStore::at(first_cache.clone())),
+            run_with_store(&manifest, &second, DownloadLimits::default(), None, "test-two".into(), watch::channel(Directive::Running).1, CacheStore::at(second_cache.clone()))
         );
         assert_eq!(left.unwrap().downloaded, 8);
         assert_eq!(right.unwrap().downloaded, 8);
@@ -732,7 +733,8 @@ mod concurrent_operations_tests {
         server.abort();
         fs::remove_dir_all(first).await.unwrap();
         fs::remove_dir_all(second).await.unwrap();
-        fs::remove_dir_all(shared_cache).await.unwrap();
+        fs::remove_dir_all(first_cache).await.unwrap();
+        fs::remove_dir_all(second_cache).await.unwrap();
     }
     #[tokio::test]
     async fn retries_503_then_truncated_body_by_range_without_repeating_prefix() {

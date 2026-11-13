@@ -105,7 +105,7 @@ class MinimalBackupTests(unittest.TestCase):
         fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            with self.assertRaisesRegex(backup.BackupError, "running"):
+            with self.assertRaisesRegex(backup.BackupError, "API или SQLite работает"):
                 backup.backup(self.root)
             self.assertEqual(list((self.root / "backups").iterdir()), [])
         finally:
@@ -131,7 +131,7 @@ class MinimalBackupTests(unittest.TestCase):
         fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            with self.assertRaisesRegex(backup.BackupError, "running"):
+            with self.assertRaisesRegex(backup.BackupError, "API или SQLite работает"):
                 backup.backup(self.root)
         finally:
             fcntl.flock(fd, fcntl.LOCK_UN)

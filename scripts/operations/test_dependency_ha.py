@@ -175,7 +175,7 @@ class DependencyHATests(unittest.TestCase):
             self.assertTrue(report['crossGatewayReadBack'])
             self.assertEqual(data, {})
             request.corrupt = True
-            with self.assertRaisesRegex(ha.HAError, 'mismatched'):
+            with self.assertRaisesRegex(ha.HAError, 'Чтение S3 через другой шлюз не совпало'):
                 ha.s3_object_probe(self.config(), {}, gateways)
             self.assertEqual(data, {})
 

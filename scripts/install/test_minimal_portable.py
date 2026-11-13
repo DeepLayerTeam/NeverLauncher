@@ -56,7 +56,7 @@ class PortableMinimalTests(unittest.TestCase):
     def test_wrong_key_refuses_to_publish_target(self):
         portable.backup_portable(self.root, self.output, self.secret)
         self.secret.write_bytes(os.urandom(48))
-        with self.assertRaisesRegex(portable.core.BackupError, "authentication failed"):
+        with self.assertRaisesRegex(portable.core.BackupError, "проверка подлинности переносимого архива"):
             portable.import_and_verify(self.output, self.secret, target_root=self.target)
         self.assertFalse(self.target.exists())
         self.assertFalse(list(self.newhost.iterdir()))
@@ -68,7 +68,7 @@ class PortableMinimalTests(unittest.TestCase):
             value = f.read(1)
             f.seek(portable.HEADER_SIZE + 512)
             f.write(bytes([value[0] ^ 1]))
-        with self.assertRaisesRegex(portable.core.BackupError, "authentication failed"):
+        with self.assertRaisesRegex(portable.core.BackupError, "проверка подлинности переносимого архива"):
             portable.import_and_verify(self.output, self.secret, target_root=self.target)
         self.assertFalse(self.target.exists())
 
@@ -94,7 +94,7 @@ class PortableMinimalTests(unittest.TestCase):
         internal = self.root / "config/recovery.key"
         internal.write_bytes(os.urandom(48))
         internal.chmod(0o600)
-        with self.assertRaisesRegex(portable.core.BackupError, "outside"):
+        with self.assertRaisesRegex(portable.core.BackupError, "вне резервируемой установки"):
             portable.backup_portable(self.root, self.output, internal)
         self.assertFalse(self.output.exists())
         self.assertFalse(list((self.root / "backups").iterdir()))

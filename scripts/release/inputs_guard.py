@@ -39,7 +39,7 @@ SOURCES = (
     'scripts/smoke/offline/notarized-macos-x64-arm64-.py',
     'scripts/smoke/offline/serverbridge-forge-neoforge.py',
     'scripts/smoke/offline/guard-windows-adversarial-ci.py',
-    'scripts/ci/required_jobs.py',
+    'scripts/ci/required_jobs.py', 'scripts/ci/build-minio.sh', '.gitattributes',
     'scripts/release/test_gate_retention.py',
     'scripts/release/reproducible.py',
     'scripts/release/test_reproducible.py',

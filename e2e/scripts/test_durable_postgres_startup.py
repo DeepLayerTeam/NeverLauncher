@@ -112,7 +112,7 @@ class DurablePostgresStartupTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(attempts, 3)
         self.assertIsNone(dsn)
-        self.assertIn("unable to start PostgreSQL after 3 attempts", result.stderr)
+        self.assertIn("не удалось запустить PostgreSQL после трёх попыток", result.stderr)
 
 
 if __name__ == "__main__":

@@ -234,7 +234,7 @@ class InventoryTests(unittest.TestCase):
         write_json(path, receipt)
         observed = self.run_inventory()['targets'][0]
         self.assertEqual(observed['status'], 'blocked')
-        self.assertIn('JVM/loader', observed['error'])
+        self.assertIn('данные JVM, загрузчика или установки', observed['error'])
 
     def test_wrong_commit_and_unknown_target_evidence_are_rejected(self):
         target = self.one()
@@ -256,7 +256,7 @@ class InventoryTests(unittest.TestCase):
         write_json(path, report)
         observed = self.run_inventory()['targets'][0]
         self.assertEqual(observed['status'], 'blocked')
-        self.assertIn('credentials', observed['error'])
+        self.assertIn('незамаскированные учётные данные', observed['error'])
 
     def test_actual_ed25519_signature_and_replay_all_280_observations(self):
         for target in self.targets:
@@ -295,7 +295,7 @@ class InventoryTests(unittest.TestCase):
         doc = json.loads(args.receipt.read_text())
         doc['payload']['observation']['targets'][0]['status'] = 'passed'
         write_json(args.receipt, doc)
-        with self.assertRaisesRegex(inv.Blocked, 'signature verification failed'):
+        with self.assertRaisesRegex(inv.Blocked, 'Независимая проверка подписи завершилась ошибкой'):
             inv.command_verify(args)
         # Восстановите настоящую квитанцию, затем измените только один сырой журнал и пересчитайте его
         # JSON SHA: подпись всё равно должна быть привязана к исходным байтам.
@@ -308,7 +308,7 @@ class InventoryTests(unittest.TestCase):
         result = json.loads(result_file.read_text())
         result['evidence']['sha256']['compatibility-execution.log'] = inv.digest(log)
         write_json(result_file, result)
-        with self.assertRaisesRegex(inv.Blocked, 'signed evidence differs'):
+        with self.assertRaisesRegex(inv.Blocked, 'Подписанные доказательства отличаются от повторно проверенных наблюдений'):
             inv.command_verify(args)
 
 

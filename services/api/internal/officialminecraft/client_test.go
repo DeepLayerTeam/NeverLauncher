@@ -179,7 +179,7 @@ func TestRedirectNotFollowedAndSizeBound(t *testing.T) {
 	huge := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(bytes.Repeat([]byte("x"), maxResponse+1)) }))
 	defer huge.Close()
 	c.microsoft = huge.URL
-	if _, err := c.Begin(context.Background(), "client"); err == nil || !strings.Contains(err.Error(), "limit") {
+	if _, err := c.Begin(context.Background(), "client"); err == nil || !strings.Contains(err.Error(), "превышает ограничение") {
 		t.Fatalf("Ответ не ограничен по размеру: %v", err)
 	}
 }

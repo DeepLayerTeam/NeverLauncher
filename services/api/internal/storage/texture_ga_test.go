@@ -29,7 +29,7 @@ func TestTextureGA0260RejectsIncompleteSnapshotBeforeMutation(t *testing.T) {
 	if err := DeleteTexture0253(ctx, store, first.Digest); err != nil {
 		t.Fatal(err)
 	}
-	if restored, err := RestoreTextures0253(ctx, store, backup, []TextureBackupObject0253{first, second}); err == nil || restored != 0 || !strings.Contains(err.Error(), "incomplete") {
+	if restored, err := RestoreTextures0253(ctx, store, backup, []TextureBackupObject0253{first, second}); err == nil || restored != 0 || !strings.Contains(err.Error(), "Неполный снимок текстур") {
 		t.Fatalf("Неполная резервная копия ошибочно принята: %d, %v", restored, err)
 	}
 	if f, _, err := OpenTexture0252(store, first.Digest); err == nil {

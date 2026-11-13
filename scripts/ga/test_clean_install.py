@@ -15,7 +15,7 @@ class CleanInstallPreconditions(unittest.TestCase):
             root = Path(d) / "installed"
             root.mkdir()
             (root / "existing").write_text("old")
-            with self.assertRaisesRegex(RuntimeError, "EMPTY installation root"):
+            with self.assertRaisesRegex(RuntimeError, "ПУСТОЙ каталог установки"):
                 real_clean_install(
                     installer=Path(d) / "no-installer",
                     root=root,
@@ -29,13 +29,13 @@ class CleanInstallPreconditions(unittest.TestCase):
     def test_no_fake_preinstalled_runtime_passes_activation(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            with self.assertRaisesRegex(RuntimeError, "no native Runtime"):
+            with self.assertRaisesRegex(RuntimeError, "отсутствует нативный Runtime"):
                 resolve_installed_runtime(root)
 
     def test_missing_signed_profile_is_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "clean"
-            with self.assertRaisesRegex(RuntimeError, "real signed Minecraft profile"):
+            with self.assertRaisesRegex(RuntimeError, "настоящий подписанный профиль Minecraft"):
                 real_clean_install(
                     installer=Path(d) / "no-installer",
                     root=root,

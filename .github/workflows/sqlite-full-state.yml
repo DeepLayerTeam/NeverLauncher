@@ -53,7 +53,7 @@ jobs:
           python3 - "$RUNNER_TEMP/nl-326-status.json" <<'PY'
           import json,sys
           value=json.load(open(sys.argv[1]))
-          assert value['status']=='ok' and value['schemaVersion']==326,value
+          assert value['status']=='ok' and value['schemaVersion']==327,value
           for table in ['bridge_runtime','bridge_commands','package_blobs','extension_packages','extension_installs','extension_kv']:
             assert table in value['counts'],table
           PY

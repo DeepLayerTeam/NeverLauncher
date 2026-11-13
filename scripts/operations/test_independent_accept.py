@@ -59,7 +59,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
     def test_root_without_sudo_operator_is_not_independent(self):
         with patch('independent_accept.os.geteuid', return_value=0), \
                 patch.dict(os.environ, {'SUDO_USER': ''}):
-            with self.assertRaisesRegex(ia.Rejected, 'require sudo'):
+            with self.assertRaisesRegex(ia.Rejected, 'требуется sudo'):
                 ia.actor('operator1')
 
     def test_cannot_invoke_arbitrary_command(self):
@@ -115,7 +115,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
             with self.assertRaisesRegex(ia.Rejected, 'другом Linux-узле'):
                 ia.accept_restore(args)
         with patch.object(ia, 'host_id', return_value='c' * 64):
-            with self.assertRaisesRegex(ia.Rejected, 'snapshot does not match'):
+            with self.assertRaisesRegex(ia.Rejected, 'Снимок не соответствует'):
                 ia.accept_restore(args)
 
     def test_restore_requires_explicit_maintenance(self):
@@ -164,7 +164,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
             with self.assertRaisesRegex(ia.Rejected, 'существующая конфигурация Compose volume'):
                 ia.assert_fresh_compose_project('launcher')
         with patch.object(ia.subprocess, 'run', return_value=proc(b'container-1')):
-            with self.assertRaisesRegex(ia.Rejected, 'existing Compose container'):
+            with self.assertRaisesRegex(ia.Rejected, 'существующая конфигурация Compose container'):
                 ia.assert_fresh_compose_project('launcher')
         with patch.object(ia.subprocess, 'run', return_value=proc(b'', rc=1)):
             with self.assertRaisesRegex(ia.Rejected, 'failed closed'):

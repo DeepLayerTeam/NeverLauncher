@@ -135,7 +135,7 @@ class AuthAcceptanceTests(unittest.TestCase):
                             '--oidc-proof',str(self.folder/'absent-proof.json'),
                             '--output',str(self.folder/'result.json')])
         self.assertEqual(code,2)
-        self.assertIn('BLOCKED',err.getvalue())
+        self.assertIn('ЗАБЛОКИРОВАНО',err.getvalue())
         self.assertFalse((self.folder/'result.json').exists())
 
 

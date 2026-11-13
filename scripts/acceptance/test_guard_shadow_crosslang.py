@@ -16,7 +16,7 @@ spec.loader.exec_module(reader)
 class CrossLanguage0529(unittest.TestCase):
     def test_production_go_writer_python_verifier_and_tampering(self):
         with tempfile.TemporaryDirectory() as tmp:
-            env = dict(os.environ, GO111MODULE='off', GOTOOLCHAIN='local', NL0529_SHADOW_TEST_OUTPUT=tmp)
+            env = dict(os.environ, GO111MODULE='off', GOTOOLCHAIN='local', NL0529_SHADOW_TEST_OUTPUT=tmp, NL0529_SHADOW_TEST_VERSION=reader.VERSION)
             result = subprocess.run(['go','test','guard_shadow.go','guard_shadow_test.go',
                                      '-run','TestGuardShadow0529WireFixture','-count=1'],
                                     cwd=ROOT/'services/api/internal/httpapi',env=env,
@@ -32,9 +32,9 @@ class CrossLanguage0529(unittest.TestCase):
             raw=file.read_bytes()
             self.assertNotIn(b'node-private',raw)
             self.assertNotIn(b'session-private',raw)
-            self.assertIn(b'"version":"0.52.9"',raw)
+            self.assertIn(f'"version":"{reader.VERSION}"'.encode(),raw)
             file.write_bytes(raw.replace(b'guard_binding_missing',b'guard_build_revoked'))
-            with self.assertRaisesRegex(reader.EvidenceError,'failed MAC'):
+            with self.assertRaisesRegex(reader.EvidenceError,'проверка MAC не пройдена'):
                 reader.analyze_shadow(folder,key)
 
 if __name__ == '__main__':unittest.main(verbosity=2)

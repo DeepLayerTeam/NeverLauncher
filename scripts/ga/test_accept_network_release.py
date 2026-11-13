@@ -89,7 +89,7 @@ class AcceptanceTests(unittest.TestCase):
                 }
             )
         )
-        with self.assertRaisesRegex(accept.ReleaseBlocked, "duplicate byte-identical"):
+        with self.assertRaisesRegex(accept.ReleaseBlocked, "повторяющийся JAR Runtime с идентичным содержимым"):
             accept.verify_final_jars(self.root, self.release, "0.42.0")
 
     def test_symlinked_artifact_is_rejected(self):
@@ -124,19 +124,19 @@ class AcceptanceTests(unittest.TestCase):
         self.assertEqual(len(report["tests"]), len(fault.REQUIRED))
 
     def test_missing_fault_result_rejected(self):
-        with self.assertRaisesRegex(ValueError, "not all completed"):
+        with self.assertRaisesRegex(ValueError, "Выполнены не все обязательные реальные тесты"):
             fault.validate(
                 self.write_go_log(missing=fault.REQUIRED[0]), "a" * 40, "0.42.0"
             )
 
     def test_skipped_fault_rejected(self):
-        with self.assertRaisesRegex(ValueError, "skipped"):
+        with self.assertRaisesRegex(ValueError, "завершился ошибкой или пропущен"):
             fault.validate(
                 self.write_go_log(skipped=fault.REQUIRED[-1]), "a" * 40, "0.42.0"
             )
 
     def test_wrong_commit_rejected(self):
-        with self.assertRaisesRegex(ValueError, "commit"):
+        with self.assertRaisesRegex(ValueError, "точный коммит исходников"):
             fault.validate(self.write_go_log(), "", "0.42.0")
 
     def test_future_patch_retains_network_gate_and_requires_matching_live_evidence(

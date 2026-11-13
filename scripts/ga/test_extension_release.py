@@ -107,7 +107,7 @@ class FinalExtensionReleaseTests(unittest.TestCase):
         doc['modules'][0]['status'] = 'verified'
         path = self.base / 'fake-matrix.json'
         path.write_text(json.dumps(doc))
-        with self.assertRaisesRegex(ValueError, 'separate module-specific live proof'):
+        with self.assertRaisesRegex(ValueError, 'отдельное реальное подтверждение для этого модуля'):
             verify_matrix(path)
 
     def test_module_limitations_must_be_explicit(self):
@@ -116,7 +116,7 @@ class FinalExtensionReleaseTests(unittest.TestCase):
         doc['modules'][1]['limitations'] = ''
         path = self.base / 'fake-matrix.json'
         path.write_text(json.dumps(doc))
-        with self.assertRaisesRegex(ValueError, 'missing explicit outcome'):
+        with self.assertRaisesRegex(ValueError, 'отсутствует явный результат или описание ограничения'):
             verify_matrix(path)
 
 

@@ -9661,7 +9661,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 115,
-          "evidence": "self.assertIn(\"unable to start PostgreSQL after 3 attempts\", result.stderr)"
+          "evidence": "self.assertIn(\"не удалось запустить PostgreSQL после трёх попыток\", result.stderr)"
         }
       ]
     },
@@ -9962,6 +9962,16 @@
           "category": "postgresql-config-or-literal",
           "line": 17,
           "evidence": "export LAUNCHER_REPOSITORY_DRIVER=memory"
+        }
+      ]
+    },
+    {
+      "path": "scripts/ci/build-minio.sh",
+      "findings": [
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 22,
+          "evidence": "docker build --tag \"launcher-ci-minio:$1\" \"$work\""
         }
       ]
     },
@@ -12122,6 +12132,11 @@
           "category": "postgresql-config-or-literal",
           "line": 28,
           "evidence": "\"sharedEndpoints\": {\"postgres\": \"pg\", \"redis\": \"redis\", \"s3\": \"s3\"},"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 237,
+          "evidence": "with self.assertRaisesRegex(ru.RollingError, \"Завершился сеанс блокировки PostgreSQL\"):"
         }
       ]
     },
@@ -12132,6 +12147,11 @@
           "category": "postgresql-config-or-literal",
           "line": 28,
           "evidence": "\"sharedEndpoints\": {\"postgres\": \"pg\", \"redis\": \"redis\", \"s3\": \"s3\"},"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 237,
+          "evidence": "with self.assertRaisesRegex(ru.RollingError, \"Завершился сеанс блокировки PostgreSQL\"):"
         }
       ]
     },
@@ -27130,17 +27150,17 @@
       "findings": [
         {
           "category": "postgresql-sql-dialect",
-          "line": 64,
+          "line": 68,
           "evidence": "res, err := tx.Exec(`INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest,minecraft_version,loader_vers"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 83,
+          "line": 87,
           "evidence": "if _, err := tx.Exec(`INSERT INTO profile_revisions_0221(project_id,profile_id,revision,schema_version,digest,spec,created_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 83,
+          "line": 87,
           "evidence": "if _, err := tx.Exec(`INSERT INTO profile_revisions_0221(project_id,profile_id,revision,schema_version,digest,spec,created_at)"
         }
       ]
@@ -29180,12 +29200,12 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 108,
+          "line": 110,
           "evidence": "if _, err := db.ExecContext(ctx, `INSERT INTO texture_assignments(realm,profile_uuid,user_id,kind,external_url,source,model)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 115,
+          "line": 117,
           "evidence": "if _, err := db.ExecContext(ctx, `INSERT INTO texture_cape_grants(project_id,user_id,granted,actor_user_id) VALUES ('',$1,true,$2)`, p.UserID, other.UserID); err != nil {"
         }
       ]
@@ -29495,13 +29515,13 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 99,
-          "evidence": "if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM texture_gravit_import_receipts WHERE source_id=$1 AND external_row_id=$2)`, input.GravitSourceID, input.GravitRowID).S"
+          "line": 97,
+          "evidence": "res, err := tx.ExecContext(ctx, `INSERT INTO texture_identities(realm,profile_uuid,user_id,profile_name,origin,local_profile_uuid)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 106,
-          "evidence": "res, err := tx.ExecContext(ctx, `INSERT INTO texture_identities(realm,profile_uuid,user_id,profile_name,origin,local_profile_uuid)"
+          "line": 109,
+          "evidence": "if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM texture_gravit_import_receipts WHERE source_id=$1 AND external_row_id=$2)`, input.GravitSourceID, input.GravitRowID).S"
         },
         {
           "category": "postgresql-sql-dialect",

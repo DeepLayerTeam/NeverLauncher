@@ -393,7 +393,7 @@ class MatrixToolTests(unittest.TestCase):
         script = (ROOT / "scripts/compatibility/install-windows-mesa.ps1").read_text(
             encoding="utf-8"
         )
-        self.assertIn("for ${arch}: $actual", script)
+        self.assertIn("для ${arch} не совпадает: $actual", script)
         self.assertNotRegex(script, r"\$[A-Za-z_][A-Za-z_0-9]*:(?![A-Za-z_])")
         workflow = (ROOT / ".github/workflows/compatibility.yml").read_text(
             encoding="utf-8"
@@ -489,7 +489,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Cross-platform Loaders 0.17.9", proc.stderr)
+            self.assertIn("Кроссплатформенные загрузчики 0.17.9", proc.stderr)
 
     def test_validate_0179_rejects_wrong_loader_platform_java(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -502,7 +502,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("requires Java 25", proc.stderr)
+            self.assertIn("требуется Java 25", proc.stderr)
 
     def test_aggregate_0179_requires_native_platform_check(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -526,7 +526,7 @@ class MatrixToolTests(unittest.TestCase):
 
             proc = self.aggregate(Path(tmp), doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("evidence files", proc.stderr)
+            self.assertIn("Неполный набор файлов доказательств", proc.stderr)
 
     def test_validate_rejects_manual_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -548,7 +548,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Baseline II", proc.stderr)
+            self.assertIn("базовой проверки совместимости Vanilla II", proc.stderr)
 
     def test_validate_rejects_missing_legacy_release_line_0163(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -560,7 +560,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Legacy Vanilla 0.16.3", proc.stderr)
+            self.assertIn("ранних версий Vanilla 0.16.3", proc.stderr)
 
     def test_validate_rejects_missing_pre17_release_line_0164(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -572,7 +572,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Legacy Vanilla 0.16.4", proc.stderr)
+            self.assertIn("Ранние версии Vanilla 0.16.4", proc.stderr)
 
     def test_validate_rejects_missing_complete_legacy_grid_0170v1(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -584,7 +584,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Legacy Vanilla 0.17.0v1", proc.stderr)
+            self.assertIn("Ранние версии Vanilla 0.17.0v1", proc.stderr)
 
     def test_validate_rejects_wrong_java_complete_legacy_grid_0170v1(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -596,7 +596,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("0.17.0v1 requires Java 8", proc.stderr)
+            self.assertIn("0.17.0v1 требуется Java 8", proc.stderr)
 
     def test_validate_rejects_missing_java16_17_grid_0170v2(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -624,7 +624,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("0.17.0v2 requires Java 16", proc.stderr)
+            self.assertIn("0.17.0v2 требуется Java 16", proc.stderr)
 
     def test_validate_rejects_missing_java21_25_grid_0170v3(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -652,7 +652,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("0.17.0v3 requires Java 25", proc.stderr)
+            self.assertIn("0.17.0v3 требуется Java 25", proc.stderr)
 
     def test_validate_accepts_fabric_compatibility_ii_0171_grid(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -724,7 +724,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Quilt Compatibility II 0.17.2", proc.stderr)
+            self.assertIn("Совместимость Quilt II 0.17.2", proc.stderr)
 
     def test_validate_rejects_wrong_quilt_java_0172(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -752,7 +752,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("exactly one catalogue target", proc.stderr)
+            self.assertIn("ровно одна цель каталога", proc.stderr)
 
     def test_validate_accepts_forge_modern_0173_grid(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -774,7 +774,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Forge Modern 0.17.3", proc.stderr)
+            self.assertIn("Forge Сетка релизов Modern 0.17.3", proc.stderr)
 
     def test_validate_rejects_wrong_forge_java_0173(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -836,7 +836,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Forge Legacy 1.12.2 0.17.4 requires Java 8", proc.stderr)
+            self.assertIn("Forge Legacy 1.12.2 0.17.4 требуется Java 8", proc.stderr)
 
     def test_validate_accepts_forge_legacy_1710_0175(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -870,7 +870,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Forge Legacy 1.7.10 0.17.5 requires Java 8", proc.stderr)
+            self.assertIn("Forge Legacy 1.7.10 0.17.5 требуется Java 8", proc.stderr)
 
     def test_validate_accepts_neoforge_compatibility_ii_0176(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -894,7 +894,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("NeoForge Compatibility II 0.17.6", proc.stderr)
+            self.assertIn("Совместимость NeoForge II 0.17.6", proc.stderr)
 
     def test_validate_rejects_wrong_neoforge_java_0176(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -946,7 +946,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("requires Java 17", proc.stderr)
+            self.assertIn("требуется Java 17", proc.stderr)
 
     def test_validate_rejects_missing_java21_release_line_0167(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -974,7 +974,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("requires Java 21", proc.stderr)
+            self.assertIn("требуется Java 21", proc.stderr)
 
     def test_validate_rejects_missing_java25_release_line_0168(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1000,7 +1000,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("requires Java 25", proc.stderr)
+            self.assertIn("требуется Java 25", proc.stderr)
 
     def test_validate_rejects_missing_cross_platform_0169(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1012,7 +1012,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Cross-platform Vanilla 0.16.9", proc.stderr)
+            self.assertIn("Кроссплатформенная Vanilla 0.16.9", proc.stderr)
 
     def test_validate_rejects_missing_matching_server_target_01610(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1024,7 +1024,7 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("Actual Client E2E II 0.16.10", proc.stderr)
+            self.assertIn("реальных E2E-проверок клиента II 0.16.10", proc.stderr)
 
     def test_aggregate_rejects_matching_server_without_real_join_01610(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1143,7 +1143,7 @@ class MatrixToolTests(unittest.TestCase):
 
             proc = self.aggregate(tmp, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("immutable version", proc.stderr)
+            self.assertIn("конкретную неизменяемую версию", proc.stderr)
 
     def test_aggregate_rejects_commit_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1243,7 +1243,7 @@ class MatrixToolTests(unittest.TestCase):
             encoding="utf-8"
         )
         restore_blocks = re.findall(
-            r"(?m)^      - name: Restore Java 21 for loader/Gradle build tooling\n"
+            r"(?m)^      - name: Восстановление Java 21 для инструментов загрузчика и Gradle\n"
             r"((?:^        .*\n|^          .*\n)+)",
             workflow,
         )

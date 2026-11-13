@@ -61,7 +61,7 @@ class LoaderPlatformVerifierTests(unittest.TestCase):
     def test_rejects_foreign_arch_native(self):
         proc, _ = self.run_case(native_path="natives/windows/x86_64/lwjgl.dll")
         self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("foreign native path", proc.stderr)
+        self.assertIn("посторонний путь к нативной библиотеке", proc.stderr)
 
     def test_rejects_runtime_native_directory_mismatch(self):
         proc, _ = self.run_case(runtime_dir="C:/work/client/natives/windows/x86_64")

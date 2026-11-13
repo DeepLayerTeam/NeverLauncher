@@ -121,7 +121,7 @@ class CompleteExecutionEvidenceTests(unittest.TestCase):
         with ZipFile(self.archive, "w") as archive:
             for name, data in keep:
                 archive.writestr(name, data)
-        with self.assertRaisesRegex(ValueError, "missing, duplicated"):
+        with self.assertRaisesRegex(ValueError, "отсутствуют обязательные элементы либо найдены повторяющиеся или лишние"):
             self.replay()
 
     def test_tampered_signed_trace_refused_even_if_zip_repacked(self):
@@ -203,7 +203,7 @@ class CompleteExecutionEvidenceTests(unittest.TestCase):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", UserWarning)
                 archive.writestr(evidence_files(VER)[0], b"forged duplicate")
-        with self.assertRaisesRegex(ValueError, "missing, duplicated"):
+        with self.assertRaisesRegex(ValueError, "отсутствуют обязательные элементы либо найдены повторяющиеся или лишние"):
             self.replay()
 
 

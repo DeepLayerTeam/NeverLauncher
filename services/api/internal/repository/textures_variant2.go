@@ -94,15 +94,6 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(252,hashtext($1))`, profile.UUID); err != nil {
 		return zero, err
 	}
-	if source == "managed-gravit-import" {
-		var done bool
-		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM texture_gravit_import_receipts WHERE source_id=$1 AND external_row_id=$2)`, input.GravitSourceID, input.GravitRowID).Scan(&done); err != nil {
-			return zero, err
-		}
-		if done {
-			return zero, ErrGravitAlreadyImported02510
-		}
-	}
 	res, err := tx.ExecContext(ctx, `INSERT INTO texture_identities(realm,profile_uuid,user_id,profile_name,origin,local_profile_uuid)
       SELECT 'local-project',uuid,user_id,name,'local-profile',uuid FROM minecraft_profiles WHERE uuid=$1 AND user_id=$2
       ON CONFLICT(realm,profile_uuid) DO UPDATE SET profile_name=EXCLUDED.profile_name WHERE texture_identities.user_id=EXCLUDED.user_id`, profile.UUID, profile.UserID)
@@ -112,6 +103,15 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	n, _ := res.RowsAffected()
 	if n != 1 {
 		return zero, ErrNotFound
+	}
+	if source == "managed-gravit-import" {
+		var done bool
+		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM texture_gravit_import_receipts WHERE source_id=$1 AND external_row_id=$2)`, input.GravitSourceID, input.GravitRowID).Scan(&done); err != nil {
+			return zero, err
+		}
+		if done {
+			return zero, ErrGravitAlreadyImported02510
+		}
 	}
 	var allowSkin, allowCape bool
 	var maxBytes int64

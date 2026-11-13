@@ -68,7 +68,7 @@ class SQLiteUpgradeTests(unittest.TestCase):
     def test_schema_check_detects_corrupt_and_future_versions(self):
         with tempfile.TemporaryDirectory() as base:
             root=Path(base); self.fixture(root)
-            with self.assertRaisesRegex(u.UpgradeError,'!= expected'):
+            with self.assertRaisesRegex(u.UpgradeError,'не соответствует ожидаемой'):
                 u.schema_check_sqlite(root,target_version=999)
             (root / 'db/coordinator.sqlite').write_bytes(b'not-a-database')
             with self.assertRaises((u.UpgradeError, sqlite3.DatabaseError)):

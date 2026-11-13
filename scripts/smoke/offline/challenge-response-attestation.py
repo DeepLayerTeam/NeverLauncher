@@ -52,14 +52,14 @@ need('services/api/internal/httpapi/auth.go', [
     'DeviceAttestationMethod',
     'DeviceAttestationExpiresAt',
     'effectiveDeviceAttestation0124',
-    'not vendor TPM/Secure Enclave provenance',
+    'а не происхождение из TPM/Secure',
 ])
 need('apps/desktop/src-tauri/src/device_keys.rs', [
     'validate_device_attestation_payload',
     'pub fn attest_device_payload',
-    'Аттестация устройства требует аппаратно привязанного ключа P-256',
+    'Для аттестации устройства требуется аппаратно привязанный ключ P-256',
     'validate_hardware_record(&record)',
-    'hardware device attestation signing failed',
+    'Ошибка: аппаратная подпись аттестации устройства',
     'attestation_payload_is_hardware_only_and_identity_bound',
 ])
 need('apps/desktop/src-tauri/src/main.rs', [
@@ -73,15 +73,15 @@ need('apps/desktop/src/main.tsx', [
     'attestDesktopDeviceKey',
     '/attest/begin',
     '/attest/complete',
-    "callTauri<DeviceSignatureResult>('attest_device_payload'",
-    "hardwareProvenance !== 'not-remotely-verified'",
-    'vendor TPM/Secure Enclave provenance не заявляется',
+    '"attest_device_payload",',
+    'hardwareProvenance !== "not-remotely-verified"',
+    'происхождение ключа в TPM или Secure Enclave производителем не подтверждено',
 ])
 need('services/api/internal/httpapi/device_attestation_test.go', [
     'TestDeviceChallengeResponseAttestation0124',
-    'attestation replay accepted',
-    'wrong attestation signature accepted',
-    'unbound session obtained attestation challenge',
+    'Принято повторное использование аттестации',
+    'Принята неверная подпись аттестации',
+    'Непривязанная сессия получила запрос аттестации',
     'TestDeviceChallengeResponseAttestationRejectsSoftwareKey0124',
     'TestDeviceAttestationPayloadStableAcrossPostgresTimestampPrecision0124',
 ])

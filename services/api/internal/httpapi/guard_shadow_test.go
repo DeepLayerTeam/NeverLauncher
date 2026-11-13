@@ -151,7 +151,7 @@ func TestGuardShadow0529WireFixture(t *testing.T) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	journal, err := newGuardShadowJournal05012(dir, keyFile, "0.52.9")
+	journal, err := newGuardShadowJournal05012(dir, keyFile, os.Getenv("NL0529_SHADOW_TEST_VERSION"))
 	if err != nil {
 		t.Fatal(err)
 	}

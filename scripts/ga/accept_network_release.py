@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from serverbridge.live_matrix_04113 import certify  # noqa: E402
+from serverbridge.live_matrix import certify  # noqa: E402
 
 HEX = re.compile(r"^[a-f0-9]{64}$")
 COMMIT = re.compile(r"^[a-f0-9]{40}$|^[a-f0-9]{64}$")

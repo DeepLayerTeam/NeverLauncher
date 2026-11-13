@@ -82,10 +82,23 @@ func (s Server) registerOperationRoutes0217(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/operations/validate", s.requireAuthenticated(s.operationValidate0217))
 	mux.Handle("POST /api/v1/operations/execute", s.requireAuthenticated(s.operationExecute0217))
 	mux.Handle("GET /api/v1/operations/{operationId}", s.requireAuthenticated(s.operationStatus0217))
-	mux.Handle("GET /api/v1/operations/{operationId}/attempts", s.requireAuthenticated(s.operationAttempts0217))
+	registerOperationAttemptsRoute(mux, s.requireAuthenticated(s.operationAttempts0217))
 	mux.Handle("POST /api/v1/operations/{operationId}/cancel", s.requireAuthenticated(s.operationCancel0217))
 	mux.Handle("POST /api/v1/operations/{operationId}/retry", s.requireAuthenticated(s.operationRetry0217))
 }
+
+// registerOperationAttemptsRoute preserves the public attempts endpoint while allowing
+// the more specific /operations/backups/{backupId} route to take precedence.
+// ServeMux rejects the two original patterns because each matches a path the
+// other does not. The outer pattern only dispatches to the exact inner route;
+// all other actions receive 404. The inner mux supplies operationId PathValue.
+func registerOperationAttemptsRoute(mux *http.ServeMux, handler http.Handler) {
+	attempts := http.NewServeMux()
+	attempts.Handle("GET /api/v1/operations/{operationId}/attempts", handler)
+	const dispatchPath = "/api/v1/operations/{operationId}/{action}"
+	mux.Handle("GET "+dispatchPath, attempts)
+}
+
 func (s Server) operationRegistryGet0217(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": []operationSpec0217{operationRegistry0217["package-publish"], operationRegistry0217["channel-rollback"]}})
 }

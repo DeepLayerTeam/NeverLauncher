@@ -26,6 +26,7 @@ func TestMigrationContentSigning0337(t *testing.T) {
 		t.Fatal("Разрешено подписать пакет без дополнительного каталога v3")
 	}
 	catalog := opt.Catalog
+	catalog.Components = append([]model.CatalogComponent0241(nil), opt.Catalog.Components...)
 	m.SchemaVersion = model.ManifestSchemaV3
 	m.ComponentCatalog = &catalog
 	if e := checkMigrationContentSign0337(p, m); e != nil {

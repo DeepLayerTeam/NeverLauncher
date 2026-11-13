@@ -147,7 +147,7 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 		// Minecraft Services может отклонить корректную цепочку OAuth/XSTS,
 		// если идентификатор клиентского приложения не был разрешён.
 		// Нормализуйте сообщение провайдера; не выводите произвольный текст его ответа.
-		if resp.StatusCode == http.StatusForbidden && strings.Contains(strings.ToLower(body.ErrorMessage), "Недопустимая регистрация приложения") {
+		if resp.StatusCode == http.StatusForbidden && strings.Contains(strings.ToLower(body.ErrorMessage), "invalid app registration") {
 			code = "invalid_app_registration"
 		}
 		if code == "" && body.XErr != 0 {

@@ -59,7 +59,7 @@ class GameAdversarialRegression(unittest.TestCase):
 
     def test_invalid_baseline_blocks_not_a_false_positive(self):
         with patch.object(negative, '_run', return_value=(1, b'failed')):
-            with self.assertRaisesRegex(RuntimeError, 'Реальный Runtime не принял исходную подпись'):
+            with self.assertRaisesRegex(RuntimeError, 'Реальный Runtime не смог проверить неизменённый подписанный манифест'):
                 negative.reject_tampered_manifest('runtime', self.manifest, 'pub', self.work, {})
 
     def test_version_mismatch_and_symlink_rejected(self):
@@ -113,26 +113,26 @@ class NativeObservationTests(unittest.TestCase):
         self.assertTrue(native.verify_game_observations_04314(self.root,'linux','arm64'))
 
     def test_wrong_arch_rejected(self):
-        with self.assertRaisesRegex(ValueError, 'host identity'):
+        with self.assertRaisesRegex(ValueError, 'несоответствие идентификатора или возможностей нативного хоста'):
             native.verify_game_observations_04314(self.root,'linux','amd64')
 
     def test_changed_negative_file_rejected(self):
         self.negative['installedFileTamper']['status']='not-run'
         self.root.joinpath('adversarial-gameplay-04314.json').write_text(json.dumps(self.negative))
-        with self.assertRaisesRegex(ValueError, 'negative game'):
+        with self.assertRaisesRegex(ValueError, 'Реальные отрицательные игровые проверки'):
             native.verify_game_observations_04314(self.root,'linux','arm64')
 
     def test_missing_game_stage_rejected(self):
         staged = json.loads(self.root.joinpath('staged-execution.json').read_text())
         staged['stages']['gameplay-smoke']['status']='blocked'
         self.root.joinpath('staged-execution.json').write_text(json.dumps(staged))
-        with self.assertRaisesRegex(ValueError, 'positive game'):
+        with self.assertRaisesRegex(ValueError, 'Отсутствуют успешные этапы реального игрового запуска'):
             native.verify_game_observations_04314(self.root,'linux','arm64')
 
     def test_unrestored_file_rejected(self):
         self.negative['installedFileTamper']['restoredFileSha256']='d'*64
         self.write_negative()
-        with self.assertRaisesRegex(ValueError, 'negative game'):
+        with self.assertRaisesRegex(ValueError, 'Реальные отрицательные игровые проверки'):
             native.verify_game_observations_04314(self.root,'linux','arm64')
 
 if __name__ == '__main__':

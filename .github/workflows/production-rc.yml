@@ -95,11 +95,12 @@ jobs:
       - name: Запустить реальные изолированные MinIO S3 служба
         run: |
           set -euo pipefail
-          docker run -d --name launcher-rc-minio \
+          bash scripts/ci/build-minio.sh RELEASE.2025-02-07T23-21-09Z
+          docker run --pull=never -d --name launcher-rc-minio \
             -p 127.0.0.1:9000:9000 \
             -e MINIO_ROOT_USER="$LAUNCHER_RC_S3_ACCESS_KEY" \
             -e MINIO_ROOT_PASSWORD="$LAUNCHER_RC_S3_SECRET_KEY" \
-            quay.io/minio/minio:RELEASE.2025-02-07T23-21-09Z \
+            launcher-ci-minio:RELEASE.2025-02-07T23-21-09Z \
             server /data --address ':9000'
           python3 -m pip install 'boto3==1.35.99'
           python3 - <<'PY'

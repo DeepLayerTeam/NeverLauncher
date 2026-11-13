@@ -197,7 +197,14 @@ func upgradeHTTPDocument0472(raw []byte) ([]byte, error) {
 }
 
 func normalizeHTTPDDL0472(text string) string {
-	return strings.ToLower(strings.ReplaceAll(strings.Join(strings.Fields(strings.TrimSuffix(strings.TrimSpace(text), ";")), ""), "ifnotexists", ""))
+	// SQLite stores CREATE TABLE without the optional IF NOT EXISTS clause.
+	// Remove that clause only in its syntactic position, never inside a column
+	// name or CHECK expression.
+	fields := strings.Fields(strings.TrimSuffix(strings.TrimSpace(text), ";"))
+	if len(fields) >= 5 && strings.EqualFold(strings.Join(fields[:5], " "), "CREATE TABLE IF NOT EXISTS") {
+		fields = append(fields[:2], fields[5:]...)
+	}
+	return strings.ToLower(strings.Join(fields, ""))
 }
 func httpDDL0472() map[string]string {
 	defs := []string{sqliteHTTPDDL0372, sqliteRuntimeDDL0373, sqliteInstallationDDL0375}

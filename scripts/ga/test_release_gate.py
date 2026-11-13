@@ -125,14 +125,14 @@ class ReleaseGateTests(unittest.TestCase):
             root = Path(tmp)
             pub = self.setup_fixtures(root)
             (root / "linux-amd64" / "installer.bin").write_bytes(b"tampered")
-            with self.assertRaisesRegex(ValueError, "content digest mismatch"):
+            with self.assertRaisesRegex(ValueError, "Контрольная сумма содержимого не совпадает"):
                 verify_all(root, pub, SHA)
 
     def test_cross_commit_evidence_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             pub = self.setup_fixtures(root)
-            with self.assertRaisesRegex(ValueError, "commit/version mismatch"):
+            with self.assertRaisesRegex(ValueError, "Commit или версия аттестации не совпадают"):
                 verify_all(root, pub, "b" * 40)
 
     def test_missing_architecture_is_rejected(self):
@@ -150,7 +150,7 @@ class ReleaseGateTests(unittest.TestCase):
             path = root / "linux-arm64" / "installer.bin"
             path.unlink()
             path.symlink_to(root / "linux-amd64" / "installer.bin")
-            with self.assertRaisesRegex(ValueError, "symlinked"):
+            with self.assertRaisesRegex(ValueError, "Файл отсутствует или является символической ссылкой"):
                 verify_all(root, pub, SHA)
 
     def test_attested_report_marked_mocked_fails(self):

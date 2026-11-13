@@ -51,7 +51,7 @@ class Recovery0456(unittest.TestCase):
             manifest = {'schema': 3,'mode':'network-ha','version':'0.45.6'}
             with patch.object(dr, 'verify_snapshot', return_value=manifest), \
                  patch.object(dr, 'target_release', return_value='0.45.5'), \
-                 patch.object(dr, 'restore_fresh') as restore, self.assertRaisesRegex(dr.DrillError, 'version'):
+                 patch.object(dr, 'restore_fresh') as restore, self.assertRaisesRegex(dr.DrillError, 'Версия восстановления должна соответствовать снимку'):
                 recover.run_restore('nl-dr-fresh','nl-dr-fresh',Path(folder)/'env',Path(folder),
                                     'https://127.0.0.1:18443/ready','nl-dr-target',None,{},
                                     datetime.now(timezone.utc),Path(folder)/'report',None,None)
@@ -86,7 +86,7 @@ class Recovery0456(unittest.TestCase):
             with patch.object(dr,'verify_snapshot',return_value=manifest), \
                  patch.object(dr,'target_release',return_value='0.45.6'), \
                  patch.object(dr,'restore_fresh',return_value={'applicationVerified':True,'serverbridgeFenced':False,'redisRestored':False}), \
-                 self.assertRaisesRegex(dr.DrillError, 'incomplete'):
+                 self.assertRaisesRegex(dr.DrillError, 'Неполное восстановление Network-HA'):
                 recover.run_restore('nl-dr-fresh','nl-dr-fresh',Path(folder)/'env',Path(folder),
                                     'https://127.0.0.1:18443/ready','nl-dr-target',None,{},incident,
                                     Path(folder)/'result.json',None,None)

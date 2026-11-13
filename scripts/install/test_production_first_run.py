@@ -91,7 +91,7 @@ class ProductionFirstRunTests(unittest.TestCase):
                     return {"status":"ready", "version":"0.45.1"}
                 return {"data":{"bootstrapTokenConsumed": True, "checks":[{"id":"admin-user","status":"ready"}]}}
             with patch.object(deploy, "tls_paths"), patch.object(deploy, "public_json", side_effect=fake_api):
-                with self.assertRaisesRegex(RuntimeError, "already"):
+                with self.assertRaisesRegex(RuntimeError, "Одноразовый токен уже использован или администратор существует"):
                     deploy.bootstrap_first_admin(args)
             self.assertEqual(len(called), 2)
 
@@ -124,11 +124,11 @@ class ProductionFirstRunTests(unittest.TestCase):
             values = env_values()
             values["LAUNCHER_TLS_CERT_PATH"] = str(cert)
             values["LAUNCHER_TLS_KEY_PATH"] = str(key)
-            with self.assertRaisesRegex(RuntimeError, "invalid|untrusted"):
+            with self.assertRaisesRegex(RuntimeError, "TLS-сертификат некорректен, недоверенный"):
                 deploy.tls_paths(values)
             values["LAUNCHER_TLS_KEY_PATH"] = str(root / "linked-key.pem")
             (root / "linked-key.pem").symlink_to(key)
-            with self.assertRaisesRegex(RuntimeError, "symlink"):
+            with self.assertRaisesRegex(RuntimeError, "TLS-файлы не должны быть символическими ссылками"):
                 deploy.tls_paths(values)
             self.assertIn("ssl_certificate_key", deploy.ROOT.joinpath("deploy/production/nginx.conf").read_text())
             self.assertIn("LAUNCHER_TLS_KEY_PATH", deploy.COMPOSE.read_text())
@@ -182,7 +182,7 @@ class ProductionFirstRunTests(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, "HTTP 302"):
                         deploy.public_json(url + "/redirect")
                 with patch.dict(os.environ, {"SSL_CERT_FILE": str(root / "no-trust.pem")}):
-                    with self.assertRaisesRegex(RuntimeError, "unavailable or untrusted"):
+                    with self.assertRaisesRegex(RuntimeError, "Публичный HTTPS недоступен или не является доверенным"):
                         deploy.public_json(url + "/ready")
             finally:
                 server.shutdown()

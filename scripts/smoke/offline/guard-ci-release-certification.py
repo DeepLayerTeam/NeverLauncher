@@ -45,12 +45,12 @@ require(
     matrix,
     [
         "guard-ci-result.json",
-        "artifact filename collision across platforms",
+        "Совпадают имена файлов артефактов разных платформ",
         "vendorSigningProvenance",
         "not-certified-by-ci",
         "packageManifestBound",
         "repository=args.repository",
-        "Guard CI matrix PASS",
+        "Матрица Guard CI пройдена:",
     ],
     "матрица Guard CI",
 )
@@ -58,10 +58,10 @@ stage = read("scripts/guard_ci/stage_release.py")
 require(
     stage,
     [
-        "Staged",
-        "exact Guard CI-certified artifacts",
-        "certified artifact mismatch",
-        "duplicate staged source",
+        "Подготовлено",
+        "точно соответствующих артефактов Guard, сертифицированных CI",
+        "Несоответствие сертифицированного артефакта",
+        "Повторяющийся подготовленный источник",
     ],
     "подготовка артефактов Guard",
 )
@@ -97,7 +97,7 @@ require(
         "LAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR",
         "stage_release.py",
         "--guard-ci-matrix",
-        "cross-platform Guard CI certification",
+        "межплатформенная сертификация Guard CI",
     ],
     "подключение сборщика релизов",
 )

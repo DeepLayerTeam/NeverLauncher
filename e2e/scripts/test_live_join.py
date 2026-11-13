@@ -62,7 +62,7 @@ class LiveJoinNegativeTests(unittest.TestCase):
 
     def test_missing_modded_distribution_is_blocked(self):
         self.args.pins = ''
-        with self.assertRaisesRegex(RuntimeError, 'required'):
+        with self.assertRaisesRegex(RuntimeError, 'нужны закреплённые пакеты'):
             gate.load_pinned_bundle(self.args)
 
     def test_unmodified_default_bridge_policy_unchanged(self):

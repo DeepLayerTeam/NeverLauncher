@@ -74,7 +74,7 @@ class FinalBundleTests(unittest.TestCase):
         self.assertIn('--bundle "$DIR" --version "$VERSION" --commit "$GITHUB_SHA"', job)
         self.assertIn('path: |\n            ${{ runner.temp }}/nl-final-bundle-e2e-0380.json', job)
         self.assertIn('if-no-files-found: error', job[e2e:])
-        self.assertLess(e2e, job.index('Require current source production package rehearsal'))
+        self.assertLess(e2e, job.index('Потребовать испытание промышленного пакета текущих исходников и пробную публикацию'))
 
     def test_status_or_binary_mismatch_refused(self):
         expected = {'productVersion': VERSION, 'sourceCommit': COMMIT, 'binarySha256': 'f' * 64}

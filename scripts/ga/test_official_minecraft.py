@@ -185,7 +185,7 @@ class OfficialGATest(unittest.TestCase):
         self.change_report(
             "windows-amd64", "vault", lambda d: d["checks"].update(logout="failed")
         )
-        with self.assertRaisesRegex(gate.GateError, "digest mismatch"):
+        with self.assertRaisesRegex(gate.GateError, "Хеш содержимого свидетельства не совпадает"):
             self.verify()
         self.change_report(
             "windows-amd64",
@@ -209,7 +209,7 @@ class OfficialGATest(unittest.TestCase):
             lambda d: d.update(minecraftProfileSHA256="b" * 64),
             resign=True,
         )
-        with self.assertRaisesRegex(gate.GateError, "same official account"):
+        with self.assertRaisesRegex(gate.GateError, "Браузер и устройство подтвердили разные официальные учётные записи"):
             self.verify()
 
     def test_fake_approval_and_skipped_checks_fail(self):
@@ -217,7 +217,7 @@ class OfficialGATest(unittest.TestCase):
         att = json.loads((folder / "attestation.json").read_text())
         att["externalApproval"]["manuallyConfirmed"] = False
         self.resign(folder, att)
-        with self.assertRaisesRegex(gate.GateError, "provider approval"):
+        with self.assertRaisesRegex(gate.GateError, "Подтверждение провайдера необходимо проверить вручную"):
             self.verify()
         att["externalApproval"]["manuallyConfirmed"] = True
         att["checks"]["signed-native-delivery"] = "skipped"
@@ -226,7 +226,7 @@ class OfficialGATest(unittest.TestCase):
             self.verify()
 
     def test_stale_missing_or_linked_proof_fails(self):
-        with self.assertRaisesRegex(gate.GateError, "stale"):
+        with self.assertRaisesRegex(gate.GateError, "Свидетельство финального выпуска отсутствует, устарело"):
             gate.verify_all(self.root, self.pub, SHA, now=NOW + timedelta(days=15))
         (self.root / "windows-arm64" / "device.json").unlink()
         with self.assertRaisesRegex(gate.GateError, "missing/symlinked"):

@@ -475,7 +475,7 @@ for required in [
     "sessionBoundToDevice0124",
     "verifyDeviceSignature0123",
     "AttestTrustedDevice",
-    "not-verified",
+    "not-remotely-verified",
 ]:
     if required not in attestation_handler:
         fail(f"В проверке «обработка аттестации с запросом и ответом 0.12.4» отсутствует обязательный компонент: {required}")

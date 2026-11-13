@@ -66,7 +66,7 @@ class IntegrationCertificationTests(unittest.TestCase):
             obj=json.loads(files[0].read_text())
             obj['results'][0]['status']='skipped'
             files[0].write_text(json.dumps(obj))
-            with self.assertRaisesRegex(ValueError,'failed/skipped'):
+            with self.assertRaisesRegex(ValueError,'завершился ошибкой или был пропущен'):
                 review(files,SHA)
 
 if __name__=='__main__':unittest.main()

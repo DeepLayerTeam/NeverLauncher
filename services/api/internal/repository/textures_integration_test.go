@@ -65,12 +65,14 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	migration, err := os.ReadFile("../dbmigrate/sql/0067_texture_identity.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.ExecContext(ctx, string(migration)); err != nil {
-		t.Fatalf("миграция: %v", err)
+	for _, name := range []string{"0067_texture_identity.sql", "0068_texture_upload.sql", "0069_texture_storage.sql", "0070_texture_fetch.sql", "0071_texture_service.sql", "0072_texture_admin.sql"} {
+		migration, err := os.ReadFile("../dbmigrate/sql/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.ExecContext(ctx, string(migration)); err != nil {
+			t.Fatalf("миграция %s: %v", name, err)
+		}
 	}
 	r := &SQLRepository{db: db}
 	selected, ok, err := r.ReadTextureProfile0251(ctx, p.UUID)

@@ -43,7 +43,7 @@ fn parse_ak_handle(input: &str) -> Result<String, String> {
 // версии 0.2.10 добавлен -unsigned для неподписанных сборок разработчика. Разрешены
 // только стандартные каталоги приложений XDG; путь от клиентского интерфейса принимать нельзя.
 fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
-    if label.len()<10 || label.len()>96 || !label.bytes().all(|b| b.is_ascii_alphanumeric() || b=='-') {
+    if label.len()<10 || label.len()>96 || !label.bytes().all(|b| b.is_ascii_alphanumeric() || b==b'-') {
         return Err("Некорректное значение: метка аппаратного хранилища TPM".into());
     }
     let home=std::env::var_os("HOME").ok_or("Переменная HOME недоступна")?;

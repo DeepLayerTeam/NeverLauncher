@@ -63,7 +63,7 @@ jobs:
           python3 - "$RUNNER_TEMP/dep06/backups/preupgrade.db" <<'PY'
           import json,sys,sqlite3,pathlib
           p=pathlib.Path(sys.argv[1]); m=json.loads((pathlib.Path(str(p)+'.json')).read_text())
-          assert m['schemaVersion']==326 and m['bytes']==p.stat().st_size,m
+          assert m['schemaVersion']==327 and m['bytes']==p.stat().st_size,m
           assert sqlite3.connect(f'file:{p}?mode=ro',uri=True).execute('PRAGMA integrity_check').fetchone()[0]=='ok'
           PY
           # Изменение байтов файлов должно приводить к отказу по умолчанию.
