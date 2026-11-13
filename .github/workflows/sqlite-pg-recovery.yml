@@ -24,8 +24,8 @@ jobs:
         run: |
           set -euo pipefail
           PYTHONPATH=scripts/operations python3 -m unittest \
-            scripts.operations.test_sqlite_pg_cutover_0475 \
-            scripts.operations.test_sqlite_pg_recovery_0477 \
+            scripts.operations.test_sqlite_pg_cutover \
+            scripts.operations.test_sqlite_pg_recovery \
             scripts.operations.test_legacy_upgrade_0476 -v
           python3 -m py_compile \
             scripts/operations/sqlite_pg_cutover.py \

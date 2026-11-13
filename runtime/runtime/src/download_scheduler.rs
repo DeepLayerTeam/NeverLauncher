@@ -141,7 +141,8 @@ impl Statistics {
         let Some(sink) = &self.sink else { return };
         // Не создавайте отдельное событие Tauri для каждого небольшого сетевого пакета.
         let Ok(mut last) = self.last_emit.try_lock() else { return };
-        if !force && last.elapsed() < Duration::from_millis(100) { return }
+        let phase_changed = self.last_phase.lock().map(|current| current.as_str() != phase).unwrap_or(true);
+        if !force && !phase_changed && last.elapsed() < Duration::from_millis(100) { return }
         let now = Instant::now();
         *last = now;
         if let Ok(mut latest) = self.last_phase.lock() { *latest = phase.to_string(); }

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // Проверяются оба соединения: отзыв фиксирует одна реплика, другая обязана
@@ -40,7 +42,7 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	familyA, familyB := "family-a-"+suffix, "family-b-"+suffix
 	mc := "mc-" + suffix
 	player := fmt.Sprintf("%x", sha256.Sum256([]byte(suffix)))
-	if _, err := a.db.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,password_hash) VALUES($1,$2,'Revocation Test','player','active','hash-before')`, user, user+"@example.test"); err != nil {
+	if _, err := a.SaveUser(model.User{ID: user, Email: user + "@example.test", DisplayName: "Revocation Test", RoleID: "player", Status: "active", PasswordHash: "hash-before"}); err != nil {
 		t.Fatal(err)
 	}
 	defer a.db.ExecContext(context.Background(), `DELETE FROM users WHERE id=$1`, user)

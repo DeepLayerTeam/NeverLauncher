@@ -73,6 +73,6 @@ public class Game {
     def test_interrupted_integrity_watcher_terminates_game(self):
         result=self.run_game('interrupt-monitor')
         self.assertNotEqual(result.returncode,0)
-        self.assertIn('Наблюдатель целостности остановился при работающей JVM',result.stderr)
+        self.assertIn('Контроль целостности остановился во время работы JVM',result.stderr)
 
 if __name__=='__main__': unittest.main(verbosity=2)

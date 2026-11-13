@@ -164,7 +164,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 	if updated, err := s.Repo.TouchUserLogin(user.ID); err == nil {
 		user = updated
 	}
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-login-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:login", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-login-" + session.ID, Actor: user.Email, Action: "auth:login", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-federation-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:federation:authenticated", Target: result.Provider.ID + "/" + result.Identity.Issuer + "/" + result.Identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion,

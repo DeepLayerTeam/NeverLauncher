@@ -313,8 +313,8 @@
       "size": 3217
     },
     ".github/workflows/guard-inventory.yml": {
-      "sha256": "c5538345e40d325608726560febb802227c710462775aa2f24b38b4a057149c2",
-      "size": 4560
+      "sha256": "7f048ac2dd4ae433b29a0e050fb12828b851a3bfa9586400d993e777d61bee32",
+      "size": 4555
     },
     ".github/workflows/guard-policy-operations.yml": {
       "sha256": "5f39d629243c9e83935a051c23f6f2b546bc9df07a0862bf0b6398a1d5136064",
@@ -353,8 +353,8 @@
       "size": 5136
     },
     ".github/workflows/integration-matrix.yml": {
-      "sha256": "92a742d3b9141d9cb1c8d5bbbb5558bf2658bedca831168bc16ac74ddff9d897",
-      "size": 13501
+      "sha256": "93325e8363c20e32526ebf69707bdd5bad0de6cc52a68e338ee4a192463e3e0f",
+      "size": 13486
     },
     ".github/workflows/isolated-build-worker.yml": {
       "sha256": "c23b7eec8a3916c0ac13f64fea6ed15d98c55b71ec519daa5d8f43a97749437b",
@@ -461,8 +461,8 @@
       "size": 2026
     },
     ".github/workflows/macos-guard-runtime.yml": {
-      "sha256": "635d28f01927022c7aa3e0ce4e021e1eee3666e2dcba35775f3d87fc455fa451",
-      "size": 2830
+      "sha256": "2ff14b5aafd7a7558b3975c31dbea4e4eae977f7b723ead26338f645a3f1541a",
+      "size": 2825
     },
     ".github/workflows/macos-production-delivery.yml": {
       "sha256": "e535b7f44c8e9f2ede939d84d9352990c6dcb2a85926eab506efdf522a3026bc",
@@ -509,8 +509,8 @@
       "size": 1795
     },
     ".github/workflows/modpacks-textures-publication.yml": {
-      "sha256": "cb5ff92cdc054aec7ed2e796cbcaaa623364f5b01d6e459cde9cddcfc7c0b5a2",
-      "size": 7320
+      "sha256": "c8714302022a80afb2f3547922ece45cb11de1f38ddfb043ca68ffd0942e8139",
+      "size": 7315
     },
     ".github/workflows/module-parity-completion.yml": {
       "sha256": "35e07ec224d9a9d23e64337a3d43c154c3470e3c3dd151d5e59f92709536ec08",
@@ -769,8 +769,8 @@
       "size": 2796
     },
     ".github/workflows/sqlite-pg-recovery.yml": {
-      "sha256": "16165c843a5d0f788e2343debf3e2f594c498d54cf59f7c86548ad1869d469a9",
-      "size": 2592
+      "sha256": "99f8c3bf6cd44c65245dc582da4abf8eb9ed1c8bbf044caa801cbdf02132844b",
+      "size": 2582
     },
     ".github/workflows/sqlite-postgresql-transfer.yml": {
       "sha256": "da31c91b8a96f1e5c01a4c96b1cc919adbce97f0e35a35457d6e2594fe7725ea",
@@ -1353,8 +1353,8 @@
       "size": 11329
     },
     "scripts/smoke/offline/session-device-risk.py": {
-      "sha256": "32da344b5b087964ee858634019761509543f49592dcc7732b5172f4f3fc16b4",
-      "size": 5259
+      "sha256": "16aa55f6526a5fa5452958de1910edc2dc91aa026e57407b9aa055b135d09167",
+      "size": 5546
     },
     "scripts/version/manage.py": {
       "sha256": "b4671c19f505bf391ddb1eaa5b579dc07b25b91e658dcdde4402f411b4f9b4de",

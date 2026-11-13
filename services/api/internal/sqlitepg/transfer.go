@@ -683,7 +683,7 @@ func addForeignKeys(ctx context.Context, src *sql.DB, tx pgx.Tx, ts []tableInfo)
 			}
 			_, e = tx.Exec(ctx, "ALTER TABLE "+qualified(t.Name)+" ADD CONSTRAINT "+quoted(name)+" FOREIGN KEY ("+strings.Join(k.from, ",")+") REFERENCES "+qualified(k.target)+" ("+strings.Join(k.to, ",")+") DEFERRABLE INITIALLY DEFERRED")
 			if e != nil {
-				return fmt.Errorf("Внешний ключ %d таблицы %s: %w", t.Name, k.id, e)
+				return fmt.Errorf("Внешний ключ %d таблицы %s: %w", k.id, t.Name, e)
 			}
 		}
 	}

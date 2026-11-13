@@ -107,7 +107,7 @@ fn retryable_backend_0396(error: &str) -> bool {
 
 fn retry_delay(base: u64, failures: u32, server_hint: Option<u64>) -> u64 {
     // Экспоненциальная задержка с сохранением исходного интервала Microsoft и slow_down.
-    base.max(5).max(5u64.saturating_mul(1u64 << failures.min(5)))
+    base.max(5).saturating_mul(1u64 << failures.min(5))
         .max(server_hint.unwrap_or(0)).clamp(5, 3600)
 }
 
@@ -156,8 +156,8 @@ fn scope(backend: &str, session_id: &str) -> Result<(Url, String), String> {
 // ID сеанса Launcher должен поступать из проверенных Backend данных аутентификации,
 // а не из поля интерфейса, позволяющего выбрать произвольное пространство учётных данных.
 fn verify_session_binding_0396(config: &Value, expected_session: &str) -> Result<(), String> {
-    let actual = config.get("SessionId").and_then(Value::as_str).unwrap_or("");
-    let user = config.get("UserId").and_then(Value::as_str).unwrap_or("");
+    let actual = config.get("launcherSessionId").and_then(Value::as_str).unwrap_or("");
+    let user = config.get("launcherUserId").and_then(Value::as_str).unwrap_or("");
     if actual.is_empty() || actual != expected_session || user.is_empty() || user.len() > 256 {
         return Err("Идентификатор сеанса Launcher не совпадает: доступ к защищённому хранилищу ОС запрещён".into());
     }
@@ -624,6 +624,14 @@ impl IdentityManager {
     /// Один нативный обработчик отвечает за интервалы опроса, задержку временных повторов
     /// и срок действия. Таймер браузера не может раскрыть билеты или создать частый опрос.
     pub async fn wait_device(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile, String> {
+        let (_, id) = scope(backend, session)?;
+        {
+            let mut flows = self.pending.lock().map_err(|_| "Менеджер учётных данных заблокирован".to_string())?;
+            if flows.get(&id).is_some_and(|flow| Instant::now() >= flow.expires) {
+                flows.remove(&id);
+                return Err("Срок действия кода устройства Microsoft истёк".into());
+            }
+        }
         let (_, id) = self.verified_scope(backend,access, session).await?;
         let mut cancelled = {
             let flows = self.pending.lock().map_err(|_| "Менеджер учётных данных заблокирован".to_string())?;

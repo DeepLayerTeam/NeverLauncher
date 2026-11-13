@@ -30,7 +30,7 @@ func TestCoordinator0471SchemaDriftFailClosed(t *testing.T) {
 	if next, err := Open(ctx, path); err == nil {
 		_ = next.Close()
 		t.Fatal("Неполная схема координатора незаметно пересоздана")
-	} else if !strings.Contains(err.Error(), "partial schema") {
+	} else if !strings.Contains(err.Error(), "неполная схема") {
 		t.Fatalf("Неожиданная ошибка схемы: %v", err)
 	}
 }

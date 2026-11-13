@@ -10,6 +10,19 @@ import (
 	"testing"
 )
 
+// A v2 draft must explicitly declare the runtime before the signing pipeline.
+func configurePackageRuntimeTest(t *testing.T, handler http.Handler, token, id string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/projects/demo-project/versions/"+id+"/manifest", strings.NewReader(`{"minecraft":{"version":"1.21.1","loader":"vanilla","mainClass":"net.minecraft.client.main.Main"},"runtime":{"java":{"majorVersion":21,"distribution":"any"},"launch":{"mainClass":"net.minecraft.client.main.Main","classpathStrategy":"libraries"}}}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("Runtime metadata: %d %s", res.Code, res.Body.String())
+	}
+}
+
 func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 	handler := testServer(t)
 	token := loginAdmin(t, handler)
@@ -35,6 +48,7 @@ func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 		t.Fatalf("packageId отсутствует: err=%v body=%s", err, res.Body.String())
 	}
 	packageID := createPayload.Data.PackageID
+	configurePackageRuntimeTest(t, handler, token, packageID)
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
@@ -111,6 +125,7 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := payload.Data.PackageID
+	configurePackageRuntimeTest(t, handler, token, id)
 
 	upload := func(content string) *httptest.ResponseRecorder {
 		var body bytes.Buffer

@@ -13,10 +13,21 @@ const navigationSource=readFileSync(new URL('../src/desktop_navigation.ts',impor
 const navigationCode=ts.transpileModule(navigationSource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const navigationModule={exports:{}};
 runInNewContext(navigationCode,{module:navigationModule,exports:navigationModule.exports});
+function loadWorkspaceDependency(name) {
+  const source=readFileSync(new URL(`../src/${name}.ts`,import.meta.url),'utf8');
+  const code=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+  const dependency={exports:{}};
+  runInNewContext(code,{module:dependency,exports:dependency.exports});
+  return dependency.exports;
+}
+const statusRu=loadWorkspaceDependency('status-ru');
+const desktopExperience=loadWorkspaceDependency('desktop_experience');
 const module={exports:{}};
-runInNewContext(output.outputText,{module,exports:module.exports,require:(name)=>{
+runInNewContext(output.outputText,{module,exports:module.exports,document:{documentElement:{lang:"ru"}},require:(name)=>{
   if(name==='react')return React;
   if(name==='./desktop_navigation')return navigationModule.exports;
+  if(name==='./status-ru')return statusRu;
+  if(name==='./desktop_experience')return desktopExperience;
   throw Error(`Непредусмотренная зависимость ${name}`);
 }});
 const {BuildsWorkspace0353,ServersWorkspace0353,HistoryWorkspace0353}=module.exports;

@@ -4,5 +4,5 @@
 async fn missing_guard_cannot_satisfy_running_heartbeat_or_restart_transparently() {
     let guard = runtime::macos_guard::GuardSupervisor::new();
     let error = guard.ping_running().await.expect_err("потерянный процесс Guard не должен запускаться автоматически");
-    assert!(error.contains("disappeared"));
+    assert!(error.contains("Guard macOS пропал во время игры"));
 }

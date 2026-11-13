@@ -43,7 +43,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/nl0478"; chmod 700 "$RUNNER_TEMP/nl0478"
           echo "TMPDIR=$RUNNER_TEMP/nl0478" >> "$GITHUB_ENV"
-          PYTHONPATH=scripts/operations python3 -m unittest scripts.operations.test_sqlite_pg_cutover_0475 scripts.operations.test_sqlite_pg_recovery_0477 scripts.integration.test_verify_0478 -v
+          PYTHONPATH=scripts/operations python3 -m unittest scripts.operations.test_sqlite_pg_cutover scripts.operations.test_sqlite_pg_recovery scripts.integration.test_verify -v
           sudo env PYTHONPATH=scripts/operations python3 -m unittest scripts.operations.test_legacy_upgrade_0476 -v
           (cd services/api && go test -race -count=1 -timeout=20m ./internal/sqlitedurable ./internal/sqlitecore ./internal/sqlitecoord ./internal/sqlitepg)
           python3 scripts/version/manage.py check

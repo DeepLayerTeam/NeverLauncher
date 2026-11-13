@@ -23,7 +23,10 @@ import (
 // Реальная HTTP-фикстура с двумя issuer, использующими одинаковые subject и email.
 // Внешний сервис возвращает refresh-секрет, который НИКОГДА не должен появляться в
 // токене Launcher.
-type dualIssuerConnector02912 struct{ calls *atomic.Int64 }
+type dualIssuerConnector02912 struct {
+	calls   *atomic.Int64
+	subject string
+}
 
 func (dualIssuerConnector02912) Metadata() authconnector.Metadata {
 	return authconnector.Metadata{ID: "issuer-e2e", DisplayName: "Issuer isolation E2E", Version: "2.0.0", Capabilities: []authconnector.Capability{authconnector.CapabilityPasswordAuth}}
@@ -43,7 +46,11 @@ func (c dualIssuerConnector02912) AuthenticatePassword(_ context.Context, req au
 	default:
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "Некорректный пароль")
 	}
-	return authconnector.Authentication{Identity: authconnector.Identity{Subject: "same-subject", Issuer: issuer, Email: "shared@example.test"}, AuthMethods: []string{"password"}, ProviderToken: "upstream-secret-for-" + issuer}, nil
+	subject := c.subject
+	if subject == "" {
+		subject = "same-subject"
+	}
+	return authconnector.Authentication{Identity: authconnector.Identity{Subject: subject, Issuer: issuer, Email: "shared@example.test"}, AuthMethods: []string{"password"}, ProviderToken: "upstream-secret-for-" + issuer}, nil
 }
 
 type authHTTPResult02912 struct {

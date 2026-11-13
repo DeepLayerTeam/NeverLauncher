@@ -53,7 +53,7 @@ jobs:
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_inventory_0501
       - name: Тест настоящего дочернего процесса Guard в Linux и аутентифицированного IPC
         if: runner.os == 'Linux'
-        run: cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_inventory_0501 -- --nocapture
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_inventory -- --nocapture
       - name: Проверка принципа запрета при ошибке при обработке матрицы
         run: python scripts/guard_ci/test_inventory.py
       - name: Проверка аутентифицированного IPC Guard и экспорт фактического результата

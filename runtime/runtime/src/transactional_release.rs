@@ -1001,7 +1001,7 @@ mod tests {
         fs::create_dir_all(source.join("mods")).unwrap();
         fs::write(source.join("mods/a.jar"),b"CORRUPTED").unwrap();
         let error=adopt_verified_staged(&manifest,&source,&root,&key,None).await.unwrap_err();
-        assert!(error.contains("Несовпадение хеша"),"{error}");
+        assert!(error.contains("Хеш подготовленного автономного источника не совпадает"),"{error}");
         assert!(pointer(&root).unwrap().active.is_none());
         assert!(!root.join("mods/a.jar").exists());
         let _=fs::remove_dir_all(parent);
@@ -1128,7 +1128,7 @@ mod tests {
         let active=pointer(&root).unwrap().active.unwrap();
         validate_release(&active,&key).unwrap();
         let mut tampered=active.clone();tampered.plan_sha256=Some("f".repeat(64));
-        assert!(validate_release(&tampered,&key).unwrap_err().contains("plan identity"));
+        assert!(validate_release(&tampered,&key).unwrap_err().contains("Не совпадает идентификатор установленного плана запуска"));
         rollback(&root,&key).await.unwrap();
         assert!(!root.join("mods/shader.jar").exists());
         assert!(!root.join("mods/sodium.jar").exists());
@@ -1182,7 +1182,7 @@ mod tests {
         fs::write(root.join("mods/sodium.jar"),b"PLAYER_EDIT").unwrap();
         let minimal=release_from_plan_0246(&m,"minimal",802);
         let err=commit(&root,minimal,&key,&stage).unwrap_err();
-        assert!(err.contains("предыдущий активный выпуск изменился"),"{err}");
+        assert!(err.contains("Предыдущий активный релиз изменился"),"{err}");
         assert_eq!(fs::read(root.join("mods/sodium.jar")).unwrap(),b"PLAYER_EDIT");
         assert_eq!(pointer(&root).unwrap().active.unwrap().preset.as_deref(),Some("quality"));
         fs::remove_dir_all(root).unwrap();
@@ -1204,7 +1204,7 @@ mod tests {
         assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
         let active=pointer(&root).unwrap().active.unwrap();
         assert_eq!(active.plan_sha256,Some(resolved_download_0246::resolve(&m,None).unwrap().sha256));
-        assert!(rollback(&root,&key).await.unwrap_err().contains("no last-known-good"),
+        assert!(rollback(&root,&key).await.unwrap_err().contains("Отсутствует предыдущий работоспособный релиз"),
             "Восстановление начальной установки не должно считать повреждённые данные последней работоспособной версией");
         assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
         fs::remove_dir_all(root).unwrap();
@@ -1478,7 +1478,7 @@ mod tests {
         sign_manifest(&mut oversized, &"1a".repeat(32), "2026-10-19T00:00:00Z").unwrap();
         let (_tx,control) = watch::channel(Directive::Running);
         let err = install(&oversized,&root,&key,None,format!("budget-{:x}",rand::random::<u64>()),control,None).await.unwrap_err();
-        assert!(err.contains("disk") || err.contains("overflow"), "{err}");
+        assert!(err.contains("Недостаточно свободного места") || err.contains("Переполнение"), "{err}");
         assert_eq!(pointer(&root).unwrap().generation,old_generation);
         assert_eq!(fs::read(root.join("libraries/a.jar")).unwrap(),b"OLD");
         let _ = fs::remove_dir_all(root);

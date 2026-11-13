@@ -223,7 +223,7 @@ func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, 
 		user = updated
 	}
 	now := time.Now().UTC()
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-login-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:login", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-login-" + session.ID, Actor: user.Email, Action: "auth:login", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-federation-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:federation:authenticated", Target: result.Provider.ID + "/" + result.Identity.Issuer + "/" + result.Identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "authenticated", "provider": result.Provider.ID, "identity": map[string]any{"id": result.Identity.ID, "provider": result.Identity.Provider, "issuer": result.Identity.Issuer, "subject": result.Identity.Subject}, "authMethods": mfa.Methods, "user": sanitizeUserAccount(user), "session": sanitizeSessionRecord(session), "tokens": map[string]any{"accessToken": accessToken, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refreshToken, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true}}})
 }

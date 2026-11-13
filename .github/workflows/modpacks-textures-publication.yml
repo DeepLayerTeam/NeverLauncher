@@ -57,7 +57,7 @@ jobs:
         working-directory: runtime/runtime
         run: |
           set -euo pipefail
-          cargo test --test selected_optional_0526
+          cargo test --test selected_optional
           cargo build --bin runtime
   live-physical:
     # Это намеренно не считается автоматическим прохождением GA: нужны отдельная реальная JVM,

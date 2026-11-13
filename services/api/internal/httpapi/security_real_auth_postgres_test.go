@@ -46,7 +46,7 @@ func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
 		if _, err := firstRepo.SaveUser(model.User{ID: id, Email: id + "@example.test", RoleID: "player", Status: "active"}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := firstRepo.SaveAuthIdentity(model.AuthIdentity{UserID: id, Provider: "issuer-e2e", Issuer: issuers[i], Subject: "same-subject", Email: "shared@example.test"}); err != nil {
+		if _, err := firstRepo.SaveAuthIdentity(model.AuthIdentity{UserID: id, Provider: "issuer-e2e", Issuer: issuers[i], Subject: "same-subject-" + suffix, Email: "shared@example.test"}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -63,7 +63,7 @@ func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
 		}
 		t.Cleanup(func() { _ = state.AuthSessions.persistent.db.Close() })
 		core := federation.New(repo)
-		if err := core.Register(dualIssuerConnector02912{calls: &atomic.Int64{}}); err != nil {
+		if err := core.Register(dualIssuerConnector02912{calls: &atomic.Int64{}, subject: "same-subject-" + suffix}); err != nil {
 			t.Fatal(err)
 		}
 		if err := core.ConfigureRouting(federation.RoutingConfig{Version: 1, DefaultProvider: "issuer-e2e"}); err != nil {

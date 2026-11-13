@@ -102,7 +102,7 @@ public class Game {
     def test_unlisted_runtime_classpath(self):
         unknown=self.root/'unexpected.jar';shutil.copy2(self.jar,unknown)
         rc,out,err=self.finish(self.invoke(extra=[unknown]))
-        self.assertNotEqual(rc,0);self.assertIn('Путь классов не подписан',err)
+        self.assertNotEqual(rc,0);self.assertIn('Путь к классам JVM Guard не охвачен подписью',err)
 
     def test_wrong_initial_hash(self):
         proc=self.invoke(args=['wait'])
@@ -131,7 +131,7 @@ public class Game {
         self.assertEqual(proc.stdout.readline().strip(),'GAME_STARTED')
         (self.root/'mods/injected.jar').write_bytes(b'unsigned')
         rc,_,err=self.finish(proc,timeout=16)
-        self.assertNotEqual(rc,0);self.assertIn('Неутверждённый файл Runtime',err)
+        self.assertNotEqual(rc,0);self.assertIn('Неодобренный файл среды выполнения',err)
 
     @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'),'Linux /proc/maps+gcc required')
     def test_live_unapproved_mapped_native(self):
@@ -141,7 +141,7 @@ public class Game {
         # обнаружить.
         proc=self.invoke(args=[lib])
         rc,out,err=self.finish(proc,timeout=16)
-        self.assertNotEqual(rc,0);self.assertIn('Неутверждённый загруженный нативный модуль',err)
+        self.assertNotEqual(rc,0);self.assertIn('Неодобренный нативный модуль, отображённый в память',err)
 
     @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'),'Linux /proc/maps+gcc required')
     def test_live_authorized_native(self):
@@ -156,7 +156,7 @@ public class Game {
         shutil.copy2(self.native,path)
         proc=self.invoke(args=[path]);rc,_,err=self.finish(proc,timeout=17)
         self.assertNotEqual(rc,0)
-        self.assertIn('Неутверждённый внешний нативный модуль',err)
+        self.assertIn('Неодобренный внешний нативный модуль',err)
 
     @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Требуется нативный слой защиты Linux')
     def test_external_native_signed_and_pinned_allowed(self):

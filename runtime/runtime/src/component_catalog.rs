@@ -675,7 +675,7 @@ mod tests{
   let allowed=resolve_conditional_0244(cat,"quality",&env).unwrap();
   assert!(allowed.contains("performance.sodium")&&allowed.contains("shaders"));
   let mut invalid=env;invalid.os="macos".into();
-  assert!(resolve_conditional_0244(cat,"quality",&invalid).unwrap_err().contains("condition_unsatisfied"));
+  assert!(resolve_conditional_0244(cat,"quality",&invalid).unwrap_err().contains("Условие не выполнено"));
   let mut changed=manifest.clone();
   changed.component_catalog.as_mut().unwrap().components[1].conditions.as_mut().unwrap().java_major_max=17;
   assert!(validate(&changed).is_err());

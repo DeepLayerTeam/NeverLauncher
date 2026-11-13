@@ -1915,7 +1915,7 @@ mod tests {
         let runtimes = root.join("runtimes");
         let error = ensure_managed_java_from_distribution(21, "temurin", Some(&runtimes),
             manifest_path.to_str().unwrap(), Some(&manifest_sha256)).await.unwrap_err();
-        assert!(error.contains("bytecode") || error.contains("probe"), "{error}");
+        assert!(error.contains("Архитектура исполняемого файла управляемой Java не совпадает"), "{error}");
         // Архив, подделывающий допустимый java -version, никогда не должен публиковать установленный Runtime или повторно использоваться как проверенная запись кэша.
         let base = runtimes.join("temurin/21");
         let (_, arch) = adoptium_platform().unwrap();

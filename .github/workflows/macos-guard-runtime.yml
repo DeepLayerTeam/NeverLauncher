@@ -47,7 +47,7 @@ jobs:
       - name: Проверить процессы macOS через libproc и интеграцию подписанной JVM
         run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib macos_runtime_guard_0509 -- --nocapture
       - name: "Проверить запрет скрытого перезапуска механизма активности Guard без полномочий"
-        run: cargo test --manifest-path runtime/runtime/Cargo.toml --test macos_guard_runtime_0509 -- --nocapture
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --test macos_guard_runtime -- --nocapture
       - name: "Регрессионные проверки целостности подписанных JAR и нативных файлов, а также сторожевого процесса Java"
         run: |
           python3 scripts/tests/guard_runtime_integrity.py

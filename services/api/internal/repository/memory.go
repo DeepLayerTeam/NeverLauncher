@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -290,6 +291,14 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 		},
 	}
 
+	// The built-in demo repository is non-production; sign its immutable seed release.
+	seed := sha256.Sum256([]byte("Ключ подписи Launcher для разработки — запрещено использовать в рабочей среде"))
+	key := ed25519.NewKeyFromSeed(seed[:])
+	payload, err := json.Marshal(manifest)
+	if err != nil {
+		panic(err)
+	}
+	manifest.Signature = &model.SignatureInfo{Algorithm: "Ed25519", PublicKey: hex.EncodeToString(key.Public().(ed25519.PublicKey)), Signature: hex.EncodeToString(ed25519.Sign(key, payload)), SignedAt: now.Format(time.RFC3339Nano)}
 	return &MemoryRepository{
 		nextExtensionInstallRevisionID: 1,
 		extensionUpdateLeases:          map[string]extensionUpdateLease02011{},

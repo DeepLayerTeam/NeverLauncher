@@ -2005,8 +2005,9 @@ mod tests {
             jvm_args: vec![], game_args: vec![], command_preview: "".into(), deterministic_sha256: "".into(),
         };
         let mut process = Command::new("java");
+        process.env("JAVA_TOOL_OPTIONS", "-javaagent:untrusted.jar");
         apply_launch_command_0223(&mut process, &plan);
-        assert!(process.as_std().get_envs().any(|(name, value)| name.to_string_lossy() == "JAVA_TOOL_OPTIONS" && value.is_none()));
+        assert!(!process.as_std().get_envs().any(|(name, value)| name.to_string_lossy() == "JAVA_TOOL_OPTIONS" && value.is_some()));
         plan.environment_allowlist.push("LANG".into());
         let mut another = Command::new("java");
         apply_launch_command_0223(&mut another, &plan);
@@ -2251,7 +2252,7 @@ mod tests {
         let cat=cycle.component_catalog.as_mut().unwrap();
         cat.components[0].dependencies.push(ComponentRequirement{id:"shaders".into(),version_range:String::new()});
         cat.digest=digest_v3(cat);
-        assert!(active_files(&cycle,Some("minimal")).unwrap_err().contains("cycle"));
+        assert!(active_files(&cycle,Some("minimal")).unwrap_err().contains("Циклическая зависимость"));
         let mut exclusion=manifest.clone();
         let cat=exclusion.component_catalog.as_mut().unwrap();
         cat.components[2].exclusive_group="performance-engine".into();

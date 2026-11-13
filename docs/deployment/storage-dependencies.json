@@ -23440,247 +23440,242 @@
       "findings": [
         {
           "category": "postgres-repository-construction",
-          "line": 24,
-          "evidence": "a, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 24,
+          "line": 26,
           "evidence": "a, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 26,
+          "evidence": "a, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 28,
           "evidence": "t.Fatal(\"Ожидался PostgreSQL\")"
         },
         {
           "category": "postgres-repository-construction",
-          "line": 29,
-          "evidence": "b, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 29,
+          "line": 31,
           "evidence": "b, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 31,
+          "evidence": "b, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 33,
           "evidence": "t.Fatal(\"Ожидался PostgreSQL\")"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 43,
-          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,password_hash) VALUES($1,$2,'Revocation Test','player','active','hash-before')`, user, us"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 46,
+          "line": 48,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM users WHERE id=$1`, user)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 48,
+          "line": 50,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_profiles(user_id,uuid,name) VALUES($1,$2,$3)`, user, uuid, \"Revoke0297\"); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 58,
+          "line": 60,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,refresh_family_id,status,expires_at) VALUES($1,$2,$3,'player',$4,'active',now()+interval '1 hou"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 62,
+          "line": 64,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id) VALUES($1,$2,$3)`, pair[1], pair[0], user); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 66,
+          "line": 68,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_tokens(id,family_id,session_id,token_hash,expires_at) VALUES($1,$2,$3,$4,now()+interval '1 hour')`, \"rt-\"+pair[0], pair[1], pa"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 74,
+          "line": 76,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 77,
+          "line": 79,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_joins(username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,expires_at) VALUES('Revoke0297','re"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 83,
+          "line": 85,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO projects(id,name) VALUES($1,'Revocation E2E')`, project); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 86,
+          "line": 88,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM projects WHERE id=$1`, project)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 87,
+          "line": 89,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_nodes_v2(id,name,project_id,token_hash,kind,runtime_id,runtime_epoch) VALUES($1,'Revocation Proxy',$2,'','velocity',$3"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 90,
+          "line": 92,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM server_bridge_nodes_v2 WHERE id=$1`, node)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 91,
+          "line": 93,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,session_id,binding_epoch,project_id"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 95,
+          "line": 97,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO durable_jobs(id,kind,actor_type,actor_id,action,resource_type,resource_id,idempotency_key,payload,payload_digest,status,lease_owner,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 95,
+          "line": 97,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO durable_jobs(id,kind,actor_type,actor_id,action,resource_type,resource_id,idempotency_key,payload,payload_digest,status,lease_owner,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 98,
+          "line": 100,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO durable_job_attempts(job_id,attempt,worker_id,lease_fence,status) VALUES($1,1,'worker',1,'running')`, job); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 101,
+          "line": 103,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM durable_jobs WHERE id=$1`, job)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 102,
+          "line": 104,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM server_bridge_player_sessions_v3 WHERE correlation_id=$1`, player)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 104,
+          "line": 106,
           "evidence": "if _, err := a.db.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=now(),revoked_reason='test-logout' WHERE id=$1`, first); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 111,
+          "line": 113,
           "evidence": "{`SELECT status FROM refresh_token_families WHERE id=$1`, \"revoked\"},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 112,
+          "line": 114,
           "evidence": "{`SELECT status FROM minecraft_sessions WHERE id=$1`, \"revoked\"},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 113,
+          "line": 115,
           "evidence": "{`SELECT status FROM server_bridge_player_sessions_v3 WHERE session_id=$1`, \"invalidated\"},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 128,
+          "line": 130,
           "evidence": "if err := b.db.QueryRowContext(ctx, `SELECT count(*) FROM minecraft_joins WHERE minecraft_session_id=$1`, mc).Scan(\u0026joins); err != nil || joins != 0 {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 132,
+          "line": 134,
           "evidence": "if err := b.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_control_commands_v3 WHERE server_id=$1 AND command_type='player.kick' AND status='pending' AND requested_by="
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 137,
+          "line": 139,
           "evidence": "if _, err := b.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 141,
+          "line": 143,
           "evidence": "if err := b.db.QueryRowContext(ctx, `SELECT status FROM durable_jobs WHERE id=$1`, job).Scan(\u0026status); err != nil || status != \"running\" {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 146,
+          "line": 148,
           "evidence": "if _, err := b.db.ExecContext(ctx, `UPDATE users SET role_id='viewer' WHERE id=$1`, user); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 149,
+          "line": 151,
           "evidence": "for _, q := range []string{`SELECT status FROM auth_sessions WHERE id=$1`, `SELECT status FROM refresh_token_families WHERE session_id=$1`} {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 154,
+          "line": 156,
           "evidence": "if err := a.db.QueryRowContext(ctx, `SELECT status FROM durable_jobs WHERE id=$1`, job).Scan(\u0026status); err != nil || status != \"revoked\" {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 158,
+          "line": 160,
           "evidence": "if _, err := a.db.ExecContext(ctx, `UPDATE auth_sessions SET status='active',revoked_at=NULL,revoked_reason='' WHERE id=$1`, second); err == nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 168,
+          "line": 170,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,refresh_family_id,status,expires_at) VALUES($1,$2,$3,'viewer',$4,'active',now()+interval '1 hou"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 172,
+          "line": 174,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id) VALUES($1,$2,$3)`, \"fresh-family-\"+suffix, fresh, user); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 179,
+          "line": 181,
           "evidence": "if _, err := a.db.ExecContext(ctx, `UPDATE users SET display_name='Renamed' WHERE id=$1`, user); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 182,
+          "line": 184,
           "evidence": "if err := b.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, fresh).Scan(\u0026status); err != nil || status != \"active\" {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 189,
+          "line": 191,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO roles(id,name,permissions) VALUES($1,'Role Revocation Test','[\"project:read\"]'::jsonb)`, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 189,
+          "line": 191,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO roles(id,name,permissions) VALUES($1,'Role Revocation Test','[\"project:read\"]'::jsonb)`, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 192,
+          "line": 194,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM roles WHERE id=$1`, role)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 193,
+          "line": 195,
           "evidence": "if _, err := b.db.ExecContext(ctx, `UPDATE users SET role_id=$2 WHERE id=$1`, user, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 202,
+          "line": 204,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,refresh_family_id,status,expires_at) VALUES($1,$2,$3,$4,$5,'active',now()+interval '1 hour')`, "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 206,
+          "line": 208,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id) VALUES($1,$2,$3)`, roleFamily, roleSession, user); err != nil {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 213,
+          "line": 215,
           "evidence": "if _, err := b.db.ExecContext(ctx, `UPDATE roles SET permissions='[]'::jsonb WHERE id=$1`, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 213,
+          "line": 215,
           "evidence": "if _, err := b.db.ExecContext(ctx, `UPDATE roles SET permissions='[]'::jsonb WHERE id=$1`, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 216,
+          "line": 218,
           "evidence": "if err := a.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, roleSession).Scan(\u0026status); err != nil || status != \"revoked\" {"
         }
       ]

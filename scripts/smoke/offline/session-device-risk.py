@@ -118,9 +118,9 @@ need(
     "services/api/internal/httpapi/session_device_risk_test.go",
     [
         "TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126",
-        "bound refresh succeeded without device proof",
-        "access token minted before device binding survived binding_epoch change",
-        "refresh family survived replay compromise",
+        "Обновление привязанного токена прошло без подтверждения устройства",
+        "Токен доступа, выданный до привязки устройства, остался действителен после изменения binding_epoch",
+        "Семейство токенов обновления пережило компрометацию повторным использованием",
         "TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126",
         "TestRefreshProofCanonicalPayloadDoesNotContainRefreshSecret0126",
     ],
