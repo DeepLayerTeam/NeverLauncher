@@ -130,7 +130,7 @@ func (s Server) persistenceSmoke(w http.ResponseWriter, r *http.Request) {
 	} else if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
-		if err := s.Repo.Health(ctx); err != nil {
+		if err := s.sqliteRepositoryHealth950(ctx); err != nil {
 			add("sqlite-integrity", "failed", err.Error())
 		} else {
 			add("sqlite-integrity", "ok", "Состояние хранилища SQLite WAL и репозитория проверено")
@@ -220,7 +220,7 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 			{"id": "postgres-ddl", "status": "available"},
 		}
 		if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
-			payload["checks"] = []map[string]string{{"id": "sqlite-wal-repository", "status": boolStatus950(s.Repo.Health(context.Background()) == nil)}}
+			payload["checks"] = []map[string]string{{"id": "sqlite-wal-repository", "status": boolStatus950(s.sqliteRepositoryHealth950(context.Background()) == nil)}}
 		}
 	}
 	return payload
@@ -534,4 +534,13 @@ func redactDSN950(dsn string) string {
 		}
 	}
 	return "redacted"
+}
+
+// SQLite readiness must fail closed when the configured repository cannot verify its health.
+func (s Server) sqliteRepositoryHealth950(ctx context.Context) error {
+	checker, ok := s.Repo.(interface{ Health(context.Context) error })
+	if !ok {
+		return errors.New("Репозиторий SQLite не поддерживает проверку целостности")
+	}
+	return checker.Health(ctx)
 }

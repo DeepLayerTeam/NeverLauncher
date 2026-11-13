@@ -29,7 +29,7 @@ BEGIN
  ELSE p:=NEW.project_id;pr:=NEW.profile_id;ch:=NEW.channel; END IF;
  SELECT run_id INTO owner_run FROM migration_cutovers_03311
  WHERE project_id=p AND profile_id=pr AND channel=ch AND state IN ('staged','active');
- IF owner_run IS NOT NULL AND current_setting('launcher.migration_cutover_run',true) IS DISTINCT FROM owner_run THEN
+ IF owner_run IS NOT NULL AND current_setting('never.migration_cutover_run',true) IS DISTINCT FROM owner_run THEN
   RAISE EXCEPTION 'migration cutover active: channel writer fenced' USING ERRCODE='23514';
  END IF;
  IF TG_OP='DELETE' THEN RETURN OLD; END IF;

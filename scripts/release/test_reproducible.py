@@ -106,7 +106,7 @@ class ReproTests(unittest.TestCase):
         create_bundle(self.a)
         with zipfile.ZipFile(self.a/name,'a') as z:
             z.writestr('launcher-desktop.exe',fake_binary('windows','arm64'))
-        with self.assertRaisesRegex(ValueError,'duplicate'):
+        with self.assertRaisesRegex(ValueError,'Повторяющийся элемент архива'):
             repro.capture(self.a,builder='a',runner='1',commit=self.commit)
 
     def test_signing_identity_and_signature_replacement_blocked(self):
@@ -152,7 +152,7 @@ class ReproTests(unittest.TestCase):
             result=repro.link(comparison,approval,self.dir,a_key=self.keys[0][2],b_key=self.keys[1][2],approval_key=self.keys[2][2],native_reports_dir=native_dir)
             self.assertEqual(set(result['targets']),repro.TARGETS)
             approval['targets']['darwin-arm64']['nativeCheck']='skipped'
-            with self.assertRaisesRegex(ValueError,'OS-native'):
+            with self.assertRaisesRegex(ValueError,'Отсутствует штатная проверка подписи macOS'):
                 repro.link(comparison,approval,self.dir,a_key=self.keys[0][2],b_key=self.keys[1][2],approval_key=self.keys[2][2],native_reports_dir=native_dir)
 
 if __name__=='__main__':unittest.main()

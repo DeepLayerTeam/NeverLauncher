@@ -287,7 +287,7 @@ func TestGuardCompatibility0502RealJVMPremainClassEnforcement(t *testing.T) {
 	if err := guardCompatInstall0502(root, signCompat0502(t, p, priv), key); err != nil {
 		t.Fatal(err)
 	}
-	if output, err := run(); err == nil || !strings.Contains(output, "unauthorized class transformation") {
+	if output, err := run(); err == nil || !strings.Contains(output, "неразрешённое преобразование класса") {
 		t.Fatalf("несанкционированное изменение класса во время работы не было заблокировано: %v %s", err, output)
 	}
 }

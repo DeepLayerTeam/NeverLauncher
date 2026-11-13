@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strings"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )

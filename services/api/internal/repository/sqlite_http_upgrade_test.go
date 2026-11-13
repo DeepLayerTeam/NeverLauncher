@@ -15,7 +15,7 @@ import (
 
 func TestHTTPUpgrade0472PreservesProjectAndPrivateAuth(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "http.sqlite")
+	path := filepath.Join(privateSQLiteTempDir(t), "http.sqlite")
 	r, err := OpenSQLiteHTTPRepository0372(ctx, path, "https://test.example")
 	if err != nil {
 		t.Fatal(err)
@@ -99,7 +99,7 @@ func TestHTTPUpgrade0472PreservesProjectAndPrivateAuth(t *testing.T) {
 
 func TestHTTPUpgrade0472RejectsMissingAuthSecretsWithoutMutation(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "http.sqlite")
+	path := filepath.Join(privateSQLiteTempDir(t), "http.sqlite")
 	r, err := OpenSQLiteHTTPRepository0372(ctx, path, "")
 	if err != nil {
 		t.Fatal(err)

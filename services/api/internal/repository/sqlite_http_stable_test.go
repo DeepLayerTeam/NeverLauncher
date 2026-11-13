@@ -32,7 +32,7 @@ type stableSQLiteFixture0374 struct {
 func stableFixture0374(t *testing.T) stableSQLiteFixture0374 {
 	t.Helper()
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "stable.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "stable.db")
 	r, err := OpenSQLiteHTTPRepository0372(ctx, path, "")
 	if err != nil {
 		t.Fatal(err)

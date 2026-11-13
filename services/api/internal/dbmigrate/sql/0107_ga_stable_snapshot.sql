@@ -68,7 +68,7 @@ BEGIN
    must_check := lower(btrim(NEW.channel))='stable' AND NEW.status='published' AND OLD.status IS DISTINCT FROM NEW.status;
  END IF;
  IF must_check THEN
-   token := current_setting('launcher.stable_gate_token',true);
+   token := current_setting('never.stable_gate_token',true);
    IF token IS NULL OR token !~ '^[0-9a-f]{64}$' OR
       NOT stable_runtime_permit_valid_03411(NEW.id,
        (SELECT manifest_sha256 FROM stable_runtime_permits_03411

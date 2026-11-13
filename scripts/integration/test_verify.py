@@ -5,8 +5,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.integration import verify_0478 as verifier
-from scripts.integration import legacy_matrix_0478 as legacy
+from scripts.integration import verify as verifier
+from scripts.integration import legacy_matrix as legacy
 
 class EvidenceSafety(unittest.TestCase):
     def setUp(self):

@@ -357,7 +357,8 @@ public final class LauncherFabricBridge implements ModInitializer {
                 if (player == null) return BridgeControlResult.failed("player_not_online");
                 String uuid = player.getGameProfile().getId().toString();
                 String correlation = payload.getOrDefault("sessionCorrelationId", "");
-                if (!correlation.isBlank() && !runtime.matchesPlayerSession(username, correlation))
+                RuntimeState current = state;
+                if (!correlation.isBlank() && (current == null || stopping.get() || !current.api.matchesPlayerSession(username, correlation)))
                     return BridgeControlResult.failed("player_session_changed");
                 if (!kickConfirmations.begin(username, player.getGameProfile().getId())) return BridgeControlResult.indeterminate("player_kick_already_pending");
                 try { player.networkHandler.disconnect(Text.literal(safeLine(payload.getOrDefault("reason", "Отключено оператором сервера"), 512))); }

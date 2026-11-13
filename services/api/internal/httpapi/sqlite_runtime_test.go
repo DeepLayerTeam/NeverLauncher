@@ -29,7 +29,7 @@ func openSQLiteRuntimeTest0373(t *testing.T, path, secret string) (*repository.S
 	return repo, state
 }
 func TestSQLiteRuntimeRestartAndSingleUse0373(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "launcher.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "launcher.db")
 	repo, state := openSQLiteRuntimeTest0373(t, path, sqliteTestSecret0373)
 	user := model.User{ID: "u-1", Email: "user@example.test", RoleID: "owner", Status: "active"}
 	req := httptest.NewRequest("POST", "https://launcher.test/api/v1/auth/login", nil)
@@ -115,7 +115,7 @@ func TestSQLiteRuntimeRestartAndSingleUse0373(t *testing.T) {
 	}
 }
 func TestSQLiteRuntimeRejectsWrongKey0373(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "launcher.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "launcher.db")
 	repo, state := openSQLiteRuntimeTest0373(t, path, sqliteTestSecret0373)
 	state.Security.setEmailVerified("user", true)
 	if err := repo.Close(); err != nil {

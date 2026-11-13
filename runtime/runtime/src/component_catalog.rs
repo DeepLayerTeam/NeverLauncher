@@ -611,11 +611,11 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
     }
     if cat.schema_version=="1.0"{
         if preset.is_some_and(|p|!p.is_empty()){return Err("Каталог v1 не поддерживает варианты компонентов".into())}
-        selected.extend(cat.components.iter().map(|c|c.id.as_str()));
+        selected.extend(cat.components.iter().map(|c|c.id.clone()));
     }
     else {
         let (roots,_)=selection_roots_0247(cat,preset.unwrap_or_default())?;
-        selected.extend(roots.iter().map(String::as_str));
+        selected.extend(roots);
     }
     for c in &cat.components{if selected.contains(c.id.as_str()){active.extend(c.files.iter().cloned());}}
     Ok(active)

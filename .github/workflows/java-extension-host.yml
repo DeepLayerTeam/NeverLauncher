@@ -92,7 +92,7 @@ jobs:
           java-version: '17'
       - uses: actions/setup-go@v5
         with:
-          go-version-file: cli/go.mod
+          go-version: '1.27.3'
       - name: Собрать запускаемые подписанные пакеты .nlext и проверить Ed25519
         run: |
           set -eu

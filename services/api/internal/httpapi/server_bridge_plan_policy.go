@@ -14,12 +14,12 @@ import (
 const planProofDomain02412 = "Launcher-Verified-Component-Plan-v1"
 const planChallengePurpose02412 = "serverbridge-verified-plan-v1"
 
-type planPolicy02412 = planpolicy02412.Policy
+type planPolicy02412 = planpolicy.Policy
 
-func planPolicyRequired02412() bool                              { return planpolicy02412.Required() }
-func loadPlanPolicy02412(now time.Time) (planPolicy02412, error) { return planpolicy02412.Load(now) }
+func planPolicyRequired02412() bool                              { return planpolicy.Required() }
+func loadPlanPolicy02412(now time.Time) (planPolicy02412, error) { return planpolicy.Load(now) }
 func planMatches02412(p planPolicy02412, server, project, profile, channel, release, catalog, plan string) bool {
-	return planpolicy02412.Matches(p, server, project, profile, channel, release, catalog, plan)
+	return planpolicy.Matches(p, server, project, profile, channel, release, catalog, plan)
 }
 
 type planChallengeRequest02412 struct {

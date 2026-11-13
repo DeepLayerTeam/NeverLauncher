@@ -119,7 +119,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v6
         with:
-          go-version-file: cli/go.mod
+          go-version: '1.27.3'
       - name: "Проверить HTTPS, закрепление доверенного манифеста и сборку актуального CLI"
         env:
           URL: ${{ inputs.baselines_url }}
@@ -195,7 +195,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v6
         with:
-          go-version-file: cli/go.mod
+          go-version: '1.27.3'
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/setup-java@v4
         with:

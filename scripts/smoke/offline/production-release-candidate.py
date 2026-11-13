@@ -47,7 +47,7 @@ require(
         "verifyMacOSNotarizationEvidence0154",
         "verifyManagedJREDistribution0155",
         "verifyPublicProductionDeliveryMatrix0159",
-        "PROVENANCE.json sourceCommit mismatch",
+        "Несовпадение sourceCommit в PROVENANCE.json",
     ],
     "Реализация кандидата на промышленный релиз",
 )
@@ -66,7 +66,7 @@ require(
     build,
     [
         "PRODUCTION_RC_REQUIRED",
-        "Промышленный кандидат в выпуск требует полного набора подтверждений CI: совместимость, доверие к устройствам и Guard",
+        "кандидат на промышленный выпуск требует полного комплекта подтверждений совместимости, доверия устройств и сертификации Guard в CI",
         'git -C "${ROOT_DIR}" diff --quiet HEAD --',
         "release candidate-verify",
         "PRODUCTION_RELEASE_CANDIDATE.json",

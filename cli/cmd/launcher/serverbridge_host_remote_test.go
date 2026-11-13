@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -292,6 +293,16 @@ func TestRemoteKeyRotationLiveAndLease0284(t *testing.T) {
 	}
 }
 
+func TestRemoteHostSupervisorHelper0284(t *testing.T) {
+	root := os.Getenv("LAUNCHER_TEST_REMOTE_SUPERVISOR_ROOT")
+	if root == "" {
+		return
+	}
+	if err := runServerBridgeHost01910(root, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRemoteControlRealSupervisorStop0284(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Тестовая имитация JVM для POSIX")
@@ -305,8 +316,14 @@ func TestRemoteControlRealSupervisorStop0284(t *testing.T) {
 	if err := configureServerBridgeHost01910([]string{"--server-root", root, "--platform", "paper", "--server-jar", jar, "--java", java, "--restart-policy", "never", "--stop-timeout-seconds", "3"}); err != nil {
 		t.Fatal(err)
 	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestRemoteHostSupervisorHelper0284$")
+	cmd.Env = append(os.Environ(), "LAUNCHER_TEST_REMOTE_SUPERVISOR_ROOT="+root)
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
 	done := make(chan error, 1)
-	go func() { done <- runServerBridgeHost01910(root, false) }()
+	go func() { done <- cmd.Wait() }()
+	t.Cleanup(func() { _ = stopServerBridgeHost01910([]string{"--server-root", root}); _ = cmd.Process.Kill() })
 	paths := hostPaths01910(root)
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {

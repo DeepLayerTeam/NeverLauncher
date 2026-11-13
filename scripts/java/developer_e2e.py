@@ -84,7 +84,7 @@ def executable_from_public_sdk(core_jar: Path, extension_source: Path, output: P
     if len({name for name, _ in payload}) != len(payload):
         raise RuntimeError('Дублирующийся класс расширения перекрывает опубликованный Java SDK')
     sys.path.insert(0, str(ROOT))
-    from scripts.ga.java_sdk_ga_0310 import deterministic_jar
+    from scripts.ga.java_sdk_ga import deterministic_jar
     manifest = (b'Manifest-Version: 1.0\r\nMain-Class: ru.launcher.sdk.host.JavaExtensionHost\r\n'
                 b'Launcher-Extension-Class: example.developer.DeveloperExtension\r\n\r\n')
     deterministic_jar(output, payload + [('META-INF/MANIFEST.MF', manifest)])
@@ -101,7 +101,7 @@ def main() -> None:
         work = Path(tmp)
         fixture = ROOT / 'examples/extensions/java-developer-04812'
         sys.path.insert(0, str(ROOT))
-        from scripts.java.build_developer_package_04812 import build
+        from scripts.java.build_developer_package import build
         package = work / 'package'
         jar = build(repo, package)
         with zipfile.ZipFile(jar) as built:

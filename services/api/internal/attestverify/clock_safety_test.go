@@ -36,7 +36,7 @@ func TestCertifyUnsafeTPMClock0436(t *testing.T) {
 	for _, invalid := range []byte{0, 2, 255} {
 		mutated := append([]byte(nil), original...)
 		mutated[2+safeOffset] = invalid
-		if err := parseAttest(mutated, ExpectedExtraData(binding), name); err == nil || !strings.Contains(err.Error(), "clock") {
+		if err := parseAttest(mutated, ExpectedExtraData(binding), name); err == nil || !strings.Contains(strings.ToLower(err.Error()), "час") {
 			t.Fatalf("Ошибочно принято небезопасное время TPM %d: %v", invalid, err)
 		}
 		modified := evidence
@@ -67,7 +67,7 @@ func TestQuoteUnsafeTPMClock0436(t *testing.T) {
 		mutated[2+safeOffset] = invalid
 		modified := evidence
 		modified.TPM2BAttest = base64.RawURLEncoding.EncodeToString(mutated)
-		if _, err := VerifyQuote0315(modified, binding, policy, hash, pinned, roots, now); err == nil || !strings.Contains(err.Error(), "clock") {
+		if _, err := VerifyQuote0315(modified, binding, policy, hash, pinned, roots, now); err == nil || !strings.Contains(strings.ToLower(err.Error()), "час") {
 			t.Fatalf("Небезопасное время свидетельства TPM %d принято либо не проверено: %v", invalid, err)
 		}
 	}

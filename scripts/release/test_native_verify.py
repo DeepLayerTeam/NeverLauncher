@@ -22,7 +22,7 @@ class NativeTests(unittest.TestCase):
 
     def test_native_host_only(self):
         with patch.object(native.platform,'system',return_value='Linux'):
-            with self.assertRaisesRegex(ValueError,'native Windows'):
+            with self.assertRaisesRegex(ValueError,'нативный верификатор Windows'):
                 native.native_report('windows-arm64',Path('/nonexistent'),Path('/nonexistent'),
                                      release_cli=Path('/nonexistent'), public_key=Path('/nonexistent'),
                                      trust_policy=Path('/nonexistent'),trust_state=Path('/nonexistent'))

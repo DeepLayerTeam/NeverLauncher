@@ -17,7 +17,7 @@ func testOptions(t *testing.T) Options {
 	t.Helper()
 	base := os.Getenv("LAUNCHER_SQLITE_TEST_ROOT")
 	if base == "" {
-		base = t.TempDir()
+		base = privateSQLiteTempDir(t)
 	} else {
 		var err error
 		base, err = os.MkdirTemp(base, "dep00-*")
@@ -321,7 +321,7 @@ func TestRejectMemoryURIsAndBadPermissions(t *testing.T) {
 			t.Fatalf("допущен недопустимый путь %q", path)
 		}
 	}
-	root := t.TempDir()
+	root := privateSQLiteTempDir(t)
 	_ = os.Chmod(root, 0777)
 	if e := verifyLocalPath(filepath.Join(root, "data.db")); e == nil {
 		t.Fatal("допущены небезопасные права доступа к каталогу")
@@ -345,7 +345,7 @@ func TestVersionAndProbe(t *testing.T) {
 }
 
 func TestLockPrimitive(t *testing.T) {
-	base := t.TempDir()
+	base := privateSQLiteTempDir(t)
 	name := filepath.Join(base, "guard.lock")
 	first, err := exclusiveLock(name)
 	if err != nil {

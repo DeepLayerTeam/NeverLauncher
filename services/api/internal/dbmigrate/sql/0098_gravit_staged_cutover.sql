@@ -1,4 +1,4 @@
--- MIG11: per-profile/channel Launcher release routing. One durable row owns the
+-- MIG11: per-profile/channel Never release routing. One durable row owns the
 -- cutover; a staged scope rejects concurrent writes to the channel head.
 -- Source Gravit write fencing remains an explicit external prerequisite.
 CREATE TABLE migration_cutovers_03311 (
@@ -42,7 +42,7 @@ BEGIN
  END IF;
  SELECT run_id INTO owner_run FROM migration_cutovers_03311
  WHERE project_id=NEW.project_id AND profile_id=NEW.profile_id AND channel=NEW.channel AND state='staged';
- IF owner_run IS NOT NULL AND current_setting('launcher.migration_cutover_run',true) IS DISTINCT FROM owner_run THEN
+ IF owner_run IS NOT NULL AND current_setting('never.migration_cutover_run',true) IS DISTINCT FROM owner_run THEN
   RAISE EXCEPTION 'migration cutover staged: channel writer fenced' USING ERRCODE='23514';
  END IF;
  RETURN NEW;

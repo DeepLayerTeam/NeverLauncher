@@ -604,7 +604,7 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 		}
 		// SET LOCAL ограничен данной транзакцией. Триггер head PostgreSQL проверяет
 		// одноразовый токен, связанные свидетельства и действующий отзыв.
-		if _, e := tx.ExecContext(ctx, `SELECT set_config('launcher.stable_gate_token',$1,true)`, commit.StableGateToken03411); e != nil {
+		if _, e := tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, commit.StableGateToken03411); e != nil {
 			return model.ReleaseVersion{}, e
 		}
 	}

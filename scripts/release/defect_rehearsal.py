@@ -46,20 +46,20 @@ COMMIT = re.compile(r'[0-9a-f]{40}\Z')
 # подменить настоящие тесты произвольными командами оболочки или путями из
 # своего JSON.
 REGRESSIONS = (
- 'scripts.release.test_independent_current_05211',
- 'scripts.acceptance.test_sweep_05211',
- 'scripts.acceptance.test_soak_05211',
- 'scripts.release.test_reproducible_0470',
- 'scripts.release.test_unsigned_package_0470',
- 'scripts.acceptance.test_inventory_0521',
- 'scripts.acceptance.test_native_packages_0522',
- 'scripts.acceptance.test_owner_admin_real_0523',
- 'scripts.acceptance.test_guard_device_bridge_real_0529',
- 'scripts.operations.test_physical_ha_dr_05210',
- 'scripts.release.test_defect_rehearsal_05212',
- 'scripts.release.test_full_real_acceptance_0530',
- 'scripts.release.test_publication_ga_0530',
- 'scripts.acceptance.test_sdk_live_0530',
+ 'scripts.release.test_independent_current',
+ 'scripts.acceptance.test_sweep',
+ 'scripts.acceptance.test_soak',
+ 'scripts.release.test_reproducible',
+ 'scripts.release.test_unsigned_package',
+ 'scripts.acceptance.test_inventory',
+ 'scripts.acceptance.test_native_packages',
+ 'scripts.acceptance.test_owner_admin_real',
+ 'scripts.acceptance.test_guard_device_bridge_real',
+ 'scripts.operations.test_physical_ha_dr',
+ 'scripts.release.test_defect_rehearsal',
+ 'scripts.release.test_full_real_acceptance',
+ 'scripts.release.test_publication_ga',
+ 'scripts.acceptance.test_sdk_live',
 )
 
 class Blocked(ValueError):

@@ -13,7 +13,7 @@ import (
 
 func TestSQLiteHTTPDevicesJobsExtensionsRestart0373(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "state.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "state.db")
 	db, err := OpenSQLiteHTTPRepository0372(ctx, path, "https://launcher.test")
 	if err != nil {
 		t.Fatal(err)

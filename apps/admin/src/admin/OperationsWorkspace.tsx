@@ -84,7 +84,7 @@ export function OperationsWorkspace({
   const [channel, setChannel] = useState("stable");
   const [toVersion, setToVersion] = useState("");
   const [packageId, setPackageId] = useState("");
-  const [idempotencyKey, setIdempotencyKey] = useState(() =>
+  const [idempotencyKey, setIdempotencyKey] = useState<string>(() =>
     crypto.randomUUID(),
   );
   const [validation, setValidation] = useState<Validation | null>(null);

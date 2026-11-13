@@ -8,8 +8,8 @@ import unittest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from scripts.release import publication_ga_0530 as m
-from scripts.release.test_defect_rehearsal_05212 import index_fixture, COMMIT, PROJECT
+from scripts.release import publication_ga as m
+from scripts.release.test_defect_rehearsal import index_fixture, COMMIT, PROJECT
 
 class PublishGateTests(unittest.TestCase):
  def setUp(self):

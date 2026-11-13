@@ -37,7 +37,7 @@ require(
         "sha256-delivery",
         "developer-id-notarized",
         "--expected-sha256",
-        "component update package SHA-256 mismatch",
+        "Несовпадение SHA-256 пакета обновления компонентов",
         '[]string{"desktop", "guard", "runtime"}',
         "macosTreeRollback",
     ],

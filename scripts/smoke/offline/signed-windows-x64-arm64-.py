@@ -58,7 +58,7 @@ require(
         "inspectWindowsPEBytes0152",
         "case 0x8664:",
         "case 0xaa64:",
-        "production publish requires Authenticode+RFC3161 Windows signing",
+        "Для промышленной публикации Windows требуется подпись Authenticode с меткой времени RFC 3161",
         "verifyWindowsPackage0152",
         "verifyWindowsDeliveryAllowlist0152",
         "verifyWindowsAuthenticodeNative0152",

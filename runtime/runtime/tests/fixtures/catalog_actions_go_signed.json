@@ -74,7 +74,7 @@
   "componentCatalog": {
     "schemaVersion": "5.0",
     "revision": 12,
-    "digest": "dbd001411a8b53041b7f8b9801f8a702f7ad129d84c00d685bbf6e2801a87523",
+    "digest": "b5eef08b35e05b295f7ba0e44e8c8e221eea58455e787e14e5a47c4ef70fa37c",
     "components": [
       {
         "id": "core",
@@ -139,7 +139,7 @@
           {
             "type": "ClientArgs",
             "args": [
-              "--never-optional-feature=1"
+              "--optional-feature=1"
             ]
           }
         ],
@@ -226,8 +226,8 @@
   },
   "signature": {
     "algorithm": "Ed25519",
-    "publicKey": "d4b771e9862923b23ba0fc5c4c30e536af7267541d49220ff6b0069257f5d180",
-    "signature": "8770e6494b3f158d78b76be6bee579932e40023f6bc5b348efedbc706cb67360f42028dd7776d625c4f289ac1894190bb1620f04e511bdd99d87d0af9859d709",
+    "publicKey": "28b94d81c3c589ef97c0d2fc7d4d27bc80a59c5701e9bb7339a1f7fd3cfd149d",
+    "signature": "a0eecfbac86a1428671d23fbe397490ff3cd7956b9991f8a242a42736b24d9da01405637be3e0dcd7d73d0b9d42da489d41a38258db8b7ba2d80e8075f695f06",
     "signedAt": "2026-10-20T00:00:00Z"
   }
 }

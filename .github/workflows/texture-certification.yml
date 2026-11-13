@@ -95,7 +95,7 @@ jobs:
         run: |
           docker run -d --rm --name textures-minio -p 127.0.0.1:9000:9000 \
             -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=texture_password_cert_only \
-            minio/minio:RELEASE.2024-10-13T13-34-11Z server /data
+            quay.io/minio/minio:RELEASE.2024-10-13T13-34-11Z server /data
           for i in $(seq 1 45); do
             if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
             sleep 2

@@ -11,7 +11,7 @@ import (
 
 func TestSQLiteCore0471RejectsUnversionedForeignDatabase(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "legacy.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "legacy.db")
 	store, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path})
 	if err != nil {
 		if strings.Contains(err.Error(), "Неподдерживаемая файловая система SQLite") {
@@ -35,7 +35,7 @@ func TestSQLiteCore0471RejectsUnversionedForeignDatabase(t *testing.T) {
 }
 
 func TestSQLiteCore0471ExistingMustNotCreateFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "no-such-db.sqlite")
+	path := filepath.Join(privateSQLiteTempDir(t), "no-such-db.sqlite")
 	if repo, err := OpenExisting(context.Background(), sqlitedurable.Options{Path: path}); err == nil {
 		_ = repo.Close()
 		t.Fatal("Создана ранее отсутствовавшая база данных")

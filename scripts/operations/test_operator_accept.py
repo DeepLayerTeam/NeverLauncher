@@ -145,8 +145,8 @@ class OperatorTests(unittest.TestCase):
             root = Path(temporary)
             self.make_minimal(root)
             result = op.probe_minimal(root)
-            self.assertEqual(result['http.sqlite'], 'integrity + foreign keys ok')
-            self.assertEqual(result['coordinator.sqlite'], 'integrity + foreign keys ok')
+            self.assertEqual(result['http.sqlite'], 'целостность данных и внешние ключи проверены')
+            self.assertEqual(result['coordinator.sqlite'], 'целостность данных и внешние ключи проверены')
             (root / 'db/coordinator.sqlite').write_bytes(b'bad database')
             with self.assertRaises((op.AcceptanceError, sqlite3.Error)):
                 op.probe_minimal(root)

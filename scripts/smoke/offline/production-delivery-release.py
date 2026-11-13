@@ -79,7 +79,7 @@ require(
         "PRODUCTION_DELIVERY_RELEASE_REQUIRED",
         "PRODUCTION_DELIVERY_RELEASE.json",
         "release production-verify",
-        "неизменяемый сегмент версии",
+        "неизменяемым сегментом версии",
     ],
     "Интеграция промышленной сборки",
 )

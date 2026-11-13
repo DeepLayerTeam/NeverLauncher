@@ -130,7 +130,7 @@ def verify_final_jars(root: Path, release: Path, version: str) -> dict:
 
 
 def verify_faults(runtime: Path, version: str, commit: str) -> None:
-    from scripts.ga.record_network_faults_0420 import REQUIRED, validate
+    from scripts.ga.record_network_faults import REQUIRED, validate
 
     proof = read_json(runtime / "network-faults-0420.json")
     require(
@@ -248,7 +248,7 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
 
 def accept(root: Path, release: Path, runtime: Path, commit: str) -> dict:
     version = (root / "VERSION").read_text(encoding="utf-8").strip()
-    from scripts.ga.record_network_faults_0420 import network_gate_version
+    from scripts.ga.record_network_faults import network_gate_version
 
     require(network_gate_version(version), "Для сетевой проверки требуется версия не ниже 0.42.0")
     require(COMMIT.fullmatch(commit) is not None, "Требуется SHA-код реального исходного коммита")

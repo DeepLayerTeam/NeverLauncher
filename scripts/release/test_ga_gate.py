@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from scripts.release import ga_gate_0480 as gate
+from scripts.release import ga_gate as gate
 
 
 class GATests(unittest.TestCase):
@@ -44,29 +44,29 @@ class GATests(unittest.TestCase):
     def test_unpinned_extra_file_is_rejected(self):
         self.seal()
         (self.evidence/'signed'/'extra-package').write_bytes(b'unsigned-extra')
-        with self.assertRaisesRegex(gate.GateError,'every evidence'):
+        with self.assertRaisesRegex(gate.GateError,'каждый файл свидетельств и пакета'):
             gate.validate_signed_attestation(self.evidence,self.approval,self.sig,self.pub,self.commit)
 
     def test_tampered_package_rejected_even_with_valid_manifest_signature(self):
         self.seal()
         (self.evidence/'signed'/'RELEASE_MANIFEST.json').write_bytes(b'tampered')
-        with self.assertRaisesRegex(gate.GateError,'bytes mismatch'):
+        with self.assertRaisesRegex(gate.GateError,'Байты независимой приёмки не совпадают'):
             gate.validate_signed_attestation(self.evidence,self.approval,self.sig,self.pub,self.commit)
 
     def test_signature_or_key_swap_refused(self):
         self.seal()
         self.sig.write_bytes(b'\0'*64)
-        with self.assertRaisesRegex(gate.GateError,'signature rejected'):
+        with self.assertRaisesRegex(gate.GateError,'Независимая подпись оператора GA отклонена'):
             gate.validate_signed_attestation(self.evidence,self.approval,self.sig,self.pub,self.commit)
 
     def test_cross_commit_replay_refused(self):
         self.seal()
-        with self.assertRaisesRegex(gate.GateError,'commit'):
+        with self.assertRaisesRegex(gate.GateError,'коммиту'):
             gate.validate_signed_attestation(self.evidence,self.approval,self.sig,self.pub,'b'*40)
 
     def test_pass_flag_not_a_live_migration(self):
         (self.evidence/'live.json').write_text(json.dumps({'status':'passed', 'version':'0.48.0'}))
-        with self.assertRaisesRegex(gate.GateError, 'no real independent upgrade'):
+        with self.assertRaisesRegex(gate.GateError, 'Нет реальной независимой приёмки обновления'):
             gate.inspect_live(self.evidence)
 
     def test_unsigned_local_fixture_can_never_pass_release_gate(self):

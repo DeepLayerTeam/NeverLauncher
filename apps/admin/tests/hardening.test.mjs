@@ -52,7 +52,7 @@ test("Потерянный ответ POST считается неопредел
         () => requestJSON(base, "/api/v1/operations/execute", "token", init),
         (e) =>
           e instanceof IndeterminateApiError &&
-          /idempotency key/.test(e.message),
+          /ключ[а-я]* идемпотентности/i.test(e.message),
       );
       assert.equal(calls, 1, "client silently retried an unknown mutation");
       const result = await requestJSON(

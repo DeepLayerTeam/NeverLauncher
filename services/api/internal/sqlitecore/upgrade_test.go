@@ -10,7 +10,7 @@ import (
 
 func TestCore0472MigratesVersion326AndDoesNotRepeatBackup(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "core.sqlite")
+	path := filepath.Join(privateSQLiteTempDir(t), "core.sqlite")
 	r, err := Open(ctx, sqlitedurable.Options{Path: path})
 	if err != nil {
 		t.Fatal(err)

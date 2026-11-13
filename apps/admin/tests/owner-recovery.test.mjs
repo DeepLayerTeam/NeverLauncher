@@ -32,6 +32,6 @@ test('Отсутствие записи журнала не разрешает �
   globalThis.fetch=async()=>({ok:false,status:404,statusText:'Not Found',json:async()=>({error:{message:'not found'}})});
   assert.equal(await findOriginalOwnerJob(new ReleaseApi('https://api.example','bearer'),record),null);
   globalThis.fetch=async()=>({ok:true,status:200,json:async()=>({data:{id:'job-foreign',projectId:'other',kind:'package-publish',resourceId:'pkg1'}})});
-  await assert.rejects(findOriginalOwnerJob(new ReleaseApi('https://api.example','bearer'),record),/does not match/);
+  await assert.rejects(findOriginalOwnerJob(new ReleaseApi('https://api.example','bearer'),record),/Серверный журнал не соответствует сохранённой операции/);
  }finally{globalThis.fetch=old}
 });

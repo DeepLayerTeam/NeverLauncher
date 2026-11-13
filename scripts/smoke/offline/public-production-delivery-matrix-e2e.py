@@ -41,7 +41,7 @@ require(
         "downloadPublicAsset0159",
         "verifyReleaseBundleWithTrust",
         "Базовый URL публичной поставки должен использовать HTTPS",
-        "redirect changed to untrusted host",
+        "Перенаправление публичной поставки ведёт на недоверенный хост",
     ],
     "Ядро публичной промышленной поставки",
 )

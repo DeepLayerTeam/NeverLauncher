@@ -63,7 +63,7 @@ jobs:
           java-version: '21'
       - uses: actions/setup-go@v5
         with:
-          go-version-file: cli/go.mod
+          go-version: '1.27.3'
       - name: "Собрать и проверить реальные дочерние процессы Java Backend и CLI"
         run: |
           sh examples/extensions/java-runtime/build.sh

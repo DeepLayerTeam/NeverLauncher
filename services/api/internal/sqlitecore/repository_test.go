@@ -22,7 +22,7 @@ func openTest(t *testing.T) (*Repository, string) {
 	t.Helper()
 	dir := os.Getenv("LAUNCHER_SQLITE_TEST_ROOT")
 	if dir == "" {
-		dir = t.TempDir()
+		dir = privateSQLiteTempDir(t)
 	} else {
 		dir = filepath.Join(dir, "sqlite-core-"+strings.ReplaceAll(t.Name(), "/", "-"))
 		if e := os.Mkdir(dir, 0700); e != nil {

@@ -119,7 +119,7 @@ require(
     workflow,
     ".github/workflows/production-release-candidate.yml",
     [
-        "Download exact-commit Windows adversarial certificate",
+        "Скачать сертификат испытаний Guard Windows для точного коммита",
         "guard-windows-adversarial-certificate-${{ github.sha }}",
         "LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE",
         "WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json",

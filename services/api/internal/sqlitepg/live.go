@@ -600,7 +600,7 @@ func PopulateLiveWithMFA0474(ctx context.Context, postgresDSN string, keys MFASe
 				return report, e
 			}
 			var n int64
-			if e = tx.QueryRow(ctx, `SELECT count(*) FROM `+qualified(table.Name)).Scan(&n); e != nil {
+			if e := tx.QueryRow(ctx, `SELECT count(*) FROM `+qualified(table.Name)).Scan(&n); e != nil {
 				return report, e
 			}
 			if n != table.Rows {

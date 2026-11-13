@@ -82,7 +82,7 @@ func TestPGStagingMigration(t *testing.T) {
 			_ = p.Close(context.Background())
 		}
 	})
-	dir := t.TempDir()
+	dir := privateSQLiteTempDir(t)
 	dbPath := filepath.Join(dir, "state.db")
 	backup := filepath.Join(dir, "backup.db")
 	repo, err := sqlitecore.Open(ctx, sqlitedurable.Options{Path: dbPath})
@@ -244,7 +244,7 @@ func TestPGStagingMigration(t *testing.T) {
 
 func TestReverseTransferMissingReceiptFailsClosed(t *testing.T) {
 	ctx := context.Background()
-	if _, err := Export(ctx, "", filepath.Join(t.TempDir(), "db.sqlite")); err == nil {
+	if _, err := Export(ctx, "", filepath.Join(privateSQLiteTempDir(t), "db.sqlite")); err == nil {
 		t.Fatal("Пустая строка подключения PostgreSQL ошибочно принята")
 	}
 	if _, err := Export(ctx, "nonempty", ""); err == nil {

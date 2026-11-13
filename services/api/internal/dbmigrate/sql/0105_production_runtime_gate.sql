@@ -101,7 +101,7 @@ BEGIN
    must_check := lower(btrim(NEW.channel))='stable' AND NEW.status='published' AND OLD.status IS DISTINCT FROM NEW.status;
  END IF;
  IF must_check THEN
-   token:=current_setting('launcher.stable_gate_token',true);
+   token:=current_setting('never.stable_gate_token',true);
    IF NOT stable_runtime_permit_valid_03411(NEW.id,
       (SELECT manifest_sha256 FROM stable_runtime_permits_03411 WHERE token_sha256=encode(sha256(convert_to(token,'UTF8')),'hex')),
       token) THEN
@@ -138,7 +138,7 @@ BEGIN
      AND profile_id=NEW.profile_id AND channel='stable' AND version=NEW.version AND status='published') THEN
    RAISE EXCEPTION 'stable_runtime_gate_03411: stable head target must be published' USING ERRCODE='23514';
  END IF;
- token:=current_setting('launcher.stable_gate_token',true);
+ token:=current_setting('never.stable_gate_token',true);
  IF NOT stable_runtime_permit_valid_03411(NEW.release_id,NEW.manifest_digest,token) THEN
    RAISE EXCEPTION 'stable_runtime_gate_03411: target evidence missing/failed/inconclusive/expired or policy changed' USING ERRCODE='23514';
  END IF;

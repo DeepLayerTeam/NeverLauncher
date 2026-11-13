@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from types import SimpleNamespace
-from scripts.acceptance import sdk_live_0530 as sdk
+from scripts.acceptance import sdk_live as sdk
 
 class SdkLiveTest(unittest.TestCase):
  def test_http_is_not_real_published_https(self):

@@ -78,7 +78,7 @@ require(
         "identity_epoch",
         "pg_advisory_xact_lock(1401",
         "pg_advisory_xact_lock(1403",
-        "Registration is intentionally create-only",
+        "Регистрация намеренно разрешает только создание",
         '"nodeAuthentication": "ed25519-signed-requests"',
         '"replayProtection": "postgresql-single-use-nonce"',
     ],
@@ -93,7 +93,7 @@ require(
         "validateBridgeNodeIdentity0142",
         "rotateIdentity",
         "identityEpoch",
-        "Ed25519 signed request headers",
+        "Заголовки запросов, подписанные Ed25519",
     ],
     "Жизненный цикл идентификаторов ServerBridge",
 )

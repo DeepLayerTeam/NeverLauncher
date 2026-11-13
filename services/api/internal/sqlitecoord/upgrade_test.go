@@ -12,7 +12,7 @@ import (
 
 func TestCoordinatorUpgrade0472PreservesLeasesAndIsIdempotent(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "coordinator.sqlite")
+	path := filepath.Join(privateSQLiteTempDir(t), "coordinator.sqlite")
 	store, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path})
 	if err != nil {
 		t.Fatal(err)

@@ -72,7 +72,7 @@ require(
         "LAUNCHER_MANAGED_JRE_MANIFEST_SHA256",
         "Для удалённого манифеста управляемой JRE требуется",
         "Целевой выпуск управляемой JRE должен сохранять точный SHA-256 архива поставщика",
-        "ensure_local_archive",
+        "ensure_managed_archive",
         "javaEntry управляемой JRE не указывает на bin/java",
     ],
     "Использование управляемой Java в Runtime",
@@ -85,7 +85,7 @@ require(
         "verifyManagedJREDistribution0155(args[1], manifestVersion, true)",
         "managed-jre-temurin21-six-target-distribution",
         "managedJREArtifacts0155(ver)",
-        "Managed JRE Distribution",
+        "Доставка управляемой JRE",
     ],
     "Интеграция релиза",
 )

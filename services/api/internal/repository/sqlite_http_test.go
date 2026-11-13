@@ -36,7 +36,7 @@ func TestSQLiteHTTPStateCoverage0372(t *testing.T) {
 
 func TestSQLiteHTTPPersistenceAndCAS0372(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "http-repository.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "http-repository.db")
 	open := func() *SQLiteHTTPRepository0372 {
 		r, err := OpenSQLiteHTTPRepository0372(ctx, path, "https://example")
 		if err != nil {
@@ -110,7 +110,7 @@ func TestSQLiteHTTPPersistenceAndCAS0372(t *testing.T) {
 
 func TestSQLiteHTTPConcurrentWritesAndSafeFailure0372(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "concurrency.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "concurrency.db")
 	r, err := OpenSQLiteHTTPRepository0372(ctx, path, "")
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +153,7 @@ func TestSQLiteHTTPConcurrentWritesAndSafeFailure0372(t *testing.T) {
 
 func TestSQLiteHTTPMutationsCannotReportSuccessWithoutCommit0372(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "commit-failure.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "commit-failure.db")
 	r, err := OpenSQLiteHTTPRepository0372(ctx, path, "")
 	if err != nil {
 		t.Fatal(err)
@@ -186,7 +186,7 @@ func TestSQLiteHTTPMutationsCannotReportSuccessWithoutCommit0372(t *testing.T) {
 }
 
 func TestSQLiteHTTPFilePermissions0372(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "mode.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "mode.db")
 	r, err := OpenSQLiteHTTPRepository0372(context.Background(), path, "")
 	if err != nil {
 		t.Fatal(err)

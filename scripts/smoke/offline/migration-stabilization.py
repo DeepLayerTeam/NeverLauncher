@@ -62,7 +62,7 @@ require(
     [
         "HighestReleaseManifestSHA256",
         "StateRevision",
-        "same-version release manifest mismatch",
+        "Несовпадение манифеста релиза той же версии",
         "releaseTrustStateSchema01510",
     ],
     "Состояние доверия 0.15.10",
@@ -70,7 +70,7 @@ require(
 require(
     updater,
     [
-        "automatic updater terminal cleanup",
+        "removeUpdaterTerminalPayload01510(u.transactionDir(journal.ID))",
         "removeUpdaterTerminalPayload01510",
         "componentStateMigration",
         "terminalPayloadsCleaned",

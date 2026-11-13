@@ -182,7 +182,7 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
         apply_selected_actions(cat,&active,Path::new("/client"),&mut plan).unwrap();
         assert!(plan.classpath_entries.iter().any(|s|s.ends_with("/mods/sodium.jar")));
         assert!(plan.jvm_args.iter().any(|s|s=="-Dfabric.log.level=debug"));
-        assert!(plan.game_args.iter().any(|s|s=="--never-optional-feature=1"));
+        assert!(plan.game_args.iter().any(|s|s=="--optional-feature=1"));
         let mut baseline=plan.clone();baseline.classpath_entries.clear();baseline.jvm_args.clear();baseline.game_args.clear();
         apply_selected_actions(cat,&HashSet::new(),Path::new("/client"),&mut baseline).unwrap();
         assert!(baseline.classpath_entries.is_empty()&&baseline.jvm_args.is_empty()&&baseline.game_args.is_empty());

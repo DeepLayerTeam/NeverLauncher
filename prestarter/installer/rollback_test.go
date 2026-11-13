@@ -150,7 +150,7 @@ func TestInstallerRollbackRejectsAbsentPreviousGeneration0527(t *testing.T) {
 	if err := Install(context.Background(), opts); err != nil {
 		t.Fatal(err)
 	}
-	if err := Rollback(context.Background(), opts); err == nil || !strings.Contains(err.Error(), "previous") {
+	if err := Rollback(context.Background(), opts); err == nil || !strings.Contains(err.Error(), "Предыдущее подписанное поколение") {
 		t.Fatalf("Неожиданно отсутствует предыдущее состояние: %v", err)
 	}
 }

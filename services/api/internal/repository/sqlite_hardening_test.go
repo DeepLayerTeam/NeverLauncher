@@ -58,7 +58,7 @@ func fieldsOrPrivatePrefix(raw []byte) []byte {
 
 func TestSQLiteHTTP0471RejectsUnrelatedDatabaseAndMissingSnapshot(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "existing.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "existing.db")
 	store, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path})
 	if err != nil {
 		if strings.Contains(err.Error(), "Неподдерживаемая файловая система SQLite") {
@@ -84,7 +84,7 @@ func TestSQLiteHTTP0471RejectsUnrelatedDatabaseAndMissingSnapshot(t *testing.T) 
 
 func TestSQLiteHTTP0471HealthVerifiesDocumentAndCache(t *testing.T) {
 	ctx := context.Background()
-	path := filepath.Join(t.TempDir(), "state.db")
+	path := filepath.Join(privateSQLiteTempDir(t), "state.db")
 	repo, err := OpenSQLiteHTTPRepository0372(ctx, path, "")
 	if err != nil {
 		if strings.Contains(err.Error(), "Неподдерживаемая файловая система SQLite") {

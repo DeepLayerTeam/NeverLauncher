@@ -12,7 +12,7 @@ import (
 // SQLite-файл.
 func TestSQLiteCoordinatorFailClosed0374(t *testing.T) {
 	state := NewRuntimeState()
-	cfg := config.Config{RepositoryDriver: "sqlite", DatabaseDSN: filepath.Join(t.TempDir(), "http.db")}
+	cfg := config.Config{RepositoryDriver: "sqlite", DatabaseDSN: filepath.Join(privateSQLiteTempDir(t), "http.db")}
 	if err := state.ConfigureProductRuntime(cfg); err == nil || !strings.Contains(err.Error(), "coordinator") {
 		t.Fatalf("При отсутствии координатора операция должна блокироваться: %v", err)
 	}

@@ -204,7 +204,7 @@ impl LinuxRuntimeGuard0508 {
     fn verify_jvm_args(&self) -> Result<(), String> {
         let file = format!("/proc/{}/cmdline", self.pid);
         let bytes = fs::read(&file).map_err(|e| format!("Недоступно: аргументы запуска JVM Guard в Linux: {e}"))?;
-        if bytes.is_empty() || bytes.len() > MAX_PROC_BYTES || bytes.last() != Some(&0) {
+        if bytes.is_empty() || bytes.len() as u64 > MAX_PROC_BYTES || bytes.last() != Some(&0) {
             return Err("Неполный список аргументов JVM в Linux Guard".into());
         }
         let argv = bytes.split(|c| *c == 0).filter(|a| !a.is_empty()).collect::<Vec<_>>();

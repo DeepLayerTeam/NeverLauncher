@@ -43,14 +43,14 @@ require(
         "PlatformArtifacts",
         "allowsArtifactPair0140",
         "guardReleasePolicyV2Required0140",
-        "Guard 0.14+ requires schemaVersion=2.0",
+        "Для Guard 0.14+ необходима политика выпуска schemaVersion=2.0",
         '"guardReleasePolicySchema"',
         '"guardProtocolVersion"',
         '"guardPlatform"',
         'signingMode != "authenticode"',
         'signingMode != "developer-id-notarized"',
-        "Windows Authenticode policy contains artifact pair without requireAuthenticode",
-        "Guard current production release %s is missing %s artifact policy",
+        "содержит пару артефактов без requireAuthenticode",
+        "Для текущего промышленного выпуска Guard %s отсутствует политика артефактов %s",
     ],
 )
 require(
@@ -61,7 +61,7 @@ require(
     "services/api/internal/httpapi/minecraft_serverbridge_integrity_test.go",
     [
         "TestMinecraftIntegrityV2RejectsCrossProductArtifactPair0140",
-        "cross-product v2 artifact pair remained valid",
+        "пара артефактов версии 2 от разных продуктов осталась действительной",
     ],
 )
 require(

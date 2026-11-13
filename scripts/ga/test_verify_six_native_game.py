@@ -71,33 +71,33 @@ class NativeGameIntegrationTests(unittest.TestCase):
         path = self.directories['linux-x64'] / 'staged-execution.json'
         doc = json.loads(path.read_text()); doc['packageId'] = 'different'
         self.write(path, doc)
-        with self.assertRaisesRegex(ValueError, 'another staged package'): self.check()
+        with self.assertRaisesRegex(ValueError, 'другому подготовленному пакету'): self.check()
 
     def test_partial_matrix_denied(self):
         self.directories['darwin-arm64'].rename(self.root / 'orphan')
-        with self.assertRaisesRegex(ValueError, 'six native GUI artifact'): self.check()
+        with self.assertRaisesRegex(ValueError, 'шесть каталогов артефактов нативного интерфейса'): self.check()
 
     def test_extra_target_denied(self):
         (self.root / 'v10-native-linux-riscv64-gui-3456789').mkdir()
-        with self.assertRaisesRegex(ValueError, 'six native GUI artifact'): self.check()
+        with self.assertRaisesRegex(ValueError, 'шесть каталогов артефактов нативного интерфейса'): self.check()
 
     def test_simulated_negative_denied(self):
         path = self.directories['darwin-x64'] / 'adversarial-gameplay-04314.json'
         doc = json.loads(path.read_text()); doc['manifestTamper']['status'] = 'skipped'
         self.write(path, doc)
-        with self.assertRaisesRegex(ValueError, 'negative game outcomes'): self.check()
+        with self.assertRaisesRegex(ValueError, 'отрицательные игровые проверки'): self.check()
 
     def test_wrong_host_architecture_denied(self):
         path = self.directories['linux-arm64'] / 'host-capabilities.json'
         doc = json.loads(path.read_text()); doc['arch'] = 'amd64'
         self.write(path, doc)
-        with self.assertRaisesRegex(ValueError, 'host identity'): self.check()
+        with self.assertRaisesRegex(ValueError, 'идентификатора или возможностей нативного хоста'): self.check()
 
     def test_invalid_binary_digest_denied(self):
         path = self.directories['windows-x64'] / 'staged-execution.json'
         doc = json.loads(path.read_text()); doc['artifactSha256'] = 'bad'
         self.write(path, doc)
-        with self.assertRaisesRegex(ValueError, 'exact executable'): self.check()
+        with self.assertRaisesRegex(ValueError, 'точный хеш исполняемого файла'): self.check()
 
     def test_future_stable_ga_uses_the_same_six_native_gate(self):
         result = verify(self.root, self.package, '1.0.0', self.commit, self.run)

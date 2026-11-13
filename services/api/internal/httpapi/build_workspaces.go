@@ -838,7 +838,7 @@ func (s Server) workspaceBuild0226(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 409, e.Error())
 		return
 	}
-	if _, e = s.Repo.UpdateVersionManifest(ws.ProjectID, release.ID, manifest); e != nil {
+	if _, e := s.Repo.UpdateVersionManifest(ws.ProjectID, release.ID, manifest); e != nil {
 		writeError(w, 409, "Не удалось сохранить манифест: "+e.Error())
 		return
 	}

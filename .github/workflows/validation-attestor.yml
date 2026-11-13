@@ -42,7 +42,7 @@ jobs:
           python3 e2e/scripts/test_staged_lifecycle.py
       - uses: actions/setup-go@v5
         with:
-          go-version-file: cli/go.mod
+          go-version: '1.27.3'
       - name: Запустить реальные тесты обновления и восстановления CLI, включая SIGKILL
         run: |
           cd cli && go build -o "$RUNNER_TEMP/launcher" ./cmd/launcher

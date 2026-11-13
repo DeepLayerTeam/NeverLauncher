@@ -18,7 +18,7 @@ func coordTestPath(t *testing.T) string {
 	t.Helper()
 	root := os.Getenv("LAUNCHER_SQLITE_TEST_ROOT")
 	if root == "" {
-		root = t.TempDir()
+		root = privateSQLiteTempDir(t)
 	} else {
 		var e error
 		root, e = os.MkdirTemp(root, "coord-test-*")

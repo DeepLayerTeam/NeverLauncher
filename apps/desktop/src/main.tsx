@@ -5253,6 +5253,7 @@ function App() {
               )}
             {screen === "auth" && (
               <AuthPanel
+                locale0357={ui0357.locale}
                 email={email}
                 setEmail={setEmail}
                 password={password}
@@ -6007,6 +6008,7 @@ function Overview({
 }
 
 function AuthPanel({
+  locale0357,
   email,
   setEmail,
   password,
@@ -6328,7 +6330,7 @@ function AuthPanel({
                   {device.platform || "платформа не указана"} ·{" "}
                   {device.clientVersion || "версия не указана"} · последний сеанс связи:{" "}
                   {device.lastSeenAt
-                    ? new Date(device.lastSeenAt).toLocaleString(ui0357.locale === "en" ? "en-US" : "ru-RU")
+                    ? new Date(device.lastSeenAt).toLocaleString(locale0357 === "en" ? "en-US" : "ru-RU")
                     : "—"}
                 </small>
                 <small>
@@ -6363,7 +6365,7 @@ function AuthPanel({
                   <small>
                     отозван:{" "}
                     {device.revokedAt
-                      ? new Date(device.revokedAt).toLocaleString(ui0357.locale === "en" ? "en-US" : "ru-RU")
+                      ? new Date(device.revokedAt).toLocaleString(locale0357 === "en" ? "en-US" : "ru-RU")
                       : "—"}{" "}
                     · {device.revokedReason || "причина не указана"}
                     {device.replacedByDeviceId

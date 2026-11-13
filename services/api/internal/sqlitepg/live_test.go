@@ -86,7 +86,7 @@ func TestLiveSQLiteToSQLRepository0473(t *testing.T) {
 	if _, err = dbmigrate.Apply(ctx, db); err != nil {
 		t.Fatalf("Применение реальной схемы PostgreSQL: %v", err)
 	}
-	dir := t.TempDir()
+	dir := privateSQLiteTempDir(t)
 	src := filepath.Join(dir, "core.db")
 	backup := filepath.Join(dir, "core-backup.db")
 	core, err := sqlitecore.Open(ctx, sqlitedurable.Options{Path: src})

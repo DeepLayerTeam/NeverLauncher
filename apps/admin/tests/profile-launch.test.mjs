@@ -12,7 +12,7 @@ test('Редактор профиля проверяет полный профи
 test('Профиль с модами требует точной закреплённой версии загрузчика',()=>{
   assert.match(validateProfile0382({...vanilla,loader:'fabric'}),/точную версию/);
   assert.equal(validateProfile0382({...vanilla,loader:'fabric',loaderVersion:'0.16.14'}),'');
-  assert.match(validateProfile0382({...vanilla,loaderVersion:'0.16.14'}),/Vanilla/);
+  assert.match(validateProfile0382({...vanilla,loaderVersion:'0.16.14'}),/обычного клиента Minecraft/);
   assert.match(validateProfile0382({...vanilla,loader:'custom',loaderVersion:'1.0'}),/Неподдерживаемый/);
 });
 test('Поля ID профиля и версии отклоняют пути и переводы строк',()=>{

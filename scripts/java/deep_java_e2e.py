@@ -21,8 +21,8 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from scripts.java.developer_e2e_04812 import verified_repo, run
-from scripts.ga.java_sdk_ga_0310 import deterministic_jar
-from scripts.java.package_dependencies_0482 import bundle
+from scripts.ga.java_sdk_ga import deterministic_jar
+from scripts.java.package_dependencies import bundle
 
 FIXTURES = ROOT / 'examples/extensions'
 

@@ -12,7 +12,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from scripts.integration import live_upgrade_0480 as a
+from scripts.integration import live_upgrade as a
 
 
 class LiveAcceptanceTests(unittest.TestCase):
@@ -115,7 +115,7 @@ class LiveAcceptanceTests(unittest.TestCase):
     def test_operator_health_check_real_owner_session_and_protected_export(self):
         # Проверяйте производственный HTTP-путь доказательств оператора на реальном локальном
         # сокете сервера. Это функциональный unit-harness, НЕ успешная PG GA.
-        from scripts.operations.sqlite_pg_cutover_0475 import Operator, CutoverError
+        from scripts.operations.sqlite_pg_cutover import Operator, CutoverError
         env = self.root/'current.env'
         env.write_text('LAUNCHER_REPOSITORY_DRIVER=postgres\nLAUNCHER_DATABASE_DSN=postgres://internal/test\n')
         env.chmod(0o600)

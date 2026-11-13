@@ -244,7 +244,7 @@ async fn adopt_scanned(scanned: Scan0339, cache: &CacheStore) -> Result<PlayerMi
 pub fn discover() -> Vec<String> {
     let Some(home) = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(PathBuf::from) else { return Vec::new() };
     let mut places = vec![home.join(".minecraft"), home.join(".gravitlauncher"), home.join("GravitLauncher")];
-    if let Some(appdata) = std::env::var_os("APPDATA") { places.push(PathBuf::from(appdata).join(".minecraft")); places.push(PathBuf::from(appdata).join("GravitLauncher")); }
+    if let Some(appdata) = std::env::var_os("APPDATA") { places.push(PathBuf::from(&appdata).join(".minecraft")); places.push(PathBuf::from(appdata).join("GravitLauncher")); }
     if cfg!(target_os = "macos") { places.push(home.join("Library/Application Support/minecraft")); }
     let mut unique = HashSet::new();
     places.into_iter().filter(|p| p.is_dir() && !fs::symlink_metadata(p).is_ok_and(|m| m.file_type().is_symlink()))

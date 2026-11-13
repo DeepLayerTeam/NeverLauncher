@@ -10,10 +10,10 @@ BEGIN
   RAISE EXCEPTION '0.29.11 refused: malformed issuer or subject';
  END IF;
  IF EXISTS (SELECT 1 FROM auth_identities i LEFT JOIN users u ON u.id=i.user_id WHERE u.id IS NULL) THEN
-  RAISE EXCEPTION '0.29.11 refused: auth identities without Launcher account';
+  RAISE EXCEPTION '0.29.11 refused: auth identities without Never account';
  END IF;
  IF EXISTS (SELECT 1 FROM minecraft_profiles m LEFT JOIN users u ON u.id=m.user_id WHERE u.id IS NULL) THEN
-  RAISE EXCEPTION '0.29.11 refused: Minecraft profiles without Launcher account';
+  RAISE EXCEPTION '0.29.11 refused: Minecraft profiles without Never account';
  END IF;
 END
 $nl$;

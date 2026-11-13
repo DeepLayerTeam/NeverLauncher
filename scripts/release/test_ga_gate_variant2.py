@@ -29,6 +29,14 @@ class TestGAReleaseApproval(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)
+        # Historical gate: exercise the original version without changing the checkout.
+        source = self.root.parent / (self.root.name + "-source")
+        source.mkdir()
+        self.addCleanup(lambda: __import__("shutil").rmtree(source))
+        (source / "VERSION").write_text(gate.VERSION + "\n")
+        patcher = patch.object(gate, "ROOT", source)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.signed = self.root / 'signed'
         self.signed.mkdir(mode=0o700)
         write(self.signed / 'RELEASE_MANIFEST.json', b'{"version":"0.50.0"}')
@@ -104,7 +112,7 @@ class TestGAReleaseApproval(unittest.TestCase):
         self.report['completedAt'] = (datetime.now(timezone.utc) - timedelta(hours=80)).isoformat()
         write(self.root / 'acceptance-0500.json', self.report)
         self.sign()
-        with self.assertRaisesRegex(gate.Blocked, 'stale'):
+        with self.assertRaisesRegex(gate.Blocked, 'устарели'):
             gate.promote(self.config, self.root, self.approval, self.sig, self.pubfile)
 
     def test_revoked_backend_after_approval_fails(self):

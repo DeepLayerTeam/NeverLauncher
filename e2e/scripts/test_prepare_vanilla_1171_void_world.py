@@ -70,7 +70,7 @@ class VoidWorldTests(unittest.TestCase):
 
     def test_non_flat_generator_refused(self):
         before = b'\x0a' + world.encode_name('') + world.encode_payload(10, sample('minecraft:noise'))
-        with self.assertRaisesRegex(world.NBTError, 'server-generated flat'):
+        with self.assertRaisesRegex(world.NBTError, 'плоский генератор, созданный сервером'):
             world.prepare(before)
 
     def test_corrupt_nbt_refused(self):
@@ -80,7 +80,7 @@ class VoidWorldTests(unittest.TestCase):
 
     def test_trailing_data_refused(self):
         before = b'\x0a' + world.encode_name('') + world.encode_payload(10, sample()) + b'\x00'
-        with self.assertRaisesRegex(world.NBTError, 'trailing'):
+        with self.assertRaisesRegex(world.NBTError, 'Лишние данные в конце level.dat'):
             world.prepare(before)
 
     def test_missing_registry_refused(self):
@@ -103,7 +103,7 @@ class VoidWorldTests(unittest.TestCase):
         self.assertLess(script.index('if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then'),
                         script.index('generator-settings='))
         self.assertIn('cp "$RUNTIME_DIR/matching-server.log" "$RUNTIME_DIR/matching-server.initial.log"', script)
-        self.assertIn('1.17.1 nonfatal world codec warning; verifying by real client join', script)
+        self.assertIn('1.17.1: некритичное предупреждение кодека мира; проверяем реальным подключением клиента', script)
         self.assertNotIn("raise SystemExit('Кодек мира версии 1.17.1 отклонил созданные настройки')", script)
         self.assertIn('clientJoinedServer', script)
         self.assertIn(') < "$SERVER_STDIN" > "$RUNTIME_DIR/matching-server.log" 2>&1 &', script)

@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"errors"
 	"gitflic.ru/skif4er/launcher/services/api/internal/authrequest"
 	"net/http"

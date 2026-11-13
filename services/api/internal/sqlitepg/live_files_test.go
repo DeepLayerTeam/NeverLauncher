@@ -35,7 +35,7 @@ func TestStoragePathsAndDigest0474(t *testing.T) {
 }
 func TestAtomicVerifiedLocalFile0474(t *testing.T) {
 	ctx := context.Background()
-	dir := t.TempDir()
+	dir := privateSQLiteTempDir(t)
 	source := storage.NewLocalStorage(filepath.Join(dir, "src"))
 	dest := storage.NewLocalStorage(filepath.Join(dir, "dest"))
 	raw := bytes.Repeat([]byte("abcdef"), 4096)

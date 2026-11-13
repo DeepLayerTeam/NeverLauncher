@@ -11,7 +11,7 @@ from unittest import mock
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from scripts.release import defect_rehearsal_05212 as m
+from scripts.release import defect_rehearsal as m
 
 COMMIT='a'*40
 PROJECT='project'

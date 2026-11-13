@@ -24,7 +24,7 @@ import (
 func TestThreeDatabasesRecoverCommittedStateAfterAbruptExit0471(t *testing.T) {
 	root := os.Getenv("LAUNCHER_SQLITE_TEST_ROOT")
 	if root == "" {
-		root = t.TempDir()
+		root = privateSQLiteTempDir(t)
 	} else {
 		var err error
 		root, err = os.MkdirTemp(root, "crash-0471-*")

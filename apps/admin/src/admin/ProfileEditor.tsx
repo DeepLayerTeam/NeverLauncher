@@ -43,7 +43,7 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
       const result=await requestJSON<{profile:Profile}>(backendUrl,editing?`${root}/${encodeURIComponent(selectedProfile.id)}`:root,token,
         {method:editing?'PATCH':'POST',body:JSON.stringify({...form,loaderVersion:form.loader==='vanilla'?'':form.loaderVersion,...(editing?{expectedRevision:baseRevision}:{})})});
       if(!result.profile?.id)throw new Error('Сервер не вернул сохранённый профиль. Проверьте список перед повтором.');
-      setDirty(false);setBaseRevision(result.profile.revision);setForm(fromProfile(result.profile));
+      setDirty(false);setBaseRevision(result.profile.revision??null);setForm(fromProfile(result.profile));
       if(!editing)onCreated(result.profile.id);
       setNotice(`Профиль ${result.profile.id} сохранён. Ревизия ${result.profile.revision}.`);
       try { await onChanged(); } catch (reloadError) {
@@ -86,7 +86,7 @@ export function ProfileEditor0382({backendUrl,token,projectId,selectedProfile,on
       <p role="alert" className="error">Профиль был изменён другим оператором (текущая ревизия {selectedProfile.revision}). Ваши изменения сохранены в форме, но для записи необходимо обновить профиль и применить изменения поверх новой ревизии.</p>}
     {issue && <p className="muted" role="status">{issue}</p>}
     <div className="buttonRow"><button disabled={working||!!issue||!projectId||!!selectedProfile&&!dirty} onClick={()=>void submit()}>{working?'Сохранение…':selectedProfile?'Сохранить новую ревизию':'Создать профиль'}</button>
-      {selectedProfile && <button disabled={working||!dirty} onClick={()=>{setForm(fromProfile(selectedProfile));setBaseRevision(selectedProfile.revision);setDirty(false);setError('');setNotice('')}}>Отменить изменения</button>}
+      {selectedProfile && <button disabled={working||!dirty} onClick={()=>{setForm(fromProfile(selectedProfile));setBaseRevision(selectedProfile.revision??null);setDirty(false);setError('');setNotice('')}}>Отменить изменения</button>}
     </div>
     {selectedProfile && <section aria-label="История ревизий профиля">
       <h4>Ревизии профиля</h4><p className="muted">Восстановление не перезаписывает историю: при сохранении создаётся новая ревизия с CAS.</p>

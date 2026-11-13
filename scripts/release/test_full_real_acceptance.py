@@ -14,7 +14,7 @@ from unittest import mock
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from scripts.release import full_real_acceptance_0530 as m
+from scripts.release import full_real_acceptance as m
 
 COMMIT='b'*40
 PIN='c'*64
@@ -95,7 +95,7 @@ class FullRealGATests(unittest.TestCase):
         with (work/'logs/ha-world.log').open('a') as f:f.write('tampered')
         with self.assertRaises(m.Blocked):m.replay(work,records,COMMIT)
  def test_missing_true_p1_closure_blocks_in_rehearsal(self):
-    self.assertIn('scripts.release.test_full_real_acceptance_0530',m.rehearsal.REGRESSIONS)
+    self.assertIn('scripts.release.test_full_real_acceptance',m.rehearsal.REGRESSIONS)
  def test_wrong_java_commit_blocks(self):
     row=valid_report('java');row['sourceCommit']='d'*40
     with self.assertRaises(m.Blocked):m.assert_observed('java',row,COMMIT)

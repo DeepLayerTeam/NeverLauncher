@@ -16,7 +16,7 @@ test('Глубокие ссылки аудита кодируют идентиф
 });
 test('Рекомендации по восстановлению различают авторизацию, конфликт и неопределённый транспорт', () => {
  assert.match(recoveryAdvice('403 forbidden'),/полномочия/i);
- assert.match(recoveryAdvice('step-up required'),/вход|step-up/i);
+ assert.match(recoveryAdvice('step-up required'),/войдите заново|подтвердите действие ключом доступа/i);
  assert.match(recoveryAdvice('409 conflict'),/обновите/i);
  assert.match(recoveryAdvice('network timeout'),/аудит/i);
 });

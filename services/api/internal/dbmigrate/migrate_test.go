@@ -66,7 +66,7 @@ func TestEvaluateAppliedDetectsPendingUnknownUnverifiedAndDrift(t *testing.T) {
 	drift := catalogChecksums(t)
 	drift["0008_session_management_2_0118"] = strings.Repeat("0", 64)
 	st, err = EvaluateApplied(drift)
-	if err == nil || st.Compatible || !strings.Contains(err.Error(), "checksum migration") {
+	if err == nil || st.Compatible || !strings.Contains(err.Error(), "Контрольная сумма миграции") {
 		t.Fatalf("Изменение контрольной суммы не отклонено: статус=%+v ошибка=%v", st, err)
 	}
 }

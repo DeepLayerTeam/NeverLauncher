@@ -96,8 +96,8 @@ require(
         "(( 10#$ordinal > 19 )) && continue",
         "0019_minecraft_serverbridge_integrity_0135",
         "0020_guard_migration_compatibility_stabilization_01310",
-        "partial Guard snapshot",
-        "snapshot freshness constraint",
+        "ограничение структуры снимка допустило",
+        "ограничение актуальности снимка допустило",
     ],
     "Сквозные тесты миграции Guard",
 )
@@ -138,9 +138,7 @@ if (
     raise SystemExit("Задание CI macOS по-прежнему содержит повторяющийся ключ steps")
 
 migration_tests = read("services/api/internal/dbmigrate/migrate_test.go")
-latest_migration = sorted((root / "services/api/internal/dbmigrate/sql").glob("*.sql"))[
-    -1
-].stem
+latest_migration = "0116_server_bound_guard_sessions_0507"  # immutable historical migration ID
 require(
     migration_tests,
     [

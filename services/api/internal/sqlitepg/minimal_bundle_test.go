@@ -17,7 +17,7 @@ import (
 
 func TestMinimalBundle077Validation(t *testing.T) {
 	ctx := context.Background()
-	dir := t.TempDir()
+	dir := privateSQLiteTempDir(t)
 	if _, _, err := verifyMinimalBundle0377(ctx, dir); err == nil {
 		t.Fatal("Пустая резервная копия ошибочно принята")
 	}
@@ -111,7 +111,7 @@ func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
 			_ = p.Close(context.Background())
 		}
 	})
-	base := t.TempDir()
+	base := privateSQLiteTempDir(t)
 	input := fixtureMinimalBundle0377(t, base)
 	importResult, err := ImportMinimalBundle0377(ctx, input, dsn)
 	if err != nil {
