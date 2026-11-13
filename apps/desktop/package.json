@@ -20,7 +20,8 @@
     "test:accessibility": "tsc --ignoreConfig src/desktop_accessibility.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/desktop_accessibility.test.mjs",
     "test:offline": "tsc --ignoreConfig src/offline_policy.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/offline_policy.test.mjs",
     "test:update-migration": "tsc --ignoreConfig src/release_update.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/release_update.test.mjs",
-    "test:diagnostics-support": "tsc --ignoreConfig src/diagnostics_support.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/diagnostics_support.test.mjs"
+    "test:diagnostics-support": "tsc --ignoreConfig src/diagnostics_support.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/diagnostics_support.test.mjs",
+    "test:workspace": "tsc --ignoreConfig src/desktop_navigation.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/desktop_navigation.test.mjs tests/desktop_workspace.test.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.5.0",

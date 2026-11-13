@@ -15,11 +15,13 @@ import (
 func TestDurablePublishRechecksAuthorizationBeforeCommit0213(t *testing.T) {
 	repo := repository.NewMemoryRepository("http://127.0.0.1")
 	srv := Server{Repo: repo, Authorization: authorization.New(repo)}
+	headRevision := int64(0)
 	payload, err := json.Marshal(model.DurablePublishPayload{
 		PackageID:              "demo-project-vanilla-3.4.0",
 		ExpectedManifestDigest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		ExpectedArtifactDigest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 		ExpectedStatus:         "staged",
+		ExpectedHeadRevision:   &headRevision,
 	})
 	if err != nil {
 		t.Fatal(err)

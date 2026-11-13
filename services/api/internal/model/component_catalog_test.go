@@ -26,7 +26,7 @@ func TestV3CatalogReferenceDigestIdentityAndImmutability0241(t *testing.T) {
 	if err := ValidateManifestSchema(m); err != nil {
 		t.Fatal(err)
 	}
-	if got := ComponentCatalogDigest0241(m.ComponentCatalog.Components); got != "85f4d294a8028281b667503339bc444bdf5c05ceef31e87fdee87f5cd0c84119" {
+	if got := ComponentCatalogDigest0241(m.ComponentCatalog.Components); got != "a583d91e72d22f7e027d8738383f428c56c6a00c0a38f077d1b7353d5891d1e8" {
 		t.Fatalf("несовпадение хеша: %s", got)
 	}
 	raw, err := json.Marshal(m)

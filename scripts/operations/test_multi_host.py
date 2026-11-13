@@ -154,7 +154,7 @@ class MultiHostExecutorTest(unittest.TestCase):
         with patch.object(mh, "run", return_value=json.dumps(raw)), \
              patch.object(mh.inventory, "machine_identity", return_value="machine:abc"), \
              patch.object(mh, "check_secure_file", return_value=None):
-            with self.assertRaisesRegex(mh.DeploymentError, "host ports"):
+            with self.assertRaisesRegex(mh.DeploymentError, "публиковать порты узла"):
                 mh.resolved_compose(directory, "launcher")
 
     def test_env_permissions_and_symlinks_fail_closed(self):

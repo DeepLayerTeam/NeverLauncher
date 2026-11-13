@@ -29,7 +29,7 @@ func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256(data)
-	if _, err := repo.AddFile(model.FileObject{ProjectID: release.ProjectID, VersionID: release.ID, Path: "client/data.jar", URL: key, Size: size, SHA256: hex.EncodeToString(sum[:]), Required: true}); err != nil {
+	if _, err := repo.AddFile(model.FileObject{ProjectID: release.ProjectID, VersionID: release.ID, Path: "client/data.jar", URL: "http://127.0.0.1/api/v1/files/" + release.ProjectID + "/" + release.ID + "/" + key, Size: size, SHA256: hex.EncodeToString(sum[:]), Required: true}); err != nil {
 		t.Fatal(err)
 	}
 	releases, err := repo.ListVersions(release.ProjectID)
@@ -50,7 +50,7 @@ func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 	// Повторите канонический конвейер sign -> stage -> integrity-check
 	// до начала административной транзакции публикации.
 	manifest := current.Manifest
-	manifest.Files = []model.ManifestFile{{Path: "client/data.jar", URL: key, Size: size, SHA256: hex.EncodeToString(sum[:]), Required: true}}
+	manifest.Files = []model.ManifestFile{{Path: "client/data.jar", URL: "http://127.0.0.1/api/v1/files/" + release.ProjectID + "/" + release.ID + "/" + key, Size: size, SHA256: hex.EncodeToString(sum[:]), Required: true}}
 	signed, err := srv.signManifest(manifest)
 	if err != nil {
 		t.Fatal(err)

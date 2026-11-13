@@ -128,7 +128,7 @@ def main():
         failed = subprocess.run(["java", "-jar", str(JAR.resolve())], cwd=ROOT / "build/package", env=instance_env,
                                 text=True, capture_output=True, timeout=10)
         assert failed.returncode != 0 and Handler.readies == 1, (failed.returncode, failed.stdout, failed.stderr)
-        assert "unregistered provider" in failed.stderr, failed.stderr
+        assert "Незарегистрированный провайдер" in failed.stderr, failed.stderr
         print("PASS: Java SPI со вложенными библиотеками → выбор конфигурации брокера → готовность JVM → аутентифицированный RPC → переключение провайдера → сигнал активности → CLI → безопасный отказ при несовместимости")
     finally:
         if child.poll() is None:

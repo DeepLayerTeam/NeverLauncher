@@ -343,10 +343,6 @@ if scope == "client":
             and witness["tickAfter"] > witness["tickBefore"]
         )
         checks["liveMultiplayerJoin"] = live_ok
-        evidence_files += [name for name in (
-            "live-join.json", "live-server-ready.json", "live-server-witness.json", "live-server-stopped.json",
-            "live-server-execution.log", "matching-server.log", "matching-server-install.json"
-        ) if (runtime / name).is_file() and name not in evidence_files]
     matching = read("matching-server.json") or {}
     server_install = read("vanilla-server-install.json") or {}
     if matching_server:
@@ -361,6 +357,11 @@ if scope == "client":
         "client-package.json", "materialized-client-verify.json", install_name, "vanilla-server-install.json",
         probe_name, f"{loader}-resolution-lock.json", "loader-platform.json", "loader-hardening.json", "loader-hardening-package.json", "matching-server.json", "matching-server.log", "result.json"
     ] if (runtime / name).is_file()]
+    if not matching_server:
+        evidence_files += [name for name in (
+            "live-join.json", "live-server-ready.json", "live-server-witness.json", "live-server-stopped.json",
+            "live-server-execution.log", "matching-server.log", "matching-server-install.json"
+        ) if (runtime / name).is_file() and name not in evidence_files]
 else:
     base = read("result.json") or {}
     manifest = read("manifest.json") or {}

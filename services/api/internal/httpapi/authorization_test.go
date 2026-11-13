@@ -104,7 +104,7 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 		t.Fatalf("Отзыв членства вернул %d: %s", res.Code, res.Body.String())
 	}
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/projects/demo-project", operator, `{"description":"revoked"}`)
-	if res.Code != http.StatusForbidden {
+	if res.Code != http.StatusUnauthorized {
 		t.Fatalf("Отозванный токен продолжил изменять проект: статус=%d ответ=%s", res.Code, res.Body.String())
 	}
 }
@@ -137,7 +137,7 @@ func TestGlobalRoleRevocation0211AppliesToExistingToken(t *testing.T) {
 		t.Fatalf("Отзыв глобальной роли вернул %d: %s", res.Code, res.Body.String())
 	}
 	res = request0211(t, handler, http.MethodPost, "/api/v1/admin/projects", token, `{"id":"global-after-revoke","name":"After"}`)
-	if res.Code != http.StatusForbidden {
+	if res.Code != http.StatusUnauthorized {
 		t.Fatalf("Устаревший токен администратора сохранил глобальное право project:write: статус=%d ответ=%s", res.Code, res.Body.String())
 	}
 }

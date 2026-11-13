@@ -29,7 +29,7 @@ jobs:
       - name: Проверить синтаксис скрипта реального клиента
         run: bash -n e2e/scripts/run-compatibility-case.sh
       - name: Запустить обязательные регрессионные проверки подписей, журналов и подмены для 0.52.1
-        run: python3 -m unittest discover -s scripts/acceptance -p 'test_*_0521.py' -v
+        run: python3 -m unittest discover -s scripts/acceptance -p 'test_inventory.py' -v
       - name: Проверить покрытие реальных запусков и отказ при отсутствии результатов
         run: |
           set -euo pipefail

@@ -172,7 +172,7 @@ func TestGoSignedDependencyFixture0243(t *testing.T) {
 	if !ed25519.Verify(ed25519.PublicKey(pub), payload, sig) {
 		t.Fatal("Некорректна подпись тестового каталога v3")
 	}
-	if m.ComponentCatalog.Digest != "53fe27537e66b25479003cdca208f3272091ef78b9278e16009e5097d4281988" {
+	if m.ComponentCatalog.Digest != "ea4ac43fb02b7cf8a1ee5831c4e64a2aba81e97d2598bfa92ab8a6a2abdcf22d" {
 		t.Fatal("Хеш каталога неожиданно изменился")
 	}
 }

@@ -1630,7 +1630,7 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 35,
+          "line": 36,
           "evidence": "- name: \"Проверка контрольных сумм миграций схемы PostgreSQL\""
         }
       ]
@@ -11290,72 +11290,72 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 68,
+          "line": 71,
           "evidence": "(stat.S_IMODE(path.stat().st_mode) \u0026 0o077) == 0, \"Требуется закрытый файл DSN PostgreSQL с правами 0600\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 70,
+          "line": 73,
           "evidence": "require(len(content) \u003c 8192 and len(content.splitlines()) == 1, \"Файл DSN должен содержать ровно один URL PostgreSQL\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 72,
+          "line": 75,
           "evidence": "require(parsed.scheme in (\"postgres\", \"postgresql\") and parsed.hostname and parsed.path not in (\"\", \"/\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 74,
+          "line": 77,
           "evidence": "\"В URL PostgreSQL должны быть указаны узел, база данных и учётные данные\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 78,
+          "line": 81,
           "evidence": "\"URL PostgreSQL должен требовать проверки имени узла через TLS (verify-full)\")"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 113,
+          "line": 116,
           "evidence": "\"SELECT row_to_json(x)::text FROM \""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 120,
+          "line": 123,
           "evidence": "raise CompatibilityError(\"Не удалось проверить схему работающей PostgreSQL\") from exc"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 123,
+          "line": 126,
           "evidence": "require(proc.returncode == 0 and len(proc.stdout) \u003c= 200_000, \"Проверка схемы рабочего PostgreSQL завершилась ошибкой\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 125,
+          "line": 128,
           "evidence": "require(rows and rows[0] == \"primary\", \"DSN PostgreSQL не указывает на доступный для записи основной узел\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 132,
+          "line": 135,
           "evidence": "raise CompatibilityError(\"PostgreSQL вернул строку миграции, которую невозможно разобрать\") from exc"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 145,
+          "line": 148,
           "evidence": "\"Схема PostgreSQL отличается от закреплённого каталога обеих версий (ожидают применения=%d неизвестных="
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 218,
+          "line": 221,
           "evidence": "\"postgres\": migrations, \"edge\": {\"success\": edge.get(\"success\"), \"sampled\": edge.get(\"sampled\")},"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 223,
+          "line": 226,
           "evidence": "ap = argparse.ArgumentParser(description=\"Допуск смешанных версий API/worker и PostgreSQL 0.51.5/0.51.6 на живой системе\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 229,
+          "line": 232,
           "evidence": "ap.add_argument(\"--pg-dsn-file\", type=Path, required=True, help=\"Один закрытый URL postgres:// с правами 0600; не передавать секреты в argv\""
         }
       ]
@@ -14280,7 +14280,7 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 786,
+          "line": 789,
           "evidence": "t.Fatalf(\"Версии N и N-1 не могут работать после изменения каталога PostgreSQL: %s\", got)"
         }
       ]
@@ -19952,6 +19952,16 @@
           "category": "postgresql-config-or-literal",
           "line": 99,
           "evidence": "key_id,'pending',0,stamp,stamp,stamp + interval '2 minutes','{}'::jsonb,'')"
+        }
+      ]
+    },
+    {
+      "path": "services/api/internal/dbmigrate/sql/0117_session_admission_role.sql",
+      "findings": [
+        {
+          "category": "postgresql-migration-file",
+          "line": 1,
+          "evidence": "-- Repair the reserved CURRENT_ROLE identifier without changing applied migration 0082."
         }
       ]
     },

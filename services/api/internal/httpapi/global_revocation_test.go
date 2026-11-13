@@ -9,6 +9,7 @@ import (
 func TestRoleUpdateRevokesLiveLauncherToken0297(t *testing.T) {
 	handler := testServer(t)
 	owner := loginAdmin(t, handler)
+	owner, _ = registerTestPasskey117(t, handler, owner)
 	created := request0211(t, handler, http.MethodPost, "/api/v1/admin/users", owner,
 		`{"email":"revocation-0297@example.test","displayName":"Revocation","roleId":"player","password":"a-real-password-0297"}`)
 	if created.Code != http.StatusCreated {

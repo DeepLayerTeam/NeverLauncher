@@ -625,7 +625,7 @@ mod tests{
  use super::*;
  #[test] fn go_v2_digest_and_presets(){
   let cat:ComponentCatalog=serde_json::from_str(include_str!("../tests/fixtures/catalog_topology_go.json")).unwrap();
-  assert_eq!(digest_v2(&cat),"97b6cfd2584fbae25545d422cad08c28b30b1de5d8f399e81a0ed7af3535f909");
+  assert_eq!(digest_v2(&cat),"5d47c869cd9f5a5bb8b38eb7e40f42b53f48c93960e6c434802bffca365fbdc3");
   validate_topology(&cat).unwrap();
   let mut other=cat.clone();other.groups[0].name="forged".into();assert_ne!(digest_v2(&cat),digest_v2(&other));
   let mut bad=cat.clone();bad.presets[0].components.push("missing".into());assert!(validate_topology(&bad).is_err());
@@ -638,25 +638,29 @@ mod tests{
  }
  #[test] fn custom_selection_0247_is_resolved_from_signed_catalog(){
   let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
-  let cat=m.component_catalog.as_ref().unwrap();
+  let mut selectable=m.component_catalog.clone().unwrap();
+  let original=m.component_catalog.as_ref().unwrap();
+  assert!(resolve_graph_v3(original,"@custom:v1:minimal:+shaders").unwrap_err().contains("нельзя включить вручную"));
+  selectable.components.iter_mut().find(|c|c.id=="shaders").unwrap().limited=false;
+  let cat=&selectable;
   let ids=resolve_graph_v3(cat,"@custom:v1:minimal:+shaders").unwrap();
   assert!(ids.contains("core")&&ids.contains("shaders")&&ids.contains("performance.sodium"));
   assert!(resolve_graph_v3(cat,"@custom:v1:minimal:-core").unwrap_err().contains("Обязательный компонент"));
-  assert!(resolve_graph_v3(cat,"@custom:v1:minimal:+unsigned").unwrap_err().contains("unsigned component"));
-  assert!(resolve_graph_v3(cat,"@custom:v1:quality:-performance.sodium").unwrap_err().contains("required_dependency"));
-  assert!(resolve_graph_v3(cat,"@custom:v1:minimal:+shaders,+shaders").unwrap_err().contains("duplicate"));
+  assert!(resolve_graph_v3(cat,"@custom:v1:minimal:+unsigned").unwrap_err().contains("Выбран неподписанный компонент"));
+  assert!(resolve_graph_v3(cat,"@custom:v1:quality:-performance.sodium").unwrap_err().contains("Обязательная зависимость"));
+  assert!(resolve_graph_v3(cat,"@custom:v1:minimal:+shaders,+shaders").unwrap_err().contains("повторяющийся вариант"));
   let mut exclusive=cat.clone();
   exclusive.components[2].exclusive_group="performance-engine".into();
-  assert!(resolve_graph_v3(&exclusive,"@custom:v1:quality:").unwrap_err().contains("exclusive_group"));
+  assert!(resolve_graph_v3(&exclusive,"@custom:v1:quality:").unwrap_err().contains("Взаимоисключающая группа"));
  }
  #[test] fn conditional_named_presets_reject_incompatible_components_0391(){
   let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_go_signed.json")).unwrap();
   let mut cat=m.component_catalog.unwrap();
   cat.components[2].exclusive_group="performance-engine".into();
   cat.components[1].exclusive_group="performance-engine".into();
-  assert!(validate_topology(&cat).unwrap_err().contains("exclusive_group"));
+  assert!(validate_topology(&cat).unwrap_err().contains("Взаимоисключающая группа"));
   cat.schema_version="4.0".into();
-  assert!(validate_topology(&cat).unwrap_err().contains("exclusive_group"));
+  assert!(validate_topology(&cat).unwrap_err().contains("Взаимоисключающая группа"));
  }
  #[test] fn signed_go_conditions_fixture_0244(){
   let manifest:crate::Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_go_signed.json")).unwrap();

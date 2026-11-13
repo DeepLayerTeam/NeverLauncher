@@ -134,7 +134,7 @@ func TestBuildWorkspaceDirectoryStageAndMaterialize0226(t *testing.T) {
 		t.Fatalf("собранный пакет должен быть неизменяемым: %d %s", rr.Code, rr.Body.String())
 	}
 	rr = call("POST", "/api/v1/packages/"+ws.Data.PackageID+"/files", nil, "")
-	if rr.Code != 409 || !strings.Contains(rr.Body.String(), "immutable") {
+	if rr.Code != 409 || !strings.Contains(rr.Body.String(), "неизменяемы") {
 		t.Fatalf("прямая загрузка изменила собранный пакет: %d %s", rr.Code, rr.Body.String())
 	}
 

@@ -271,7 +271,7 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
             #[cfg(target_os = "macos")] macos_daemon:None};
         assert!(live.verify().is_ok());
         fs::write(&jar,b"different game").unwrap();
-        assert!(live.verify().unwrap_err().contains("Обнаружено изменение: «executable»"));
+        assert!(live.verify().unwrap_err().contains("Исполняемый файл изменился во время игры"));
         let _=fs::remove_dir_all(root);
     }
     #[cfg(unix)]
@@ -293,7 +293,7 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
         fs::write(&file,b"injected").unwrap();
         let exited=handle.await.unwrap();
         assert!(!exited.timed_out);
-        assert!(exited.violation.unwrap_or_default().contains("executable changed"));
+        assert!(exited.violation.unwrap_or_default().contains("Исполняемый файл изменился во время игры"));
         assert!(exited.status.is_none());
         let _=fs::remove_dir_all(root);
     }

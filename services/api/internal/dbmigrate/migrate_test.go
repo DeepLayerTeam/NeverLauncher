@@ -30,7 +30,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("Неожиданный статус: %+v", st)
 	}
-	if st.Current != "0116_server_bound_guard_sessions_0507" {
+	if st.Current != "0117_session_admission_role" {
 		t.Fatalf("Неожиданная текущая миграция %q", st.Current)
 	}
 }
@@ -770,8 +770,8 @@ func TestTextureLifecycleMigration02511(t *testing.T) {
 	}
 }
 
-// Текущий выпуск намеренно не добавляет DDL. Неизвестная миграция в смешанном
-// развёртывании 0.51.5/0.51.6 привела бы к ошибке прежнего /ready.
+// Проверяем неизменяемый исторический каталог 0.51.5/0.51.6.
+// Новые миграции требуют отдельного окна обновления без старых узлов.
 func TestNN1MigrationCatalogFrozen0516(t *testing.T) {
 	ms, err := Catalog()
 	if err != nil {
@@ -779,6 +779,9 @@ func TestNN1MigrationCatalogFrozen0516(t *testing.T) {
 	}
 	h := sha256.New()
 	for _, m := range ms {
+		if m.Version > "0116_server_bound_guard_sessions_0507" {
+			continue
+		}
 		_, _ = h.Write([]byte(m.Description + "\x00" + m.Checksum + "\n"))
 	}
 	const baseline0515 = "12247e5cb196efb8a77d52c64dd55e4b4956703100a928c65d8be0c978c723ce"

@@ -411,9 +411,14 @@ func (s Server) migrationModulesBridgeStatus0446(w http.ResponseWriter, r *http.
 func decodeMigrationEnrollment0446(r io.Reader, req *moduleEnrollmentRequest0338) error {
 	dec := json.NewDecoder(r)
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(req); err != nil {
+	var decoded *moduleEnrollmentRequest0338
+	if err := dec.Decode(&decoded); err != nil {
 		return err
 	}
+	if decoded == nil {
+		return errors.New("Ожидается JSON-объект регистрации")
+	}
+	*req = *decoded
 	if req.WrapperPath == "" || req.ID == "" || req.ProfileID == "" || req.PublicKey == "" || req.Kind == "" {
 		return errors.New("Отсутствует: «поля регистрации»")
 	}

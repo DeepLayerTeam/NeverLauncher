@@ -36,7 +36,7 @@ func TestProviderWizardStrictSecrets02910(t *testing.T) {
 }
 func TestProviderWizardSecretDetectionIsRecursive02910(t *testing.T) {
 	v := repository.ManagedProviderRevision02910{ID: "company", Kind: "http", Config: json.RawMessage(`{"id":"company","hmac":{"secretEnv":"EXTERNAL_HMAC","clientSecret":"password"}}`), Reason: "test"}
-	if err := validateManagedSecrets02910(v); err == nil || !strings.Contains(err.Error(), "secret") {
+	if err := validateManagedSecrets02910(v); err == nil || !strings.Contains(err.Error(), "clientSecret") {
 		t.Fatal(err)
 	}
 }

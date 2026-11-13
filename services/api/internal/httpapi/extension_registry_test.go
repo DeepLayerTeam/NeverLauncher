@@ -103,7 +103,7 @@ func TestExtensionsRegistryInstallRejectsUnverifiedStorage0203(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)
-	if res.Code != http.StatusConflict || !strings.Contains(res.Body.String(), "artifact verification failed") {
+	if res.Code != http.StatusConflict || !strings.Contains(res.Body.String(), "Проверка артефакта реестра завершилась ошибкой") {
 		t.Fatalf("Установка должна завершиться отказом по умолчанию: %d %s", res.Code, res.Body.String())
 	}
 	installs, err := repo.ListExtensionInstalls(ctx, "", "")

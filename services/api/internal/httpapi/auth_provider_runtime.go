@@ -47,12 +47,16 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 	if err := strictProviderConfig02910(v.Config, &fields); err != nil {
 		return err
 	}
-	var banned func(map[string]json.RawMessage) error
-	banned = func(m map[string]json.RawMessage) error {
+	var banned func(map[string]json.RawMessage, string) error
+	banned = func(m map[string]json.RawMessage, path string) error {
 		for key, raw := range m {
 			low := strings.ToLower(key)
 			switch low {
-			case "dsn", "password", "secret", "clientsecret", "clientsecretfile", "secretfile", "keyfile", "certfile", "cafile", "privatekey", "accesstoken", "refreshtoken", "token", "hmacsecret", "connectionstring":
+			case "password":
+				if v.Kind != "sql" || key != "password" || (path != "" && path != "columns") {
+					return fmt.Errorf("Секреты в конфигурации и пути к файлам секретов запрещены: %s", key)
+				}
+			case "dsn", "secret", "clientsecret", "clientsecretfile", "secretfile", "keyfile", "certfile", "cafile", "privatekey", "accesstoken", "refreshtoken", "token", "hmacsecret", "connectionstring":
 				return fmt.Errorf("Секреты в конфигурации и пути к файлам секретов запрещены: %s", key)
 			}
 			if strings.Contains(low, "secret") && !strings.HasSuffix(low, "secretenv") {
@@ -60,14 +64,18 @@ func validateManagedSecrets02910(v repository.ManagedProviderRevision02910) erro
 			}
 			var nested map[string]json.RawMessage
 			if len(raw) > 0 && raw[0] == '{' && json.Unmarshal(raw, &nested) == nil {
-				if err := banned(nested); err != nil {
+				next := key
+				if path != "" {
+					next = path + "." + key
+				}
+				if err := banned(nested, next); err != nil {
 					return err
 				}
 			}
 		}
 		return nil
 	}
-	if err := banned(fields); err != nil {
+	if err := banned(fields, ""); err != nil {
 		return err
 	}
 	// Требуйте точного совпадения ID, чтобы конфигурация промежуточной среды не заменила чужого

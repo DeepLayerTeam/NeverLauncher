@@ -116,21 +116,28 @@ func TestProviderRuntimeParity0296BrowserMFAHasNoPreApprovalCredential(t *testin
 	if err := api.State.Passkeys.setPolicy("admin", mfaRequired117); err != nil {
 		t.Fatal(err)
 	}
-	begin := httptest.NewRecorder()
-	api.Handler().ServeHTTP(begin, httptest.NewRequest(http.MethodPost, "/api/v1/auth/oidc/parity-browser/begin", strings.NewReader(`{"redirectUri":"https://launcher.example.test/api/v1/auth/oidc/parity-browser/callback"}`)))
-	if begin.Code != http.StatusOK {
-		t.Fatalf("начало входа через браузер завершилось ошибкой: %d %s", begin.Code, begin.Body.String())
+	newPayload := func() []byte {
+		begin := httptest.NewRecorder()
+		api.Handler().ServeHTTP(begin, httptest.NewRequest(http.MethodPost, "/api/v1/auth/oidc/parity-browser/begin", strings.NewReader(`{"redirectUri":"https://launcher.example.test/api/v1/auth/oidc/parity-browser/callback"}`)))
+		if begin.Code != http.StatusOK {
+			t.Fatalf("начало входа через браузер завершилось ошибкой: %d %s", begin.Code, begin.Body.String())
+		}
+		var initial struct {
+			Data struct {
+				State       string `json:"state"`
+				Transaction string `json:"transaction"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(begin.Body.Bytes(), &initial); err != nil {
+			t.Fatal(err)
+		}
+		payload, err := json.Marshal(map[string]string{"code": "fixture-code", "state": initial.Data.State, "transaction": initial.Data.Transaction})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return payload
 	}
-	var initial struct {
-		Data struct {
-			State       string `json:"state"`
-			Transaction string `json:"transaction"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(begin.Body.Bytes(), &initial); err != nil {
-		t.Fatal(err)
-	}
-	payload, _ := json.Marshal(map[string]string{"code": "fixture-code", "state": initial.Data.State, "transaction": initial.Data.Transaction})
+	payload := newPayload()
 	complete := func() *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
 		api.Handler().ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/api/v1/auth/oidc/parity-browser/complete", bytes.NewReader(payload)))
@@ -152,6 +159,10 @@ func TestProviderRuntimeParity0296BrowserMFAHasNoPreApprovalCredential(t *testin
 	if err := api.State.Passkeys.setPolicy("admin", mfaOptional117); err != nil {
 		t.Fatal(err)
 	}
+	if rr := complete(); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("Повтор транзакции допущен: %d %s", rr.Code, rr.Body.String())
+	}
+	payload = newPayload()
 	ok := complete()
 	if ok.Code != http.StatusOK || strings.Contains(ok.Body.String(), "browser-refresh-secret") {
 		t.Fatalf("вход через браузер завершился ошибкой: %d %s", ok.Code, ok.Body.String())

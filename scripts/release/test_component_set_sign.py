@@ -105,6 +105,21 @@ class ComponentSetSigningTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             signed_set(value)
 
+    def test_development_generation_does_not_relax_production(self):
+        from unittest.mock import patch
+        import json
+        with patch.dict(os.environ, {"LAUNCHER_COMPONENT_SECURITY_GENERATION": "", "LAUNCHER_COMPONENT_SET_ED25519_SEED": ""}):
+            value = self.fixture("windows")
+            value["productVersion"] = "0.53.0"
+            with self.assertRaises(ValueError):
+                signed_set(copy.deepcopy(value))
+            raw, sig = signed_set(copy.deepcopy(value), development=True)
+            self.assertIsNone(sig)
+            self.assertEqual(json.loads(raw)["securityGeneration"], 1)
+            value["securityGeneration"] = 0
+            with self.assertRaises(ValueError):
+                signed_set(value, development=True)
+
     def test_missing_updater_rejected(self):
         value = self.fixture()
         value["supportFiles"] = []

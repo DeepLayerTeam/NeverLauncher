@@ -5,8 +5,8 @@
       "size": 1350
     },
     ".github/workflows/acceptance-inventory.yml": {
-      "sha256": "88a4e4edaafbc3e2f9d439a7e4f0469f4225dbcafe916d5e164ead8b5a2d1688",
-      "size": 2364
+      "sha256": "b2c47b5d7b28c03ddd7ad1e2db7d5063381f9eeeb4ef41e7b9394abeb0e1448b",
+      "size": 2367
     },
     ".github/workflows/account-device-recovery.yml": {
       "sha256": "677d243f2bb8b78f3568680bafbdbe3f52ec8755190cda5b949b861865abe9c5",
@@ -569,8 +569,8 @@
       "size": 8562
     },
     ".github/workflows/nn1-compatibility.yml": {
-      "sha256": "c4b9f0b2ad16eb7a2b86b027d221d0d6c7d9990158e2802be0ebf6285771ca01",
-      "size": 1617
+      "sha256": "6c76d1845c630ebe548c97a4bbd3cc91aaa60f3b902fc1a51ab5d671d794bcc2",
+      "size": 1666
     },
     ".github/workflows/observability.yml": {
       "sha256": "479369f00d6bcf6b833379f7ffdaf0e331647e1d9d2b5de3b03b67c475870115",
@@ -857,8 +857,8 @@
       "size": 30711
     },
     "apps/desktop/package.json": {
-      "sha256": "b09f7d332be343ab313256cd078d23598acb84724fe8eba25395d8c2978836e5",
-      "size": 3784
+      "sha256": "8e610ecccd22dc3880ef912108989e6d4272d3114309fa9068476d5af74cc7f0",
+      "size": 4040
     },
     "apps/desktop/src-tauri/Cargo.toml": {
       "sha256": "348a49f02c96252a80d113a59dff7edda30fbed4643315fc55f4cb75855b8a8a",
@@ -877,8 +877,8 @@
       "size": 48
     },
     "cli/internal/dbmigrate/catalog.zip": {
-      "sha256": "d978f8386446a42f91ce5c2ad7548a8fc0b8feac32d08e0712fc9727d1737a2c",
-      "size": 127716
+      "sha256": "74999fa38662d8cfeb5a03761cf13db628e86e2275ee4f66f166c04bfed7a142",
+      "size": 128340
     },
     "deploy/production/docker-compose.yml": {
       "sha256": "95828aad8cb6fb46589b2f76062791b263039fd90f5f1bdeb0db503cdb0b8c58",
@@ -1101,8 +1101,8 @@
       "size": 3511
     },
     "scripts/release/component_set_sign.py": {
-      "sha256": "4a3fba43852068f659e96edd1761047b43f66cdc51225d2d1db09ac815f021f4",
-      "size": 11786
+      "sha256": "a2b25172670e3594f1caa5a2e99b05de465a27e31f32a8c71cab37487e93b0ab",
+      "size": 12124
     },
     "scripts/release/defect_rehearsal.py": {
       "sha256": "2a6b348372127c734ef6f092a87aa98673d68804d353293f8402f164949a84d1",
@@ -1225,8 +1225,8 @@
       "size": 2472
     },
     "scripts/release/test_component_set_sign.py": {
-      "sha256": "f16944524fd57121832288fcbaca90fce5b6d600b3f956568696185f3354c5e7",
-      "size": 4447
+      "sha256": "3bed77797b122ba3df6501eb4617cb44d33ecb9012ecb8998fea15cb7febfcea",
+      "size": 5217
     },
     "scripts/release/test_defect_rehearsal.py": {
       "sha256": "db3dbe53a8034ea1fca21a023d3c58087afc173f07232f382510eb3d56ecc8dd",
@@ -1875,6 +1875,10 @@
     "services/api/internal/dbmigrate/sql/0116_server_bound_guard_sessions.sql": {
       "sha256": "bc2bdb72c6276a360950ceea93bb124024594f24f48fc6ef67ae87acb6bce014",
       "size": 5219
+    },
+    "services/api/internal/dbmigrate/sql/0117_session_admission_role.sql": {
+      "sha256": "5dd7eb78412978ffbdcb964614acf99149883c88b85272ebec12a4ff2964ba1e",
+      "size": 991
     },
     "settings.gradle.kts": {
       "sha256": "98aaca12745e6cfa6ad610c3f409ccd2eaa73e0e90ba9f6098b03d25b4243120",

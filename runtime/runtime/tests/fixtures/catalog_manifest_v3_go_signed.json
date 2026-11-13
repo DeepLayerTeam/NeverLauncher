@@ -77,7 +77,7 @@
   "componentCatalog": {
     "schemaVersion": "2.0",
     "revision": 1,
-    "digest": "97b6cfd2584fbae25545d422cad08c28b30b1de5d8f399e81a0ed7af3535f909",
+    "digest": "5d47c869cd9f5a5bb8b38eb7e40f42b53f48c93960e6c434802bffca365fbdc3",
     "components": [
       {
         "id": "core",
@@ -171,8 +171,8 @@
   },
   "signature": {
     "algorithm": "Ed25519",
-    "publicKey": "24a9dcf8fac87bd5cb27d51d09f98188bc1c00b1223f5ccaa26a5736d9a53d78",
-    "signature": "57cf016268b90bbbf978bb22ef18a80586edaf1b30adc19b4d338f870c5a5d3ac8aa7a8af5f1d0697b803e0a37895c4bcde095512363c88b7790ca9b44b65b04",
+    "publicKey": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+    "signature": "e6c51b3f5796e1846f0c639e957ff823cb292bea23aa6398b788c4d1c961c3234a7eb2512ed01d486c44b3eddc651b998d151769b04ae7d0b37e19bd2a8fb80d",
     "signedAt": "2026-10-20T00:00:00Z"
   }
 }

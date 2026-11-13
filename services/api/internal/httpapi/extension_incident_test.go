@@ -23,7 +23,7 @@ func TestEmergencyDisablePersistsDenyEvenWhenStateTransitionFails0424(t *testing
 	ctx := context.Background()
 	base := repository.NewMemoryRepository("http://localhost")
 	id := "example.incident"
-	if _, err := base.SaveExtensionVersion(ctx, model.ExtensionManifest{SchemaVersion: "2.0", ID: id, Name: "Incident", Version: "1.0.0", Publisher: "test.publisher", API: "1.0"}); err != nil {
+	if _, err := base.SaveExtensionVersion(ctx, model.ExtensionManifest{SchemaVersion: "2.0", ID: id, Name: "Incident", Version: "1.0.0", Publisher: "test.publisher", API: "1.0", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/main"}}}); err != nil {
 		t.Fatal(err)
 	}
 	_, err := base.TransitionExtensionInstall(ctx, model.ExtensionLifecycleTransition{ExtensionID: id, Scope: "global", DesiredVersion: "1.0.0", CurrentVersion: "1.0.0", DesiredState: model.ExtensionInstallStateEnabled, CurrentState: model.ExtensionInstallStateEnabled, Enabled: true, Operation: "install", ExpectedGeneration: 0})
@@ -49,7 +49,7 @@ func TestTrustSweepQuarantinesActiveLocalPackage0424(t *testing.T) {
 	repo := repository.NewMemoryRepository("http://localhost")
 	id := "example.active-local"
 	identity := "sha256:" + strings.Repeat("a", 64)
-	if _, err := repo.SaveExtensionVersion(ctx, model.ExtensionManifest{SchemaVersion: "2.0", ID: id, Name: "Local", Version: "1.0.0", Publisher: "test.publisher", API: "1.0"}); err != nil {
+	if _, err := repo.SaveExtensionVersion(ctx, model.ExtensionManifest{SchemaVersion: "2.0", ID: id, Name: "Local", Version: "1.0.0", Publisher: "test.publisher", API: "1.0", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/main"}}}); err != nil {
 		t.Fatal(err)
 	}
 	_, err := repo.TransitionExtensionInstall(ctx, model.ExtensionLifecycleTransition{ExtensionID: id, Scope: "global", DesiredVersion: "1.0.0", CurrentVersion: "1.0.0", DesiredState: model.ExtensionInstallStateEnabled, CurrentState: model.ExtensionInstallStateEnabled, Enabled: true, PackageIdentity: identity, CurrentPackageIdentity: identity, Source: "local:dev", Operation: "install", ExpectedGeneration: 0})

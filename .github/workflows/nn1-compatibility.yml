@@ -24,6 +24,7 @@ jobs:
       - name: "Проверка контроля сумм SQL версии 0.51.5 и отказов при смешении версий"
         run: |
           set -euo pipefail
+          python3 -m pip install 'PyYAML==6.0.3'
           PYTHONPATH=scripts/operations python3 -m unittest \
             scripts/operations/test_nn1_compat.py \
             scripts/operations/test_multi_host.py \

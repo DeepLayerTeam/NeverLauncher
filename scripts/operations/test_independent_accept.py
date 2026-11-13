@@ -167,7 +167,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
             with self.assertRaisesRegex(ia.Rejected, 'существующая конфигурация Compose container'):
                 ia.assert_fresh_compose_project('launcher')
         with patch.object(ia.subprocess, 'run', return_value=proc(b'', rc=1)):
-            with self.assertRaisesRegex(ia.Rejected, 'failed closed'):
+            with self.assertRaisesRegex(ia.Rejected, 'завершилась безопасным отказом'):
                 ia.assert_fresh_compose_project('launcher')
         with patch.object(ia.subprocess, 'run', side_effect=[proc(), proc()]):
             ia.assert_fresh_compose_project('launcher')

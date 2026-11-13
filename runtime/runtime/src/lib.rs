@@ -2207,7 +2207,7 @@ mod tests {
     fn go_signed_v3_catalog_v2_interop_0242() {
         let signed = include_str!("../tests/fixtures/catalog_manifest_v3_go_signed.json");
         let manifest: Manifest = serde_json::from_str(signed).expect("получить тестовый каталог, подписанный Go");
-        let key="24a9dcf8fac87bd5cb27d51d09f98188bc1c00b1223f5ccaa26a5736d9a53d78";
+        let key="03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8";
         verify_manifest_signature(&manifest,key).expect("подпись Ed25519 v3 каталога v2 из Go должна проверяться в Rust");
         let cat=manifest.component_catalog.as_ref().unwrap();
         assert_eq!(crate::component_catalog_0241::digest_v2(cat),cat.digest);
@@ -2233,7 +2233,7 @@ mod tests {
         let key="03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8";
         verify_manifest_signature(&manifest,key).expect("подпись Go Ed25519 для каталога 3.0 должна проверяться в Rust");
         let cat=manifest.component_catalog.as_ref().unwrap();
-        assert_eq!(digest_v3(cat),"53fe27537e66b25479003cdca208f3272091ef78b9278e16009e5097d4281988");
+        assert_eq!(digest_v3(cat),"ea4ac43fb02b7cf8a1ee5831c4e64a2aba81e97d2598bfa92ab8a6a2abdcf22d");
         let minimum=active_files(&manifest,Some("minimal")).unwrap();
         assert!(minimum.contains("mods/core.jar"));
         assert!(!minimum.contains("mods/sodium.jar"));
@@ -2256,7 +2256,7 @@ mod tests {
         let cat=exclusion.component_catalog.as_mut().unwrap();
         cat.components[2].exclusive_group="performance-engine".into();
         cat.digest=digest_v3(cat);
-        assert!(active_files(&exclusion,Some("quality")).unwrap_err().contains("exclusive_group"));
+        assert!(active_files(&exclusion,Some("quality")).unwrap_err().contains("Взаимоисключающая группа"));
     }
 
     #[test]
@@ -2276,7 +2276,7 @@ mod tests {
                 executable:false,target_os:vec![],ownership:"optional".into()});
         }
         let components=vec![CatalogComponent{id:"performance.sodium".into(),name:"Sodium & friends".into(),files:paths,version:String::new(),dependencies:vec![],conflicts:vec![],exclusive_group:String::new(),conditions:None,actions:vec![],description:String::new(),category_id:String::new(),group_id:String::new(),required:false,default:false,visible:None,limited:false,metadata:Default::default()}];
-        assert_eq!(digest(&components),"85f4d294a8028281b667503339bc444bdf5c05ceef31e87fdee87f5cd0c84119");
+        assert_eq!(digest(&components),"a583d91e72d22f7e027d8738383f428c56c6a00c0a38f077d1b7353d5891d1e8");
         m.component_catalog=Some(ComponentCatalog{schema_version:"1.0".into(),revision:1,digest:digest(&components),components,categories:vec![],groups:vec![],presets:vec![],default_preset:String::new()});
         let seed="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
         let key=sign_manifest(&mut m,seed,"2026-10-20T00:00:00Z").expect("подпись версии v3");

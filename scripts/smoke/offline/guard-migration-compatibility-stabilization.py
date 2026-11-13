@@ -138,7 +138,7 @@ if (
     raise SystemExit("Задание CI macOS по-прежнему содержит повторяющийся ключ steps")
 
 migration_tests = read("services/api/internal/dbmigrate/migrate_test.go")
-latest_migration = "0116_server_bound_guard_sessions_0507"  # immutable historical migration ID
+latest_migration = "0117_session_admission_role"
 require(
     migration_tests,
     [

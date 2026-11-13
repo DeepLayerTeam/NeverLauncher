@@ -38,6 +38,10 @@ def signed_set(
                 raise ValueError("поколение безопасности компонента должно быть десятичным числом")
             generation = int(value)
             manifest["securityGeneration"] = generation
+        if generation is None and development and not os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_SEED", "").strip():
+            # Unsigned development packages have no release trust epoch. Keep
+            # production admission strict; this value is never a signed grant.
+            generation = manifest["securityGeneration"] = 1
         if type(generation) is not int or generation <= 0 or generation > 2**64 - 1:
             raise ValueError(
                 "securityGeneration должен быть явно заданным положительным значением uint64"

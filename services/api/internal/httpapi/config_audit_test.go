@@ -26,11 +26,11 @@ func TestOperationalConfigAdminRoutes02111(t *testing.T) {
 	if bad.Code != 400 || !strings.Contains(bad.Body.String(), "invalid_field") {
 		t.Fatalf("Некорректная конфигурация: %d %s", bad.Code, bad.Body.String())
 	}
-	ok := send("POST", "/api/v1/admin/config/validate", `{"expectedRevision":1,"reason":"check settings","settings":{"auditDefaultPageSize":30,"auditMaxPageSize":100,"auditLookbackDays":30,"jobsDefaultPageSize":25,"jobsMaxPageSize":100}}`)
+	ok := send("POST", "/api/v1/admin/config/validate", `{"expectedRevision":1,"reason":"check settings","settings":{"auditExposeClientDetails":false,"auditDefaultPageSize":30,"auditMaxPageSize":100,"auditLookbackDays":30,"jobsDefaultPageSize":25,"jobsMaxPageSize":100}}`)
 	if ok.Code != 200 || !strings.Contains(ok.Body.String(), `"restartRequired":false`) {
 		t.Fatalf("проверка корректности: %d %s", ok.Code, ok.Body.String())
 	}
-	clash := send("POST", "/api/v1/admin/config/validate", `{"expectedRevision":77,"reason":"check settings","settings":{"auditDefaultPageSize":30,"auditMaxPageSize":100,"auditLookbackDays":30,"jobsDefaultPageSize":25,"jobsMaxPageSize":100}}`)
+	clash := send("POST", "/api/v1/admin/config/validate", `{"expectedRevision":77,"reason":"check settings","settings":{"auditExposeClientDetails":false,"auditDefaultPageSize":30,"auditMaxPageSize":100,"auditLookbackDays":30,"jobsDefaultPageSize":25,"jobsMaxPageSize":100}}`)
 	if clash.Code != 409 || !strings.Contains(clash.Body.String(), "revision_conflict") {
 		t.Fatalf("конфликт: %d %s", clash.Code, clash.Body.String())
 	}

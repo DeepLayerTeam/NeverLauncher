@@ -142,7 +142,7 @@ pub(crate) fn replace_file(root: &Path, source: &Path, destination: &Path) -> Re
     }
     #[cfg(windows)] {
         // После успешного ReplaceFileW сбросьте содержимое и метаданные файла на диск.
-        fs::File::open(destination).and_then(|f| f.sync_all())
+        fs::OpenOptions::new().write(true).open(destination).and_then(|f| f.sync_all())
             .map_err(|e| format!("Сохранение заменённого файла Windows: {e}"))?;
     }
     sync_parent(destination)

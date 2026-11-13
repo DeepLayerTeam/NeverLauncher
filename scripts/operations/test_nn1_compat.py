@@ -50,7 +50,7 @@ class NN1Admission(unittest.TestCase):
             directory = Path(d)
             for f in (nn.ROOT / "services/api/internal/dbmigrate/sql").glob("*.sql"):
                 (directory / f.name).write_bytes(f.read_bytes())
-            first = next(directory.glob("*.sql"))
+            first = sorted(directory.glob("*.sql"))[0]
             first.write_bytes(first.read_bytes() + b"\n-- changed")
             with self.assertRaisesRegex(nn.CompatibilityError, "каталог изменился"):
                 nn.migration_catalog(directory)
@@ -72,7 +72,7 @@ class NN1Admission(unittest.TestCase):
         with patch.object(mh, "remote_call", side_effect=lambda target, *a, **kw: reports[target.split("@")[1][0]]), \
              patch.object(mh, "edge_ready", return_value=(False,{"success":0,"sampled":3})), \
              patch.object(nn, "live_pg_migrations", return_value=nn.migration_catalog()[0]):
-            with self.assertRaisesRegex(nn.CompatibilityError, "HTTPS edge"):
+            with self.assertRaisesRegex(nn.CompatibilityError, "Внешний HTTPS-шлюз"):
                 nn.verify(argv)
 
     def test_real_mixed_hosts_with_matching_api_worker_and_protocol(self):
@@ -129,7 +129,7 @@ class NN1Admission(unittest.TestCase):
                 with self.assertRaisesRegex(nn.CompatibilityError, "доступный для записи основной узел"):
                     nn.live_pg_migrations(file)
             with patch.object(nn.subprocess, "run", return_value=types.SimpleNamespace(returncode=0,stdout="primary\nshape-mismatch\n",stderr="")):
-                with self.assertRaisesRegex(nn.CompatibilityError, "schema shape"):
+                with self.assertRaisesRegex(nn.CompatibilityError, "схемы durable/outbox/ServerBridge несовместимы"):
                     nn.live_pg_migrations(file)
             with patch.object(nn.subprocess, "run", return_value=types.SimpleNamespace(returncode=1,stdout="",stderr="password123")):
                 with self.assertRaises(nn.CompatibilityError) as ctx:

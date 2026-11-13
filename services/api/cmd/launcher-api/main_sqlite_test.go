@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -9,9 +10,13 @@ import (
 )
 
 func TestSQLiteHTTPRepositoryBootstrap0372(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
 	cfg := config.Config{
 		RepositoryDriver: "sqlite",
-		DatabaseDSN:      filepath.Join(t.TempDir(), "http-state.db"),
+		DatabaseDSN:      filepath.Join(dir, "http-state.db"),
 		PublicURL:        "https://launcher.example.test",
 	}
 	first := newRepository(cfg)

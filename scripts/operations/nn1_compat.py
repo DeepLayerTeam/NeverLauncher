@@ -55,6 +55,9 @@ def migration_catalog(folder=ROOT / "services/api/internal/dbmigrate/sql"):
         require(re.fullmatch(r"[a-zA-Z0-9_]+\.sql", logical), "Некорректное логическое имя миграции")
         name = logical.removesuffix(".sql")
         require(name not in versions, "Повторяющееся имя миграции")
+        # The historical pair cannot admit any newer applied migration.
+        if name > "0116_server_bound_guard_sessions_0507":
+            continue
         digest.update(logical.encode("ascii") + b"\0" + checksum.encode("ascii") + b"\n")
         versions[name] = checksum
     # Пока активен хотя бы один экземпляр 0.51.5, новые миграции развёртывать

@@ -50,7 +50,7 @@ need('services/api/internal/repository/devices.go', [
     'CascadeHandled: true',
     'jsonb_build_array($3::text)',
     'SET CONSTRAINTS ALL IMMEDIATE',
-    'revoke trusted device: validate deferred constraints',
+    'Отзыв доверенного устройства: ошибка проверки отложенных ограничений',
 ])
 need('services/api/internal/httpapi/device_management_test.go', [
     'TestDeviceManagementRevokeOthersAndChallengeInvalidation0125',
@@ -66,19 +66,21 @@ need('apps/desktop/src/main.tsx', [
     'renameManagedDevice',
     'revokeManagedDevice',
     'revokeOtherManagedDevices',
-    "callTauri<void>('delete_device_key'",
-    "callTauri<void>('delete_auth_session'",
+    'callTauri<void>("delete_device_key"',
+    'callTauri<void>("delete_auth_session"',
     '/auth/devices/revoke-others',
-    '/revoke`, authSession.accessToken',
+    '/revoke`,\n      authSession.accessToken',
     'revoke необратим для старого ключа',
 ])
-need('apps/admin/src/main.tsx', [
-    "{ id: 'devices', title: 'Устройства' }",
-    "devices: '/api/v1/admin/auth/devices'",
+need('apps/admin/src/admin/sections.ts', [
+    '{ id: "devices", title: "Устройства" }',
+])
+need('apps/admin/src/admin/AdminApp.tsx', [
+    '"/api/v1/admin/auth/devices"',
     'loadTrustedDevices',
     'revokeTrustedDevice',
     '/api/v1/admin/auth/devices/${encodeURIComponent(item.id)}/revoke',
-    'fresh phishing-resistant step-up',
+    'повторную проверку, устойчивую к фишингу',
 ])
 need('scripts/contracts/generate_openapi.py', [
     'TrustedDeviceRevokeRequest',
