@@ -367,10 +367,10 @@ mod tests {
         };
         assert!(guard.verify().is_ok(), "защищённый дочерний процесс должен пройти проверку");
         guard.expected_jvm_args = vec!["-javaagent:/injected.jar".into()];
-        assert!(guard.verify().unwrap_err().contains("Обнаружено изменение: параметры запуска"));
+        assert!(guard.verify().unwrap_err().contains("Обнаружено изменение: фактические параметры запуска JVM Guard в Linux"));
         guard.expected_jvm_args = vec!["8".into()];
         guard.start_ticks += 1;
-        assert!(guard.verify().unwrap_err().contains("PID reuse"));
+        assert!(guard.verify().unwrap_err().contains("PID использован повторно"));
         let _ = child.kill().await;
         let _ = child.wait().await;
     }
@@ -395,13 +395,24 @@ mod tests {
         let guard = LinuxRuntimeGuard0508 {
             pid, start_ticks:start_ticks_from_stat(&read_proc(pid,"stat").unwrap()).unwrap(),
             java_device:meta.dev(), java_inode:meta.ino(), java_sha256:sha256_file(&exe).unwrap(),
-            root:root.clone(), java_home:PathBuf::from("/not-a-java-home"),
+            root:root.clone(), java_home:exe.parent().unwrap().parent().unwrap().to_path_buf(),
             java_executable:exe.clone(),
             signed:BTreeMap::new(), external:BTreeMap::new(), java_native_baseline:BTreeMap::new(),
             expected_jvm_args:vec!["8".into()],
         };
+        // Wait for the dynamic loader to map the injected ELF, not just execve.
+        let mut mapped = false;
+        for _ in 0..100 {
+            if read_proc(pid, "maps").map(|maps| maps.lines().any(|line| line.contains(native.to_str().unwrap()) && line.split_whitespace().nth(1).is_some_and(|p| p.contains('x')))).unwrap_or(false) {
+                mapped = true;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        assert!(mapped, "test ELF must actually be mapped executable");
         let result=guard.verify();
-        assert!(result.unwrap_err().contains("неразрешённый модуль игры"));
+        let error = result.unwrap_err();
+        assert!(error.contains("неразрешённый модуль игры") && error.contains(native.to_str().unwrap()), "unexpected denial: {error}");
         let _ = child.kill().await;
         let _ = child.wait().await;
         let _ = fs::remove_dir_all(root);

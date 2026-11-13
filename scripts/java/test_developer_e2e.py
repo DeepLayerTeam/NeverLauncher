@@ -34,14 +34,14 @@ class JavaArtifactHardeningTest(unittest.TestCase):
         repo = self.isolated()
         jar = mod.artifact_dir(repo, 'launcher-java-sdk-core') / f'launcher-java-sdk-core-{mod.VERSION}.jar'
         jar.write_bytes(jar.read_bytes() + b'evil')
-        with self.assertRaisesRegex(ValueError, 'sha256 mismatch'):
+        with self.assertRaisesRegex(ValueError, 'sha256: несоответствие'):
             mod.verified_repo(repo)
 
     def test_missing_sources_rejected(self):
         repo = self.isolated()
         source = mod.artifact_dir(repo, 'launcher-java-sdk-core') / f'launcher-java-sdk-core-{mod.VERSION}-sources.jar'
         source.unlink()
-        with self.assertRaisesRegex(ValueError, 'missing/unsafe'):
+        with self.assertRaisesRegex(ValueError, 'Публикуемый артефакт отсутствует или небезопасен'):
             mod.verified_repo(repo)
 
     def test_corrupt_dependency_pom_rejected(self):
@@ -52,14 +52,14 @@ class JavaArtifactHardeningTest(unittest.TestCase):
         import hashlib
         for algo in ('sha256', 'sha512'):
             (pom.parent / (pom.name + '.' + algo)).write_text(getattr(hashlib, algo)(data).hexdigest() + '\n')
-        with self.assertRaisesRegex(ValueError, 'missing core dependency'):
+        with self.assertRaisesRegex(ValueError, 'Отсутствует основная зависимость'):
             mod.verified_repo(repo)
 
     def test_modified_manifest_digest_rejected(self):
         repo = self.isolated()
         checksum = mod.artifact_dir(repo, 'launcher-gravit-compat') / f'launcher-gravit-compat-{mod.VERSION}.pom.sha512'
         checksum.write_text('0'*128 + '\n')
-        with self.assertRaisesRegex(ValueError, 'sha512 mismatch'):
+        with self.assertRaisesRegex(ValueError, 'sha512: несоответствие'):
             mod.verified_repo(repo)
 
 if __name__ == '__main__':

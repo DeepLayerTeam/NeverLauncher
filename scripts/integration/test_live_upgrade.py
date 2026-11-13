@@ -147,7 +147,7 @@ class LiveAcceptanceTests(unittest.TestCase):
         with closing(sqlite3.connect(self.db[0])) as db:
             db.execute("UPDATE state SET value='changed'");db.commit()
         with patch.object(a, 'postgres_live_probe'):
-            with self.assertRaisesRegex(a.AcceptanceError, 'original core SQLite data changed'):
+            with self.assertRaisesRegex(a.AcceptanceError, 'Исходные данные SQLite \\(core\\) неожиданно изменились'):
                 a.verify(self.args)
 
     def test_same_count_blob_mutation_detected(self):

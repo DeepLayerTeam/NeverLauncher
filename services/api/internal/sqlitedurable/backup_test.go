@@ -124,7 +124,7 @@ func TestBackupTamperingAndOfflineLock(t *testing.T) {
 	if err = os.WriteFile(sidecar, []byte("stale"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = RestoreBackup(ctx, backup, opt.Path, true); err == nil || !strings.Contains(err.Error(), "checkpoint") {
+	if _, err = RestoreBackup(ctx, backup, opt.Path, true); err == nil || !strings.Contains(err.Error(), "контрольную точку") {
 		t.Fatalf("Ошибочно принят небезопасный сопутствующий файл: %v", err)
 	}
 	if err = os.Remove(sidecar); err != nil {

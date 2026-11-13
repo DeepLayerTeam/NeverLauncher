@@ -32,7 +32,7 @@ class IntegrationCertificationTests(unittest.TestCase):
             # Имитируйте набор Go-тестов с кодом выхода 0, который молча пропустил E2E.
             # Его никогда нельзя считать успешной сертификацией.
             with patch.dict(CASES, {'skip': (("go", "test", "-v", "./internal/lanmdns"),)}):
-                with patch("run_integration_0310.subprocess.Popen") as spawn:
+                with patch("run_integration_variant2.subprocess.Popen") as spawn:
                     child = spawn.return_value
                     child.communicate.return_value = (b"=== RUN   TestReal\n--- SKIP: TestReal (0.00s)\nPASS\n", b"")
                     child.returncode = 0
@@ -61,7 +61,7 @@ class IntegrationCertificationTests(unittest.TestCase):
             self.assertTrue(review(files,SHA)['crossPlatformIntegrationGatesPassed'])
             with self.assertRaisesRegex(ValueError,'Отсутствуют обязательные операционные системы'):
                 review(files[:-1],SHA)
-            with self.assertRaisesRegex(ValueError,'wrong schema'):
+            with self.assertRaisesRegex(ValueError,'Некорректная схема, релиз или рабочая копия'):
                 review(files,'b'*40)
             obj=json.loads(files[0].read_text())
             obj['results'][0]['status']='skipped'

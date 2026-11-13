@@ -40,7 +40,9 @@ func TestGravitS3Source02510(t *testing.T) {
 	}
 }
 func TestGravitS3RedirectRejected02510(t *testing.T) {
-	dst := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Error("SSRF: перенаправление на произвольный HTTP-сервер") }))
+	dst := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("SSRF: перенаправление на произвольный HTTP-сервер")
+	}))
 	defer dst.Close()
 	srcServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, dst.URL+"/private", http.StatusFound)

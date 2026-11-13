@@ -232,10 +232,10 @@ try {
         $GuardSource = Join-Path $Root "runtime\runtime\target\$($Target.RustTarget)\release\guard.exe"
         $RuntimeSource = Join-Path $Root "runtime\runtime\target\$($Target.RustTarget)\release\runtime.exe"
         $SensorSource = Join-Path $Root "runtime\guard-sensor\target\$($Target.RustTarget)\release\guard_sensor.dll"
-        if (-not (Test-Path $DesktopSource -PathType Leaf)) { throw "Отсутствует артефакт Desktop для $Arch: $DesktopSource" }
-        if (-not (Test-Path $GuardSource -PathType Leaf)) { throw "Отсутствует артефакт Guard для $Arch: $GuardSource" }
-        if (-not (Test-Path $RuntimeSource -PathType Leaf)) { throw "Отсутствует артефакт Runtime для $Arch: $RuntimeSource" }
-        if (-not (Test-Path $SensorSource -PathType Leaf)) { throw "Отсутствует артефакт Guard Sensor для $Arch: $SensorSource" }
+        if (-not (Test-Path $DesktopSource -PathType Leaf)) { throw "Отсутствует артефакт Desktop для ${Arch}: $DesktopSource" }
+        if (-not (Test-Path $GuardSource -PathType Leaf)) { throw "Отсутствует артефакт Guard для ${Arch}: $GuardSource" }
+        if (-not (Test-Path $RuntimeSource -PathType Leaf)) { throw "Отсутствует артефакт Runtime для ${Arch}: $RuntimeSource" }
+        if (-not (Test-Path $SensorSource -PathType Leaf)) { throw "Отсутствует артефакт Guard Sensor для ${Arch}: $SensorSource" }
 
         $DesktopPackageName = "launcher-desktop.exe"
         $DesktopPackagePath = Join-Path $PackageDir $DesktopPackageName

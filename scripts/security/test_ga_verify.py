@@ -52,36 +52,36 @@ class GAVerification0320(unittest.TestCase):
 
     def test_unsigned_mutation_rejected(self):
         self.paths[0].write_bytes(self.paths[0].read_bytes()+b' ')
-        with self.assertRaisesRegex(ValueError,'signature'):
+        with self.assertRaisesRegex(ValueError,'Некорректная подпись доказательных данных'):
             self.verify()
 
     def test_missing_tier_rejected(self):
-        with self.assertRaisesRegex(ValueError,'seven independent'):
+        with self.assertRaisesRegex(ValueError,'семь независимо подписанных уровней'):
             gate.verify_all(self.paths[:-1],self.pub,self.commit,self.source,now=self.now)
 
     def test_wrong_key_rejected(self):
         key = Ed25519PrivateKey.generate().public_key().public_bytes(serialization.Encoding.Raw,serialization.PublicFormat.Raw).hex()
-        with self.assertRaisesRegex(ValueError,'signature'):
+        with self.assertRaisesRegex(ValueError,'Некорректная подпись доказательных данных'):
             gate.verify_all(self.paths,key,self.commit,self.source,now=self.now)
 
     def test_cross_commit_and_stale_rejected(self):
         tier='linux-live'; path=self.root/f'{tier}.json'
         doc=self.documents[tier]; doc['commit']='f'*40; self.sign(path,doc)
-        with self.assertRaisesRegex(ValueError,'commit/version'): self.verify()
+        with self.assertRaisesRegex(ValueError,'не привязаны к точному коммиту и версии релиза'): self.verify()
         doc['commit']=self.commit; doc['generatedAt']=(self.now-dt.timedelta(days=8)).isoformat(); self.sign(path,doc)
         with self.assertRaisesRegex(ValueError,'stale'): self.verify()
 
     def test_skip_fake_live_and_wrong_platform_rejected(self):
         tier='macos-live'; path=self.root/f'{tier}.json'
         doc=self.documents[tier]; doc['results'][0]['simulated']=True; self.sign(path,doc)
-        with self.assertRaisesRegex(ValueError,'simulated'): self.verify()
+        with self.assertRaisesRegex(ValueError,'режиме имитации'): self.verify()
         doc['results'][0]['simulated']=False; doc['host']['system']='Linux'; self.sign(path,doc)
         with self.assertRaisesRegex(ValueError,'wrong OS'): self.verify()
 
     def test_missing_hardware_scenario_and_fake_pass_rejected(self):
         tier='hardware-live'; path=self.root/f'{tier}.json'
         doc=self.documents[tier]; doc['results'].pop(); self.sign(path,doc)
-        with self.assertRaisesRegex(ValueError,'missing live scenarios'): self.verify()
+        with self.assertRaisesRegex(ValueError,'отсутствуют реальные сценарии'): self.verify()
         doc['results'][0]['status']='SKIP'; self.sign(path,doc)
         with self.assertRaisesRegex(ValueError,'simulated'): self.verify()
 
@@ -91,10 +91,10 @@ class GAVerification0320(unittest.TestCase):
         test_name = next(iter(doc['results'][0]['required']))
         doc['results'][0]['required'][test_name]='SKIP'
         self.sign(path,doc)
-        with self.assertRaisesRegex(ValueError,'passing named tests'): self.verify()
+        with self.assertRaisesRegex(ValueError,'отсутствуют успешно пройденные обязательные тесты'): self.verify()
 
     def test_duplicate_json_field_rejected(self):
         raw=b'{"tier":"offline","tier":"offline"}'
-        with self.assertRaisesRegex(ValueError,'duplicate JSON'): gate.unique_json(raw)
+        with self.assertRaisesRegex(ValueError,'(?:Повторяющееся поле|Обнаружен дубликат: ключ) JSON'): gate.unique_json(raw)
 
 if __name__=='__main__': unittest.main()

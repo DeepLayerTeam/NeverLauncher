@@ -25,7 +25,7 @@ func TestBrandedSignedUpdateIsTransactional04510(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Тестовые данные Prestarter на основе скрипта")
 	}
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	t.Setenv("XDG_DATA_HOME", filepath.Join(root, "xdg"))
 	opts := signedBundle(t, root, false)
 	raw, err := os.ReadFile(filepath.Join(opts.Bundle, "bootstrap.signed.json"))

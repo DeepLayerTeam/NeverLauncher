@@ -21,7 +21,7 @@ type MigrationSecurityReport0336 struct {
 	Format                      string     `json:"format"`
 	RunID                       string     `json:"runId"`
 	ImportedAccounts            int        `json:"importedAccounts"`
-	ExistingLauncherUntouched      int        `json:"existingLauncherUntouched"`
+	ExistingLauncherUntouched   int        `json:"existingLauncherUntouched"`
 	ManualResets                int        `json:"manualResets"`
 	SessionsRevoked             int64      `json:"sessionsRevoked"`
 	DevicesRevoked              int64      `json:"devicesRevoked"`

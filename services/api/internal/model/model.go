@@ -421,7 +421,7 @@ type MinecraftProfile struct {
 type MinecraftSession struct {
 	ID                     string    `json:"id"`
 	UserID                 string    `json:"userId"`
-	LauncherSessionID         string    `json:"launcherSessionId"`
+	LauncherSessionID      string    `json:"launcherSessionId"`
 	ProfileUUID            string    `json:"profileUuid"`
 	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch           int64     `json:"bindingEpoch"`
@@ -752,7 +752,7 @@ type ServerBridgePlayerSession struct {
 	PlayerUUID          string    `json:"playerUuid"`
 	Username            string    `json:"username"`
 	UserID              string    `json:"userId"`
-	LauncherSessionID      string    `json:"launcherSessionId"`
+	LauncherSessionID   string    `json:"launcherSessionId"`
 	MinecraftSessionID  string    `json:"minecraftSessionId,omitempty"`
 	TrustedDeviceID     string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch        int64     `json:"bindingEpoch"`

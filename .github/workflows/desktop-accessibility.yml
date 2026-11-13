@@ -38,6 +38,6 @@ jobs:
           node-version: '22'
       - name: Установить нативные зависимости WebKitGTK для сборки в Linux
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libtss2-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev
       - name: Собрать и запустить нативные тесты Desktop
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml desktop_window_0357_tests --no-default-features

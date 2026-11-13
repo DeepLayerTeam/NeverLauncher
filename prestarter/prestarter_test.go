@@ -115,7 +115,7 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Имитация Runtime на POSIX требует sh; на Windows необходимы нативные бинарные файлы")
 	}
-	temp := t.TempDir()
+	temp := resolvedTestTempDir(t)
 	parts := baseParts()
 	opts, cfg := makeOfflineFixture(t, temp, parts)
 	opts.LaunchProfile = true
@@ -174,7 +174,7 @@ func TestFailedFirstBootstrapDoesNotLeaveUnlaunchableActiveRelease(t *testing.T)
 	if runtime.GOOS == "windows" {
 		t.Skip("Тестовая среда выполнения POSIX")
 	}
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	parts := baseParts()
 	// Подписанный Runtime проверяет профиль, но не может установить Managed Java.
 	parts["runtime"] = []byte("#!/bin/sh\ncase \"$1\" in verify) echo '{}';; java) exit 17;; *) exit 19;; esac\n")
@@ -208,7 +208,7 @@ func TestPrestarterDownloadRejectsPartialSymlink(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("В Windows права доступа к символьным ссылкам отличаются")
 	}
-	s, err := newStorage(filepath.Join(t.TempDir(), "cache"), "", false)
+	s, err := newStorage(filepath.Join(resolvedTestTempDir(t), "cache"), "", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestPrestarterDownloadRejectsPartialSymlink(t *testing.T) {
 	if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		t.Fatal(err)
 	}
-	sentinel := filepath.Join(t.TempDir(), "sentinel")
+	sentinel := filepath.Join(resolvedTestTempDir(t), "sentinel")
 	if err = os.WriteFile(sentinel, []byte("unchanged"), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +237,7 @@ func TestFailedNewReleaseKeepsOldActive(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Проверка вспомогательного инструмента POSIX")
 	}
-	temp := t.TempDir()
+	temp := resolvedTestTempDir(t)
 	parts := baseParts()
 	opts, _ := makeOfflineFixture(t, temp, parts)
 	if e := Run(context.Background(), opts); e != nil {
@@ -297,7 +297,7 @@ func TestDownloadRangeResumeAndBadRangeInvalidates(t *testing.T) {
 	}))
 	defer server.Close()
 	checksum.URL = server.URL + "/content"
-	s, e := newStorage(filepath.Join(t.TempDir(), "cache"), "", false)
+	s, e := newStorage(filepath.Join(resolvedTestTempDir(t), "cache"), "", false)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -335,7 +335,7 @@ func TestMalformed206NeverJoinsOldBytes(t *testing.T) {
 	}))
 	defer server.Close()
 	a.URL = server.URL + "/content"
-	s, _ := newStorage(filepath.Join(t.TempDir(), "cache"), "", false)
+	s, _ := newStorage(filepath.Join(resolvedTestTempDir(t), "cache"), "", false)
 	s.http = server.Client()
 	got, e := s.artifact(context.Background(), a, "")
 	if e != nil {
@@ -348,7 +348,7 @@ func TestMalformed206NeverJoinsOldBytes(t *testing.T) {
 func TestManifestIntegrityRejectsWrongBytes(t *testing.T) {
 	data := []byte(`{"status":"fake"}`)
 	a := fakeArtifact(data, "https://placeholder.invalid")
-	dir := t.TempDir()
+	dir := resolvedTestTempDir(t)
 	s, _ := newStorage(dir, "", true)
 	if e := os.MkdirAll(filepath.Join(dir, "cache", "sha256", a.SHA256[:2]), 0700); e != nil {
 		t.Fatal(e)
@@ -359,7 +359,7 @@ func TestManifestIntegrityRejectsWrongBytes(t *testing.T) {
 	}
 }
 func TestProcessLockSerializesSameRoot(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "lock")
+	path := filepath.Join(resolvedTestTempDir(t), "lock")
 	first, e := acquireProcessLock(path)
 	if e != nil {
 		t.Fatal(e)
@@ -386,7 +386,7 @@ func TestNoUnboundedTransferAccepted(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200); io.WriteString(w, string(body)) }))
 	defer srv.Close()
 	a.URL = srv.URL + "/file"
-	s, _ := newStorage(filepath.Join(t.TempDir(), "cache"), "", false)
+	s, _ := newStorage(filepath.Join(resolvedTestTempDir(t), "cache"), "", false)
 	s.http = srv.Client()
 	if _, e := s.artifact(context.Background(), a, ""); e == nil {
 		t.Fatal("Принято потоковое тело сверх допустимого размера")
@@ -397,7 +397,7 @@ func TestDesktopReceivesSignedFirstRunBinding(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Проверка Desktop для POSIX")
 	}
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	parts := baseParts()
 	parts["desktop"] = []byte("#!/bin/sh\nprintf '%s' \"$LAUNCHER_CONFIG_DIR\" > \"$LAUNCHER_CONFIG_DIR/desktop-started\"\n")
 	opts, cfg := makeOfflineFixture(t, root, parts)
@@ -441,7 +441,7 @@ func TestRollbackIfSignedProfileCannotBootstrap(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Проверка вспомогательного инструмента POSIX")
 	}
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	parts := baseParts()
 	opts, cfg := makeOfflineFixture(t, root, parts)
 	private := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{0x42}, 32))
@@ -492,7 +492,7 @@ func TestRecoveryRemovesUncommittedStaging(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Проверка вспомогательного инструмента POSIX")
 	}
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	opts, _ := makeOfflineFixture(t, root, baseParts())
 	releaseRoot := filepath.Join(opts.Root, "launcher", "releases", ".incomplete-from-power-loss")
 	if err := os.MkdirAll(releaseRoot, 0700); err != nil {

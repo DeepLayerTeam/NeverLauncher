@@ -81,7 +81,7 @@ require(
     component,
     [
         "migrateComponentUpdateState01510(root)",
-        "persist canonical component update state",
+        "Сохранение канонического состояния обновления компонентов",
         "removeSafeComponentTreePayload01510",
     ],
     "Интеграция обновления компонентов 0.15.10",
@@ -94,7 +94,7 @@ require(
     [
         "migrationStabilizationRequired01510",
         "runMigrationStabilizationSelfTest01510",
-        "migration stabilization",
+        "Ошибка самопроверки миграции и стабилизации",
     ],
     "Интеграция релиза 0.15.10",
 )
@@ -112,7 +112,7 @@ require(preflight, ["migration-stabilization.py"], "Предварительна
 require(ci, ["migration-stabilization.py"], "CI")
 require(
     policy,
-    ["0.15.10 Migration + stabilization", "migration-stabilization.py"],
+    ["В 0.15.10: миграция и стабилизация", "migration-stabilization.py"],
     "Политика хранилища",
 )
 

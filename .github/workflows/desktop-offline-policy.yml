@@ -38,7 +38,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: "Установить зависимости Tauri для Linux"
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libtss2-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev
       - name: "Проверка нативной подписанной привязки для автономного режима"
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml offline_policy_0358 --no-default-features
       - name: "Проверка существующего нативного разделения областей доверия"

@@ -8,6 +8,7 @@ import unittest
 
 SCRIPT = Path(__file__).with_name('upload_release.py')
 VERSION = SCRIPT.parents[2].joinpath('VERSION').read_text().strip()
+COMMIT = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=SCRIPT.parents[2], text=True).strip()
 
 class ReleaseUploadTests(unittest.TestCase):
     def test_upload_and_strip(self):
@@ -18,7 +19,7 @@ class ReleaseUploadTests(unittest.TestCase):
             log=root/'commands'
             cli=root/'sentry-cli';cli.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$SENTRY_TEST_LOG"\n');cli.chmod(0o755)
             env={**os.environ,'SENTRY_AUTH_TOKEN':'test-secret','SENTRY_ORG':'test-org','SENTRY_PROJECT':'test-project','SENTRY_TEST_LOG':str(log)}
-            run=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit','abcdef1234567890','--js-dist',str(assets.parent),'--cli',str(cli)],env=env,capture_output=True,text=True)
+            run=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit',COMMIT,'--js-dist',str(assets.parent),'--cli',str(cli)],env=env,capture_output=True,text=True)
             self.assertEqual(run.returncode,0,run.stderr)
             self.assertFalse(sm.exists())
             commands=log.read_text()
@@ -33,7 +34,7 @@ class ReleaseUploadTests(unittest.TestCase):
             with zipfile.ZipFile(bundle,'w') as z:
                 z.writestr('META-INF/sentry-debug-meta.properties','io.sentry.proguard.uuid=12345678-1234-1234-1234-123456789abc\n')
             env={**os.environ,'SENTRY_AUTH_TOKEN':'test','SENTRY_ORG':'test','SENTRY_PROJECT':'test'}
-            result=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit','abcdef1234567890','--jvm-mapping',str(mapping),'--jvm-jar',str(bundle),'--mapping-uuid','98765432-1234-1234-1234-123456789abc'],env=env,capture_output=True)
+            result=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit',COMMIT,'--jvm-mapping',str(mapping),'--jvm-jar',str(bundle),'--mapping-uuid','98765432-1234-1234-1234-123456789abc'],env=env,capture_output=True)
             self.assertNotEqual(result.returncode,0)
             self.assertIn('UUID карты сопоставления не совпадает'.encode('utf-8'),result.stderr)
 
@@ -53,7 +54,7 @@ class ReleaseUploadTests(unittest.TestCase):
             cli.chmod(0o755)
             env={**os.environ,'SENTRY_AUTH_TOKEN':'test-secret','SENTRY_ORG':'test-org',
                  'SENTRY_PROJECT':'test-project','SENTRY_TEST_LOG':str(log)}
-            result=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit','abcdef1234567890',
+            result=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit',COMMIT,
                 '--jvm-mapping',str(mapping),'--jvm-jar',str(bundle),'--mapping-uuid',uuid,
                 '--cli',str(cli)],env=env,capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
@@ -67,7 +68,7 @@ class ReleaseUploadTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             assets=Path(temporary)/'assets';assets.mkdir();(assets/'app.js.map').write_text('{}')
             env={k:v for k,v in os.environ.items() if k not in ['SENTRY_AUTH_TOKEN','SENTRY_ORG','SENTRY_PROJECT']}
-            run=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit','abcdef1234567890','--js-dist',str(assets.parent)],env=env,capture_output=True)
+            run=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit',COMMIT,'--js-dist',str(assets.parent)],env=env,capture_output=True)
             self.assertNotEqual(run.returncode,0)
             self.assertTrue((assets/'app.js.map').exists())
 

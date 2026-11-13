@@ -47,6 +47,9 @@ jobs:
         run: |
           mkdir -p audit-evidence
           "$RUNNER_TEMP/nl" module-parity audit --report audit-evidence/source.json
+      - name: Установить закреплённые зависимости Desktop
+        working-directory: apps/desktop
+        run: npm ci --ignore-scripts
       - name: Запустить регрессионные тесты Desktop
         run: |
           "$RUNNER_TEMP/nl" module-parity audit --run-tests --require-tests --module M07 --timeout 90s --report audit-evidence/desktop-linux.json

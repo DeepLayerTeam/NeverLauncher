@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"

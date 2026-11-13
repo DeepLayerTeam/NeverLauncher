@@ -17,7 +17,7 @@ import (
 
 func installTwoSignedReleases0527(t *testing.T) (Options, *installation, record, record) {
 	t.Helper()
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	opts := signedBundle(t, root, true)
 	cfg, _, err := VerifyBundle(opts.Bundle, opts.TrustedKey, true)
 	if err != nil {
@@ -146,7 +146,7 @@ func TestInstallerRollbackRejectsAbsentPreviousGeneration0527(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Для тестового сценария оболочки требуется POSIX")
 	}
-	opts := signedBundle(t, t.TempDir(), true)
+	opts := signedBundle(t, resolvedTestTempDir(t), true)
 	if err := Install(context.Background(), opts); err != nil {
 		t.Fatal(err)
 	}

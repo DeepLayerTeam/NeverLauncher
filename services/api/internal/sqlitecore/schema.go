@@ -245,7 +245,7 @@ func (r *Repository) Check(ctx context.Context) error {
 		}
 		// Выявляйте подменённые неизменяемые данные профиля и head каналов даже при
 		// структурно корректных страницах SQLite и внешних ключах.
-		profiles, e := q.QueryContext(ctx, "SELECT "+"id,project_id,name,description,loader,preset,is_default,created_at,updated_at,revision,digest"+" FROM profiles")
+		profiles, e := q.QueryContext(ctx, "SELECT "+profileFields+" FROM profiles")
 		if e != nil {
 			return e
 		}

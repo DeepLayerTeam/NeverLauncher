@@ -378,7 +378,7 @@ mod tests {
         let hint=ErrorBody{error:String::new(),message:"Invalid app registration: very-secret".into(),xerr:serde_json::json!(0)};
         assert_eq!(classify(403,&hint,None),ProviderError::AppNotAuthorized);
         assert_eq!(classify(429,&ErrorBody::default(),Some(31)),ProviderError::Throttled(Some(31)));
-        assert_eq!(classify(401,&ErrorBody{xerr:serde_json::json!(2148916238),..Default::default()},None),ProviderError::XboxFamily);
+        assert_eq!(classify(401,&ErrorBody{error:String::new(),message:String::new(),xerr:serde_json::json!(2148916238)},None),ProviderError::XboxFamily);
         assert!(!ProviderError::AppNotAuthorized.message().contains("very-secret"));
     }
     #[test] fn official_texture_changes_require_observed_account_state() {

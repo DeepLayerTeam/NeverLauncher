@@ -33,7 +33,7 @@ func trustFixture02312(t *testing.T) ([]byte, ed25519.PrivateKey, ed25519.Privat
 }
 func TestRootSignedTrustRotationAndRevocation02312(t *testing.T) {
 	raw, root, signer, key := trustFixture02312(t)
-	dir := t.TempDir()
+	dir := resolvedTestTempDir(t)
 	p, e := AcceptTrustPolicy(dir, key, raw, time.Now().UTC())
 	if e != nil {
 		t.Fatal(e)

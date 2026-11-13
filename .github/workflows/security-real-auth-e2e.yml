@@ -64,7 +64,7 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: "Проверить форматирование и собрать промышленный Backend"
         run: |
-          test -z "$(gofmt -l internal/authrequest internal/httpapi/auth_accounts.go internal/httpapi/admin_handlers.go internal/httpapi/auth.go internal/httpapi/*02912*.go)"
+          test -z "$(gofmt -l internal/authrequest internal/httpapi/auth_accounts.go internal/httpapi/admin_handlers.go internal/httpapi/auth.go internal/httpapi/security_real_auth_e2e_test.go internal/httpapi/security_real_auth_postgres_test.go internal/httpapi/security_session_signing_test.go)"
           go build ./cmd/...
           go vet ./internal/authrequest ./internal/httpapi ./internal/federation ./internal/repository
       - name: Проверить изоляцию источника HTTP, вредоносный JSON, MFA и повтор запросов обновления

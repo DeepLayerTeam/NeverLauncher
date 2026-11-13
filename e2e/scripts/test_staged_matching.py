@@ -236,10 +236,10 @@ class MatchingValidationTests(unittest.TestCase):
 
                 with (
                     patch(
-                        "staged_matching_0344.find_window", return_value=("0x1234", 42)
+                        "staged_matching.find_window", return_value=("0x1234", 42)
                     ),
-                    patch("staged_matching_0344.command", side_effect=test_cmd),
-                    patch("staged_matching_0344.time.sleep", return_value=None),
+                    patch("staged_matching.command", side_effect=test_cmd),
+                    patch("staged_matching.time.sleep", return_value=None),
                     patch.object(
                         GameplayObserver,
                         "screenshot",

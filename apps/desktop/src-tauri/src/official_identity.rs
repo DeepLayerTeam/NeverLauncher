@@ -374,7 +374,7 @@ fn migrate_legacy(id: &str) -> Result<(), String> {
             save(&slot, &legacy)?;
         }
         dir.ids.push(uuid.clone());
-        if dir.active.is_none() { dir.active = Some(uuid); }
+        if dir.active.is_none() { dir.active = Some(uuid.clone()); }
         save_directory(id, &dir)?;
     } else if existing.is_none() {
         return Err("Миграция защищённого хранилища ОС не завершена: отсутствует активный слот учётной записи".into());
@@ -403,7 +403,7 @@ fn add_account(id: &str, record: &StoredAccount) -> Result<(), String> {
     // прежний активный выбор остаётся пригодным. Новая бесхозная запись не содержит открытого текста.
     save(&slot, record)?;
     if !dir.ids.contains(&uuid) {dir.ids.push(uuid.clone());}
-    dir.active = Some(uuid);
+    dir.active = Some(uuid.clone());
     save_directory(id, &dir)
 }
 fn remove_account(id: &str, uuid: &str) -> Result<(), String> {
@@ -770,7 +770,7 @@ impl IdentityManager {
             payload.pointer("/data/status").and_then(Value::as_str)!=Some("joined") {
             return Err("ServerBridge не авторизовал выбранную официальную учётную запись".into());
         }
-        Ok(OfficialServerJoinResult0397{username:record.profile.name,uuid:expected,server_id:req.server_id})
+        Ok(OfficialServerJoinResult0397{username:record.profile.name.clone(),uuid:expected,server_id:req.server_id})
     }
 
     pub async fn launch_credentials(&self, backend: &str, access: &str, session: &str) -> Result<MinecraftLaunchCredentials, String> {
@@ -945,23 +945,22 @@ impl IdentityManager {
             Some(self.verified_native_grant(&client_id,microsoft.as_ref().unwrap()).await)
         } else {None};
         let _vault=self.vault_lock.lock().await;
-        let mut flows=self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
-        if !flows.get(&id).is_some_and(|v|v.nonce==nonce) {return Err("Microsoft-авторизация отменена".into());}
         {
-            let flow=flows.get_mut(&id).ok_or("Microsoft-авторизация отменена")?;
-            flow.in_flight=false;
+            let mut flows=self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
+            let flow=flows.get_mut(&id).filter(|v|v.nonce==nonce).ok_or("Microsoft-авторизация отменена")?;
             if Instant::now()>=flow.expires {flows.remove(&id);return Err("Срок действия кода устройства Microsoft истёк".into());}
+            // Keep the flow in flight until the backend session has been revalidated.
         }
         if completed.as_ref().is_some_and(|v|v.is_ok()) {
             // Проверьте сеанс Launcher перед сохранением нативных учётных данных.
             // Не удерживайте синхронный мьютекс во время HTTP await.
-            drop(flows);
             let current = match self.request(&base,access,"/browser/config",Method::GET,None,None,None).await {
                 Ok(response) => response,
                 Err(error) if retryable_backend_0396(&error) => {
                     let mut flows = self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
                     let flow = flows.get_mut(&id).filter(|f| f.nonce == nonce)
                         .ok_or("Microsoft-авторизация отменена")?;
+                    flow.in_flight = false;
                     flow.grant = microsoft; // НЕ использовать Microsoft Device Code для повторного обмена на токен
                     flow.failures = flow.failures.saturating_add(1);
                     let delay = retry_delay(flow.interval,flow.failures,None);
@@ -991,6 +990,7 @@ impl IdentityManager {
                 add_account(&id,&StoredAccount {schema:2,ticket:String::new(),profile:profile.clone(),native:Some(account)}));
             if let Err(_vault_error) = stored {
                 let flow = flows.get_mut(&id).ok_or("Microsoft-авторизация отменена")?;
+                flow.in_flight = false;
                 flow.grant = microsoft;
                 flow.failures = flow.failures.saturating_add(1);
                 let delay = retry_delay(flow.interval,flow.failures,None);
@@ -1000,7 +1000,9 @@ impl IdentityManager {
             flows.remove(&id);
             return Ok(PollResult{pending:false,profile:Some(profile),interval_seconds:None});
         }
-        let flow=flows.get_mut(&id).ok_or("Microsoft-авторизация отменена")?;
+        let mut flows=self.native_pending.lock().map_err(|_|"Не удалось получить блокировку нативной идентификации")?;
+        let flow=flows.get_mut(&id).filter(|v|v.nonce==nonce).ok_or("Microsoft-авторизация отменена")?;
+        flow.in_flight=false;
         let mut server_hint=None;
         match completed {
             Some(Err(error)) => {
@@ -1391,7 +1393,7 @@ mod tests {
             expires: Instant::now() - Duration::from_secs(1), nonce: 2, in_flight: false,
             failures: 0, interval: 5, cancel,
         });
-        assert!(manager.wait_device(backend, "access-token", session).await.unwrap_err().contains("истёк"));
+        assert!(manager.wait_device(backend, "access-token", session).await.err().expect("expired device flow must fail").contains("истёк"));
         assert!(manager.pending.lock().unwrap().get(&id).is_none());
     }
     #[test] fn device_retry_preserves_provider_interval_and_backoff() {

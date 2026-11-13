@@ -52,21 +52,21 @@ test("Изменённые или отсутствующие части кэша
   fixture(async (root) => {
     await packDist03011(root);
     await writeFile(join(root, "assets/login-abcdef01.js"), "tampered");
-    await assert.rejects(verifyDist03011(root), /corrupted/);
+    await assert.rejects(verifyDist03011(root), /повреждены, отсутствуют или устарели/);
   }));
 test("Символические ссылки, карты исходников и JS без хеша отклоняются перед выпуском", async () =>
   fixture(async (root) => {
     await writeFile(join(root, "assets/private.js.map"), "secret");
-    await assert.rejects(packDist03011(root), /source map/);
+    await assert.rejects(packDist03011(root), /Карту исходников необходимо загрузить в Sentry/);
     await rm(join(root, "assets/private.js.map"));
     await writeFile(join(root, "assets/app.js"), "old");
-    await assert.rejects(packDist03011(root), /uncacheable/);
+    await assert.rejects(packDist03011(root), /Имя файла ресурса не поддерживает кеширование/);
     await rm(join(root, "assets/app.js"));
     await symlink(
       join(root, "index.html"),
       join(root, "assets/alias-12345678.js"),
     );
-    await assert.rejects(packDist03011(root), /symlink/);
+    await assert.rejects(packDist03011(root), /обнаружена символическая ссылка/);
   }));
 test("Сборка Sentry выполняется до загрузки защищённых карт, но проверка запрещает включать карты в релиз", async () =>
   fixture(async (root) => {
@@ -79,7 +79,7 @@ test("Сборка Sentry выполняется до загрузки защи�
       if (old === undefined) delete process.env.LAUNCHER_SENTRY_RELEASE_BUILD;
       else process.env.LAUNCHER_SENTRY_RELEASE_BUILD = old;
     }
-    await assert.rejects(verifyDist03011(root), /source map/);
+    await assert.rejects(verifyDist03011(root), /Карту исходников необходимо загрузить в Sentry/);
     await rm(join(root, "assets/index-12345678.js.map"));
     await verifyDist03011(root);
   }));

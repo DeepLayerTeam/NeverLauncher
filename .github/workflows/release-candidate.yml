@@ -122,7 +122,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libxdo-dev libssl-dev librsvg2-dev libgtk-3-dev build-essential
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libtss2-dev libayatana-appindicator3-dev libxdo-dev libssl-dev librsvg2-dev libgtk-3-dev build-essential
       - name: "Установка зависимостей и сборка настоящего интерфейса Desktop"
         working-directory: apps/desktop
         run: |

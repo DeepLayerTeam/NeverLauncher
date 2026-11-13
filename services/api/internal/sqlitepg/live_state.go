@@ -741,7 +741,9 @@ func stateRules0474() []stateRule0474 {
 		{"access_tokens", "sqlite_access_token_tombstones_0474", accessToken0474},
 		{"refresh_families", "refresh_token_families", family0474},
 		{"refresh_tokens", "refresh_tokens", refresh0474},
-		{"mfa_totp", "mfa_methods", func(context.Context, pgx.Tx, map[string]any) error { return errors.New("Отсутствует: ключ повторного шифрования MFA") }},
+		{"mfa_totp", "mfa_methods", func(context.Context, pgx.Tx, map[string]any) error {
+			return errors.New("Отсутствует: ключ повторного шифрования MFA")
+		}},
 		{"mfa_recovery", "recovery_codes", recovery0474},
 		{"minecraft_profiles", "minecraft_profiles", minecraftProfile0474},
 		{"minecraft_sessions", "minecraft_sessions", minecraftSession0474},

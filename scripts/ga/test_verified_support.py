@@ -46,7 +46,7 @@ class SignedSupportIntegrationTests(unittest.TestCase):
         value = document(receipt)
         value['targets'][0]['security'].append({'capability': 'unverified', 'scope': 'client', 'verification': 'invented'})
         self.path.write_bytes(serialize(value))
-        with self.assertRaisesRegex(ValueError, 'differ'): check_file(self.path, receipt)
+        with self.assertRaisesRegex(ValueError, 'расходится'): check_file(self.path, receipt)
 
     def test_support_report_does_not_replace_evidence(self):
         receipt = self.full_receipt()
@@ -57,10 +57,10 @@ class SignedSupportIntegrationTests(unittest.TestCase):
     def test_signed_receipt_must_contain_all_capabilities(self):
         receipt = self.full_receipt()
         receipt['targets'][0]['securityCapabilitiesVerified'].pop()
-        with self.assertRaisesRegex(ValueError, 'incomplete independently verified'): document(receipt)
+        with self.assertRaisesRegex(ValueError, 'независимо проверенных возможностей неполон'): document(receipt)
 
     def test_missing_report_refused(self):
-        with self.assertRaisesRegex(ValueError, 'missing'): check_file(self.path, self.full_receipt())
+        with self.assertRaisesRegex(ValueError, 'отсутствует'): check_file(self.path, self.full_receipt())
 
 
 if __name__ == '__main__':

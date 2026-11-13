@@ -482,8 +482,8 @@ for required in [
 for required in [
     "TestDeviceChallengeResponseAttestation0124",
     "TestDeviceChallengeResponseAttestationRejectsSoftwareKey0124",
-    "attestation replay accepted",
-    "wrong attestation signature accepted",
+    "Принято повторное использование аттестации",
+    "Принята неверная подпись аттестации",
 ]:
     if required not in attestation_test:
         fail(f"В проверке «сквозной тест аттестации 0.12.4» отсутствует обязательный компонент: {required}")
@@ -592,7 +592,7 @@ for required in [
 for required in [
     "TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126",
     "TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126",
-    "refresh family survived replay compromise",
+    "Семейство токенов обновления пережило компрометацию повторным использованием",
 ]:
     if required not in session_risk_test:
         fail(f"Недостаточное регрессионное покрытие «оценка риска сеанса и устройства 0.12.6»: {required}")
@@ -652,7 +652,7 @@ for required in ["channel_mismatch", "trustEnforcement", "evaluateGameplayTrust0
 for required in [
     "TestMinecraftTrust0127RequiresBoundDeviceAndInvalidatesTokenAfterRebind",
     "TestServerBridgeTrust0127LiveBindingAndRiskEnforcement",
-    "bridge accepted mismatched channel",
+    "мост принял несовпадающий канал",
 ]:
     if required not in gameplay_trust_test:
         fail(f"Недостаточное регрессионное покрытие «доверие к игровому процессу 0.12.7»: {required}")
@@ -700,7 +700,7 @@ for required in [
     "user-federation-external-e2e",
     "compose restart api-a",
     "api/v1/auth/refresh",
-    "replay old refresh",
+    "повторное использование старого токена обновления",
 ]:
     if required not in federation_e2e:
         fail(f"В E2E-сценарии федерации PostgreSQL отсутствует проверка стабилизации: {required}")
@@ -759,7 +759,7 @@ for forbidden in [
     if forbidden in release_commands or forbidden in release_signing:
         fail("подпись выпуска снова сведена к контрольной сумме вместо Ed25519")
 for required in [
-    "required artifact",
+    "Не совпадает SHA-256 обязательного артефакта",
     'artifact.Status != "present"',
     "verifyReleaseSignature",
     "releaseArtifacts(ver)",
@@ -791,7 +791,7 @@ if (
     fail("build-release должен требовать внешнюю пару закрытого и открытого ключей Ed25519")
 if (
     "release-bundle:" not in production_release_workflow
-    or "Build and cryptographically verify complete release bundle"
+    or "Собрать полный пакет релиза и криптографически его проверить"
     not in production_release_workflow
 ):
     fail("отдельный процесс промышленного выпуска не собирает полный комплект выпуска")
@@ -922,7 +922,7 @@ for required in ["ErrImmutable", 'Status == "published"']:
 # Конвейер выпуска разделён между package_product, блокировкой изменений,
 # обработчиками Admin и устойчивым обработчиком отката. Проверяйте настоящие
 # места выполнения, а не наличие всех слов в одном устаревшем монолите.
-for required in ["Опубликованный релиз нельзя изменить", "http.StatusConflict"]:
+for required in ["Опубликованный релиз неизменяем; создайте новую версию", "http.StatusConflict"]:
     if required not in package_product:
         fail(f"В проверке «защита неизменности жизненного цикла HTTP-пакета» отсутствует обязательный компонент: {required}")
 if "lockPackageMutation" not in read("services/api/internal/httpapi/admin_handlers.go"):
@@ -1125,7 +1125,7 @@ if (
 for required in [
     "hashlib.sha256",
     "Контрольная сумма Backend после загрузки не совпадает",
-    "local package file changed before upload",
+    "Локальный файл пакета изменился перед загрузкой",
     "manifestSettings",
     "response.status == 429",
     "Retry-After",
@@ -1231,7 +1231,7 @@ for required in [
 if (
     "actual-mojang-client" not in ci
     or "xvfb" not in ci
-    or "Minecraft Client E2E" not in ci
+    or "реальная сквозная проверка клиента Minecraft" not in ci
 ):
     fail("В CI отсутствует обязательная сквозная проверка настоящего клиента Minecraft")
 
@@ -1302,7 +1302,7 @@ for required in [
     'LOADER="$(printf',
     'runtime "${LOADER}-package"',
     "RESOLVED_LOADER_VERSION",
-    "mutable loader selector leaked into release",
+    "изменяемый селектор загрузчика попал в выпуск",
     ".signature.valid == true",
     "joined the game",
 ]:
@@ -1365,7 +1365,7 @@ for required in [
     "compatibilityRetryDelay",
     "forgeLikeMetadataRefreshURL",
     "_launcher_refresh",
-    "fresh metadata snapshots",
+    "обновлений снимков метаданных",
 ]:
     if required not in forge_runtime:
         fail(
@@ -1411,7 +1411,7 @@ for required in [
     "paperHealthy",
     "exitCode",
     "Неполный набор файлов доказательств",
-    "evidence manifestLoader mismatch",
+    "Несовпадение manifestLoader в подтверждении",
 ]:
     if required not in compat_tool:
         fail(f"В проверке «стабилизация доказательств совместимости» отсутствует обязательный компонент: {required}")
@@ -1436,8 +1436,8 @@ for required in [
     "Resumed",
     "maxCompatibilityNativeExtract",
     "replaceDirectoryAtomicPortable",
-    "virtual assets staging",
-    "resources staging",
+    "Подготовка виртуальных ресурсов",
+    "Подготовка ресурсов",
 ]:
     if required not in vanilla_runtime and required not in stability_go:
         fail(
@@ -1496,7 +1496,7 @@ for required in [
     "--compatibility-matrix",
     "--compatibility-targets",
     "--source-commit",
-    "Minecraft compatibility certification",
+    "Ошибка сертификации совместимости Minecraft",
     "compatibilityCertificationRequired",
 ]:
     if required not in release_commands:
@@ -1505,7 +1505,7 @@ for required in [
     "LAUNCHER_COMPATIBILITY_MATRIX_FILE",
     "LAUNCHER_SOURCE_COMMIT",
     "release publish-check",
-    "Свидетельство сертификации не передано",
+    "Свидетельства сертификации не предоставлены",
 ]:
     if required not in build_release:
         fail(f"Неполная реализация «сертификация совместимости собранного выпуска»: {required}")
@@ -1538,16 +1538,16 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 release_cert_fetch = read("scripts/release/fetch-exact-certifications.py")
 for required in [
     "head_sha",
-    "refusing release fallback",
+    "резервная публикация запрещена",
     'status": "passed"',
     "archive_download_url",
     "launcher-compatibility-matrix-",
     "launcher-device-trust-matrix-",
-    "exact-commit",
+    "для точного коммита",
     "ArtifactRedirectHandler",
     "ARTIFACT_REDIRECT_SUFFIXES",
     "Хост перенаправления артефакта не является доверенным",
-    "Never forward the GitHub bearer token",
+    "Никогда не пересылайте токен GitHub Bearer",
 ]:
     if required not in release_cert_fetch:
         fail(f"Неполная реализация «загрузка результатов сертификации точного коммита выпуска»: {required}")
@@ -1646,7 +1646,7 @@ for required in [
     "контрольная сумма SHA-256 свидетельства {name} не совпадает",
     "vendorHardwareProvenance",
     "headless-ci-does-not-prove-os-secure-storage-runtime",
-    "safe-basename",
+    "безопасными именами файлов",
     "точного идентификатора коммита и запуска",
 ]:
     if required not in device_trust_matrix:
@@ -1679,14 +1679,14 @@ for required in [
     "replacement_reason='recover'",
     "launcher_session_or_handoff_missing_or_expired",
     "recovery-replay.json",
-    "recovery challenge replay after source-device tombstone",
+    "Повторное использование запроса восстановления после блокировки исходного устройства",
     "purpose='key-recover' AND consumed_at IS NOT NULL",
     "активное исходное устройство не найдено",
-    "require 0.12.9 -> current shipping migration upgrade evidence",
+    "требуются свидетельства обновления с миграции 0.12.9 до текущей поставляемой",
     '--arg migration "$EXPECTED_CURRENT_MIGRATION"',
     ".upgrade.toMigration==$migration",
     ".upgrade.guardPurposeMigrationSealed==true",
-    "secret material leaked into public evidence",
+    "секретные данные попали в общедоступные свидетельства",
     'repository:"postgresql"',
 ]:
     if required not in device_trust_e2e:
@@ -1773,14 +1773,14 @@ for required in [
     if required not in stabilization_migration_api:
         fail(f"В проверке «миграция стабилизации 0.12.10» отсутствует обязательный инвариант: {required}")
 for required in [
-    "0.12.9 schema (0001..0017)",
+    "схемы 0.12.9 (0001..0017)",
     "0017_device_key_recovery_rotation_0128",
     "0018_device_trust_stabilization_01210",
     "key-rotate",
     "key-recover",
-    "cross-user auth session/device binding unexpectedly succeeded",
-    "cross-user replacement link unexpectedly succeeded",
-    "cross-user Minecraft device snapshot unexpectedly succeeded",
+    "неожиданно разрешена привязка сеанса и устройства разных пользователей",
+    "неожиданно разрешена ссылка замены для разных пользователей",
+    "неожиданно получен снимок устройства Minecraft другого пользователя",
     "migration-stabilization.json",
 ]:
     if required not in stabilization_upgrade_e2e:
@@ -1801,7 +1801,7 @@ if (
     )
 if (
     "migrationStabilization01210" not in device_trust_matrix
-    or "migration stabilization 0.12.10" not in device_trust_matrix
+    or "стабилизации миграций 0.12.10" not in device_trust_matrix
 ):
     fail("0.12.10: публичная матрица доверия не содержит свидетельств стабилизации миграции")
 if (
@@ -2061,7 +2061,7 @@ for required in [
     "copy_verified",
     "os.replace",
     "sha256_file",
-    "exact Guard CI-certified artifacts",
+    "точно соответствующих артефактов Guard, сертифицированных CI",
     "Отсутствуют сертифицированные артефакты платформ",
 ]:
     if required not in guard_stage_0139:
@@ -2354,7 +2354,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "gzip.GzipFile",
         "mtime=0",
         "LINUX_PACKAGE_MANIFEST_",
-        "production package requires ELF64 little-endian",
+        "для рабочего пакета требуется ELF64 с порядком байтов от младшего к старшему",
     ]:
         if required not in linux_packager_0153:
             fail(f"Неполная реализация «0.15.3 deterministic Linux packager»: {required}")
@@ -2415,7 +2415,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "LC_CODE_SIGNATURE",
         "verifyMacOSPackageArchive0154",
         "verifyMacOSNotarizationEvidence0154",
-        "Developer ID + Apple notarization",
+        "подпись Developer ID и нотариальное заверение Apple",
         "stapler",
         "Gatekeeper",
     ]:
@@ -2519,7 +2519,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "ensure_managed_java_from_distribution",
         "LAUNCHER_MANAGED_JRE_MANIFEST",
         "LAUNCHER_MANAGED_JRE_MANIFEST_SHA256",
-        "exact vendor archive SHA-256",
+        "точный SHA-256 архива поставщика",
         "ensure_managed_archive",
         "javaEntry управляемой JRE не указывает на bin/java",
     ]:
@@ -2534,7 +2534,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in jre_release_0155:
             fail(f"Неполная реализация «0.15.5 release JRE staging»: {required}")
     for required in [
-        "Managed JRE Production Delivery",
+        "Промышленная поставка управляемой JRE",
         "managed-jre-distribution.py",
         "delivery verify-jre",
     ]:
@@ -2543,13 +2543,13 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "managed-jre-production:",
         "Управляемая Java II — сквозные проверки Java 8/16/17/21/25 и поставка Temurin 21",
-        "Upload exact-commit Managed JRE production assets",
+        "Загрузить промышленные артефакты управляемой JRE для точного коммита",
         "name: launcher-managed-jre-${{ github.sha }}",
     ]:
         if required not in ci:
             fail(f"Неполная реализация «0.15.5 основная сертификация управляемой JRE»: {required}")
     for required in [
-        "Download Managed JRE six-target production assets",
+        "Скачать производственные артефакты управляемой JRE для шести платформ",
         "path: managed-jre-artifacts",
         "LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts",
     ]:
@@ -2616,7 +2616,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in managed_java_e2e_0165:
             fail(f"Неполная реализация «0.16.5 Managed Java II E2E»: {required}")
     for required in [
-        "Managed Java II Java 8/16/17/21/25 production E2E",
+        "Провести промышленные сквозные тесты управляемой Java II на Java 8, 16, 17, 21 и 25",
         "run-managed-java-II-e2e.sh",
         "MANAGED_JAVA_II_EVIDENCE.json",
     ]:
@@ -2871,7 +2871,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in workflow_0169:
             fail(f"0.16.9: процесс проверки совместимости не привязан к узлу: {required}")
-    for required in ["platform-runtime.json", "platformMatched", "runner mismatch"]:
+    for required in ["platform-runtime.json", "platformMatched", "Несовпадение среды запуска"]:
         if required not in compat_case_0169:
             fail(f"Неполная реализация «0.16.9 подтверждения платформы»: {required}")
     for required in [
@@ -2986,7 +2986,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.16.10 диспетчер совместимости»: {required}")
     for required in [
         "ACTUAL_CLIENT_E2E_II_01610",
-        "Actual Client E2E II 0.16.10",
+        "Для реальных E2E-проверок клиента II 0.16.10",
         "clientJoinedServer",
         "serverVersionMatched",
     ]:
@@ -3035,10 +3035,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "commitLocked",
         "rollbackLocked",
         "recoverIncompleteLocked",
-        "Stage verified bytes before touching the live tree",
+        "Подготовьте проверенные байты до изменения рабочего дерева",
         "replaceFileAtomicPortable",
         "updaterProcessAlive0156",
-        "updater refuses symlink parent",
+        "Обновление запрещено: родительский каталог является символической ссылкой",
         'Phase = "committing"',
         'Phase = "verifying"',
     ]:
@@ -3205,8 +3205,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "verifyReleaseSignatureV20158",
         "verify-only",
         "revoked",
-        "trust epoch rollback",
-        "release rollback blocked",
+        "Откат эпохи доверия",
+        "Откат релиза заблокирован",
         "LAUNCHER_RELEASE_TRUST_STATE_FILE",
     ]:
         if required not in rv2_0158:
@@ -3368,7 +3368,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "releaseTrustStateSchema01510",
         "migrateComponentUpdateState01510",
         "stabilizeTerminalPayloads01510",
-        "same-version release manifest mismatch",
+        "Несовпадение манифеста релиза той же версии",
         "migration-stabilization-0.15.10",
     ]:
         if required not in stabilization_01510 and required not in rv2_01510:
@@ -3434,7 +3434,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "exact-source-commit-cohort",
         "productionReleaseCandidateCohortDigest01511",
         "verifyProductionReleaseCandidatePrerequisites01511",
-        "PROVENANCE.json sourceCommit mismatch",
+        "Несовпадение sourceCommit в PROVENANCE.json",
         "verifyWindowsSigningEvidence0152",
         "verifyMacOSNotarizationEvidence0154",
         "verifyManagedJREDistribution0155",
@@ -3454,7 +3454,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.15.11 интеграция выпуска»: {required}")
     for required in [
         "PRODUCTION_RC_REQUIRED",
-        "Кандидат на промышленный выпуск требует полного набора сертификационных проверок совместимости, доверия к устройствам и Guard CI",
+        "кандидат на промышленный выпуск требует полного комплекта подтверждений совместимости, доверия устройств и сертификации Guard в CI",
         'git -C "${ROOT_DIR}" diff --quiet HEAD --',
         "release candidate-verify",
         "PRODUCTION_RELEASE_CANDIDATE.json",
@@ -3540,7 +3540,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "PRODUCTION_DELIVERY_RELEASE_REQUIRED",
         "PRODUCTION_DELIVERY_RELEASE.json",
         "release production-verify",
-        "неизменяемый сегмент версии",
+        "неизменяемым сегментом версии",
     ]:
         if required not in build_0160:
             fail(f"Неполная реализация «0.16.0 интеграция промышленной сборки»: {required}")
@@ -3737,7 +3737,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "fabric-install.json",
         "fabric-certification.json",
         "certify-vanilla",
-        "mutable loader selector leaked",
+        "изменяемое значение выбора загрузчика попало в определённую версию",
         "actual-mojang-client",
     ]:
         if required not in fabric_case_0171:
@@ -3817,7 +3817,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "QUILT_COMPATIBILITY_II_0172",
         "quilt_compatibility_ii_0172_required",
-        "Quilt Compatibility II 0.17.2",
+        "Совместимость Quilt II 0.17.2",
     ]:
         if required not in quilt_matrix_0172:
             fail(f"Неполная реализация «0.17.2 Quilt матрица совместимости»: {required}")
@@ -3835,7 +3835,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "quilt-install.json",
         "quilt-certification.json",
         "certify-vanilla",
-        "mutable loader selector leaked",
+        "изменяемое значение выбора загрузчика попало в определённую версию",
         "actual-mojang-client",
     ]:
         if required not in quilt_case_0172:
@@ -3928,7 +3928,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "runForgeProcessors",
         "clientProcessorCount",
-        "processor-based modern installer format",
+        "современный формат установщика с обработчиками",
         "MINECRAFT_VERSION",
         "resolveProcessorNamedToken",
         "extractInstallerData",
@@ -3946,7 +3946,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "processorRan",
         "processorSkipped",
         "certify-vanilla",
-        "mutable loader selector leaked",
+        "изменяемое значение выбора загрузчика попало в определённую версию",
         "actual-mojang-client",
     ]:
         if required not in forge_case_0173:
@@ -4037,7 +4037,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in legacy_runtime_0174:
             fail(f"Неполная реализация «0.17.4 Forge материализация устаревших версий»: {required}")
-    for required in ['"forge-legacy-1.12.2"', "legacy V1 universal installer"]:
+    for required in ['"forge-legacy-1.12.2"', "универсальный установщик V1"]:
         if required not in legacy_commands_0174:
             fail(f"Неполная реализация «0.17.4 статус возможностей среды исполнения»: {required}")
     for required in ['alias = "clientreq"', "library.client_req == Some(false)"]:
@@ -4139,12 +4139,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         '"forge-legacy-1.7.10"',
         '"forge-legacy-pre-1.7.10"',
-        "legacy V1 universal installer",
+        "универсальный установщик V1",
     ]:
         if required not in legacy_commands_0175:
             fail(f"Неполная реализация «0.17.5 статус возможностей среды исполнения»: {required}")
     for required in [
-        "metadata predates downloads.classifiers",
+        "downloads.artifact вместо downloads.classifiers + natives",
         "library.downloads.classifiers.is_empty()",
         "legacy_forge_native_classifier_without_downloads_is_resolved_from_maven_coordinate",
     ]:
@@ -4248,7 +4248,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "neoforge-certification.json",
         "mode != 'processors'",
         "certify-vanilla",
-        "mutable loader selector leaked",
+        "изменяемое значение выбора загрузчика попало в определённую версию",
     ]:
         if required not in neo_case_0176:
             fail(f"Неполная реализация «0.17.6 NeoForge сертификация реального клиента»: {required}")
@@ -4262,7 +4262,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "NEOFORGE_COMPATIBILITY_II_0176",
         "neoforge_compatibility_ii_0176_required",
-        "NeoForge Compatibility II 0.17.6",
+        "Совместимость NeoForge II 0.17.6",
     ]:
         if required not in neo_matrix_0176:
             fail(f"Неполная реализация «0.17.6 NeoForge matrix»: {required}")
@@ -4503,7 +4503,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.17.8 нативное подтверждение совместимости»: {required}")
     for required in [
         "loader_native_e2e_0178_required",
-        "Loader-native E2E 0.17.8 requires exactly one",
+        "Для Loader-native E2E 0.17.8 требуется ровно одна",
         "loaderNativeClientJoin",
     ]:
         if required not in native_matrix_0178:
@@ -4589,7 +4589,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"Неполная реализация «0.17.9 подтверждение совместимости платформы»: {required}")
     for required in [
         "CROSS_PLATFORM_LOADERS_0179",
-        "Cross-platform Loaders 0.17.9",
+        "Кроссплатформенные загрузчики 0.17.9",
         "loaderPlatformMaterialized",
         "loader-platform.json",
     ]:
@@ -4899,7 +4899,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "loaderCompatibilityGA",
         "loaderCompatibilityGASupportSha256",
-        "Loader Compatibility GA 0.18.0",
+        "Ошибка совместимости загрузчиков GA 0.18.0",
         "loaderGASupportSHA2560180",
     ]:
         if required not in ga_release_0180:
@@ -4971,7 +4971,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         '.arg("--protection-profile")',
         'send_command(&mut handle, "process-policy")',
-        "remote attestation requires aggressive Windows protection profile",
+        "для удалённой аттестации требуется усиленный профиль защиты Windows",
         "validate_status_profile",
     ]:
         if required not in windows_ipc_0181:
@@ -5142,7 +5142,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "ct_eq",
         "MODULE_STREAM_TIMEOUT",
         "reconcile_snapshot",
-        "external snapshot drift",
+        "изменение внешнего снимка",
         "verify_windows_authenticode_trust",
         "advance_event_chain",
         "TerminateProcess",
@@ -5212,7 +5212,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "hook_load_library_w",
         "hook_virtual_alloc",
         "hook_virtual_protect",
-        "pre-existing IAT target drift",
+        "обнаружено ранее возникшее изменение цели IAT",
         "verify_locked",
         "shutdown_restore",
         "hook_set_digest",
@@ -5299,10 +5299,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "MEM_IMAGE",
         "MEM_PRIVATE",
         "hash_image_region",
-        "code-page drift",
+        "изменение кодовой страницы",
         "record_virtual_alloc",
         "record_virtual_protect",
-        "transition ring overflow",
+        "переполнение кольцевого буфера переходов",
         "executable-map v1",
         "code-set v1",
     ]:
@@ -5337,7 +5337,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "memory_integrity: crate::WindowsMemoryIntegrityReport",
         "вторым событием ожидалось MEMORY_READY",
         "memory_report_from_event",
-        "Memory Integrity runtime tampering detected",
+        "Проверка целостности памяти Guard обнаружила изменение Runtime",
         "fail_closed",
     ]:
         if required not in memory_parent_0185:
@@ -5403,7 +5403,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "THREAD_QUERY_SET_WIN32_START_ADDRESS",
         "VirtualQuery",
         "MEM_IMAGE",
-        "non-image executable memory",
+        "исполняемой памяти, не принадлежащей образу",
         "thread-set v1",
         "origin-set v1",
         "reconcile_and_verify",
@@ -5437,7 +5437,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Process32FirstW",
         "Process32NextW",
         "IsProcessInJob",
-        "escaped runtime Job Object",
+        "вышел из объекта задания Runtime",
         "process-tree v1",
     ]:
         if required not in thread_policy_0186:
@@ -5447,7 +5447,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "третьим событием ожидалось THREAD_PROCESS_READY",
         "thread_process_report_from_event",
         "runtime_policy.verify_process_tree(pid)",
-        "Thread & Process Integrity suspicious runtime transition detected",
+        "при проверке целостности потоков и процессов обнаружен подозрительный переход состояния Runtime",
         "fail_closed",
     ]:
         if required not in thread_parent_0186:
@@ -5564,7 +5564,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "debug_instrumentation: crate::WindowsDebugInstrumentationReport",
         "четвёртым событием ожидалось DEBUG_INSTRUMENTATION_READY",
         "debug_instrumentation_report_from_event",
-        "unwanted debug/instrumentation boundary detected",
+        "обнаружено нежелательное вмешательство отладки или инструментирования",
         "fail_closed",
     ]:
         if required not in debug_parent_0187:
@@ -5635,7 +5635,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "capture_transition_provenance",
         "observe_memory_transition",
         "MEM_PRIVATE",
-        "outside jvm.dll provenance",
+        "вне проверенного происхождения jvm.dll",
     ]:
         if required not in jvm_sensor_0188:
             fail(f"Неполная реализация «0.18.8 JVM-Aware Sensor серверная часть»: {required}")
@@ -5661,7 +5661,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "пятым событием ожидалось JVM_AWARE_READY",
         "jvm_aware_report_from_event",
         "GUARD_CERTIFIED_JAVA_MAJORS",
-        "non-JVM executable-memory transition",
+        "отклонён переход памяти в исполняемое состояние вне JVM",
     ]:
         if required not in jvm_parent_0188:
             fail(f"Неполная реализация «0.18.8 JVM-Aware контроль родительского процесса»: {required}")
@@ -5748,8 +5748,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "шестым событием ожидалось CONTINUOUS_READY",
         "advance_continuous_event_chain",
         "write_continuous_guard_ack",
-        "event-chain cross-check mismatch",
-        "guard-sequence mismatch",
+        "Не совпадают результаты перекрёстной проверки цепочки событий",
+        "нарушение последовательности Guard",
         "last_cross_check_sha256",
     ]:
         if required not in continuous_parent_0189:

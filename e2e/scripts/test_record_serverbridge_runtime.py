@@ -90,7 +90,7 @@ class RecorderTests(unittest.TestCase):
             return value
 
         with mock.patch.object(rec.subprocess, "run", side_effect=no_java):
-            with self.assertRaisesRegex(ValueError, "one live Java process"):
+            with self.assertRaisesRegex(ValueError, "один активный процесс Java"):
                 rec.record(
                     "velocity",
                     "velocity-e2e-p3",
@@ -112,7 +112,7 @@ class RecorderTests(unittest.TestCase):
             return value
 
         with mock.patch.object(rec.subprocess, "run", side_effect=unhealthy):
-            with self.assertRaisesRegex(ValueError, "not healthy"):
+            with self.assertRaisesRegex(ValueError, "неисправном состоянии"):
                 rec.record(
                     "velocity",
                     "velocity-e2e-p3",
@@ -133,7 +133,7 @@ class RecorderTests(unittest.TestCase):
 
         with mock.patch.object(rec.subprocess, "run", side_effect=missing_deny):
             with self.assertRaisesRegex(
-                ValueError, "missing ordered allow/revocation deny"
+                ValueError, "последовательность разрешения и отказа после отзыва"
             ):
                 rec.record(
                     "velocity",

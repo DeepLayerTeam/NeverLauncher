@@ -54,12 +54,14 @@ need(
         "/api/v1/auth/devices/register/complete",
         "/verify/begin",
         "/verify/complete",
-        "callTauri<DeviceSignatureResult>('sign_device_payload'",
         "privateKeyExposedToFrontend",
     ],
 )
 
 frontend = (ROOT / "apps/desktop/src/main.tsx").read_text(encoding="utf-8")
+import re
+if not re.search(r"""callTauri<DeviceSignatureResult>\s*\(\s*['"]sign_device_payload['"]""", frontend):
+    errors.append("Desktop: отсутствует типизированный вызов sign_device_payload")
 for forbidden in [
     "privateSeed",
     "private_seed",

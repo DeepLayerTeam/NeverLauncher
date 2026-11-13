@@ -77,7 +77,7 @@ require(
     "services/api/internal/httpapi/guard_attestation_test.go",
     [
         "TestGuardReleasePolicyV2ExactPlatformPair0140",
-        "cross-product artifact pair must not be accepted",
+        "Нельзя принимать пару артефактов разных продуктов",
         "TestGuardReleasePolicyLegacyRejectedFrom0140",
         "TestGuardReleasePolicyProductionSigningRequirements0140",
     ],
@@ -105,7 +105,7 @@ require(
         '"windows": ("authenticode", True)',
         '"linux": ("integrity-only", False)',
         '"macos": ("developer-id-notarized", False)',
-        "Windows production pair must require Authenticode",
+        "производственная пара Windows должна требовать Authenticode",
         "set(platforms) != {expected_platform}",
     ],
 )

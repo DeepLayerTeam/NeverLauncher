@@ -98,7 +98,7 @@ public final class Agent {
                                 String owner = pluginDigest(hook);
                                 Set<String> allowed = ALLOWED_TRANSFORMS.get(owner);
                                 if (allowed == null || !allowed.contains(binary)) {
-                                    System.err.println("[Launcher Guard] неразрешённое преобразование класса: " + binary);
+                                    System.err.println("[Launcher Guard] unauthorized_class_transformation: неразрешённое преобразование класса: " + binary);
                                     Runtime.getRuntime().halt(79); // JVM может скрывать исключения трансформатора
                                 }
                             }

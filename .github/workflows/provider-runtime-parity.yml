@@ -70,7 +70,7 @@ jobs:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
       - name: Проверить форматирование производственного Go-кода
-        run: test -z "$(gofmt -l pkg/authconnector internal/httpapi/mfa_login_117.go internal/httpapi/oidc_flow_115.go internal/httpapi/admin_handlers.go internal/httpapi/*0296*.go)"
+        run: test -z "$(gofmt -l pkg/authconnector internal/httpapi/mfa_login_117.go internal/httpapi/oidc_flow_115.go internal/httpapi/admin_handlers.go internal/httpapi/provider_assurance_test.go internal/httpapi/provider_pending_passkey.go internal/httpapi/provider_pending_passkey_test.go internal/httpapi/provider_runtime_test.go)"
       - name: "Собрать рабочие Backend и CLI"
         run: go build ./cmd/...
       - name: Проверить подписанные HTTP/OIDC/Microsoft-запросы и регрессии авторизации Runtime API

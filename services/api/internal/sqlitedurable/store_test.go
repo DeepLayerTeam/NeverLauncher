@@ -191,7 +191,7 @@ func TestOwnerChild(t *testing.T) {
 			_ = s.Close()
 			t.Fatal("второй процесс записи получил исключительный доступ к хранилищу")
 		}
-		if !strings.Contains(err.Error(), "owned by another") {
+		if !strings.Contains(err.Error(), "занята другим экземпляром") {
 			t.Fatalf("неожиданная причина: %v", err)
 		}
 	case "expect-allow":

@@ -131,7 +131,7 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(data['status'], 'BLOCKED')
         self.assertIn('user/E2E-18', {row['id'] for row in data['targets']})
         self.assertIn('serverbridge/velocity', {row['id'] for row in data['targets']})
-        with self.assertRaisesRegex(inv.Blocked, 'incomplete Minecraft evidence'):
+        with self.assertRaisesRegex(inv.Blocked, 'Неполные доказательства Minecraft'):
             self.run_inventory(strict=True)
 
     def test_valid_bound_raw_evidence_is_only_observed_not_ga(self):
@@ -198,7 +198,7 @@ class InventoryTests(unittest.TestCase):
         other = self.results / 'duplicate' / 'compatibility-result'
         other.mkdir(parents=True)
         (other / 'compatibility-result.json').write_bytes(path.read_bytes())
-        with self.assertRaisesRegex(inv.Blocked, 'duplicate observed target'):
+        with self.assertRaisesRegex(inv.Blocked, 'Повторяющаяся проверенная цель'):
             self.run_inventory()
 
     def test_symlinked_report_refused(self):
@@ -206,20 +206,20 @@ class InventoryTests(unittest.TestCase):
         path = self.make(target)
         path.rename(path.with_suffix('.bak'))
         path.symlink_to(path.with_suffix('.bak'))
-        with self.assertRaisesRegex(inv.Blocked, 'symlinked'):
+        with self.assertRaisesRegex(inv.Blocked, 'символическую ссылку'):
             self.run_inventory()
 
     def test_duplicate_json_key_refused(self):
         target = self.one()
         path = self.make(target)
         path.write_text('{"targetId":"' + target['id'] + '","targetId":"' + target['id'] + '"}')
-        with self.assertRaisesRegex(inv.Blocked, 'duplicate JSON'):
+        with self.assertRaisesRegex(inv.Blocked, '(?:Повторяющееся поле|Обнаружен дубликат: ключ) JSON'):
             self.run_inventory()
 
     def test_unexpected_optional_proof_rejected(self):
         other = next(row for row in self.targets if not row['required'])
         self.make(other)
-        with self.assertRaisesRegex(inv.Blocked, 'unknown/optional'):
+        with self.assertRaisesRegex(inv.Blocked, 'Неизвестные или необязательные цели'):
             self.run_inventory()
 
     def test_recomputed_hash_cannot_hide_fake_runtime_status(self):
@@ -243,7 +243,7 @@ class InventoryTests(unittest.TestCase):
         fake = self.results / 'extra' / 'compatibility-result'
         fake.mkdir(parents=True)
         write_json(fake / 'compatibility-result.json', {'targetId': 'fake-unknown-target'})
-        with self.assertRaisesRegex(inv.Blocked, 'unknown/optional'):
+        with self.assertRaisesRegex(inv.Blocked, 'Неизвестные или необязательные цели'):
             self.run_inventory()
 
     def test_exposed_bearer_secret_never_observed(self):
@@ -289,7 +289,7 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(inv.command_verify(args), 0)
         bad_pin = args.public_key_sha256
         args.public_key_sha256 = '0' * 64
-        with self.assertRaisesRegex(inv.Blocked, 'independent pin'):
+        with self.assertRaisesRegex(inv.Blocked, 'независимо закреплённым ключом'):
             inv.command_verify(args)
         args.public_key_sha256 = bad_pin
         doc = json.loads(args.receipt.read_text())

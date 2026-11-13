@@ -48,8 +48,8 @@ class IndependentAcceptanceTests(unittest.TestCase):
         with self.assertRaises(ia.Rejected): ia.atomic_report(self.private / 'no.json', {'status': 'passed'})
 
     def test_actor_must_differ_from_primary(self):
-        with patch('independent_accept_04514.pwd.getpwuid') as uid, \
-                patch('independent_accept_04514.os.geteuid', return_value=1000), \
+        with patch('independent_accept.pwd.getpwuid') as uid, \
+                patch('independent_accept.os.geteuid', return_value=1000), \
                 patch.dict(os.environ, {'SUDO_USER': ''}):
             uid.return_value.pw_name = 'operator2'
             self.assertEqual(ia.actor('operator1'), 'operator2')
@@ -57,7 +57,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
             with self.assertRaises(ia.Rejected): ia.actor('../admin')
 
     def test_root_without_sudo_operator_is_not_independent(self):
-        with patch('independent_accept_04514.os.geteuid', return_value=0), \
+        with patch('independent_accept.os.geteuid', return_value=0), \
                 patch.dict(os.environ, {'SUDO_USER': ''}):
             with self.assertRaisesRegex(ia.Rejected, 'require sudo'):
                 ia.actor('operator1')
@@ -112,7 +112,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
                   maintenance_approved=True, source_receipt=source,
                   snapshot=snapshot, primary_operator='operator1'))()
         with patch.object(ia, 'host_id', return_value=self.host):
-            with self.assertRaisesRegex(ia.Rejected, 'different Linux host'):
+            with self.assertRaisesRegex(ia.Rejected, 'другом Linux-узле'):
                 ia.accept_restore(args)
         with patch.object(ia, 'host_id', return_value='c' * 64):
             with self.assertRaisesRegex(ia.Rejected, 'snapshot does not match'):
@@ -128,7 +128,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
 
     def test_failover_rejects_production_project(self):
         args = type('Args', (), dict(project='launcher', confirm='launcher'))()
-        with self.assertRaisesRegex(ia.Rejected, 'isolated'):
+        with self.assertRaisesRegex(ia.Rejected, 'изолированных'):
             ia.accept_failover(args)
 
     def test_install_rejects_legacy_deployment(self):
@@ -136,7 +136,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
                   version=ia.VERSION, url='https://test.example', password_file=self.file('pass')) )()
         with patch.object(ia, 'checked_env'):
             (self.private / '.launcher-compose-state.json').write_text('{}')
-            with self.assertRaisesRegex(ia.Rejected, 'clean install'):
+            with self.assertRaisesRegex(ia.Rejected, 'чистая установка'):
                 ia.accept_install(args)
 
     def test_strict_failover_report_checks_all_faults(self):
@@ -161,7 +161,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
         def proc(out=b'', rc=0):
             return type('Completed', (), {'returncode': rc, 'stdout': out})()
         with patch.object(ia.subprocess, 'run', side_effect=[proc(b''), proc(b'launcher_launcher_postgres\n')]):
-            with self.assertRaisesRegex(ia.Rejected, 'existing Compose volume'):
+            with self.assertRaisesRegex(ia.Rejected, 'существующая конфигурация Compose volume'):
                 ia.assert_fresh_compose_project('launcher')
         with patch.object(ia.subprocess, 'run', return_value=proc(b'container-1')):
             with self.assertRaisesRegex(ia.Rejected, 'existing Compose container'):
@@ -244,7 +244,7 @@ class IndependentAcceptanceTests(unittest.TestCase):
         class Opener:
             def open(self, req, timeout=15): return Response(data.pop(0))
         with patch.object(ia.urllib.request, 'build_opener', return_value=Opener()):
-            with self.assertRaisesRegex(ia.Rejected, 'pre-existing project'):
+            with self.assertRaisesRegex(ia.Rejected, 'существующий проект'):
                 ia.verify_old_owner('https://example.org', 'admin@example.org', pwd, 'missing', '0.45.13')
 
     def test_failed_operation_does_not_create_receipt(self):

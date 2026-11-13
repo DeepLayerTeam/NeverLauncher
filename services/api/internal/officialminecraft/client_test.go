@@ -165,7 +165,9 @@ func TestFullOfficialAuthAndOperations(t *testing.T) {
 	}
 }
 func TestRedirectNotFollowedAndSizeBound(t *testing.T) {
-	evil := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Fatal("Выполнен переход по перенаправлению") }))
+	evil := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("Выполнен переход по перенаправлению")
+	}))
 	defer evil.Close()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, evil.URL, http.StatusFound) }))
 	defer server.Close()

@@ -71,7 +71,7 @@ func signedBundle(t *testing.T, root string, offline bool) Options {
 	return Options{Root: filepath.Join(root, "app"), Bundle: bundle, TrustedKey: hex.EncodeToString(pub), Offline: offline, NoStart: true}
 }
 func TestInstallRepairUninstallKeepsGameData(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	opts := signedBundle(t, root, true)
 	if e := Install(context.Background(), opts); e != nil {
 		t.Fatal(e)
@@ -103,7 +103,7 @@ func TestInstallRepairUninstallKeepsGameData(t *testing.T) {
 	}
 }
 func TestTamperedSignedBundleRejected(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	opts := signedBundle(t, root, false)
 	if _, _, e := VerifyBundle(opts.Bundle, opts.TrustedKey, false); e != nil {
 		t.Fatal(e)
@@ -120,7 +120,7 @@ func TestTamperedSignedBundleRejected(t *testing.T) {
 	}
 }
 func TestOfflineMissingObjectRejected(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	opts := signedBundle(t, root, true)
 	entries, _ := os.ReadDir(filepath.Join(opts.Bundle, "objects"))
 	os.Remove(filepath.Join(opts.Bundle, "objects", entries[0].Name()))
@@ -129,7 +129,7 @@ func TestOfflineMissingObjectRejected(t *testing.T) {
 	}
 }
 func TestCannotReplaceRootTrust(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	opts := signedBundle(t, root, false)
 	opts.TrustedKey = strings.Repeat("0", 64)
 	if _, _, e := VerifyBundle(opts.Bundle, opts.TrustedKey, false); e == nil {
@@ -138,7 +138,7 @@ func TestCannotReplaceRootTrust(t *testing.T) {
 }
 
 func TestRepairCorruptedInstalledPrestarterFromRetainedOffline(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	opts := signedBundle(t, root, true)
 	if err := Install(context.Background(), opts); err != nil {
 		t.Fatal(err)
@@ -169,7 +169,7 @@ func TestRepairCorruptedInstalledPrestarterFromRetainedOffline(t *testing.T) {
 // Отменённая начальная загрузка никогда не публикует новый активный слот. В частности, прерванная
 // переустановка обязана сохранить ранее проверенное поколение.
 func TestCanceledBootstrapNeverAdvancesActiveRelease0240(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	opts := signedBundle(t, root, true)
 	i, err := newInstall(opts)
 	if err != nil {

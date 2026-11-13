@@ -40,7 +40,9 @@ def require(ok, reason):
 
 
 def migration_catalog(folder=ROOT / "services/api/internal/dbmigrate/sql"):
-    files = sorted(folder.glob("*.sql"))
+    # Physical filenames may be renamed; database IDs and historical checksums cannot.
+    names = json.loads((ROOT / "services/api/internal/dbmigrate/migration_names.json").read_text(encoding="utf-8"))
+    files = sorted(folder.glob("*.sql"), key=lambda item: names.get(item.name, item.name))
     require(len(files) >= 100, "Отсутствует встроенный каталог миграций PostgreSQL")
     digest = hashlib.sha256()
     versions = {}
@@ -49,9 +51,11 @@ def migration_catalog(folder=ROOT / "services/api/internal/dbmigrate/sql"):
                 "Небезопасный элемент каталога миграций")
         content = item.read_bytes()
         checksum = hashlib.sha256(content).hexdigest()
-        name = item.stem
+        logical = names.get(item.name, item.name)
+        require(re.fullmatch(r"[a-zA-Z0-9_]+\.sql", logical), "Некорректное логическое имя миграции")
+        name = logical.removesuffix(".sql")
         require(name not in versions, "Повторяющееся имя миграции")
-        digest.update(item.name.encode("ascii") + b"\0" + checksum.encode("ascii") + b"\n")
+        digest.update(logical.encode("ascii") + b"\0" + checksum.encode("ascii") + b"\n")
         versions[name] = checksum
     # Пока активен хотя бы один экземпляр 0.51.5, новые миграции развёртывать
     # нельзя.

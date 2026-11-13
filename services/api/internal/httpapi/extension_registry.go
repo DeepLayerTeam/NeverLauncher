@@ -323,8 +323,8 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 		Manifest:    verified.Manifest,
 		PublisherID: publisherID,
 		Compatibility: model.ExtensionRegistryCompatibility{
-			MinLauncher:       strings.TrimSpace(r.FormValue("minLauncher")),
-			MaxLauncher:       strings.TrimSpace(r.FormValue("maxLauncher")),
+			MinLauncher:            strings.TrimSpace(r.FormValue("minLauncher")),
+			MaxLauncher:            strings.TrimSpace(r.FormValue("maxLauncher")),
 			MinAPI:                 strings.TrimSpace(r.FormValue("minApi")),
 			MaxAPI:                 strings.TrimSpace(r.FormValue("maxApi")),
 			SupportedOS:            splitRegistryList0203(r.FormValue("os")),

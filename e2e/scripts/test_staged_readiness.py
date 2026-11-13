@@ -31,7 +31,7 @@ class ReadinessTests(unittest.TestCase):
 
     def observer(self, loader="fabric"):
         with patch(
-            "runtime_capabilities_03410.evaluate",
+            "runtime_capabilities.evaluate",
             return_value={"status": "ready", "blockers": []},
         ):
             return StartupObserver(
@@ -110,8 +110,8 @@ class ReadinessTests(unittest.TestCase):
             return {"sha256": digest, "menuControls": ["multiplayer", "singleplayer"]}
 
         with (
-            patch("staged_readiness_0343.find_window", return_value=("0x12", 222)),
-            patch("staged_readiness_0343.capture_menu", side_effect=fake_capture),
+            patch("staged_readiness.find_window", return_value=("0x12", 222)),
+            patch("staged_readiness.capture_menu", side_effect=fake_capture),
         ):
             obs.tick()
             obs.last_probe -= 5
@@ -131,18 +131,18 @@ class ReadinessTests(unittest.TestCase):
         fake_tree = '0x12 "Minecraft 1.21" ("minecraft" "Minecraft")\n'
         with (
             patch(
-                "staged_readiness_0343.command",
+                "staged_readiness.command",
                 side_effect=[fake_tree, "_NET_WM_PID(CARDINAL) = 5"],
             ),
-            patch("staged_readiness_0343.is_descendant", return_value=False),
+            patch("staged_readiness.is_descendant", return_value=False),
         ):
             self.assertIsNone(find_window(100))
         with (
             patch(
-                "staged_readiness_0343.command",
+                "staged_readiness.command",
                 side_effect=[fake_tree, "_NET_WM_PID(CARDINAL) = 345"],
             ),
-            patch("staged_readiness_0343.is_descendant", return_value=True),
+            patch("staged_readiness.is_descendant", return_value=True),
         ):
             self.assertEqual(find_window(100), ("0x12", 345))
         self.assertTrue(is_descendant(os.getpid(), os.getpid()))
@@ -159,12 +159,12 @@ class ReadinessTests(unittest.TestCase):
                 return "Minecraft\nSingleplayer\nMultiplayer\nOptions\n"
             return ""
 
-        with patch("staged_readiness_0343.command", side_effect=sample_command):
+        with patch("staged_readiness.command", side_effect=sample_command):
             frame = capture_menu("0xab", self.root / "frame.png")
         self.assertIn("singleplayer", frame["menuControls"])
         self.assertIn("multiplayer", frame["menuControls"])
         with patch(
-            "staged_readiness_0343.command",
+            "staged_readiness.command",
             side_effect=lambda argv, timeout=7: (
                 "1280 720 0.02" if argv[0] == "identify" else "Singleplayer Multiplayer"
             ),

@@ -160,7 +160,7 @@ require(
         "serverbridge_node_timestamp_out_of_window",
         "serverbridge_node_signature_invalid",
         "serverbridge_node_fingerprint_mismatch",
-        "existing node identity was replaceable through registration",
+        "Регистрация позволила заменить существующую идентичность узла",
     ],
     "Регрессионные тесты криптографической идентификации",
 )
@@ -191,7 +191,7 @@ require(
         "0022_serverbridge_crypto_node_identities_0142",
         "identity-enrollment-required",
         "paper-disabled-0141",
-        "disabled node retained legacy bearer material",
+        "Отключённый узел сохранил устаревшие данные Bearer",
         "activeJoinInvalidated:true",
         "server_bridge_node_nonces_v2",
     ],
@@ -215,7 +215,7 @@ require(
     [
         "serverbridge_node_sign",
         '-in "$canonical_file"',
-        "invalid Ed25519 signature length",
+        "Некорректная длина подписи Ed25519",
     ],
     "Подписывание Ed25519 для сквозных проверок ServerBridge",
 )

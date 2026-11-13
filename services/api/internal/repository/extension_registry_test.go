@@ -35,8 +35,8 @@ func registryTestPublication0203(t *testing.T, version string, fingerprint strin
 		Manifest:    registryTestManifest0203(version),
 		PublisherID: "deeplayer.team",
 		Compatibility: model.ExtensionRegistryCompatibility{
-			MinLauncher:       "0.20.0",
-			MaxLauncher:       "0.20.9",
+			MinLauncher:            "0.20.0",
+			MaxLauncher:            "0.20.9",
 			SupportedOS:            []string{"linux"},
 			SupportedArchitectures: []string{"amd64"},
 		},

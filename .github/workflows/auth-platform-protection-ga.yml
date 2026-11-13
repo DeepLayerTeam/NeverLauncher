@@ -78,7 +78,7 @@ jobs:
         run: |
           test "$(cat VERSION)" = 0.30.0
           python3 scripts/version/manage.py check
-          test -z "$(gofmt -l services/api/internal/httpapi/*0300*.go services/api/pkg/protection/*.go services/api/internal/httpapi/auth_v1.go services/api/internal/httpapi/oidc_flow_115.go services/api/internal/httpapi/microsoft_flow_116.go services/api/internal/httpapi/protection.go services/api/internal/httpapi/auth_link_password.go services/api/internal/httpapi/auth_provider_runtime.go)"
+          test -z "$(gofmt -l services/api/internal/httpapi/auth_platform_ga_test.go services/api/internal/httpapi/auth_sensitive.go services/api/pkg/protection/*.go services/api/internal/httpapi/auth_v1.go services/api/internal/httpapi/oidc_flow_115.go services/api/internal/httpapi/microsoft_flow_116.go services/api/internal/httpapi/protection.go services/api/internal/httpapi/auth_link_password.go services/api/internal/httpapi/auth_provider_runtime.go)"
           python3 -m unittest discover -s scripts/ga -p 'test_assert_go_test.py' -v
       - name: Собрать промышленный Backend на Go и выполнить go vet
         working-directory: services/api

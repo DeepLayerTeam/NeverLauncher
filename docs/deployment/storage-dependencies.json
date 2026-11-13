@@ -11275,77 +11275,77 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 44,
+          "line": 46,
           "evidence": "require(len(files) \u003e= 100, \"Отсутствует встроенный каталог миграций PostgreSQL\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 64,
+          "line": 68,
           "evidence": "(stat.S_IMODE(path.stat().st_mode) \u0026 0o077) == 0, \"Требуется закрытый файл DSN PostgreSQL с правами 0600\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 66,
+          "line": 70,
           "evidence": "require(len(content) \u003c 8192 and len(content.splitlines()) == 1, \"Файл DSN должен содержать ровно один URL PostgreSQL\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 68,
+          "line": 72,
           "evidence": "require(parsed.scheme in (\"postgres\", \"postgresql\") and parsed.hostname and parsed.path not in (\"\", \"/\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 70,
+          "line": 74,
           "evidence": "\"В URL PostgreSQL должны быть указаны узел, база данных и учётные данные\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 74,
+          "line": 78,
           "evidence": "\"URL PostgreSQL должен требовать проверки имени узла через TLS (verify-full)\")"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 109,
+          "line": 113,
           "evidence": "\"SELECT row_to_json(x)::text FROM \""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 116,
+          "line": 120,
           "evidence": "raise CompatibilityError(\"Не удалось проверить схему работающей PostgreSQL\") from exc"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 119,
+          "line": 123,
           "evidence": "require(proc.returncode == 0 and len(proc.stdout) \u003c= 200_000, \"Проверка схемы рабочего PostgreSQL завершилась ошибкой\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 121,
+          "line": 125,
           "evidence": "require(rows and rows[0] == \"primary\", \"DSN PostgreSQL не указывает на доступный для записи основной узел\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 128,
+          "line": 132,
           "evidence": "raise CompatibilityError(\"PostgreSQL вернул строку миграции, которую невозможно разобрать\") from exc"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 141,
+          "line": 145,
           "evidence": "\"Схема PostgreSQL отличается от закреплённого каталога обеих версий (ожидают применения=%d неизвестных="
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 214,
+          "line": 218,
           "evidence": "\"postgres\": migrations, \"edge\": {\"success\": edge.get(\"success\"), \"sampled\": edge.get(\"sampled\")},"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 219,
+          "line": 223,
           "evidence": "ap = argparse.ArgumentParser(description=\"Допуск смешанных версий API/worker и PostgreSQL 0.51.5/0.51.6 на живой системе\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 225,
+          "line": 229,
           "evidence": "ap.add_argument(\"--pg-dsn-file\", type=Path, required=True, help=\"Один закрытый URL postgres:// с правами 0600; не передавать секреты в argv\""
         }
       ]
@@ -30920,22 +30920,22 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 792,
+          "line": 794,
           "evidence": "`CREATE TABLE IF NOT EXISTS sqlite_access_token_tombstones_0474(token_hash TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES auth_sessions(id),issued_at TIMESTAMPTZ NOT NULL,exp"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 792,
+          "line": 794,
           "evidence": "`CREATE TABLE IF NOT EXISTS sqlite_access_token_tombstones_0474(token_hash TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES auth_sessions(id),issued_at TIMESTAMPTZ NOT NULL,exp"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 793,
+          "line": 795,
           "evidence": "`CREATE TABLE IF NOT EXISTS sqlite_bridge_runtime_nonces_0474(node_id TEXT NOT NULL REFERENCES server_bridge_nodes_v2(id),epoch BIGINT NOT NULL,nonce_hash TEXT NOT NULL CHECK(lengt"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 793,
+          "line": 795,
           "evidence": "`CREATE TABLE IF NOT EXISTS sqlite_bridge_runtime_nonces_0474(node_id TEXT NOT NULL REFERENCES server_bridge_nodes_v2(id),epoch BIGINT NOT NULL,nonce_hash TEXT NOT NULL CHECK(lengt"
         }
       ]

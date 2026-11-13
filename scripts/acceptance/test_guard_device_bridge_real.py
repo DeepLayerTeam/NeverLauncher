@@ -57,7 +57,7 @@ class Acceptance0529(unittest.TestCase):
             vanilla.verify({})
 
     def test_invalid_rcon_password_and_unbound_interface_rejected(self):
-        with self.assertRaisesRegex(vanilla.Blocked, 'loopback'):
+        with self.assertRaisesRegex(vanilla.Blocked, 'только локальный интерфейс'):
             vanilla.rcon('8.8.8.8', 25575, 'this is a password', 'list')
         with self.assertRaisesRegex(vanilla.Blocked, 'credential'):
             vanilla.rcon('127.0.0.1', 25575, 'secret', 'list')
@@ -78,7 +78,7 @@ class Acceptance0529(unittest.TestCase):
                 client.sendall(struct.pack('<iii',10,-1,2)+b'\0\0')
             listener.close()
         thread=threading.Thread(target=serve,daemon=True);thread.start()
-        with self.assertRaisesRegex(vanilla.Blocked,'authentication'):
+        with self.assertRaisesRegex(vanilla.Blocked,'отклонил авторизацию RCON'):
             vanilla.rcon('127.0.0.1',port,'sufficientlylongsecret','list')
         thread.join(timeout=3)
 

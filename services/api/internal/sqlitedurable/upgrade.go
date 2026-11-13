@@ -13,7 +13,7 @@ import (
 )
 
 func PreUpgradeBackup0472(ctx context.Context, source, label string) (string, error) {
-	if label == "" || strings.ContainsAny(label, `/\\.\x00\r\n`) {
+	if label == "" || strings.ContainsAny(label, "/\\.\x00\r\n") {
 		return "", errors.New("Некорректное значение: «метка резервной копии SQLite»")
 	}
 	abs, err := filepath.Abs(source)

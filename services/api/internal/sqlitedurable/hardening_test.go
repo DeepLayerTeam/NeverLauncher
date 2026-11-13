@@ -21,7 +21,7 @@ func TestSQLite0471RejectsSymlinkedWAL(t *testing.T) {
 	if store, err := Open(context.Background(), opt); err == nil {
 		_ = store.Close()
 		t.Fatal("Ошибочно принят файл WAL SQLite через символическую ссылку")
-	} else if !strings.Contains(err.Error(), "sidecar") {
+	} else if !strings.Contains(err.Error(), "Небезопасный вспомогательный файл SQLite") {
 		t.Fatal(err)
 	}
 }

@@ -36,12 +36,12 @@ type PlanInput struct {
 	ReconciliationEvidenceSHA256 string       `json:"reconciliationEvidenceSha256,omitempty"`
 }
 type CommitInput struct {
-	ProfileID          string `json:"profileId"`
-	Channel            string `json:"channel"`
-	ExpectedRevision   int64  `json:"expectedRevision"`
-	PlanSHA256         string `json:"planSha256"`
-	SourceWriterFenced bool   `json:"sourceWriterFenced"`
-	LauncherWriterFenced  bool   `json:"launcherWriterFenced"`
+	ProfileID            string `json:"profileId"`
+	Channel              string `json:"channel"`
+	ExpectedRevision     int64  `json:"expectedRevision"`
+	PlanSHA256           string `json:"planSha256"`
+	SourceWriterFenced   bool   `json:"sourceWriterFenced"`
+	LauncherWriterFenced bool   `json:"launcherWriterFenced"`
 	// Свежий независимо экспортированный снимок, полученный непосредственно перед
 	// фиксацией.
 	Current                      gr.Snapshot  `json:"current"`

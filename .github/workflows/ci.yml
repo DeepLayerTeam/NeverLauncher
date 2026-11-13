@@ -164,7 +164,7 @@ jobs:
           npm run test:launch-modes
       - name: Проверить типы TypeScript SDK для расширений
         run: |
-          apps/admin/node_modules/.bin/tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/launcher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/launcher-desktop.ts
+          apps/admin/node_modules/.bin/tsc --ignoreConfig --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/launcher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/launcher-desktop.ts
 
   rust-desktop:
     name: Среда выполнения и Tauri
@@ -1349,7 +1349,7 @@ jobs:
           TMPDIR: ${{ runner.temp }}/storage-parity-0371
         run: |
           set -euo pipefail
-          test -z "$(gofmt -l internal/repository/sqlite_http*_0372.go)"
+          test -z "$(gofmt -l internal/repository/sqlite_http.go internal/repository/sqlite_http_methods.go internal/repository/sqlite_http_state.go)"
           go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTP' ./internal/repository
           go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTPRepositoryBootstrap0372$' ./cmd/launcher-api
       - name: Проверить SQLite 0.37.3 — авторизацию, passkeys, сеансы и надёжность Bridge

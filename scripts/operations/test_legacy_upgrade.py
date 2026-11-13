@@ -195,7 +195,7 @@ class UpgradeTests(unittest.TestCase):
     def test_installed_version_mismatch_blocks_before_native_update(self):
         self.client_state('0.47.4')
         with patch.object(u.native, 'checked_file'), patch.object(u.native, 'client_package') as call:
-            with self.assertRaisesRegex(u.LegacyUpgradeError, 'differs'):
+            with self.assertRaisesRegex(u.LegacyUpgradeError, 'SHA-256 API не совпадает'):
                 u.execute(self.args(from_version='0.47.5'))
             call.assert_not_called()
 

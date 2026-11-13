@@ -19,7 +19,10 @@ func TestSupervisorConcurrentTerminalFailure03012(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := 0; i < 40; i++ {
 		wg.Add(1)
-		go func() { defer wg.Done(); s.failProcess(st, "Java RPC не отвечает после трёх проверок", false) }()
+		go func() {
+			defer wg.Done()
+			s.failProcess(st, "Java RPC не отвечает после трёх проверок", false)
+		}()
 	}
 	wg.Wait()
 	s.failProcess(st, "heartbeat timeout", false)

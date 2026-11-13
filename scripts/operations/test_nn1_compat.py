@@ -52,7 +52,7 @@ class NN1Admission(unittest.TestCase):
                 (directory / f.name).write_bytes(f.read_bytes())
             first = next(directory.glob("*.sql"))
             first.write_bytes(first.read_bytes() + b"\n-- changed")
-            with self.assertRaisesRegex(nn.CompatibilityError, "catalog changed"):
+            with self.assertRaisesRegex(nn.CompatibilityError, "каталог изменился"):
                 nn.migration_catalog(directory)
 
     def test_end_to_end_operator_gate_queries_both_remote_hosts_and_real_primary(self):

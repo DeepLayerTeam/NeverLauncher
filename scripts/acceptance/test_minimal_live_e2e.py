@@ -61,7 +61,7 @@ class MinimalRunnerTests(unittest.TestCase):
                 mod.run_acceptance(binary, base/'guard', base/'bridge', work, {'checks': []})
             (work/'already').unlink()
             binary.chmod(0o777)
-            with self.assertRaisesRegex(mod.AcceptanceFailure, 'permissions'):
+            with self.assertRaisesRegex(mod.AcceptanceFailure, 'Небезопасные права доступа'):
                 mod.run_acceptance(binary, base/'guard', base/'bridge', work, {'checks': []})
 
     def test_command_failure_cannot_be_recorded_as_pass(self):

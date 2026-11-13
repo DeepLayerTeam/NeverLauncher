@@ -107,7 +107,7 @@ workflow = read(".github/workflows/managed-jre-production-delivery.yml")
 require(
     workflow,
     [
-        "Managed JRE Production Delivery",
+        "Промышленная поставка управляемой JRE",
         "managed-jre-distribution.py",
         "delivery verify-jre",
         "launcher-managed-jre-",
@@ -122,7 +122,7 @@ require(
     [
         "managed-jre-production:",
         "Управляемая Java II — сквозные проверки Java 8/16/17/21/25 и поставка Temurin 21",
-        "Upload exact-commit Managed JRE production assets",
+        "Загрузить промышленные артефакты управляемой JRE для точного коммита",
         "name: launcher-managed-jre-${{ github.sha }}",
         "managed-jre-production]",
     ],
@@ -131,7 +131,7 @@ require(
 require(
     production_release,
     [
-        "Download Managed JRE six-target production assets",
+        "Скачать производственные артефакты управляемой JRE для шести платформ",
         "path: managed-jre-artifacts",
         "LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts",
     ],

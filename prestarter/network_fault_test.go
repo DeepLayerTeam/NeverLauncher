@@ -50,7 +50,7 @@ func TestTLSDownloadInterruptedResumeExactSHA0527(t *testing.T) {
 	}))
 	defer server.Close()
 	art := Artifact{URL: server.URL + "/signed-object", Size: int64(len(content)), SHA256: hex.EncodeToString(hash[:])}
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	part := filepath.Join(root, "object.part")
 	meta := filepath.Join(root, "object.etag")
 	storage := &storage{root: root, http: server.Client()}
@@ -83,7 +83,7 @@ func TestTLSResumeRejectsWrongServerValidator0527(t *testing.T) {
 	}))
 	defer server.Close()
 	art := Artifact{URL: server.URL + "/signed-object", Size: int64(len(content)), SHA256: hex.EncodeToString(hash[:])}
-	root := t.TempDir()
+	root := resolvedTestTempDir(t)
 	part := filepath.Join(root, "part")
 	meta := filepath.Join(root, "etag")
 	if err := os.WriteFile(part, content[:8], 0600); err != nil {

@@ -1106,7 +1106,7 @@ async fn save_installed_component_choice_0247_inner_0392(
     component_preset:String,mut config:DesktopConfig,
 )->Result<(),String>{
     let chosen=runtime::transactional_release::matching_installed_preset_0247(
-        &manifest,&PathBuf::from(root),&pinned_public_key)?
+        &manifest,&PathBuf::from(&root),&pinned_public_key)?
         .ok_or("Нельзя сохранить выбор компонентов для другого или неустановленного релиза")?;
     if chosen.unwrap_or_default()!=component_preset {
         return Err("Выбор установленного компонента отличается от запрошенной настройки".into());

@@ -18,7 +18,7 @@ func TestOwnerSignedFirstRun0352(t *testing.T) {
 	cfg.ServerPort = 25566
 	cfg.AutoEnter = true
 	signed, root := generateConfig(t, cfg)
-	temp := t.TempDir()
+	temp := resolvedTestTempDir(t)
 	store := &storage{root: filepath.Join(temp, ".launcher-prestarter")}
 	p := installer{root: temp, store: store, config: cfg, rawConfig: signed, key: root, gameRoot: filepath.Join(temp, "profiles", "hello", "vanilla")}
 	dir, err := p.ensureDesktopConfig("Player_123", false)

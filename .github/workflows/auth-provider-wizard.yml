@@ -37,7 +37,7 @@ jobs:
       - name: "Отформатировать Go-код и собрать Backend"
         working-directory: services/api
         run: |
-          test -z "$(gofmt -l internal/repository/*02910*.go internal/federation/*02910*.go internal/httpapi/*02910*.go internal/sqlconnector/connector.go)"
+          test -z "$(gofmt -l internal/repository/auth_provider_wizard.go internal/repository/auth_provider_wizard_integration_test.go internal/repository/auth_provider_wizard_test.go internal/federation/managed.go internal/federation/managed_test.go internal/httpapi/auth_provider_runtime.go internal/httpapi/auth_provider_wizard.go internal/httpapi/auth_provider_wizard_test.go internal/sqlconnector/connector.go)"
           go build ./cmd/...
       - name: "Применить реальные миграции PostgreSQL"
         working-directory: services/api

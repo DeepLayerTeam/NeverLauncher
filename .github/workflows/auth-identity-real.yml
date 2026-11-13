@@ -68,7 +68,7 @@ jobs:
         working-directory: services/api
         run: |
           set -euo pipefail
-          test -z "$(gofmt -l internal/httpapi/*0525*.go internal/httpapi/oidc_flow_115.go internal/httpapi/microsoft_flow_116.go internal/httpapi/federation_release.go)"
+          test -z "$(gofmt -l internal/httpapi/auth_browser_replay.go internal/httpapi/auth_browser_replay_integration_test.go internal/httpapi/auth_browser_replay_test.go internal/httpapi/oidc_flow_115.go internal/httpapi/microsoft_flow_116.go internal/httpapi/federation_release.go)"
           go build ./cmd/...
           go test -race -count=1 -timeout=12m ./internal/httpapi \
             -run 'TestBrowserReplayAcrossAPIReplicas0525|TestBrowserLinkReplayAndLoginSeparation0525|TestBrowserReplayAtomicMemory0525|TestBrowserNonceAcrossPostgresReplicas0525|TestOIDCBeginCompleteCreatesCanonicalLauncherSession|TestGenericBrowserProviderExplicitLink0120|TestMicrosoftExplicitLinkStoresEncryptedCredentialAndRotates116'

@@ -75,7 +75,7 @@ require(
         'target_os = "linux"',
         "GUARD_LINUX_PROCESS_POLICY_VERSION",
         "ensure_linux_production_hardening",
-        "Guard Linux production hardening verification failed",
+        "не пройдена проверка усиленной защиты Guard для рабочей сборки Linux",
     ],
     "Принудительное применение политик Linux в Desktop",
 )
@@ -87,7 +87,7 @@ require(
         "guardLinuxIntegritySchema0137",
         "guardLinuxProcessPolicySchema0137",
         "isLinuxDevicePlatform0137",
-        "Guard Linux process policy verification failed",
+        "Проверка политики процесса Guard в Linux не пройдена",
     ],
     "Проверка Linux на Backend",
 )

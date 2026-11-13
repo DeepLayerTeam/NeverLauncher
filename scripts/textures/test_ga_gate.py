@@ -95,21 +95,21 @@ class TextureGAGate0260Tests(unittest.TestCase):
         attestation = json.loads((folder / "attestation.json").read_text())
         attestation["actualExecution"] = False
         self.write_json(folder / "attestation.json", attestation)
-        with self.assertRaisesRegex(GateError, "signed attestation"):
+        with self.assertRaisesRegex(GateError, "недоверенное или изменённое подписанное подтверждение"):
             verify(self.root, COMMIT, self.public)
 
     def test_changed_evidence_content_rejected(self):
         folder = self.root / "linux-amd64"
         report = folder / "gameplay.json"
         report.write_bytes(report.read_bytes() + b" ")
-        with self.assertRaisesRegex(GateError, "Контрольная сумма SHA-256 не совпадает"):
+        with self.assertRaisesRegex(GateError, "контрольная сумма SHA-256 свидетельства"):
             verify(self.root, COMMIT, self.public)
 
     def test_missing_real_platform_rejected(self):
         import shutil
 
         shutil.rmtree(self.root / "windows-arm64")
-        with self.assertRaisesRegex(GateError, "exactly six"):
+        with self.assertRaisesRegex(GateError, "ровно шесть независимых целей"):
             verify(self.root, COMMIT, self.public)
 
     def test_signed_but_mocked_report_rejected(self):
@@ -122,7 +122,7 @@ class TextureGAGate0260Tests(unittest.TestCase):
         )
         self.write_json(folder / "attestation.json", attestation)
         self.sign(folder)
-        with self.assertRaisesRegex(GateError, "not a matching real"):
+        with self.assertRaisesRegex(GateError, "отчёт не соответствует фактическому выполнению"):
             verify(self.root, COMMIT, self.public)
 
     def test_signed_but_skipped_gameplay_rejected(self):
@@ -139,13 +139,13 @@ class TextureGAGate0260Tests(unittest.TestCase):
             verify(self.root, COMMIT, self.public)
 
     def test_wrong_commit_rejected(self):
-        with self.assertRaisesRegex(GateError, "release identity/status"):
+        with self.assertRaisesRegex(GateError, "идентификатор или статус релиза не совпадает"):
             verify(self.root, "b" * 40, self.public)
 
     def test_installer_tampering_rejected(self):
         with (self.root / "linux-amd64" / "installer.bin").open("ab") as f:
             f.write(b"tamper")
-        with self.assertRaisesRegex(GateError, "Контрольная сумма SHA-256 не совпадает"):
+        with self.assertRaisesRegex(GateError, "контрольная сумма SHA-256 свидетельства"):
             verify(self.root, COMMIT, self.public)
 
     def test_symlinked_report_rejected(self):
@@ -157,7 +157,7 @@ class TextureGAGate0260Tests(unittest.TestCase):
             report.symlink_to(outside)
         except OSError as err:
             self.skipTest(str(err))
-        with self.assertRaisesRegex(GateError, "unsafe evidence file"):
+        with self.assertRaisesRegex(GateError, "Файл доказательных данных отсутствует или небезопасен"):
             verify(self.root, COMMIT, self.public)
 
     def test_duplicate_json_key_rejected(self):
@@ -174,7 +174,7 @@ class TextureGAGate0260Tests(unittest.TestCase):
         ).hexdigest()
         self.write_json(folder / "attestation.json", attestation)
         self.sign(folder)
-        with self.assertRaisesRegex(GateError, "Повторяющийся ключ JSON"):
+        with self.assertRaisesRegex(GateError, "Обнаружен дубликат: ключ JSON"):
             verify(self.root, COMMIT, self.public)
 
 

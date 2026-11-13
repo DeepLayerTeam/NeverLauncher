@@ -38,7 +38,7 @@ class FinalBundleTests(unittest.TestCase):
         with self.assertRaises(m.Blocked):
             m.identity(self.folder, VERSION, 'b' * 40)
         (self.folder / m.BINARY).write_bytes(b'changed-after-signing')
-        with self.assertRaisesRegex(m.Blocked, 'differs'):
+        with self.assertRaisesRegex(m.Blocked, 'SHA-256 API не совпадает'):
             m.identity(self.folder, VERSION, COMMIT)
 
     def test_duplicate_unsigned_or_missing_binary_refused(self):

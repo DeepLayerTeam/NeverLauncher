@@ -17,8 +17,8 @@
       "size": 2615
     },
     ".github/workflows/admin-official-provider.yml": {
-      "sha256": "b221f9eabd4f4402bcc04e8280a58d3d82a4c47add3c308b4407808156cb677d",
-      "size": 1799
+      "sha256": "9b92f88cbbe0f5336c091a2539c55f5d61acc24a924f1ed6a5999e4c52f3d1e0",
+      "size": 1811
     },
     ".github/workflows/adversarial-security.yml": {
       "sha256": "65d30dd26c340543d2ecf207c98d462543f661e1e6d237c9e58cd3f8b574f8dc",
@@ -29,24 +29,24 @@
       "size": 2448
     },
     ".github/workflows/arm64-game-integration.yml": {
-      "sha256": "480b8a6ee6b6452209fc453cb3b2615e2e0154c20e5309038fe90fb68b94d31c",
-      "size": 5328
+      "sha256": "3f371d7e0a9e5b6bd1b9042344a2d5d0c1592338bf2306a07a00a242b336c7f3",
+      "size": 5340
     },
     ".github/workflows/auth-identity-real.yml": {
-      "sha256": "ff2d77885418c9cd52682d779cf32cd56c14d68c98af8f5447f3be87d057d775",
-      "size": 5916
+      "sha256": "21c65f9b30c23c7488a867396c32a797ae0e3353e8aab63392c9e75456af62e0",
+      "size": 6031
     },
     ".github/workflows/auth-migration-compat.yml": {
       "sha256": "71dd6a6db375053362d33aca861ae9eef8a50b5967e0b9d664933a635f9f9c92",
       "size": 4993
     },
     ".github/workflows/auth-platform-protection-ga.yml": {
-      "sha256": "207c5dec6e76d19ec6874d66691c1e014039a86f3ef1c4aec96d8f6ff37b8b43",
-      "size": 7327
+      "sha256": "4ec34131e0730629201911bc5c70c53a809f9fddf3080b5a97bf9402beebb383",
+      "size": 7390
     },
     ".github/workflows/auth-provider-wizard.yml": {
-      "sha256": "d4251a8c58606ff78a14f455f7cd9bdf6354041c0810997f7d77f2074e6bf9e9",
-      "size": 3230
+      "sha256": "eb0918a770587b7aa25a294c9063c844efbf02d1e7a0b8274842fe7e7371fb49",
+      "size": 3490
     },
     ".github/workflows/auth-sdk-conformance.yml": {
       "sha256": "2320a0851666a140c020c6555a75a7199301c6b31b73b0dcbbd8b39ab3808e07",
@@ -65,8 +65,8 @@
       "size": 2914
     },
     ".github/workflows/branding-studio.yml": {
-      "sha256": "ac5607c780f1305506c04e8b2d46b32cd6258035ec8f2ff33a2a6aed44fba18b",
-      "size": 2418
+      "sha256": "45b63358b4188e08517ae4bf80f7eda18b6413fe83a7601e475ae97b34da832e",
+      "size": 2430
     },
     ".github/workflows/browser-oauth-pkce.yml": {
       "sha256": "28f92f08c2e92d3f896b926d25cffdeb354c958dfe5749586dce118158042de2",
@@ -85,8 +85,8 @@
       "size": 3668
     },
     ".github/workflows/ci.yml": {
-      "sha256": "7c17671c3872ec526194fa603760dc356d00304613987ad4a38088b0f7897024",
-      "size": 98244
+      "sha256": "bdb0880d2d82fc738ba5d2a62f97d33517abc335b7b173586bf256c5af628243",
+      "size": 98337
     },
     ".github/workflows/client-factory.yml": {
       "sha256": "247fc31042e1a2bd180e5fdf9a37798924285a5d402b9381f20d0684d5d99635",
@@ -141,20 +141,20 @@
       "size": 2095
     },
     ".github/workflows/desktop-accessibility.yml": {
-      "sha256": "06f9ff5cceeba8ddcff7ce18b4c3329271e913f77aaca746f53c46d72d1df2ec",
-      "size": 1550
+      "sha256": "c55daa19608c3d0b2d66be87b1a14807945fc2c2614f491db7b504d0139b9cdf",
+      "size": 1562
     },
     ".github/workflows/desktop-authentication.yml": {
       "sha256": "b89d4222008b6e2c0f7aca8e61979e52faa14241a7b0a1d4b46e1ee556c38d79",
       "size": 978
     },
     ".github/workflows/desktop-migrations.yml": {
-      "sha256": "22f117845559955b5f7ea38ba71c6d2720f1e04382b2656c47a21f7f3583a75f",
-      "size": 1832
+      "sha256": "30e1800ef982e72ae960323b9a5803211b374f1ebc6c4c4d158c72bf0aa906c0",
+      "size": 1844
     },
     ".github/workflows/desktop-offline-policy.yml": {
-      "sha256": "9c1a9a5d04cfaf4afac6e469a076588940ab77dfdfa16331e760a11cb7267ce9",
-      "size": 1827
+      "sha256": "95b1c6b7ff5d4887e0a455a8180c2a41d6783b1e3a6e6a7b95d1a9451d18bb26",
+      "size": 1839
     },
     ".github/workflows/desktop-workspace.yml": {
       "sha256": "590822b334762f71fbfc8574142ccf4ae7bf8e38051e3bcb1c8d0bafe7872b9c",
@@ -177,16 +177,16 @@
       "size": 2615
     },
     ".github/workflows/diagnostics-sentry.yml": {
-      "sha256": "f9f0a7aad26fc5e56926649c9ae0f2ca7d878de976ffd94969781a91b63f2f4e",
-      "size": 2195
+      "sha256": "651b7cb8ce5caec85865f03ec45e23a6fb992861b07c8fafc2bec247e5dd7d51",
+      "size": 2207
     },
     ".github/workflows/diagnostics-support.yml": {
-      "sha256": "96f2c0535db838e42bff0140b16bd2a7c2362e6190d96101764fabdaa4a50aeb",
-      "size": 2432
+      "sha256": "132d479ec11422bc94ff86a086263449cc7eceb682e21d115a6b1bb0eb9ef6bd",
+      "size": 2444
     },
     ".github/workflows/discord-lan.yml": {
-      "sha256": "bc3d66f03e69a79ffea87f82992022a7619b9271b261e81eeed7c2993b081399",
-      "size": 2724
+      "sha256": "200c747aaf8240278eba3d4ccab0ea4807b851cb0c38f7ff3731c998d8b9728d",
+      "size": 2736
     },
     ".github/workflows/docs.yml": {
       "sha256": "d064de76a09e5ee44d6fc9c46388b847644e4a39ae61639da067b0e30fedbdc1",
@@ -253,8 +253,8 @@
       "size": 2975
     },
     ".github/workflows/gravit-migration-ga.yml": {
-      "sha256": "371c7118e23fe18da9813370a9d9ecc4b881658657fa053e9a202d65a039e8eb",
-      "size": 10922
+      "sha256": "9343c9157e28d210bfd97e5d5b62ac92de6325f9ff659a4ad47b2be885ced363",
+      "size": 10934
     },
     ".github/workflows/gravit-migration-reports.yml": {
       "sha256": "2da3a7512ac32f01fb1933ac02cffc3f9308e966b2e0897899c6d0eadcada638",
@@ -305,8 +305,8 @@
       "size": 2284
     },
     ".github/workflows/guard-game-lifetime.yml": {
-      "sha256": "caf26f8fd15299291507cc08f568d7819370bb0965223816c04be6a93a80876b",
-      "size": 3148
+      "sha256": "2e77a830e9fe66ed386e5eeb338372bc56993ba72ff1a59969922967393c018f",
+      "size": 3217
     },
     ".github/workflows/guard-inventory.yml": {
       "sha256": "c5538345e40d325608726560febb802227c710462775aa2f24b38b4a057149c2",
@@ -333,8 +333,8 @@
       "size": 2062
     },
     ".github/workflows/hwid-risk-recovery.yml": {
-      "sha256": "358e142ac3c5f9a714b7bee5ca85bfcc8546222ccd64ebd46791be48f590dd31",
-      "size": 3151
+      "sha256": "f852a3852cbc381d1ebd06810fe73f7df1cbf2c2baa6ae19fafef05f82800a54",
+      "size": 3163
     },
     ".github/workflows/independent-ha-ga.yml": {
       "sha256": "74ab229bca1dc0744c9749a3d88e21e8c5426dd6d9d392f00c374ed44a4e7da0",
@@ -345,8 +345,8 @@
       "size": 6619
     },
     ".github/workflows/integration-certification.yml": {
-      "sha256": "1b21d924daa684ae7eafbf93fcf9539ec8df5b243a20d8fa5bfc8fffa1d0be74",
-      "size": 5124
+      "sha256": "2ba37e7b2e5b66b26aa5e2bb3db55b0ff2e8e7d6e372f6f5f2a46f18eb801038",
+      "size": 5136
     },
     ".github/workflows/integration-matrix.yml": {
       "sha256": "92a742d3b9141d9cb1c8d5bbbb5558bf2658bedca831168bc16ac74ddff9d897",
@@ -397,8 +397,8 @@
       "size": 4919
     },
     ".github/workflows/java-sdk-module-parity-ga.yml": {
-      "sha256": "d61a6f5f2b0cb98482cc08351b2cf7d6c0f40b2c33c8bcfdefed85ab7c9f2030",
-      "size": 5745
+      "sha256": "0023a2d513c418a9725f2d95c8238b64b7213f9e7790edb5d3317e786b55dca2",
+      "size": 5757
     },
     ".github/workflows/java-sdk-runtime.yml": {
       "sha256": "d42ec4619e572c94dc835f61347e8ba7c8a17ff37db8711e6ab822f54333f22f",
@@ -513,8 +513,8 @@
       "size": 4264
     },
     ".github/workflows/module-parity.yml": {
-      "sha256": "13658c3e1c72895b3ea85eba2f458becf57e3b7159fdfc8ffe8bc62ce1b9575e",
-      "size": 3014
+      "sha256": "f6ada60876d21318caa06c1a59087aad8a8e452ef2ebaa99633c8784abda61c7",
+      "size": 3182
     },
     ".github/workflows/multi-account-lifecycle.yml": {
       "sha256": "0954309f5c4ec3c1927dd4f3e2e2579031dbe2c872ca51b7cbb5feec45659c24",
@@ -609,16 +609,16 @@
       "size": 2919
     },
     ".github/workflows/performance.yml": {
-      "sha256": "b1f51f95c05d3fe917a81d3ccf10890ed0b78f228c4961b7824a7dd648dbe682",
-      "size": 4225
+      "sha256": "dab4943bdd9e7a17dc50b05322b320c8aa63a0f6b490df3c75204080f50423cb",
+      "size": 4237
     },
     ".github/workflows/physical-ha-dr.yml": {
       "sha256": "9ab30dcdaf0a7e8130919a9bf0612a18bc14a25daec7c06387258c05b03de617",
       "size": 8667
     },
     ".github/workflows/player-migration.yml": {
-      "sha256": "ab9fb5109c37ab2336af603ded31e1a784d1b71702aa56ccb8fd99fb8636830c",
-      "size": 1689
+      "sha256": "0a2398a50e0a548d93e071c046b6489adfd94bd15e22e95a6d63b09f74b3db76",
+      "size": 1701
     },
     ".github/workflows/prestarter.yml": {
       "sha256": "fbcda32ba2a38dc07193c0ff736395ecdf9f4f47e391e5581d2ba7ef4f39a57e",
@@ -649,8 +649,8 @@
       "size": 3574
     },
     ".github/workflows/provider-runtime-parity.yml": {
-      "sha256": "759c5216e935fa04f2a095be7111fa36a60f1f6d2ab4a9adf9d79bdcae4dd644",
-      "size": 4289
+      "sha256": "72165cd76227f3fea05b0423ae503de531568d956fe6d23112053f158f7c0671",
+      "size": 4443
     },
     ".github/workflows/public-production-delivery.yml": {
       "sha256": "666420f9f3658ab6b01992d2b707be450c77f515eab4492ac8ec4a261039c3fe",
@@ -665,8 +665,8 @@
       "size": 2186
     },
     ".github/workflows/release-candidate.yml": {
-      "sha256": "4369d786a41cd60976d85dac799d1ee5187af31477f8ea57ec993ee79e796291",
-      "size": 10239
+      "sha256": "0476928df41d45561741214841361b7845b6b469def09333d5282982c17873ac",
+      "size": 10251
     },
     ".github/workflows/reproducibility-current.yml": {
       "sha256": "29608e4fb42c2126b9b2f931116128edddd017221d8c519d4fadfd30d6142f31",
@@ -693,12 +693,12 @@
       "size": 1823
     },
     ".github/workflows/security-real-auth-e2e.yml": {
-      "sha256": "231232f801251b590ac3aa1cc2086847d616be5f291d3b99dc24746c60ba0120",
-      "size": 4525
+      "sha256": "abb6cf1d053c563d53fe48473fe0add9526137b1d052a0c6007506f67fbde03a",
+      "size": 4648
     },
     ".github/workflows/security-sandbox.yml": {
-      "sha256": "c4df01bfde057856c58dc9182d78b7b9acff9ad185bce603819e584f421a867f",
-      "size": 2083
+      "sha256": "df60bc4f0d3f094bf5644f95b36fb79b6312e59112c390fcdd41e3492783a096",
+      "size": 2095
     },
     ".github/workflows/security.yml": {
       "sha256": "6bf1cc3e54348a47211a3da8cead02959c2ea7b6ab6a16c646fc5abbdbcd1a78",
@@ -729,8 +729,8 @@
       "size": 1958
     },
     ".github/workflows/signed-first-run.yml": {
-      "sha256": "c14c1249060be4130017dbaa95da1aa991eca0fc95a981ce8ed097f07f47f337",
-      "size": 1949
+      "sha256": "b1b71bd8c943ac472598dd6305aaab8831485556aa03b8ab23da1fe9dd7de074",
+      "size": 1961
     },
     ".github/workflows/sql-mapping-legacy-hash.yml": {
       "sha256": "8dfb33fbcc402e743882bff5f00eca6f34f099f2fa656575aa2d259eb560126a",
@@ -853,8 +853,8 @@
       "size": 30711
     },
     "apps/desktop/package.json": {
-      "sha256": "474130598d6990d7c2fb3bc546c72a329cef685851060ed6c0e672dedf34f52d",
-      "size": 3589
+      "sha256": "b09f7d332be343ab313256cd078d23598acb84724fe8eba25395d8c2978836e5",
+      "size": 3784
     },
     "apps/desktop/src-tauri/Cargo.toml": {
       "sha256": "348a49f02c96252a80d113a59dff7edda30fbed4643315fc55f4cb75855b8a8a",
@@ -1057,8 +1057,8 @@
       "size": 63506
     },
     "scripts/release/build-windows-desktop.ps1": {
-      "sha256": "f99b101339ae780e53a9361d74f7a7750e58bcd6eaf6edf5a21839a5c5a82509",
-      "size": 33953
+      "sha256": "299b9c357b8c345d5c945e4aa1d46cd1c16f03285e453d783fd439c5daf0f2f1",
+      "size": 33440
     },
     "scripts/release/canonical_zip.py": {
       "sha256": "10de882670055f2062db94fbc50c6677ef8a8033a31502427d6c96c32e9c4c06",
@@ -1337,8 +1337,8 @@
       "size": 8883
     },
     "scripts/smoke/offline/repository-policy.py": {
-      "sha256": "02fbdc61b4e58e8806aad5e09e5aeb1ed84c6d6333d97b85dc9b59abe1554de2",
-      "size": 322827
+      "sha256": "b014d70b8cd8fd637abd3b62a18b7255f375bfd21a054dff0e720ce7e88c32ab",
+      "size": 326439
     },
     "scripts/smoke/offline/serverbridge-forge-neoforge.py": {
       "sha256": "a40efb51383c74d5d289055890411d5b1dd6b646e8ea5bc4a07d543473c551a7",

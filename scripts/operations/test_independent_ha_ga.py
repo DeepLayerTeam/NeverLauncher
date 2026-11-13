@@ -77,9 +77,9 @@ class HAGATest(unittest.TestCase):
             ga.read_json(link, private=True)
 
     def test_rejects_publisher_self_acceptance_and_unverified_root(self):
-        with patch('independent_ha_ga_0520.pwd.getpwuid') as pw, \
-             patch('independent_ha_ga_0520.os.getuid', return_value=111), \
-             patch('independent_ha_ga_0520.os.geteuid', return_value=111), \
+        with patch('independent_ha_ga.pwd.getpwuid') as pw, \
+             patch('independent_ha_ga.os.getuid', return_value=111), \
+             patch('independent_ha_ga.os.geteuid', return_value=111), \
              patch.object(ga.multi.inventory, 'machine_identity', return_value='machine:other'):
             pw.return_value.pw_name = 'operator'
             with self.assertRaises(ga.Blocked):

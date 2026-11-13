@@ -21,7 +21,7 @@ class Capabilities(unittest.TestCase):
 
     def test_headless_capability_claims_gui(self):
         with patch(
-            "runtime_capabilities_03410._probe_java",
+            "runtime_capabilities._probe_java",
             return_value={"available": True, "sha256": "a" * 64},
         ):
             result = evaluate("headless", "/java")
@@ -33,15 +33,15 @@ class Capabilities(unittest.TestCase):
     def test_no_renderer_is_blocked_not_failed(self):
         with (
             patch(
-                "runtime_capabilities_03410.host_identity",
+                "runtime_capabilities.host_identity",
                 return_value={"os": "linux", "arch": "amd64", "supported": True},
             ),
             patch(
-                "runtime_capabilities_03410._probe_java",
+                "runtime_capabilities._probe_java",
                 return_value={"available": True},
             ),
             patch(
-                "runtime_capabilities_03410._linux_gui",
+                "runtime_capabilities._linux_gui",
                 return_value=(False, "Нет доступного модуля отображения", None),
             ),
         ):
@@ -51,7 +51,7 @@ class Capabilities(unittest.TestCase):
 
     def test_missing_java_also_blocks_before_game(self):
         with patch(
-            "runtime_capabilities_03410._probe_java",
+            "runtime_capabilities._probe_java",
             return_value={"available": False, "reason": "Некорректная Java"},
         ):
             result = evaluate("headless", "/java")
@@ -61,15 +61,15 @@ class Capabilities(unittest.TestCase):
     def test_gui_ready_requires_real_renderer(self):
         with (
             patch(
-                "runtime_capabilities_03410.host_identity",
+                "runtime_capabilities.host_identity",
                 return_value={"os": "linux", "arch": "amd64", "supported": True},
             ),
             patch(
-                "runtime_capabilities_03410._probe_java",
+                "runtime_capabilities._probe_java",
                 return_value={"available": True},
             ),
             patch(
-                "runtime_capabilities_03410._linux_gui",
+                "runtime_capabilities._linux_gui",
                 return_value=(True, "", {"renderer": "llvmpipe", "version": "4.5"}),
             ),
         ):
