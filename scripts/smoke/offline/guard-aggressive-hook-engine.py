@@ -191,6 +191,7 @@ def main() -> int:
                 )
 
     print("[Launcher] Усиленный механизм контроля перехватов I 0.18.4: проверка: OK")
+    print('Aggressive Hook Engine I 0.18.4 gate: OK')
     return 0
 
 

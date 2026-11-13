@@ -11,11 +11,11 @@
 
 Сначала реальная сборка и платформенная подпись, затем окончательная упаковка, проверка **конечных байтов**, независимые результаты проверки среды выполнения и готовности выпуска, BOM, SPDX 2.3 SBOM, сведения о происхождении сборки по SLSA, манифест выпуска и подпись. Шесть целей: Windows/Linux/macOS × x64/ARM64. Проверка Linux не подтверждает Windows/macOS. Отсутствующий сертификат, подпись, физический исполнитель CI или сквозной игровой тест — выпуск заблокирован.
 
-Проверяйте CLI `launcher release distribution-verify` и `launcher release verify` по [Signed Distribution](../releases/0.45.11-signed-distribution.md). Для брендирования сохраняйте идентичность проекта и закреплённый корневой ключ доверия по [Branding GA](../releases/0.45.10-branding-ga.md). Установщик не должен автоматически переключаться на новый выпуск при ошибке подписи или запуска.
+Проверяйте CLI `launcher release distribution-verify` и `launcher release verify` по [Signed Distribution](../release/delivery.md). Для брендирования сохраняйте идентичность проекта и закреплённый корневой ключ доверия по [Branding GA](../admin/build-workspace.md). Установщик не должен автоматически переключаться на новый выпуск при ошибке подписи или запуска.
 
 ## API/SDK
 
-Канонический `schemas/openapi.yaml`: OpenAPI 3.1.1, контракт `1.0.0`, 452 операции из базовой версии 0.45.12. `sdk/api/go`, `sdk/api/typescript`, `sdk/java/http-client` отправляют реальные HTTP-запросы; это **не** 452 полностью типизированных индивидуальных методов. Обратная совместимость с 0.45.11 требует проверки на работающей системе (сравнение OpenAPI и мок-запросы недостаточны). [API/SDK Freeze Candidate](../releases/0.45.12-api-sdk-freeze-candidate.md).
+Канонический `schemas/openapi.yaml`: OpenAPI 3.1.1, контракт `1.0.0`, 452 операции из базовой версии 0.45.12. `sdk/api/go`, `sdk/api/typescript`, `sdk/java/http-client` отправляют реальные HTTP-запросы; это **не** 452 полностью типизированных индивидуальных методов. Обратная совместимость с 0.45.11 требует проверки на работающей системе (сравнение OpenAPI и мок-запросы недостаточны). [API/SDK Freeze Candidate](../reference/api.md).
 
 ```sh
 python3 scripts/contracts/validate-openapi.py

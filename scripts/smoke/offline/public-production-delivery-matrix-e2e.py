@@ -125,3 +125,4 @@ subprocess.run(
 )
 
 print(f"Launcher {VERSION}: проверка публичной матрицы поставки и E2E: OK")
+print('Public Production Delivery Matrix + E2E gate: OK')

@@ -7,7 +7,7 @@ import {
   textureAssignment0258,
   validateTextureFile0258,
   safeOfficialTextureURL0258,
-} from "../build-tests/texture_service_0258.js";
+} from "../build-tests/texture_service.js";
 const digest = "a".repeat(64);
 function response(data, status = 200, headers = {}) {
   return {
@@ -219,7 +219,7 @@ test("Загрузка multipart отслеживает прогресс XHR и 
 });
 test("Загрузка официального скина идёт только через нативный IPC, без Bearer-токена браузера или игрового токена", async () => {
   const { OfficialMinecraftClient0257 } =
-    await import("../build-tests/official_minecraft_0257.js");
+    await import("../build-tests/official_minecraft.js");
   const previousFetch = globalThis.fetch,
     previousXHR = globalThis.XMLHttpRequest,
     now = Date.now;

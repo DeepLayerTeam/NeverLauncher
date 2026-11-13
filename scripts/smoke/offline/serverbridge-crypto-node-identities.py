@@ -348,3 +348,4 @@ if "X-Launcher-Server-Token" in main_e2e or ".data.serverToken" in main_e2e:
     )
 
 print(f"Launcher 0.14.2: проверка криптографических идентификаторов узлов: OK ({version})")
+print('Cryptographic Node Identities gate')

@@ -2,7 +2,7 @@ import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React,{useState} from 'react';
 import type {ReleaseApi} from '../api/release';
-import type {Catalog0248,CatalogPreview0248} from './component-editor-model-0248';
+import type {Catalog0248,CatalogPreview0248} from './component-editor-model';
 
 type Field={field:string;status:'mapped'|'transformed'|'manual'|'blocked';target?:string;reason:string};
 export type GravitOptionalResponse02411={

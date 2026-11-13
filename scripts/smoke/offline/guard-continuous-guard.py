@@ -132,3 +132,4 @@ for rel, text in [
             )
 
 print("[Launcher] Непрерывная защита Guard 0.18.9: проверка: OK")
+print('Continuous Guard 0.18.9 gate: OK')

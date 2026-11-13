@@ -1,18 +1,31 @@
+#[path = "tpm_wire.rs"]
 mod tpm_wire_0313;
 #[cfg(target_os = "linux")]
+#[path = "tpm_linux.rs"]
 mod tpm_linux_0314;
 #[cfg(target_os = "windows")]
+#[path = "tpm_windows.rs"]
 mod tpm_windows_0313;
+#[path = "discord_presence.rs"]
 mod discord_presence_0308;
+#[path = "sentry_diagnostics.rs"]
 mod sentry_diagnostics_0309;
+#[path = "diagnostics_bundle.rs"]
 mod diagnostics_bundle_03510;
 mod device_keys;
+#[path = "signed_first_run.rs"]
 mod signed_first_run_0352;
+#[path = "hwid_risk.rs"]
 mod hwid_risk_0299;
+#[path = "official_identity.rs"]
 mod official_identity_0262;
+#[path = "official_browser.rs"]
 mod official_browser_0263;
+#[path = "official_exchange.rs"]
 mod official_exchange_0265;
+#[path = "official_verification.rs"]
 mod official_verification_0266;
+#[path = "game_guard_watchdog.rs"]
 mod game_guard_watchdog_0438;
 
 use runtime::{

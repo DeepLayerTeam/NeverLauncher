@@ -1221,11 +1221,11 @@ pub struct LauncherOfficialLink0268 {
 
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
-pub struct Context { backend_url: String, token: String, session_id: String }
+pub struct Context { backend_url: String, #[serde(rename="launcherToken")] token: String, #[serde(rename="launcherSessionId")] session_id: String }
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
 pub struct OfficialServerJoinRequest0397 {
-    backend_url:String, token:String, session_id:String,
+    backend_url:String, #[serde(rename="launcherToken")] token:String, #[serde(rename="launcherSessionId")] session_id:String,
     expected_uuid:String, server_id:String, project_id:String,profile_id:String,
     channel:String, guard_attestation_ticket:String,
     continuous_guard_ticket:Option<String>, plan_evidence:Option<Value>,
@@ -1242,7 +1242,7 @@ pub async fn official_identity_prepare_join_0397(manager:tauri::State<'_,Identit
 
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
-pub struct LaunchContext { pub backend_url: String, pub token: String, pub session_id: String, pub expected_uuid: String }
+pub struct LaunchContext { pub backend_url: String, #[serde(rename="launcherToken")] pub token: String, #[serde(rename="launcherSessionId")] pub session_id: String, pub expected_uuid: String }
 
 #[tauri::command]
 pub async fn official_identity_begin_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<DeviceChallenge, String> {

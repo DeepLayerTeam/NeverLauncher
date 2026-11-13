@@ -313,7 +313,7 @@ fn restore(root: &Path, j: &Journal) -> Result<(), String> {
                 match fs::remove_file(&target) {
                     Ok(()) => { if let Some(parent) = target.parent() { sync_dir(parent)?; } },
                     Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
-                    Err(e) => return Err(format!("Не удалось удалить недавно установленный файл {}: {e}", e.path)),
+                    Err(err) => return Err(format!("Не удалось удалить недавно установленный файл {}: {err}", e.path)),
                 }
             }
         }

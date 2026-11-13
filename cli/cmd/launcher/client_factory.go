@@ -805,6 +805,10 @@ func rejectFactoryOutputPath0271(root, output string) error {
 	if err != nil {
 		return err
 	}
+	// Absolute paths on different Windows volumes cannot be descendants.
+	if !strings.EqualFold(filepath.VolumeName(absRoot), filepath.VolumeName(absOutput)) {
+		return nil
+	}
 	rel, err := filepath.Rel(absRoot, absOutput)
 	if err != nil {
 		return err

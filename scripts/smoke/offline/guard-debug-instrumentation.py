@@ -170,3 +170,4 @@ for rel, text in [
             )
 
 print("[Launcher] Защита от отладки и инструментирования 0.18.7: проверка: OK")
+print('Debug & Instrumentation Guard 0.18.7 gate: OK')

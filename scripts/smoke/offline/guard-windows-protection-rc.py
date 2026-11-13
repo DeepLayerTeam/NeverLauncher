@@ -152,3 +152,4 @@ for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
 print(
     f"[Launcher] Сертификат RC защиты Windows и производственные проверки 0.18.12: ПРОЙДЕНО ({version})"
 )
+print('Windows Protection RC release certificate + production gates 0.18.12 gate: OK')

@@ -31,12 +31,12 @@ import {
   type ReleaseVersion0386,
 } from "../api/release";
 import { ApiError } from "../api/client";
-import { PublishReadiness0385 } from "./PublishReadiness0385";
+import { PublishReadiness0385 } from "./PublishReadiness";
 import { JobMonitor } from "./JobMonitor";
-import { ValidationHistory03412 } from "./ValidationHistory03412";
+import { ValidationHistory03412 } from "./ValidationHistory";
 import { BuildWorkspacePanel } from "./BuildWorkspacePanel";
-import { ComponentGraphEditor0248 } from "./ComponentGraphEditor0248";
-import { channelHistory0386 } from "./release-history-0386";
+import { ComponentGraphEditor0248 } from "./ComponentGraphEditor";
+import { channelHistory0386 } from "./release-history";
 import {
   durableOwnerKey,
   findOriginalOwnerJob,

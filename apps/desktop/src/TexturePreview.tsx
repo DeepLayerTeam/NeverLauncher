@@ -1,5 +1,5 @@
 import React, {useState, useRef} from 'react';
-import type {SkinModel0258} from './texture_service_0258';
+import type {SkinModel0258} from './texture_service';
 
 type Vec = {x:number;y:number;w:number;h:number};
 type Cube = {id:string;x:number;y:number;z:number;w:number;h:number;d:number;atlas:Vec;overlay?:boolean; cape?:boolean};

@@ -217,3 +217,4 @@ require(
 print(
     f"NeoForge Compatibility II 0.17.6: проверка — OK (целей каталога: {len(rows)}; обязательных: {len(rows) - len(blocked)}; не сертифицировано: {len(blocked)}; 1.20.1..26.2, Java 17/21/25)"
 )
+print('NeoForge Compatibility II 0.17.6 gate: OK')

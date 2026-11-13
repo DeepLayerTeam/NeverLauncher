@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveLaunchMode0269 } from '../build-tests/launch_modes_0269.js';
-import { launchPreferences } from '../build-tests/desktop_experience_0229.js';
+import { resolveLaunchMode0269 } from '../build-tests/launch_modes.js';
+import { launchPreferences } from '../build-tests/desktop_experience.js';
 
 const intent = {identity:'official',hasOfficialProfile:true,offlineAllowed:false,autoEnter:true,serverId:''};
 test('Официальный режим подключается напрямую без сеанса ServerBridge',()=>{
@@ -15,7 +15,7 @@ test('Yggdrasil не зависит от официальной учётной �
 });
 test('Автономный режим требует подписанного разрешения релиза и запрещает автоподключение',()=>{
   assert.throws(()=>resolveLaunchMode0269({...intent,identity:'offline'}),/подписанным/);
-  assert.throws(()=>resolveLaunchMode0269({...intent,identity:'offline',offlineAllowed:true}),/Offline не подключается/);
+  assert.throws(()=>resolveLaunchMode0269({...intent,identity:'offline',offlineAllowed:true}),/Автономный режим не подключается/);
   assert.equal(resolveLaunchMode0269({...intent,identity:'offline',offlineAllowed:true,autoEnter:false}),'offline');
 });
 const settings={memoryMb:4096,screenWidth:1280,screenHeight:720,fullscreen:false,autoEnter:true,serverHost:'mc.example.org',serverPort:25565,serverId:'',offlineEnabled:false};

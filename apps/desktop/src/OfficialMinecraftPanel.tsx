@@ -3,12 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   OfficialMinecraftClient0257,
   type OfficialProfile0257,
-} from "./official_minecraft_0257";
+} from "./official_minecraft";
 import {
   AuthenticationExperience02610,
   initialAuthenticationState02610,
   type AuthenticationState02610,
-} from "./official_auth_experience_02610";
+} from "./official_auth_experience";
 
 type Props = {
   client: OfficialMinecraftClient0257;

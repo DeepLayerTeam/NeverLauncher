@@ -159,3 +159,4 @@ with tempfile.TemporaryDirectory(prefix="launcher-0151-") as tmp_raw:
         raise SystemExit("Проверка поставки приняла изменённый артефакт")
 
 print(f"Launcher {VERSION}: проверка манифеста поставки и платформ/архитектур пройдена: OK")
+print('Delivery Manifest + platform/architecture gate: OK')

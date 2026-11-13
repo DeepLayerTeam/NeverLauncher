@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectLocale0357,validateUISettings0357,nextZoom0357,shortcut0357,rovingNav0357,canNavigate0357,SCREENS0357,STRINGS0357} from '../build-tests/desktop_accessibility_0357.js';
+import {selectLocale0357,validateUISettings0357,nextZoom0357,shortcut0357,rovingNav0357,canNavigate0357,SCREENS0357,STRINGS0357} from '../build-tests/desktop_accessibility.js';
 test('Настройки отклоняют внедрение кода, неверные значения и масштаб за пределами политики',()=>{
  assert.deepEqual(validateUISettings0357({locale:'<script>',zoom:999,reducedMotion:'false',highContrast:1},'en'), {locale:'en',zoom:100,reducedMotion:false,highContrast:false});
  assert.equal(selectLocale0357('de'),'ru');

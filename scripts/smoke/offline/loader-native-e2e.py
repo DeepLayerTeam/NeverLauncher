@@ -160,3 +160,4 @@ for required in [
 print(
     "Проверка нативного E2E загрузчиков 0.17.8: OK (реальный клиент Fabric/Quilt/Forge/NeoForge, сервер точной версии и подтверждение подключения)"
 )
+print('Loader-native E2E 0.17.8 gate: OK')

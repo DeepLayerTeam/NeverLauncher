@@ -141,3 +141,4 @@ require(
 print(
     "Проверка доверия Minecraft/ServerBridge — OK: действуют проверки сессии, устройства и рисков, снимки эпох привязки, закрепление каналов и причины отказов плагинов"
 )
+print('Minecraft/ServerBridge trust enforcement gate OK')

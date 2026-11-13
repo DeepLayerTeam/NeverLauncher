@@ -605,10 +605,10 @@ mod tests {
         let root = workspace().await;
         let f = file(url, correct);
         let target = root.join(&f.path);
-        fs::write(&target, b"Исходные данные клиента").await.unwrap();
+        fs::write(&target, b"\xd0\x98\xd1\x81\xd1\x85\xd0\xbe\xd0\xb4\xd0\xbd\xd1\x8b\xd0\xb5 \xd0\xb4\xd0\xb0\xd0\xbd\xd0\xbd\xd1\x8b\xd0\xb5 \xd0\xba\xd0\xbb\xd0\xb8\xd0\xb5\xd0\xbd\xd1\x82\xd0\xb0").await.unwrap();
         let result = download_verified(&client(), &root, &f, &target, |_| {}).await;
         assert!(result.unwrap_err().contains("SHA-256"));
-        assert_eq!(fs::read(&target).await.unwrap(), b"Исходные данные клиента");
+        assert_eq!(fs::read(&target).await.unwrap(), b"\xd0\x98\xd1\x81\xd1\x85\xd0\xbe\xd0\xb4\xd0\xbd\xd1\x8b\xd0\xb5 \xd0\xb4\xd0\xb0\xd0\xbd\xd0\xbd\xd1\x8b\xd0\xb5 \xd0\xba\xd0\xbb\xd0\xb8\xd0\xb5\xd0\xbd\xd1\x82\xd0\xb0");
         let (part, meta) = partial_paths(&root, &target).unwrap();
         assert!(!fs::try_exists(part).await.unwrap());
         assert!(!fs::try_exists(meta).await.unwrap());
@@ -789,7 +789,7 @@ mod tests {
         let root = workspace().await;
         let f = file(url, data);
         let target = root.join(&f.path);
-        fs::write(&target, b"Предыдущая работоспособная версия клиента").await.unwrap();
+        fs::write(&target, b"\xd0\x9f\xd1\x80\xd0\xb5\xd0\xb4\xd1\x8b\xd0\xb4\xd1\x83\xd1\x89\xd0\xb0\xd1\x8f \xd1\x80\xd0\xb0\xd0\xb1\xd0\xbe\xd1\x82\xd0\xbe\xd1\x81\xd0\xbf\xd0\xbe\xd1\x81\xd0\xbe\xd0\xb1\xd0\xbd\xd0\xb0\xd1\x8f \xd0\xb2\xd0\xb5\xd1\x80\xd1\x81\xd0\xb8\xd1\x8f \xd0\xba\xd0\xbb\xd0\xb8\xd0\xb5\xd0\xbd\xd1\x82\xd0\xb0").await.unwrap();
         assert!(download_verified(&client(), &root, &f, &target, |_| {}).await.is_err());
         let (part, meta) = partial_paths(&root, &target).unwrap();
         fs::write(&part, b"XXXXXXXX").await.unwrap();
@@ -797,7 +797,7 @@ mod tests {
         assert!(network_resilience::retry_delay(&error, 0).is_some());
         assert!(!fs::try_exists(&part).await.unwrap());
         assert!(!fs::try_exists(&meta).await.unwrap());
-        assert_eq!(fs::read(&target).await.unwrap(), b"Предыдущая работоспособная версия клиента");
+        assert_eq!(fs::read(&target).await.unwrap(), b"\xd0\x9f\xd1\x80\xd0\xb5\xd0\xb4\xd1\x8b\xd0\xb4\xd1\x83\xd1\x89\xd0\xb0\xd1\x8f \xd1\x80\xd0\xb0\xd0\xb1\xd0\xbe\xd1\x82\xd0\xbe\xd1\x81\xd0\xbf\xd0\xbe\xd1\x81\xd0\xbe\xd0\xb1\xd0\xbd\xd0\xb0\xd1\x8f \xd0\xb2\xd0\xb5\xd1\x80\xd1\x81\xd0\xb8\xd1\x8f \xd0\xba\xd0\xbb\xd0\xb8\xd0\xb5\xd0\xbd\xd1\x82\xd0\xb0");
         download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap();
         assert_eq!(fs::read(&target).await.unwrap(), data);
         server.await.unwrap();

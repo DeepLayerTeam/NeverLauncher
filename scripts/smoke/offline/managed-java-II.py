@@ -84,3 +84,4 @@ subprocess.run(
 )
 
 print(f"Launcher {VERSION}: проверка управляемой среды Java II: OK")
+print('Managed Java II gate: OK')

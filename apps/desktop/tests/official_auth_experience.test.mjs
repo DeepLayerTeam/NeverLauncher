@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import {
   AuthenticationExperience02610,
   describeAuthenticationFailure02610,
-} from "../build-tests/official_auth_experience_02610.js";
-import { OfficialMinecraftClient0257 } from "../build-tests/official_minecraft_0257.js";
+} from "../build-tests/official_auth_experience.js";
+import { OfficialMinecraftClient0257 } from "../build-tests/official_minecraft.js";
 
 const alpha = {
   id: "0123456789abcdef0123456789abcdef",

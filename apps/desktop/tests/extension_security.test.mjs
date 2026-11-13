@@ -6,7 +6,7 @@ import {
   verifiedEntrypoint0356,
   validRPC0356,
   authorizedBridge0356,
-} from "../build-tests/extension_security_0356.js";
+} from "../build-tests/extension_security.js";
 const item = {
   extensionId: "example.desktop",
   version: "1.0.0",

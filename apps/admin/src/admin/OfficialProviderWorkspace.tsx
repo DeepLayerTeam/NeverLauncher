@@ -2,7 +2,7 @@ import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
-import { validProviderPolicy02611, type OfficialProviderPolicy02611 } from './official-provider-model-02611';
+import { validProviderPolicy02611, type OfficialProviderPolicy02611 } from './official-provider-model';
 
 type Policy = OfficialProviderPolicy02611;
 type Revision = { revision: number; settings: Policy; actor?: string; reason?: string; createdAt?: string };

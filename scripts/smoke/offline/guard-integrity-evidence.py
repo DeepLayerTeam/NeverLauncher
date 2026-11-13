@@ -123,3 +123,4 @@ if "guard-integrity-evidence.py" not in preflight:
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
 print(f"[Launcher] Проверка свидетельств целостности Guard для Windows v1: OK; версия={version}")
+print('Integrity Evidence v1 gate OK')

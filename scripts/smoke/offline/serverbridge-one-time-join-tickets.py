@@ -173,3 +173,4 @@ require(
 )
 
 print(f"Launcher 0.14.3: проверка одноразовых билетов входа: OK ({version})")
+print('One-Time Join Tickets gate')

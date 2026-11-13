@@ -1,26 +1,26 @@
 import { networkErrorRu } from "../api/client";
 import React, { useEffect, useState } from "react";
-import { AdminExtensions } from "../admin_extensions_0208";
+import { AdminExtensions } from "../admin_extensions";
 import { RegistryWorkspace } from "./RegistryWorkspace";
 import { OperationsWorkspace } from "./OperationsWorkspace";
-import { BackendOperations0289 } from "./BackendOperations0289";
-import { BackendNoticeInbox0289 } from "./BackendNoticeInbox0289";
+import { BackendOperations0289 } from "./BackendOperations";
+import { BackendNoticeInbox0289 } from "./BackendNoticeInbox";
 import { ReleaseWorkspace } from "./ReleaseWorkspace";
 import {
   requireValidatedPackage0390,
   type PackageValidation0390,
-} from "./package-validation-0390";
+} from "./package-validation";
 import { ProfileManagementWorkspace } from "./ProfileManagementWorkspace";
-import { ProfileEditor0382 } from "./ProfileEditor0382";
-import { ProjectAccessWorkspace0387 } from "./ProjectAccessWorkspace0387";
+import { ProfileEditor0382 } from "./ProfileEditor";
+import { ProjectAccessWorkspace0387 } from "./ProjectAccessWorkspace";
 import { JobMonitor } from "./JobMonitor";
-import { MigrationCenter0331 } from "./MigrationCenter0331";
+import { MigrationCenter0331 } from "./MigrationCenter";
 import { BackupWorkspace } from "./BackupWorkspace";
 import { SessionsDevicesWorkspace } from "./SessionsDevicesWorkspace";
 import { AuditWorkspace } from "./AuditWorkspace";
 import { ConfigWorkspace } from "./ConfigWorkspace";
-import { OfficialProviderWorkspace02611 } from "./OfficialProviderWorkspace02611";
-import { AuthProviderWizard02910 } from "./AuthProviderWizard02910";
+import { OfficialProviderWorkspace02611 } from "./OfficialProviderWorkspace";
+import { AuthProviderWizard02910 } from "./AuthProviderWizard";
 import { requestJSON, ApiError, httpStatusRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import { AdminApi, type AdminOverview } from "../api/admin";
@@ -36,10 +36,10 @@ import {
   nodeForContext0383,
   nodeState0383,
   profileNodes0383,
-} from "./server-selection-0383";
-import { TextureManagement0259 } from "./TextureManagement0259";
-import { BrandingStudio0355 } from "./BrandingStudio0355";
-import { SupportDiagnostics03510 } from "./SupportDiagnostics03510";
+} from "./server-selection";
+import { TextureManagement0259 } from "./TextureManagement";
+import { BrandingStudio0355 } from "./BrandingStudio";
+import { SupportDiagnostics03510 } from "./SupportDiagnostics";
 import { ResourceGrid } from "../components/ResourceGrid";
 import {
   useAdminRoute,
@@ -52,7 +52,7 @@ import {
   readSavedContext,
   saveContext,
   resolveProjectContext,
-} from "./project-context-0381";
+} from "./project-context";
 import { sections, endpointForSection } from "./sections";
 import { can, canSeeSection, type AdminIdentity } from "./permissions";
 import {
@@ -225,7 +225,7 @@ export function AdminApp() {
     channels: dashboard?.channels ?? [],
   });
   const projectNodes =
-    bridgeInventory?.projectId === baseOwnerContext.projectId
+    bridgeInventory && bridgeInventory.projectId === baseOwnerContext.projectId
       ? bridgeInventory.nodes
       : null;
   const ownerContext = resolveProjectContext(route, savedContext, {

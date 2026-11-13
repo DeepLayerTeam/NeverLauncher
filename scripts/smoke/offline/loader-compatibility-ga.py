@@ -180,3 +180,4 @@ if "1.7.10" not in unique_versions["forge"] or "1.12.2" not in unique_versions["
 print(
     "Проверка совместимости загрузчиков GA 0.18.0: OK (163 сочетания загрузчика и версии, контролируемых Runtime; 292 цели каталога, 280 обязательных, 12 NOT CERTIFIED, Fabric/Quilt/Forge/NeoForge и устаревшие версии)"
 )
+print('Loader Compatibility GA 0.18.0 gate: OK')

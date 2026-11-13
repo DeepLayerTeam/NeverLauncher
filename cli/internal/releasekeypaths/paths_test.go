@@ -51,3 +51,31 @@ func TestReleaseTrustKeyCannotBeAliasedIntoBundle0428(t *testing.T) {
 		t.Fatal("Принят ключ внутри пакета выпуска с альтернативным путём")
 	}
 }
+
+func TestNewTrustStateOutsideBundle(t *testing.T) {
+	root := t.TempDir()
+	bundle := filepath.Join(root, "bundle")
+	if err := os.Mkdir(bundle, 0700); err != nil {
+		t.Fatal(err)
+	}
+	state := filepath.Join(root, "state.json")
+	if err := OutsideBundleState(bundle, state); err != nil {
+		t.Fatal(err)
+	}
+	if err := OutsideBundleState(bundle, filepath.Join(bundle, "state.json")); err == nil {
+		t.Fatal("accepted state inside bundle")
+	}
+	alias := filepath.Join(root, "alias")
+	if err := os.Symlink(bundle, alias); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	if err := OutsideBundleState(bundle, filepath.Join(alias, "state.json")); err == nil {
+		t.Fatal("accepted state in aliased bundle")
+	}
+	if err := os.Symlink(filepath.Join(bundle, "missing"), state); err != nil {
+		t.Fatal(err)
+	}
+	if err := OutsideBundleState(bundle, state); err == nil {
+		t.Fatal("accepted dangling symlink")
+	}
+}

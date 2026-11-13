@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ensureReviewedDiagnostic03510 } from '../build-tests/diagnostics_support_03510.js';
+import { ensureReviewedDiagnostic03510 } from '../build-tests/diagnostics_support.js';
 
 const report={schemaVersion:'1.1',launcherVersion:'0.35.10',generatedAtUnix:12345,os:'linux',arch:'x86_64',stage:'failed',events:[{code:'download',count:1}]};
 const preview={reviewToken:'a'.repeat(48),report};

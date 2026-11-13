@@ -16,7 +16,7 @@ runInNewContext(navigationCode,{module:navigationModule,exports:navigationModule
 const module={exports:{}};
 runInNewContext(output.outputText,{module,exports:module.exports,require:(name)=>{
   if(name==='react')return React;
-  if(name==='./desktop_navigation_0353')return navigationModule.exports;
+  if(name==='./desktop_navigation')return navigationModule.exports;
   throw Error(`Непредусмотренная зависимость ${name}`);
 }});
 const {BuildsWorkspace0353,ServersWorkspace0353,HistoryWorkspace0353}=module.exports;

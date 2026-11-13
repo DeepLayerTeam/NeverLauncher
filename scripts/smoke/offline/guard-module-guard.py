@@ -144,6 +144,7 @@ def main() -> int:
                 )
 
     print("[Launcher] Защита модулей Guard 0.18.3: проверка: OK")
+    print('Module Guard 0.18.3 gate: OK')
     return 0
 
 

@@ -752,8 +752,8 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "Тайм-аут HTTP-запросов расширений должен составлять от 1 до 60 секунд")
 		}
 	}
-	driver := strings.ToLower(strings.TrimSpace(cfg.StorageDriver))
-	switch driver {
+	storageDriver := strings.ToLower(strings.TrimSpace(cfg.StorageDriver))
+	switch storageDriver {
 	case "local", "":
 		storageRoot := filepath.Clean(strings.TrimSpace(cfg.StorageLocalPath))
 		if strings.TrimSpace(cfg.StorageLocalPath) == "" || storageRoot == "." {

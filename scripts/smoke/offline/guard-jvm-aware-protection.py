@@ -171,3 +171,4 @@ for rel, text in [
             )
 
 print("[Launcher] Защита с учётом JVM 0.18.8: проверка: OK")
+print('JVM-Aware Protection 0.18.8 gate: OK')

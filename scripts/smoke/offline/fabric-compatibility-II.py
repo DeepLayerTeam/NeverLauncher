@@ -203,3 +203,4 @@ require(
 print(
     f"Проверка совместимости Fabric II 0.17.1: OK ({len(fabric_rows)} стабильных релизов Fabric, 1.14..26.3, Java 8/16/17/21/25)"
 )
+print('Fabric Compatibility II 0.17.1 gate: OK')

@@ -2,7 +2,7 @@ import { networkErrorRu } from "../api/client";
 import React, {useEffect, useState} from 'react';
 import {requestJSON, ApiError, IndeterminateApiError} from '../api/client';
 import type {Profile} from '../api/admin';
-import {validateProfile0382} from './profile-launch-0382';
+import {validateProfile0382} from './profile-launch';
 
 type Fields = {id:string;name:string;description:string;loader:string;preset:string;isDefault:boolean;minecraftVersion:string;loaderVersion:string;javaMajor:number};
 type Snapshot = {schemaVersion:string;revision:number;digest:string;spec:Fields};

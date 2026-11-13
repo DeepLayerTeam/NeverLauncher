@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gitflic.ru/skif4er/launcher/cli/internal/releasekeypaths"
 )
 
 const (
@@ -403,7 +405,7 @@ func verifyReleaseSignatureV20158(dir, rootPublicKeyPath, trustStatePath, curren
 	if strings.TrimSpace(trustStatePath) == "" {
 		return releaseVerificationV2Context{}, errors.New("Для проверки релиза v2 необходимо постоянное состояние --trust-state или LAUNCHER_RELEASE_TRUST_STATE_FILE")
 	}
-	if err := ensureKeyOutsideReleaseBundle(dir, trustStatePath); err != nil {
+	if err := releasekeypaths.OutsideBundleState(dir, trustStatePath); err != nil {
 		return releaseVerificationV2Context{}, fmt.Errorf("Ошибка состояния доверия: %w", err)
 	}
 	currentPolicyPath = strings.TrimSpace(currentPolicyPath)

@@ -12,7 +12,7 @@ import {
   type ExtensionQuarantine0425,
   type ExtensionEmergency0425,
   type ExtensionOperation0425,
-} from "./admin/extension_management_0425";
+} from "./admin/extension_management";
 
 const ADMIN_PROTOCOL = "extensions.admin-rpc.v1";
 const EXTENSION_API_VERSION = "1.0";

@@ -1,4 +1,4 @@
-import type { LocalLaunchSettings } from './desktop_experience_0229';
+import type { LocalLaunchSettings } from './desktop_experience';
 
 /** Офлайн-режим — отдельный локальный запуск, а не резервный провайдер аутентификации. */
 export function offlineLaunchSettings0358<T extends LocalLaunchSettings>(settings: T, offline: boolean): T {

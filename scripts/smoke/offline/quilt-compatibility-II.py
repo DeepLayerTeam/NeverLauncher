@@ -195,3 +195,4 @@ require(
 print(
     f"Quilt Compatibility II 0.17.2: проверка — OK ({len(quilt_rows)} конфигураций каталога; {len(quilt_rows) - len(blocked)} обязательных; {len(blocked)}: не сертифицировано; 1.14..26.3, Java 8/16/17/21/25)"
 )
+print('Quilt Compatibility II 0.17.2 gate: OK')

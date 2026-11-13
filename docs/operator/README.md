@@ -26,4 +26,4 @@ python3 scripts/contracts/validate-openapi.py
 
 Minimal — один API с SQLite и локальными файлами; не распределяйте SQLite по NFS. Standard — PostgreSQL и локальные тома Docker, SQLite-координатор, один API. Network-HA — PostgreSQL, Redis, внешнее S3 и два экземпляра API и два обработчика; Compose на одном хосте **не является** отказоустойчивой системой на нескольких хостах. Оператор не должен одновременно поднимать прежний и восстановленный контур с одинаковыми подписывающими ключами, ServerBridge-узлами и игровыми мирами. Нужны отдельно проверенные TLS/DNS, бэкап секретов, тест входа прежнего владельца и запуск Minecraft.
 
-Подробности продукта: [OpenAPI и SDK](../releases/0.45.12-api-sdk-freeze-candidate.md), [обзор политики выпуска](../operations/release-policy.md), [проверки безопасности](../security/trust-model.md).
+Подробности продукта: [OpenAPI и SDK](../reference/api.md), [обзор политики выпуска](../operations/release-policy.md), [проверки безопасности](../security/trust-model.md).

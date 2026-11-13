@@ -146,6 +146,7 @@ def main() -> int:
                 )
 
     print("[Launcher] Ядро защиты Windows II 0.18.1: проверка: OK")
+    print('Windows Protection Core II 0.18.1 gate: OK')
     return 0
 
 

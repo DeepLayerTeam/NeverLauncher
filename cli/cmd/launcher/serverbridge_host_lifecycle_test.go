@@ -211,7 +211,7 @@ func TestHostLifecycle0414RealJVMCrashLoopIsBounded(t *testing.T) {
 	if readErr != nil {
 		t.Fatal(readErr)
 	}
-	if state.Status != "crashed" || state.ProcessPID != 0 || state.CrashCount != 3 || state.RestartCount != 2 || !strings.Contains(state.LastError, "crash-loop restart limit") {
+	if state.Status != "crashed" || state.ProcessPID != 0 || state.CrashCount != 3 || state.RestartCount != 2 || !strings.Contains(state.LastError, "Достигнут лимит перезапусков после сбоев") {
 		t.Fatalf("Неожиданный предел аварий Java: %+v (%v)", state, err)
 	}
 	data, _ := os.ReadFile(filepath.Join(root, "jvm-events.txt"))

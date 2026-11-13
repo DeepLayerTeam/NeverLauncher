@@ -153,3 +153,4 @@ require(
 print(
     "Проверка устаревшего Forge 1.7.10 версии 0.17.5: OK (настоящий универсальный пакет V1, LaunchWrapper/cpw FML и сертификация реального клиента Java 8)"
 )
+print('Forge Legacy 1.7.10 0.17.5 gate: OK')

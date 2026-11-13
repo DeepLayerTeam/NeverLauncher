@@ -1,7 +1,7 @@
 // Запуск `node --test` после транспиляции чистого модуля выбора через tsc.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseChoice0247,encodeChoice0247,proposeChoice0247} from '../build-tests/component_selection_0247.js';
+import {parseChoice0247,encodeChoice0247,proposeChoice0247} from '../build-tests/component_selection.js';
 test('Канонические варианты остаются стабильными, дубликаты отклоняются',()=>{
   assert.equal(encodeChoice0247(parseChoice0247('@custom:v1:quality:+iris,-optifine')),'@custom:v1:quality:+iris,-optifine');
   assert.throws(()=>parseChoice0247('@custom:v1::+a,+a'),/повторная/);
@@ -18,7 +18,7 @@ test('Удаление обязательного компонента запр�
 });
 
 test('Ограничения SemVer соответствуют нативному разрешению версий, включая диапазоны и предрелизы',async()=>{
-  const {matchesVersion0247} = await import('../build-tests/component_selection_0247.js');
+  const {matchesVersion0247} = await import('../build-tests/component_selection.js');
   for(const [version,range,expected] of [
     ['1.2.3','>=1.0.0 <2.0.0',true], ['2.0.0','>=1.0.0 <2.0.0',false],
     ['0.5.2','^0.5.0',true], ['0.6.0','^0.5.0',false],

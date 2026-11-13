@@ -4,13 +4,13 @@ import {
   offlineLaunchSettings0358,
   offlineSelection0358,
   offlineRecovery0358,
-} from "./offline_policy_0358";
-import { assertOfficialJoin0397 } from "./server_join_identity_0397";
+} from "./offline_policy";
+import { assertOfficialJoin0397 } from "./server_join_identity";
 import {
   approvedSelectionIdentity0393,
   ensureReleaseApproval0359,
-} from "./release_update_0359";
-import { startupStatus0427 } from "./startup_screen_0427";
+} from "./release_update";
+import { startupStatus0427 } from "./startup_screen";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { invoke } from "@tauri-apps/api/core";
@@ -28,38 +28,38 @@ import {
   type Locale0357,
   type Screen0357,
   type UISettings0357,
-} from "./desktop_accessibility_0357";
-import PlayerMigration0339 from "./PlayerMigration0339";
-import { installErrorCapture0309 } from "./sentry_diagnostics_0309";
+} from "./desktop_accessibility";
+import PlayerMigration0339 from "./PlayerMigration";
+import { installErrorCapture0309 } from "./sentry_diagnostics";
 import {
   ensureReviewedDiagnostic03510,
   type PlayerDiagnosticPreview03510,
-} from "./diagnostics_support_03510";
+} from "./diagnostics_support";
 import {
   loadDesktopView03011,
   prewarmDesktop03011,
-} from "./startup_optimizer_03011";
+} from "./startup_optimizer";
 
-import { parseChoice0247 } from "./component_selection_0247";
+import { parseChoice0247 } from "./component_selection";
 import {
   launchPreferences,
   scopedServers,
   type ScopedServer,
-} from "./desktop_experience_0229";
+} from "./desktop_experience";
 import {
   resolveLaunchMode0269,
   type GameLaunchMode0269,
-} from "./launch_modes_0269";
+} from "./launch_modes";
 import {
   OfficialMinecraftClient0257,
   type OfficialProfile0257,
-} from "./official_minecraft_0257";
+} from "./official_minecraft";
 import {
   progress0354,
   recovery0354,
   type NativeTransfer0354,
   type Recovery0354,
-} from "./download_experience_0354";
+} from "./download_experience";
 
 export { httpStatusRu } from "./status-ru";
 
@@ -4177,8 +4177,8 @@ function App() {
     }>("official_identity_prepare_join_0397", {
       request: {
         backendUrl: settings.backendUrl,
-        Token: authSession.accessToken,
-        SessionId: authSession.sessionId,
+        launcherToken: authSession.accessToken,
+        launcherSessionId: authSession.sessionId,
         expectedUuid: officialProfile.id,
         serverId: settings.serverId,
         projectId: settings.projectId,
@@ -4226,8 +4226,8 @@ function App() {
       let officialLaunchIdentity:
         | {
             backendUrl: string;
-            Token: string;
-            SessionId: string;
+            launcherToken: string;
+            launcherSessionId: string;
             expectedUuid: string;
           }
         | undefined;
@@ -4248,8 +4248,8 @@ function App() {
             throw new Error("Необходимо войти в Launcher.");
           officialLaunchIdentity = {
             backendUrl: settings.backendUrl,
-            Token: authSession.accessToken,
-            SessionId: authSession.sessionId,
+            launcherToken: authSession.accessToken,
+            launcherSessionId: authSession.sessionId,
             expectedUuid: officialProfile.id,
           };
           officialGuardTicket0397 = guardAttestationTicket;

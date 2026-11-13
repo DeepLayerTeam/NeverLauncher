@@ -4,7 +4,7 @@ import type {
   OfficialAccount0267,
   OfficialDevice0257,
   LauncherOfficialLink0268,
-} from "./official_minecraft_0257";
+} from "./official_minecraft";
 
 /** Публичное отображение нативного менеджера идентификации в Desktop без чувствительных данных. */
 export type AuthenticationActivity02610 =
@@ -137,7 +137,7 @@ export class AuthenticationExperience02610 {
     // Данные каталога — локальные метаданные защищённого хранилища. Недоступность Backend для привязок не должна скрывать учётные записи, пригодные для игры.
     const [accountsResult, linksResult] = await Promise.allSettled([
       this.client.accounts(),
-      this.client.Links(),
+      this.client.launcherLinks(),
     ]);
     if (!this.current(token)) return;
     const accounts =

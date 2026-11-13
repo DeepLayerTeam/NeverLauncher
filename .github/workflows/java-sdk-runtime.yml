@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/runtime-example"
-          javac --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/runtime-example" examples/extensions/java-runtime/src/ru/example/launcher/RuntimeExample.java
+          javac -encoding UTF-8 --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/runtime-example" examples/extensions/java-runtime/src/ru/example/launcher/RuntimeExample.java
       - name: Проверить фактические jar артефакт
         shell: bash
         run: jar tf sdk/java/core/build/launcher-java-sdk-core.jar | grep -q 'ru/launcher/sdk/core/RuntimeCallbackServer.class'

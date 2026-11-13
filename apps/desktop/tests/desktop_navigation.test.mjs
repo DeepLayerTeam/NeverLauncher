@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {navigation0353,restoreScreen0353,permittedScreen0353,filterHistory0353,chooseProject0353,chooseProfile0353,canSelectServer0353,gameBaseDirectory0353} from '../build-tests/desktop_navigation_0353.js';
+import {navigation0353,restoreScreen0353,permittedScreen0353,filterHistory0353,chooseProject0353,chooseProfile0353,canSelectServer0353,gameBaseDirectory0353} from '../build-tests/desktop_navigation.js';
 test('Каждый пользовательский экран имеет уникальное имя и не является исключительно техническим',()=>{
   assert.equal(new Set(navigation0353.map(item=>item.id)).size,navigation0353.length);
   for(const screen of ['accounts','servers','builds','optionalMods','textures','download','history','settings','diagnostics']) assert.ok(navigation0353.some(item=>item.id===screen));

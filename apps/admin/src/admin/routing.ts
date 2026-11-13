@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { ProjectContext } from './project-context-0381';
-import {parseAdminRoute, adminHref, type SectionId, type AdminRoute} from './route-links-0381';
-export {routeIds,parseAdminRoute,adminHref} from './route-links-0381';
-export type {SectionId,AdminRoute} from './route-links-0381';
+import type { ProjectContext } from './project-context';
+import {parseAdminRoute, adminHref, type SectionId, type AdminRoute} from './route-links';
+export {routeIds,parseAdminRoute,adminHref} from './route-links';
+export type {SectionId,AdminRoute} from './route-links';
 /** Старая навигация по разделам сохраняет выбор владельца при переходах. */
 export function navigate(section: SectionId, overrides: Partial<ProjectContext> = {}): void {
   const previous = parseAdminRoute(window.location.hash);

@@ -2,7 +2,7 @@ import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, IndeterminateApiError, requestJSON } from '../api/client';
-import { assignableRoles0387, membershipChange0387, type ProjectRole0387, type ProjectRoleUser0387 } from './project-membership-0387';
+import { assignableRoles0387, membershipChange0387, type ProjectRole0387, type ProjectRoleUser0387 } from './project-membership';
 
 type Props = {
   backendUrl: string; token: string; projectId: string;

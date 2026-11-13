@@ -2,9 +2,9 @@ import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import type { ReleaseApi } from '../api/release';
-import {GravitOptionalImport02411} from './GravitOptionalImport02411';
+import {GravitOptionalImport02411} from './GravitOptionalImport';
 import {type Catalog0248,type CatalogSnapshot0248,type CatalogPreview0248,type Component0248,type Category0248,type Group0248,type Preset0248,type Conditions0248,
- freshComponent0248,listAvailableFiles0248,lintCatalog0248,splitLines0248,parseRelations0248,formatRelations0248,renameComponent0248,removeComponent0248,validComponentID0248} from './component-editor-model-0248';
+ freshComponent0248,listAvailableFiles0248,lintCatalog0248,splitLines0248,parseRelations0248,formatRelations0248,renameComponent0248,removeComponent0248,validComponentID0248} from './component-editor-model';
 
 type Section='components'|'categories'|'groups'|'presets';
 const errText=(e:unknown)=>networkErrorRu(e);

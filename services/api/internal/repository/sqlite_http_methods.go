@@ -2311,14 +2311,14 @@ func (r *SQLiteHTTPRepository0372) RevokeMinecraftSession(id string, reason stri
 	return
 }
 
-func (r *SQLiteHTTPRepository0372) RevokeMinecraftSessionsBySession(SessionID string, reason string) (out0 int) {
+func (r *SQLiteHTTPRepository0372) RevokeMinecraftSessionsByLauncherSession(SessionID string, reason string) (out0 int) {
 	r.mu.Lock()
 	auditStart := len(r.mem.audit)
 	defer r.unlockAndPublishAudit0372(auditStart)
 	if r.failed != nil {
 		panic(r.failed)
 	}
-	out0 = r.mem.RevokeMinecraftSessionsBySession(SessionID, reason)
+	out0 = r.mem.RevokeMinecraftSessionsByLauncherSession(SessionID, reason)
 	if e := r.persist(context.Background()); e != nil {
 		r.failed = e
 		panic(e)

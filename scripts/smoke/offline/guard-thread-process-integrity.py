@@ -201,6 +201,7 @@ def main() -> int:
                 )
 
     print("[Launcher] Контроль целостности потоков и процессов 0.18.6: проверка: OK")
+    print('Thread & Process Integrity 0.18.6 gate: OK')
     return 0
 
 

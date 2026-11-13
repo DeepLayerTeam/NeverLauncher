@@ -219,3 +219,4 @@ subprocess.run(
 )
 
 print(f"Launcher {VERSION}: проверка нотариально заверенных пакетов macOS x64 и ARM64: OK")
+print('notarized macOS x64 + ARM64 gate: OK')

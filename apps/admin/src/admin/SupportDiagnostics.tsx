@@ -1,6 +1,6 @@
 import { networkErrorRu } from "../api/client";
 import React, { useEffect, useState } from "react";
-import { GuardPolicyOperations05011 } from "./GuardPolicyOperations05011";
+import { GuardPolicyOperations05011 } from "./GuardPolicyOperations";
 import { requestJSON } from "../api/client";
 import { statusRu } from "./status-ru";
 

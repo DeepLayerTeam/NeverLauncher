@@ -202,3 +202,4 @@ require(
 print(
     f"Проверка современного Forge 0.17.3: OK ({len(forge_rows)} релизов Forge с обработчиками, 1.13.2..26.3, Java 8/16/17/21/25)"
 )
+print('Forge Modern 0.17.3 gate: OK')

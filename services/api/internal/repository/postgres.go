@@ -1766,7 +1766,7 @@ func (r *SQLRepository) SaveMinecraftSession(item model.MinecraftSession) (model
 	if err := r.check(); err != nil {
 		return model.MinecraftSession{}, err
 	}
-	if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.UserID) == "" || strings.TrimSpace(item.SessionID) == "" || strings.TrimSpace(item.ProfileUUID) == "" || strings.TrimSpace(item.AccessTokenHash) == "" {
+	if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.UserID) == "" || strings.TrimSpace(item.LauncherSessionID) == "" || strings.TrimSpace(item.ProfileUUID) == "" || strings.TrimSpace(item.AccessTokenHash) == "" {
 		return model.MinecraftSession{}, fmt.Errorf("Требуется: поля сессии Minecraft")
 	}
 	now := time.Now().UTC()
@@ -1792,7 +1792,7 @@ WHERE minecraft_sessions.status='active' AND EXCLUDED.status='active' AND
     minecraft_sessions.profile_uuid=EXCLUDED.profile_uuid AND
     minecraft_sessions.access_token_hash=EXCLUDED.access_token_hash AND
     minecraft_sessions.trusted_device_id IS NOT DISTINCT FROM EXCLUDED.trusted_device_id AND
-    minecraft_sessions.binding_epoch=EXCLUDED.binding_epoch`, item.ID, item.UserID, item.SessionID, item.ProfileUUID, nullText(item.TrustedDeviceID), item.BindingEpoch, item.ClientToken, item.AccessTokenHash, item.IntegrityVerified, item.GuardAttestationSHA256, item.GuardEvidenceSHA256, item.GuardSHA256, item.LauncherSHA256, item.LauncherVersion, nullTime(item.IntegrityVerifiedAt), item.Status, item.CreatedAt, item.LastSeenAt, item.ExpiresAt, nullTime(item.RevokedAt), item.RevokedReason)
+    minecraft_sessions.binding_epoch=EXCLUDED.binding_epoch`, item.ID, item.UserID, item.LauncherSessionID, item.ProfileUUID, nullText(item.TrustedDeviceID), item.BindingEpoch, item.ClientToken, item.AccessTokenHash, item.IntegrityVerified, item.GuardAttestationSHA256, item.GuardEvidenceSHA256, item.GuardSHA256, item.LauncherSHA256, item.LauncherVersion, nullTime(item.IntegrityVerifiedAt), item.Status, item.CreatedAt, item.LastSeenAt, item.ExpiresAt, nullTime(item.RevokedAt), item.RevokedReason)
 	if err != nil {
 		return model.MinecraftSession{}, err
 	}
@@ -1808,7 +1808,7 @@ func (r *SQLRepository) getMinecraftSessionByID(id string) (model.MinecraftSessi
 	var item model.MinecraftSession
 	var revoked, integrityVerifiedAt sql.NullTime
 	var trustedDeviceID sql.NullString
-	err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evidence_sha256,guard_sha256,launcher_sha256,launcher_version,integrity_verified_at,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE id=$1`, id).Scan(&item.ID, &item.UserID, &item.SessionID, &item.ProfileUUID, &trustedDeviceID, &item.BindingEpoch, &item.ClientToken, &item.AccessTokenHash, &item.IntegrityVerified, &item.GuardAttestationSHA256, &item.GuardEvidenceSHA256, &item.GuardSHA256, &item.LauncherSHA256, &item.LauncherVersion, &integrityVerifiedAt, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
+	err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evidence_sha256,guard_sha256,launcher_sha256,launcher_version,integrity_verified_at,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE id=$1`, id).Scan(&item.ID, &item.UserID, &item.LauncherSessionID, &item.ProfileUUID, &trustedDeviceID, &item.BindingEpoch, &item.ClientToken, &item.AccessTokenHash, &item.IntegrityVerified, &item.GuardAttestationSHA256, &item.GuardEvidenceSHA256, &item.GuardSHA256, &item.LauncherSHA256, &item.LauncherVersion, &integrityVerifiedAt, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.MinecraftSession{}, ErrNotFound
 	}
@@ -1830,7 +1830,7 @@ func (r *SQLRepository) GetMinecraftSessionByTokenHash(hash string) (model.Minec
 	var item model.MinecraftSession
 	var revoked, integrityVerifiedAt sql.NullTime
 	var trustedDeviceID sql.NullString
-	err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evidence_sha256,guard_sha256,launcher_sha256,launcher_version,integrity_verified_at,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE access_token_hash=$1`, strings.TrimSpace(hash)).Scan(&item.ID, &item.UserID, &item.SessionID, &item.ProfileUUID, &trustedDeviceID, &item.BindingEpoch, &item.ClientToken, &item.AccessTokenHash, &item.IntegrityVerified, &item.GuardAttestationSHA256, &item.GuardEvidenceSHA256, &item.GuardSHA256, &item.LauncherSHA256, &item.LauncherVersion, &integrityVerifiedAt, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
+	err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evidence_sha256,guard_sha256,launcher_sha256,launcher_version,integrity_verified_at,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason FROM minecraft_sessions WHERE access_token_hash=$1`, strings.TrimSpace(hash)).Scan(&item.ID, &item.UserID, &item.LauncherSessionID, &item.ProfileUUID, &trustedDeviceID, &item.BindingEpoch, &item.ClientToken, &item.AccessTokenHash, &item.IntegrityVerified, &item.GuardAttestationSHA256, &item.GuardEvidenceSHA256, &item.GuardSHA256, &item.LauncherSHA256, &item.LauncherVersion, &integrityVerifiedAt, &item.Status, &item.CreatedAt, &item.LastSeenAt, &item.ExpiresAt, &revoked, &item.RevokedReason)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.MinecraftSession{}, ErrNotFound
 	}
@@ -1876,11 +1876,11 @@ func (r *SQLRepository) RevokeMinecraftSession(id, reason string) error {
 	}
 	return nil
 }
-func (r *SQLRepository) RevokeMinecraftSessionsBySession(SessionID, reason string) int {
+func (r *SQLRepository) RevokeMinecraftSessionsByLauncherSession(launcherSessionID, reason string) int {
 	if err := r.check(); err != nil {
 		return 0
 	}
-	res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE session_id=$1 AND status='active'`, strings.TrimSpace(SessionID), strings.TrimSpace(reason))
+	res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE session_id=$1 AND status='active'`, strings.TrimSpace(launcherSessionID), strings.TrimSpace(reason))
 	if err != nil {
 		return 0
 	}

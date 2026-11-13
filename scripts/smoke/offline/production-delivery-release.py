@@ -129,3 +129,4 @@ subprocess.run(
     check=True,
 )
 print(f"Launcher {VERSION}: проверка производственной поставки 0.16.0: OK")
+print('Production Delivery Release 0.16.0 gate: OK')

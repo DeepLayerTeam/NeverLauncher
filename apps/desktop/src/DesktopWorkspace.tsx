@@ -7,7 +7,7 @@ import {
   filterHistory0353,
   type HistoryFilter0353,
   type HistoryRow0353,
-} from "./desktop_navigation_0353";
+} from "./desktop_navigation";
 
 const loaderLabelRu = (loader?: string | null): string => !loader || loader === 'vanilla' ? 'Без загрузчика' : loader;
 

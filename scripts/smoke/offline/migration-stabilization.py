@@ -129,3 +129,4 @@ subprocess.run(
 )
 
 print(f"[Launcher] Проверка миграции и стабилизации 0.15.10: успешно ({VERSION})")
+print('Migration + stabilization 0.15.10 gate: OK')

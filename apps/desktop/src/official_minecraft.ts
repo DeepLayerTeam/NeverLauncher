@@ -32,24 +32,24 @@ export class OfficialMinecraftClient0257 {
   private generation = 0;
   constructor(
     private backendUrl: string,
-    private Token: string,
-    private SessionId: string,
+    private launcherToken: string,
+    private launcherSessionId: string,
     private readonly native: NativeOfficialInvoke0262,
   ) {}
-  rebind(backendUrl: string, Token: string, rSessionId: string) {
-    if (this.backendUrl !== backendUrl || this.SessionId !== rSessionId)
+  rebind(backendUrl: string, launcherToken: string, launcherSessionId: string) {
+    if (this.backendUrl !== backendUrl || this.launcherSessionId !== launcherSessionId)
       this.clear();
     this.backendUrl = backendUrl;
-    this.Token = Token;
-    this.SessionId = rSessionId;
+    this.launcherToken = launcherToken;
+    this.launcherSessionId = launcherSessionId;
   }
   private get context(): Record<string, string> {
-    if (!this.Token || !this.SessionId)
+    if (!this.launcherToken || !this.launcherSessionId)
       throw new Error("Сначала выполните вход в Launcher.");
     return {
       backendUrl: this.backendUrl,
-      Token: this.Token,
-      SessionId: this.SessionId,
+      launcherToken: this.launcherToken,
+      launcherSessionId: this.launcherSessionId,
     };
   }
   private async call<T>(
@@ -84,7 +84,7 @@ export class OfficialMinecraftClient0257 {
     this.active = hadLinkedAccount; // отмена добавления аккаунта не завершает сеанс уже подключённого аккаунта
     await this.native("official_identity_cancel_0262", {
       backendUrl: this.backendUrl,
-      SessionId: this.SessionId,
+      sessionId: this.launcherSessionId,
     });
   }
   /** OAuth PKCE в системном браузере: код авторизации и verifier не должны попадать в React. */
@@ -326,7 +326,7 @@ export class OfficialMinecraftClient0257 {
     return this.texture("resetCape");
   }
   /** Постоянные связи с Minecraft независимо проверяются бэкендом. */
-  async Links(): Promise<LauncherOfficialLink0268[]> {
+  async launcherLinks(): Promise<LauncherOfficialLink0268[]> {
     return this.call<LauncherOfficialLink0268[]>("official_identity_links_0268");
   }
   async linkToLauncher(

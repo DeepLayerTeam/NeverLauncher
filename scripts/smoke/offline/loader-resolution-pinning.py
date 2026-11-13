@@ -166,3 +166,4 @@ for loader in ("fabric", "quilt", "forge", "neoforge"):
 print(
     "Проверка разрешения и закрепления загрузчика 0.17.7: OK (неизменяемый загрузчик, SHA-256 источника, данных и профиля, воспроизводимость по файлу блокировки)"
 )
+print('Loader Resolution & Pinning 0.17.7 gate: OK')

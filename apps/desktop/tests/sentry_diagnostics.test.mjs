@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {stackFrames0309, installErrorCapture0309} from '../build-tests/sentry_diagnostics_0309.js';
+import {stackFrames0309, installErrorCapture0309} from '../build-tests/sentry_diagnostics.js';
 test('Кадры карты исходников ограничены ресурсами из пакета',()=>{
  const out=stackFrames0309('Error: bearer secret\n at https://host/assets/index-a1b2.js:120:3\n at file:///home/john/private.js:3:9');
  assert.deepEqual(out,[{asset:'assets/index-a1b2.js',line:120,column:3}]);

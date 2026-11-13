@@ -2,12 +2,12 @@ import { networkErrorRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "../api/client";
-import { HostOperationsWorkspace04111 } from "./HostOperationsWorkspace04111";
+import { HostOperationsWorkspace04111 } from "./HostOperationsWorkspace";
 import { ResourceGrid } from "../components/ResourceGrid";
 import { MetricCard } from "../components/primitives";
-import { adminHref } from "./route-links-0381";
-import { nodeState0383 } from "./server-selection-0383";
-import { durableOwnerKey } from "./owner-recovery-0388";
+import { adminHref } from "./route-links";
+import { nodeState0383 } from "./server-selection";
+import { durableOwnerKey } from "./owner-recovery";
 import {
   ServerBridgeClient,
   buildControlPayload,
@@ -528,7 +528,7 @@ export function ServerBridgeWorkspace({
         (n) => n.nodeId === node.id,
       );
       if (
-        !capacityApplied04111(
+        !observed || !capacityApplied04111(
           node.id,
           network.operatorCapacityRevision,
           limit,

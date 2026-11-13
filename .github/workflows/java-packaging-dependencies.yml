@@ -43,7 +43,7 @@ jobs:
         run: sh examples/extensions/java-dependencies/build.sh
       - name: Проверить реальное разрешение классов расширения с приоритетом дочернего загрузчика и сценарии отказа
         run: |
-          javac --release 17 -cp sdk/java/core/build/classes -d sdk/java/core/build/test-classes sdk/java/core/src/test/java/ru/launcher/sdk/core/ModulePackaging0482Tests.java
+          javac -encoding UTF-8 --release 17 -cp sdk/java/core/build/classes -d sdk/java/core/build/test-classes sdk/java/core/src/test/java/ru/launcher/sdk/core/ModulePackaging0482Tests.java
           java -cp sdk/java/core/build/classes:sdk/java/core/build/test-classes ru.launcher.sdk.core.ModulePackaging0482Tests examples/extensions/java-dependencies/build/package/backend/java-dependencies.jar
       - name: Проверить настоящий исполняемый хост, HTTP-рукопожатие, запуск, обратный вызов, сигналы активности и завершение
         run: python3 examples/extensions/java-dependencies/test-runner.py

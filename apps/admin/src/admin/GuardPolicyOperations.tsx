@@ -1,6 +1,6 @@
 import { networkErrorRu } from "../api/client";
 import React, { useState } from 'react';
-import {guardCandidate05011,guardCandidateAllowed05011,verifyGuardEnvelope05011,type GuardContent05011} from './guard_policy_offline_05011';
+import {guardCandidate05011,guardCandidateAllowed05011,verifyGuardEnvelope05011,type GuardContent05011} from './guard_policy_offline';
 
 function download05011(file:string,value:string){
  const blob=new Blob([value],{type:'application/json'});const url=URL.createObjectURL(blob);

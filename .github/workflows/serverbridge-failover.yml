@@ -36,7 +36,7 @@ jobs:
           mkdir -p /tmp/bridge-classes /tmp/bridge-generated/ru/launcher/bridge/common
           printf 'package ru.launcher.bridge.common; public final class BridgeVersion { public static final String VERSION="%s"; }\n' "$(cat VERSION)" > /tmp/bridge-generated/ru/launcher/bridge/common/BridgeVersion.java
           find plugins/bridge-common/src/main/java plugins/bridge-common/src/test/java /tmp/bridge-generated -name '*.java' > /tmp/bridge-sources
-          javac --release 21 -d /tmp/bridge-classes @/tmp/bridge-sources
+          javac -encoding UTF-8 --release 21 -d /tmp/bridge-classes @/tmp/bridge-sources
           java -cp /tmp/bridge-classes ru.launcher.bridge.common.BridgeControlJournal0412Test
           java -cp /tmp/bridge-classes ru.launcher.bridge.common.BridgeFailoverRecovery0515Test
   host-receipt:

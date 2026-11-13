@@ -6,8 +6,8 @@ public final class BridgeAuthResponse {
     public static BridgeAuthResponse0287.Decision join(int status, String body, String nodeId, String username, String uuid) {
         return BridgeAuthResponse0287.join(status, body, nodeId, username, uuid);
     }
-    public static BridgeAuthResponse0287.Decision handoff(int status, String body, String nodeId, String target, String correlation) {
-        return BridgeAuthResponse0287.handoff(status, body, nodeId, target, correlation);
+    public static BridgeAuthResponse0287.Decision handoff(int status, String body, String nodeId, String username, String target, String correlation) {
+        return BridgeAuthResponse0287.handoff(status, body, nodeId, username, target, correlation);
     }
     public static BridgeAuthResponse0287.Decision route(int status, String body, String source, String target, java.time.Instant now) {
         return BridgeAuthResponse0287.route(status, body, source, target, now);

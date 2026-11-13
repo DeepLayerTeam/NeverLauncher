@@ -6,11 +6,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { TexturePreview0258 } from "./TexturePreview0258";
+import { TexturePreview0258 } from "./TexturePreview";
 import {
   OfficialMinecraftClient0257,
   type OfficialProfile0257,
-} from "./official_minecraft_0257";
+} from "./official_minecraft";
 import {
   TextureServiceClient0258,
   TextureServiceError0258,
@@ -24,7 +24,7 @@ import {
   type TextureKind0258,
   type SkinModel0258,
   type TextureVisibility0258,
-} from "./texture_service_0258";
+} from "./texture_service";
 
 /** События истории текстур локализуются только при отображении. */
 function textureEventRu0258(event: string): string {

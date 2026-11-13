@@ -164,3 +164,4 @@ subprocess.run(
 )
 
 print(f"Launcher {VERSION}: проверка транзакционного обновления приложения, Guard и среды выполнения пройдена: OK")
+print('Desktop/Guard/Runtime transactional update gate: OK')

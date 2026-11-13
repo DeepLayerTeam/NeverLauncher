@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { OfficialMinecraftClient0257 } from "../build-tests/official_minecraft_0257.js";
+import { OfficialMinecraftClient0257 } from "../build-tests/official_minecraft.js";
 const profile = {
   id: "123456781234123412341234567890ab",
   name: "Owner",

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {bytes0354, duration0354, progress0354, recovery0354} from '../build-tests/download_experience_0354.js';
+import {bytes0354, duration0354, progress0354, recovery0354} from '../build-tests/download_experience.js';
 const sample = (props = {}) => ({operationId:'op',phase:'downloading',totalFiles:2,queued:0,active:1,completed:1,
   failed:0,skipped:0,bytesExpected: 1000,bytesTransferred:1700,bytesVerified:500,
   speedBytesPerSecond:250,etaSeconds:2,cacheHits:0,bytesReused:0,...props});

@@ -173,6 +173,7 @@ def main() -> int:
                 )
 
     print("[Launcher] Контроль целостности памяти 0.18.5: проверка: OK")
+    print('Memory Integrity 0.18.5 gate: OK')
     return 0
 
 

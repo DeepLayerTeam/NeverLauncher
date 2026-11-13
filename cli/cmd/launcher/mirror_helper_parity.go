@@ -656,6 +656,10 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 	if _, err = mirrorCheckedHash0274(tmp.Name(), expectedSHA); err != nil {
 		return nil, err
 	}
+	// Windows forbids replacing a file while its ZIP reader is open.
+	if err = base.Close(); err != nil {
+		return nil, err
+	}
 	if err = replaceFileAtomicPortable(tmp.Name(), dst); err != nil {
 		return nil, err
 	}

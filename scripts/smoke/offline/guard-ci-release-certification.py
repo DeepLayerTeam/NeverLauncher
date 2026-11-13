@@ -140,3 +140,4 @@ subprocess.run(
 print(
     "Launcher 0.13.9+: проверка кроссплатформенной матрицы Guard CI и сертификации релиза — OK"
 )
+print('cross-platform Guard CI matrix + release certification gate')

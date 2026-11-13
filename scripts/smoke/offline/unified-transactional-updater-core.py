@@ -138,3 +138,4 @@ subprocess.run(
 )
 
 print(f"Launcher {VERSION}: проверка ядра единого транзакционного обновления: OK")
+print('Unified Transactional Updater Core gate: OK')

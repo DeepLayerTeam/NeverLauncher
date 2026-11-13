@@ -51,3 +51,40 @@ func outside(bundle, key string) error {
 	}
 	return nil
 }
+
+// OutsideBundleState validates a persistent trust-state path, including its first creation.
+func OutsideBundleState(bundle, state string) error {
+	bundleAbs, err := filepath.Abs(bundle)
+	if err != nil {
+		return err
+	}
+	stateAbs, err := filepath.Abs(state)
+	if err != nil {
+		return err
+	}
+	if err = outside(bundleAbs, stateAbs); err != nil {
+		return err
+	}
+	bundleReal, err := filepath.EvalSymlinks(bundleAbs)
+	if err != nil {
+		return err
+	}
+	parentReal, err := filepath.EvalSymlinks(filepath.Dir(stateAbs))
+	if err != nil {
+		return err
+	}
+	if err = outside(bundleReal, filepath.Join(parentReal, filepath.Base(stateAbs))); err != nil {
+		return err
+	}
+	info, err := os.Lstat(stateAbs)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return errors.New("Trust state must be a regular file, not a symbolic link")
+	}
+	return OutsideBundle(bundle, stateAbs)
+}

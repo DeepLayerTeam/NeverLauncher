@@ -1,4 +1,4 @@
-import { httpStatusRu } from "./status-ru";
+import { httpStatusRu } from "./status-ru.js";
 
 /** 0.25.8: локальные операции с текстурами в области учётной записи; официальные учётные данные отправляются. */
 export type TextureKind0258 = "skin" | "cape";

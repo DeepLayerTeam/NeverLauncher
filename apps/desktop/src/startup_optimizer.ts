@@ -1,30 +1,30 @@
-import { warmAfterIdle03011 } from "./startup_prewarmer_03011";
+import { warmAfterIdle03011 } from "./startup_prewarmer";
 // Настоящие точки разделения кода Vite: модули не разбираются, пока не открыт их
 // экран или лаунчер не простаивает. Один промис импорта на представление
 // устраняет дублирование при переходах и предварительном прогреве кэша.
 export const desktopViews03011 = {
   extensions: () =>
-    import("./extensions_0209").then((m) => ({
+    import("./extensions").then((m) => ({
       default: m.DesktopExtensions0209,
     })),
   components: () =>
-    import("./ComponentChooser0247").then((m) => ({
+    import("./ComponentChooser").then((m) => ({
       default: m.ComponentChooser0247,
     })),
   portability: () =>
-    import("./ComponentPortability02410").then((m) => ({
+    import("./ComponentPortability").then((m) => ({
       default: m.ComponentPortability02410,
     })),
   official: () =>
-    import("./OfficialMinecraftPanel0257").then((m) => ({
+    import("./OfficialMinecraftPanel").then((m) => ({
       default: m.OfficialMinecraftPanel0257,
     })),
   textures: () =>
-    import("./TexturesPanel0258").then((m) => ({
+    import("./TexturesPanel").then((m) => ({
       default: m.TexturesPanel0258,
     })),
   deviceRisk: () =>
-    import("./HWIDRisk0299").then((m) => ({ default: m.HWIDRisk0299 })),
+    import("./HWIDRisk").then((m) => ({ default: m.HWIDRisk0299 })),
 };
 
 export type DesktopView03011 = keyof typeof desktopViews03011;

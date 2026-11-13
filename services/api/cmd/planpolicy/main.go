@@ -28,7 +28,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var p planpolicy02412.Policy
+	var p planpolicy.Policy
 	if err = json.Unmarshal(raw, &p); err != nil {
 		panic(err)
 	}
@@ -55,7 +55,7 @@ func main() {
 	if len(raw) > 192*1024 {
 		panic("Политика превышает допустимый размер")
 	}
-	env := planpolicy02412.Envelope{SchemaVersion: "1.0", Payload: base64.StdEncoding.EncodeToString(raw), Signature: hex.EncodeToString(ed25519.Sign(key, append([]byte(planpolicy02412.Domain), raw...)))}
+	env := planpolicy.Envelope{SchemaVersion: "1.0", Payload: base64.StdEncoding.EncodeToString(raw), Signature: hex.EncodeToString(ed25519.Sign(key, append([]byte(planpolicy.Domain), raw...)))}
 	bytes, err := json.MarshalIndent(env, "", "  ")
 	if err != nil {
 		panic(err)

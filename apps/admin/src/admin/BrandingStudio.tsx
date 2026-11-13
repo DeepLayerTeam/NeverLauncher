@@ -1,6 +1,6 @@
 import { networkErrorRu } from "../api/client";
 import React, {useRef,useState} from 'react';
-import {readPng0355,signBranding0355,validateBrand0355,verifyBootstrap0355,type Branding0355} from './branding_0355';
+import {readPng0355,signBranding0355,validateBrand0355,verifyBootstrap0355,type Branding0355} from './branding';
 
 const starter:Branding0355={displayName:'Лаунчер проекта',publisher:'Project',accentColor:'#22c55e',backgroundColor:'#0f172a',textColor:'#e5e7eb',locale:'ru',news:[]};
 function brandImage(data?:string){return data?`data:image/png;base64,${data}`:undefined}

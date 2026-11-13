@@ -1,12 +1,18 @@
 pub mod attestation;
 pub mod compatibility;
 mod deterministic_launch;
+#[path = "launch_identity.rs"]
 mod launch_identity_0269;
+#[path = "offline_policy.rs"]
 mod offline_policy_0358;
 pub mod file_ownership;
+#[path = "component_catalog.rs"]
 pub mod component_catalog_0241;
+#[path = "component_actions.rs"]
 pub mod component_actions_0245;
+#[path = "component_selection.rs"]
 pub mod component_selection_02410;
+#[path = "resolved_download.rs"]
 pub mod resolved_download_0246;
 mod platform_fs;
 pub mod download_scheduler;
@@ -14,6 +20,7 @@ mod http_resume;
 mod content_cache;
 mod network_resilience;
 pub mod durable_downloads;
+#[path = "player_migration.rs"]
 pub mod player_migration_0339;
 pub mod transactional_release;
 mod release_generations;
@@ -21,12 +28,18 @@ mod trust_policy;
 pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOWNLOAD_PROGRESS_EVENT};
 pub mod managed_java;
 pub mod guard_ipc;
+#[path = "guard_inventory.rs"]
 pub mod guard_inventory_0501;
 #[cfg(target_os = "linux")]
+#[path = "linux_runtime_guard.rs"]
 pub mod linux_runtime_guard_0508;
+#[path = "guard_compatibility.rs"]
 pub mod guard_compatibility_0502;
+#[path = "guarded_trusted_launch.rs"]
 mod guarded_trusted_launch_0503;
+#[path = "runtime_integrity.rs"]
 mod runtime_integrity_0505;
+#[path = "continuous_game_protection.rs"]
 mod continuous_game_protection_0506;
 mod integrity;
 pub mod supervisor;
@@ -48,6 +61,7 @@ pub mod linux_guard;
 #[cfg(target_os = "macos")]
 pub mod macos_guard;
 #[cfg(target_os = "macos")]
+#[path = "macos_runtime_guard.rs"]
 pub mod macos_runtime_guard_0509;
 pub use attestation::{GuardAttestationRequest, GuardRemoteAttestation, GUARD_LINUX_REMOTE_ATTESTATION_SCHEMA, GUARD_MACOS_REMOTE_ATTESTATION_SCHEMA, GUARD_REMOTE_ATTESTATION_SCHEMA, GUARD_REMOTE_ATTESTATION_VERSION};
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
@@ -2402,13 +2416,13 @@ mod tests {
         let root=std::env::temp_dir().join(format!("nl-v1-ownership-{}-{}",std::process::id(),now_unix().unwrap()));
         let _=std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).unwrap();
-        std::fs::write(root.join("options.txt"),b"Изменённые пользовательские параметры").unwrap();
+        std::fs::write(root.join("options.txt"),b"\xd0\x98\xd0\xb7\xd0\xbc\xd0\xb5\xd0\xbd\xd1\x91\xd0\xbd\xd0\xbd\xd1\x8b\xd0\xb5 \xd0\xbf\xd0\xbe\xd0\xbb\xd1\x8c\xd0\xb7\xd0\xbe\xd0\xb2\xd0\xb0\xd1\x82\xd0\xb5\xd0\xbb\xd1\x8c\xd1\x81\xd0\xba\xd0\xb8\xd0\xb5 \xd0\xbf\xd0\xb0\xd1\x80\xd0\xb0\xd0\xbc\xd0\xb5\xd1\x82\xd1\x80\xd1\x8b").unwrap();
         let mut manifest=sample_manifest();
         manifest.files[0].path="options.txt".into();
         let key=sign_manifest(&mut manifest,"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f","2026-10-18T00:00:00Z").unwrap();
         let result=repair_client(&manifest,&root,&key).await.unwrap();
         assert_eq!(result.repaired,0);
-        assert_eq!(std::fs::read(root.join("options.txt")).unwrap(),b"Изменённые пользовательские параметры");
+        assert_eq!(std::fs::read(root.join("options.txt")).unwrap(),b"\xd0\x98\xd0\xb7\xd0\xbc\xd0\xb5\xd0\xbd\xd1\x91\xd0\xbd\xd0\xbd\xd1\x8b\xd0\xb5 \xd0\xbf\xd0\xbe\xd0\xbb\xd1\x8c\xd0\xb7\xd0\xbe\xd0\xb2\xd0\xb0\xd1\x82\xd0\xb5\xd0\xbb\xd1\x8c\xd1\x81\xd0\xba\xd0\xb8\xd0\xb5 \xd0\xbf\xd0\xb0\xd1\x80\xd0\xb0\xd0\xbc\xd0\xb5\xd1\x82\xd1\x80\xd1\x8b");
         let _=std::fs::remove_dir_all(root);
     }
 

@@ -521,6 +521,7 @@ mod game_guard_lifetime_0438_tests {
             child: child.clone(),
             client_release_lease: None,
             guard_violation: None,
+            trusted_launch: None,
         });
         let result = supervisor.stop_for_guard_violation_0438(&id, "Связь с аутентифицированным Guard потеряна")
             .await.expect("При потере Guard игра должна завершаться");

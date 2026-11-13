@@ -5,7 +5,7 @@ import {
   parseChoice0247,
   proposeChoice0247,
   type SelectableComponent0247,
-} from "./component_selection_0247";
+} from "./component_selection";
 
 type CatalogComponent = SelectableComponent0247 & {
   description?: string;

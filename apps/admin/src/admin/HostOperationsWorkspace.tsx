@@ -10,8 +10,8 @@ import {
   type HostOperation04111,
   type HostPending04111,
   type HostSnapshot04111,
-} from "../api/host-operations-04111";
-import { durableOwnerKey } from "./owner-recovery-0388";
+} from "../api/host-operations";
+import { durableOwnerKey } from "./owner-recovery";
 import { ApiError } from "../api/client";
 
 const pendingKey = (backend: string, user: string, project: string) =>

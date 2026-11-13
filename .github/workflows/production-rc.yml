@@ -55,7 +55,6 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 30
     env:
       LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
-      LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-rc-sqlite
       LAUNCHER_PG_TEST_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
       LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
       LAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
@@ -77,6 +76,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Настроить временный каталог SQLite
+        run: echo "LAUNCHER_SQLITE_TEST_ROOT=$RUNNER_TEMP/launcher-rc-sqlite" >> "$GITHUB_ENV"
       - name: Проверить RC скрипты и канонические версия
         run: |
           set -euo pipefail

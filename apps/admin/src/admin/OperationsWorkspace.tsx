@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { requestJSON } from "../api/client";
 import { TextInput } from "../components/primitives";
 import { ReleaseApi } from "../api/release";
-import { durableOwnerKey } from "./owner-recovery-0388";
+import { durableOwnerKey } from "./owner-recovery";
 
 type Kind = "channel-rollback" | "package-publish";
 type Job = {

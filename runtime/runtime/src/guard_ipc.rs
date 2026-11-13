@@ -366,6 +366,7 @@ impl GuardSupervisor {
         let mut child = command
             .spawn()
             .map_err(|err| format!("не удалось запустить Guard {}: {err}", executable.display()))?;
+        let guard_pid = child.id().ok_or_else(|| "Guard завершился до установки доверенного канала".to_string())?;
         let lifetime_job = match bind_guard_to_launcher_job(&mut child) {
             Ok(job) => job,
             Err(err) => {

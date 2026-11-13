@@ -1,13 +1,13 @@
 import { networkErrorRu, httpStatusRu } from "../api/client";
 import { statusRu } from "./status-ru";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ClientFactoryBuilder02710 } from "./ClientFactoryBuilder02710";
+import { ClientFactoryBuilder02710 } from "./ClientFactoryBuilder";
 import {
   diffCounts0384,
   hasCompleteBuild0384,
   planImports0384,
   type FileDifference0384,
-} from "./build-files-0384";
+} from "./build-files";
 
 /** Представление категорий сравнения, без изменения формата ответа API. */
 function fileDiffRu0384(change: string): string {

@@ -139,3 +139,4 @@ for rel, text in [
 print(
     f"[Launcher] Проверка имитации атак Windows и сертификации совместимости 0.18.11 — OK ({version})"
 )
+print('Windows Adversarial CI attack-simulation + compatibility certification 0.18.11 gate: OK')

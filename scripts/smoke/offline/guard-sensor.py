@@ -177,6 +177,7 @@ def main() -> int:
                 )
 
     print("[Launcher] Сенсор Guard 0.18.2: проверка: OK")
+    print('Guard Sensor 0.18.2 gate: OK')
     return 0
 
 

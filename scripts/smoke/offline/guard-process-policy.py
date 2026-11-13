@@ -159,3 +159,4 @@ require(
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
 print(f"[Launcher] Проверка политики среды выполнения и процессов Guard для Windows 0.13.3: OK; версия={version}")
+print('runtime/process policy 0.13.3 gate OK')

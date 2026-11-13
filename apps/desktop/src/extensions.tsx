@@ -7,7 +7,7 @@ import {
   verifiedEntrypoint0356,
   validRPC0356,
   authorizedBridge0356,
-} from "./extension_security_0356";
+} from "./extension_security";
 
 const DESKTOP_EXTENSION_PROTOCOL = "extensions.desktop-rpc.v1";
 const EXTENSION_API_VERSION = "1.0";

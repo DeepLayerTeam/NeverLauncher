@@ -186,3 +186,4 @@ subprocess.run(
     [sys.executable, str(ROOT / "scripts/device_trust/test_matrix.py")], check=True
 )
 print(f"[Launcher] Доверие к устройствам: миграция и стабилизация 0.12.10 проверены: OK ({version})")
+print('Device Trust migration + stabilization 0.12.10 gate OK')

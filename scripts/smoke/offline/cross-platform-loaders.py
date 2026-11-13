@@ -192,3 +192,4 @@ require(
 print(
     "Проверка кроссплатформенных загрузчиков 0.17.9: OK (Fabric/Quilt/Forge/NeoForge для Windows/Linux/macOS x64/ARM64, с подтверждениями нативного Runtime)"
 )
+print('Cross-platform Loaders 0.17.9 gate: OK')

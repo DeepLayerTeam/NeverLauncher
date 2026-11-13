@@ -171,7 +171,7 @@ exit 8`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.CrashCount != 3 || state.RestartCount != 2 || !strings.Contains(state.LastError, "crash-loop") {
+	if state.CrashCount != 3 || state.RestartCount != 2 || !strings.Contains(state.LastError, "Достигнут лимит перезапусков после сбоев") {
 		t.Fatalf("Неожиданное состояние после сбоя: %+v", state)
 	}
 	if delay := hostRestartDelay0282(2000, 4); delay != 16*time.Second {
