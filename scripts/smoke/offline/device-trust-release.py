@@ -86,7 +86,7 @@ req(
     [
         "LAUNCHER_DEVICE_TRUST_MATRIX_FILE",
         "--device-trust-matrix",
-        "Publish-check Minecraft Compatibility + Device Trust Release",
+        "Проверка публикации: совместимость Minecraft, выпуск доверенных устройств и межплатформенная сертификация Guard CI",
     ],
     "release pipeline",
 )

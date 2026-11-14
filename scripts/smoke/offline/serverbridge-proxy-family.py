@@ -201,11 +201,11 @@ require(
     "Проверка производственной конфигурации",
 )
 
-openapi_gen = read("scripts/contracts/generate_openapi.py")
+openapi_gen = "".join(read("scripts/contracts/generate_openapi.py").split())
 require(
     openapi_gen,
     [
-        'enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]'
+        'enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla",]'
     ],
     "Перечень семейств прокси в OpenAPI",
 )
@@ -237,7 +237,7 @@ require(
         'wait_log "$service" "launcher.join.denied username=$PLAYER_USERNAME"',
         "launcher-bungeecord-bridge.jar",
         "launcher-waterfall-bridge.jar",
-        "proxyFamilyRuntime:true",
+        "proxyFamilyRuntime:($mode == \"full\")",
     ],
     "Сквозная проверка настоящего Runtime прокси",
 )

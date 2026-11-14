@@ -84,6 +84,11 @@ def fixtures(path):
 
 
 class NativeRunnerTests(unittest.TestCase):
+    def test_stdlib_platform_not_shadowed(self):
+        from native import platform
+        self.assertTrue(platform.system())
+        self.assertTrue(platform.machine())
+
     def test_real_process_exit_and_rejection(self):
         good = process(
             Path(sys.executable),

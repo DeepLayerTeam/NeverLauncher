@@ -720,7 +720,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 			stderrFile.Close()
 			combinedFile.Close()
 			state.Status = "failed"
-			state.LastError = err.Error()
+			state.LastError = startErr.Error()
 			_ = atomicWriteJSON01910(paths["runtime"], state, 0o600)
 			return fmt.Errorf("Не удалось запустить процесс Minecraft: %w", startErr)
 		}

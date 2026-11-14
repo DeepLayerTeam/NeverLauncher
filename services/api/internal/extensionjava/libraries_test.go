@@ -63,7 +63,11 @@ func TestActualCompiledDependencyHost0482(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.ClassFiles < 3 || len(info.Libraries) != 1 || info.Libraries[0].Version != "1.2.3" || info.EntrypointClass != "example.extension.DependencyExtension" {
+	entrypoint, version := "example.extension.DependencyExtension", "1.2.3"
+	if os.Getenv("LAUNCHER_TEST_JAVA_DEPENDENCY_KIND") == "spi" {
+		entrypoint, version = "example.spi.GreetingExtension", "1.0.0"
+	}
+	if info.ClassFiles < 3 || len(info.Libraries) != 1 || info.Libraries[0].Version != version || info.EntrypointClass != entrypoint {
 		t.Fatalf("Неожиданный пакет фактической среды выполнения: %+v", info)
 	}
 }

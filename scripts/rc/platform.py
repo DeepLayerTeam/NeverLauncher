@@ -11,9 +11,17 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import platform
 import re
 import sys
+
+# This directory contains platform.py; do not shadow the stdlib platform module.
+_rc_dir = Path(__file__).resolve().parent
+_rc_path = sys.path[:]
+try:
+    sys.path[:] = [p for p in sys.path if Path(p).resolve() != _rc_dir]
+    import platform
+finally:
+    sys.path[:] = _rc_path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
 from release_policy import rc_extended

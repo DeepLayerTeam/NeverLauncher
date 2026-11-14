@@ -26,7 +26,7 @@ func TestHostCannotStartStaleInstallationAfterDisable0424(t *testing.T) {
 		t.Fatal(err)
 	}
 	host := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
-	if err := host.StartInstallation(ctx, initial); err == nil || !strings.Contains(err.Error(), "state has changed") {
+	if err := host.StartInstallation(ctx, initial); err == nil || !strings.Contains(err.Error(), "поколение установки или состояние изменилось") {
 		t.Fatalf("Перезапущен устаревший активированный снимок: %v", err)
 	}
 }

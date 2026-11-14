@@ -34,19 +34,18 @@ func TestGAStableSnapshotImmutablePostgres0350(t *testing.T) {
 	project := fmt.Sprintf("ga-0350-%d", time.Now().UnixNano())
 	stable := project + "-stable"
 	dev := project + "-dev"
-	for _, statement := range []string{
-		`INSERT INTO projects(id,name) VALUES($1,$1)`,
-		`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($2,$1,'vanilla','stable','0.35.0','integrity-passed','{}'::jsonb)`,
-		`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($3,$1,'vanilla','dev','0.35.0','integrity-passed','{}'::jsonb)`,
-		`INSERT INTO files(id,project_id,version_id,path,size,sha256,url,required) VALUES($1||'-f',$1,$2,'client.jar',4,$4,'',true)`,
-		`INSERT INTO package_integrity_checks(id,package_id,project_id,manifest_digest,artifact_digest,signature_verified,storage_verified,files_verified,compatibility_verified,result) VALUES($1||'-check',$2,$1,$4,$4,true,true,true,true,'passed')`,
+	for _, fixture := range []struct {
+		statement string
+		params    []any
+	}{
+		{`INSERT INTO projects(id,name) VALUES($1,$1)`, []any{project}},
+		{`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($2,$1,'vanilla','stable','0.35.0','integrity-passed','{}'::jsonb)`, []any{project, stable}},
+		{`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($2,$1,'vanilla','dev','0.35.0','integrity-passed','{}'::jsonb)`, []any{project, dev}},
+		{`INSERT INTO files(id,project_id,version_id,path,size,sha256,url,required) VALUES($1||'-f',$1,$2,'client.jar',4,$3,'',true)`, []any{project, stable, strings.Repeat("a", 64)}},
+		{`INSERT INTO package_integrity_checks(id,package_id,project_id,manifest_digest,artifact_digest,signature_verified,storage_verified,files_verified,compatibility_verified,result) VALUES($1||'-check',$2,$1,$3,$3,true,true,true,true,'passed')`, []any{project, stable, strings.Repeat("a", 64)}},
 	} {
-		params := []any{project, stable, dev, strings.Repeat("a", 64)}
-		for len(params) > 1 && !strings.Contains(statement, fmt.Sprintf("$%d", len(params))) {
-			params = params[:len(params)-1]
-		}
-		if _, err = tx.ExecContext(ctx, statement, params...); err != nil {
-			t.Fatalf("Тестовые данные: %s: %v", statement, err)
+		if _, err = tx.ExecContext(ctx, fixture.statement, fixture.params...); err != nil {
+			t.Fatalf("Тестовые данные: %s: %v", fixture.statement, err)
 		}
 	}
 	blocked := map[string]string{

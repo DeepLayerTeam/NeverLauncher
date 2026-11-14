@@ -50,7 +50,7 @@ public class Game {
     def tearDownClass(cls): cls.tmp.cleanup()
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(prefix='nl-0506-launch-')
-        self.base=pathlib.Path(self.tmp.name)
+        self.base=pathlib.Path(self.tmp.name).resolve()
         self.agent=self.base/'agent.jar';self.game=self.base/'game.jar'
         shutil.copy2(AGENT,self.agent);shutil.copy2(self.jar,self.game)
         pins=[(self.agent,'code'),(self.game,'code')]
@@ -63,9 +63,9 @@ public class Game {
         self.config=self.base/'guard.properties';self.config.write_text('\n'.join(config)+'\n')
     def tearDown(self): self.tmp.cleanup()
     def run_game(self,*args):
-        return subprocess.run(['java',f'-javaagent:{self.agent}={self.config}',
+        return subprocess.run(['java','-Dfile.encoding=UTF-8','-Dsun.stderr.encoding=UTF-8',f'-javaagent:{self.agent}={self.config}',
             '-cp',str(self.game),'ru.launcher.trusted.MinecraftMain',*args],
-            capture_output=True,text=True,timeout=15)
+            capture_output=True,encoding="utf-8",timeout=15)
     def test_healthy_game_not_killed(self):
         result=self.run_game()
         self.assertEqual(result.returncode,0,result.stderr)

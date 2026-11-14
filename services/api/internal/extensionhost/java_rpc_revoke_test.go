@@ -45,7 +45,7 @@ func TestJavaDirectRPCRejectsRevokedExtension04212(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := host.CallJavaRPC0304(ctx, st.key, "command.invoke", json.RawMessage(`{"command":"dangerous"}`))
-	if err == nil || !strings.Contains(err.Error(), "trust") {
+	if err == nil || !strings.Contains(err.Error(), "политикой доверия расширения") {
 		t.Fatalf("Не отклонён прямой RPC с отозванными правами: %v", err)
 	}
 	if attempts != 1 {

@@ -20181,7 +20181,7 @@
         {
           "category": "storage-configuration-read",
           "line": 48,
-          "evidence": "{\"sqlite-requires-persistent-path\", func(c *config.Config) { c.RepositoryDriver = \"sqlite\" }, \"absolute clean persistent path\"},"
+          "evidence": "{\"sqlite-requires-persistent-path\", func(c *config.Config) { c.RepositoryDriver = \"sqlite\" }, \"абсолютный путь к чистому каталогу постоянног"
         },
         {
           "category": "storage-configuration-read",
@@ -20201,7 +20201,7 @@
         {
           "category": "storage-configuration-read",
           "line": 76,
-          "evidence": "{\"unsupported-repo\", func(c *config.Config) { c.RepositoryDriver = \"magic\" }, \"unsupported\"},"
+          "evidence": "{\"unsupported-repo\", func(c *config.Config) { c.RepositoryDriver = \"magic\" }, \"Неподдерживаемый драйвер\"},"
         },
         {
           "category": "storage-configuration-read",
@@ -23440,242 +23440,242 @@
       "findings": [
         {
           "category": "postgres-repository-construction",
-          "line": 26,
+          "line": 30,
           "evidence": "a, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 26,
+          "line": 30,
           "evidence": "a, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 28,
+          "line": 32,
           "evidence": "t.Fatal(\"Ожидался PostgreSQL\")"
         },
         {
           "category": "postgres-repository-construction",
-          "line": 31,
+          "line": 35,
           "evidence": "b, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 31,
+          "line": 35,
           "evidence": "b, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 33,
+          "line": 37,
           "evidence": "t.Fatal(\"Ожидался PostgreSQL\")"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 48,
+          "line": 52,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM users WHERE id=$1`, user)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 50,
+          "line": 54,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_profiles(user_id,uuid,name) VALUES($1,$2,$3)`, user, uuid, \"Revoke0297\"); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 60,
+          "line": 64,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,refresh_family_id,status,expires_at) VALUES($1,$2,$3,'player',$4,'active',now()+interval '1 hou"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 64,
+          "line": 68,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id) VALUES($1,$2,$3)`, pair[1], pair[0], user); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 68,
+          "line": 72,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_tokens(id,family_id,session_id,token_hash,expires_at) VALUES($1,$2,$3,$4,now()+interval '1 hour')`, \"rt-\"+pair[0], pair[1], pa"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 76,
+          "line": 80,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 79,
+          "line": 83,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_joins(username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,expires_at) VALUES('Revoke0297','re"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 85,
+          "line": 89,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO projects(id,name) VALUES($1,'Revocation E2E')`, project); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 88,
+          "line": 92,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM projects WHERE id=$1`, project)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 89,
-          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_nodes_v2(id,name,project_id,token_hash,kind,runtime_id,runtime_epoch) VALUES($1,'Revocation Proxy',$2,'','velocity',$3"
+          "line": 98,
+          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_nodes_v2(id,name,project_id,token_hash,kind,runtime_id,runtime_epoch,key_algorithm,public_key,key_fingerprint,identity"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 92,
+          "line": 101,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM server_bridge_nodes_v2 WHERE id=$1`, node)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 93,
+          "line": 102,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,session_id,binding_epoch,project_id"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 97,
+          "line": 106,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO durable_jobs(id,kind,actor_type,actor_id,action,resource_type,resource_id,idempotency_key,payload,payload_digest,status,lease_owner,"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 97,
-          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO durable_jobs(id,kind,actor_type,actor_id,action,resource_type,resource_id,idempotency_key,payload,payload_digest,status,lease_owner,"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 100,
-          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO durable_job_attempts(job_id,attempt,worker_id,lease_fence,status) VALUES($1,1,'worker',1,'running')`, job); err != nil {"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 103,
-          "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM durable_jobs WHERE id=$1`, job)"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 104,
-          "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM server_bridge_player_sessions_v3 WHERE correlation_id=$1`, player)"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 106,
-          "evidence": "if _, err := a.db.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=now(),revoked_reason='test-logout' WHERE id=$1`, first); err != nil {"
+          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO durable_jobs(id,kind,actor_type,actor_id,action,resource_type,resource_id,idempotency_key,payload,payload_digest,status,lease_owner,"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 109,
+          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO durable_job_attempts(job_id,attempt,worker_id,lease_fence,status) VALUES($1,1,'worker',1,'running')`, job); err != nil {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 112,
+          "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM durable_jobs WHERE id=$1`, job)"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 113,
-          "evidence": "{`SELECT status FROM refresh_token_families WHERE id=$1`, \"revoked\"},"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 114,
-          "evidence": "{`SELECT status FROM minecraft_sessions WHERE id=$1`, \"revoked\"},"
+          "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM server_bridge_player_sessions_v3 WHERE correlation_id=$1`, player)"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 115,
+          "evidence": "if _, err := a.db.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=now(),revoked_reason='test-logout' WHERE id=$1`, first); err != nil {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 122,
+          "evidence": "{`SELECT status FROM refresh_token_families WHERE id=$1`, \"revoked\"},"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 123,
+          "evidence": "{`SELECT status FROM minecraft_sessions WHERE id=$1`, \"revoked\"},"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 124,
           "evidence": "{`SELECT status FROM server_bridge_player_sessions_v3 WHERE session_id=$1`, \"invalidated\"},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 130,
+          "line": 139,
           "evidence": "if err := b.db.QueryRowContext(ctx, `SELECT count(*) FROM minecraft_joins WHERE minecraft_session_id=$1`, mc).Scan(\u0026joins); err != nil || joins != 0 {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 134,
+          "line": 143,
           "evidence": "if err := b.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_control_commands_v3 WHERE server_id=$1 AND command_type='player.kick' AND status='pending' AND requested_by="
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 139,
+          "line": 148,
           "evidence": "if _, err := b.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 143,
+          "line": 152,
           "evidence": "if err := b.db.QueryRowContext(ctx, `SELECT status FROM durable_jobs WHERE id=$1`, job).Scan(\u0026status); err != nil || status != \"running\" {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 148,
+          "line": 157,
           "evidence": "if _, err := b.db.ExecContext(ctx, `UPDATE users SET role_id='viewer' WHERE id=$1`, user); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 151,
+          "line": 160,
           "evidence": "for _, q := range []string{`SELECT status FROM auth_sessions WHERE id=$1`, `SELECT status FROM refresh_token_families WHERE session_id=$1`} {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 156,
+          "line": 165,
           "evidence": "if err := a.db.QueryRowContext(ctx, `SELECT status FROM durable_jobs WHERE id=$1`, job).Scan(\u0026status); err != nil || status != \"revoked\" {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 160,
+          "line": 169,
           "evidence": "if _, err := a.db.ExecContext(ctx, `UPDATE auth_sessions SET status='active',revoked_at=NULL,revoked_reason='' WHERE id=$1`, second); err == nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 170,
+          "line": 179,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,refresh_family_id,status,expires_at) VALUES($1,$2,$3,'viewer',$4,'active',now()+interval '1 hou"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 174,
+          "line": 183,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id) VALUES($1,$2,$3)`, \"fresh-family-\"+suffix, fresh, user); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 181,
+          "line": 190,
           "evidence": "if _, err := a.db.ExecContext(ctx, `UPDATE users SET display_name='Renamed' WHERE id=$1`, user); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 184,
+          "line": 193,
           "evidence": "if err := b.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, fresh).Scan(\u0026status); err != nil || status != \"active\" {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 191,
+          "line": 200,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO roles(id,name,permissions) VALUES($1,'Role Revocation Test','[\"project:read\"]'::jsonb)`, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 191,
+          "line": 200,
           "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO roles(id,name,permissions) VALUES($1,'Role Revocation Test','[\"project:read\"]'::jsonb)`, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 194,
+          "line": 203,
           "evidence": "defer a.db.ExecContext(context.Background(), `DELETE FROM roles WHERE id=$1`, role)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 195,
+          "line": 204,
           "evidence": "if _, err := b.db.ExecContext(ctx, `UPDATE users SET role_id=$2 WHERE id=$1`, user, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 204,
+          "line": 213,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,refresh_family_id,status,expires_at) VALUES($1,$2,$3,$4,$5,'active',now()+interval '1 hour')`, "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 208,
+          "line": 217,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id) VALUES($1,$2,$3)`, roleFamily, roleSession, user); err != nil {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 215,
+          "line": 224,
           "evidence": "if _, err := b.db.ExecContext(ctx, `UPDATE roles SET permissions='[]'::jsonb WHERE id=$1`, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 215,
+          "line": 224,
           "evidence": "if _, err := b.db.ExecContext(ctx, `UPDATE roles SET permissions='[]'::jsonb WHERE id=$1`, role); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 218,
+          "line": 227,
           "evidence": "if err := a.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, roleSession).Scan(\u0026status); err != nil || status != \"revoked\" {"
         }
       ]
@@ -27090,47 +27090,47 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1811,
+          "line": 1815,
           "evidence": "err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evi"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1833,
+          "line": 1837,
           "evidence": "err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evi"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1852,
+          "line": 1856,
           "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET last_seen_at=now() WHERE id=$1 AND status='active'`, strings.TrimSpace(id))"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1866,
+          "line": 1870,
           "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,now()),revoked_reason=CASE WHEN revoked_reason='' THEN $2 ELSE revoked_reason E"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1883,
+          "line": 1887,
           "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE session_id=$1 AND status='active'`, strings.TrimSpace(launcherSession"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1894,
+          "line": 1898,
           "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE user_id=$1 AND status='active'`, strings.TrimSpace(userID), strings.T"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1928,
+          "line": 1932,
           "evidence": "_, err := r.db.Exec(`INSERT INTO minecraft_joins(username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,ticket_version,status,created_at,expires_at,con"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1938,
+          "line": 1942,
           "evidence": "err := r.db.QueryRow(`SELECT username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,ticket_version,status,created_at,expires_at,consumed_at FROM minecr"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1953,
+          "line": 1957,
           "evidence": "err := r.db.QueryRow(`UPDATE minecraft_joins SET status='consumed',consumed_at=$4 WHERE username_normalized=lower($1) AND server_id=$2 AND minecraft_session_id=$3 AND ticket_versio"
         }
       ]
@@ -28745,97 +28745,97 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 38,
-          "evidence": "`INSERT INTO projects(id,name) VALUES($1,$1)`,"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 39,
-          "evidence": "`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($2,$1,'vanilla','stable','0.35.0','integrity-passed','{}'::jsonb)`,"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 39,
-          "evidence": "`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($2,$1,'vanilla','stable','0.35.0','integrity-passed','{}'::jsonb)`,"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 40,
-          "evidence": "`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($3,$1,'vanilla','dev','0.35.0','integrity-passed','{}'::jsonb)`,"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 40,
-          "evidence": "`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($3,$1,'vanilla','dev','0.35.0','integrity-passed','{}'::jsonb)`,"
-        },
-        {
-          "category": "postgresql-sql-dialect",
           "line": 41,
-          "evidence": "`INSERT INTO files(id,project_id,version_id,path,size,sha256,url,required) VALUES($1||'-f',$1,$2,'client.jar',4,$4,'',true)`,"
+          "evidence": "{`INSERT INTO projects(id,name) VALUES($1,$1)`, []any{project}},"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 42,
+          "evidence": "{`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($2,$1,'vanilla','stable','0.35.0','integrity-passed','{}'::jsonb)`, []any{project, s"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 42,
-          "evidence": "`INSERT INTO package_integrity_checks(id,package_id,project_id,manifest_digest,artifact_digest,signature_verified,storage_verified,files_verified,compatibility_verified,result) VAL"
+          "evidence": "{`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($2,$1,'vanilla','stable','0.35.0','integrity-passed','{}'::jsonb)`, []any{project, s"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 43,
+          "evidence": "{`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($2,$1,'vanilla','dev','0.35.0','integrity-passed','{}'::jsonb)`, []any{project, dev}"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 53,
+          "line": 43,
+          "evidence": "{`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($2,$1,'vanilla','dev','0.35.0','integrity-passed','{}'::jsonb)`, []any{project, dev}"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 44,
+          "evidence": "{`INSERT INTO files(id,project_id,version_id,path,size,sha256,url,required) VALUES($1||'-f',$1,$2,'client.jar',4,$3,'',true)`, []any{project, stable, strings.Repeat(\"a\", 64)}},"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 45,
+          "evidence": "{`INSERT INTO package_integrity_checks(id,package_id,project_id,manifest_digest,artifact_digest,signature_verified,storage_verified,files_verified,compatibility_verified,result) VA"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 52,
           "evidence": "\"alter signed file\": `UPDATE files SET sha256=$2 WHERE version_id=$1`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 54,
+          "line": 53,
           "evidence": "\"delete signed file\": `DELETE FROM files WHERE version_id=$1`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 55,
+          "line": 54,
           "evidence": "\"append signed file\": `INSERT INTO files(id,project_id,version_id,path,size,sha256,url,required) SELECT id||'-new',project_id,version_id,'extra.jar',4,$2,'',true FROM files WHERE v"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 56,
+          "line": 55,
+          "evidence": "\"alter signed manifest\": `UPDATE release_versions SET manifest='{\"a\":1}'::jsonb WHERE id=$1`,"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 55,
           "evidence": "\"alter signed manifest\": `UPDATE release_versions SET manifest='{\"a\":1}'::jsonb WHERE id=$1`,"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 56,
-          "evidence": "\"alter signed manifest\": `UPDATE release_versions SET manifest='{\"a\":1}'::jsonb WHERE id=$1`,"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 57,
           "evidence": "\"overwrite verified integrity\": `UPDATE package_integrity_checks SET result='failed' WHERE package_id=$1`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 58,
+          "line": 57,
           "evidence": "\"delete verified release\": `DELETE FROM release_versions WHERE id=$1`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 59,
+          "line": 58,
           "evidence": "\"manual publish\": `UPDATE release_versions SET status='published' WHERE id=$1`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 60,
+          "line": 59,
           "evidence": "\"direct stable head\": `INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest) SELECT project_id,profile_id,'stable',1,id,version,$2 FR"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 68,
+          "line": 67,
           "evidence": "if strings.Contains(query, \"$2\") {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 85,
+          "line": 84,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE release_versions SET manifest='{\"test\":true}'::jsonb WHERE id=$1`, dev); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 85,
+          "line": 84,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE release_versions SET manifest='{\"test\":true}'::jsonb WHERE id=$1`, dev); err != nil {"
         }
       ]
@@ -30626,12 +30626,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 218,
-          "evidence": "\"operational_config_revisions\": `revision=1 AND actor='system' AND reason='исходные значения по умолчанию' AND restored_from IS NULL AND settings='{\"audi"
+          "evidence": "\"operational_config_revisions\": `revision=1 AND actor='system' AND reason='initial defaults' AND restored_from IS NULL AND settings='{\"auditDefaultPageSize\":25,\"auditMaxPageSize\":1"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 218,
-          "evidence": "\"operational_config_revisions\": `revision=1 AND actor='system' AND reason='исходные значения по умолчанию' AND restored_from IS NULL AND settings='{\"audi"
+          "evidence": "\"operational_config_revisions\": `revision=1 AND actor='system' AND reason='initial defaults' AND restored_from IS NULL AND settings='{\"auditDefaultPageSize\":25,\"auditMaxPageSize\":1"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -31090,77 +31090,77 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 296,
-          "evidence": "`CREATE TABLE ` + minimalRef0377(\"receipt\") + ` (id TEXT PRIMARY KEY, manifest JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,"
+          "line": 297,
+          "evidence": "`CREATE TABLE ` + minimalRef0377(\"receipt\") + ` (id TEXT PRIMARY KEY, manifest TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 296,
-          "evidence": "`CREATE TABLE ` + minimalRef0377(\"receipt\") + ` (id TEXT PRIMARY KEY, manifest JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,"
+          "line": 297,
+          "evidence": "`CREATE TABLE ` + minimalRef0377(\"receipt\") + ` (id TEXT PRIMARY KEY, manifest TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 305,
+          "line": 306,
           "evidence": "if _, err = tx.Exec(ctx, `INSERT INTO `+minimalRef0377(\"receipt\")+` (id,manifest) VALUES($1,$2)`, report.ManifestSHA256, string(raw)); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 309,
+          "line": 310,
           "evidence": "if _, err = tx.Exec(ctx, `INSERT INTO `+minimalRef0377(\"files\")+` (path,kind,mode,bytes,sha256) VALUES($1,$2,$3,$4,$5)`, f.Path, f.Kind, int32(f.Mode), f.Bytes, f.SHA256); err != n"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 331,
+          "line": 332,
           "evidence": "if _, err = tx.Exec(ctx, `INSERT INTO `+minimalRef0377(\"chunks\")+` (path,ordinal,sha256,payload) VALUES($1,$2,$3,$4)`, f.Path, ordinal, hex.EncodeToString(sum[:]), part); err != ni"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 344,
+          "line": 345,
           "evidence": "return report, fmt.Errorf(\"Файл изменился во время переноса в PostgreSQL: %s\", f.Path)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 376,
+          "line": 377,
           "evidence": "return report, fmt.Errorf(\"Результат сохранения PostgreSQL требует сверки: %w\", err)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 386,
+          "line": 387,
           "evidence": "return report, errors.New(\"Требуется: строка подключения PostgreSQL и целевая база\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 406,
+          "line": 407,
           "evidence": "return report, fmt.Errorf(\"Ошибка подключения к PostgreSQL (%T; DSN скрыт)\", e)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 459,
+          "line": 460,
           "evidence": "if err = tx.QueryRow(ctx, `SELECT path,kind,mode,bytes,sha256 FROM `+minimalRef0377(\"files\")+` WHERE path=$1`, f.Path).Scan(\u0026saved.Path, \u0026saved.Kind, \u0026mode, \u0026saved.Bytes, \u0026saved.SH"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 467,
+          "line": 468,
           "evidence": "return report, fmt.Errorf(\"Метаданные файла PostgreSQL не совпадают с манифестом: %s\", f.Path)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 474,
+          "line": 475,
           "evidence": "rows, e := tx.Query(ctx, `SELECT ordinal,sha256,payload FROM `+minimalRef0377(\"chunks\")+` WHERE path=$1 ORDER BY ordinal`, f.Path)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 490,
+          "line": 491,
           "evidence": "err = errors.New(\"Отсутствует или повреждён фрагмент пакета PostgreSQL\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 513,
+          "line": 514,
           "evidence": "err = errors.New(\"Несовпадение: «хеш или размер файла комплекта PostgreSQL»\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 538,
+          "line": 539,
           "evidence": "return report, fmt.Errorf(\"Передача опубликована, но подтверждение записи PostgreSQL не определено; проверьте целе"
         }
       ]

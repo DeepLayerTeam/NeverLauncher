@@ -39,7 +39,7 @@ class RuntimeIntegrityLive0505(unittest.TestCase):
         else:
             run('sh', str(ROOT/'sdk/java/trusted-agent/build.sh'))
         cls.tmp=tempfile.TemporaryDirectory(prefix='nl0505-jvm-')
-        cls.base=Path(cls.tmp.name)
+        cls.base=Path(cls.tmp.name).resolve()
         source=cls.base/'source/fixture/Game.java';source.parent.mkdir(parents=True)
         source.write_text('''package fixture;
 public class Game {
@@ -64,7 +64,7 @@ public class Game {
 
     def setUp(self):
         self.work=tempfile.TemporaryDirectory(prefix='nl0505-game-')
-        self.root=Path(self.work.name)
+        self.root=Path(self.work.name).resolve()
         self.agent=self.root/'agent.jar';shutil.copy2(AGENT,self.agent)
         self.game=self.root/'game.jar';shutil.copy2(self.jar,self.game)
 

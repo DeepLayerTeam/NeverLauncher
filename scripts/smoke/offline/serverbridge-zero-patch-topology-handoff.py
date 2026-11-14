@@ -80,7 +80,7 @@ require(
     config,
     [
         "ensureZeroPatchConfig",
-        "No Minecraft/proxy configuration is modified",
+        "Плагин не изменяет конфигурацию Minecraft или прокси.",
         "handoffUrl()",
     ],
     "Начальная настройка конфигурации без патчей",

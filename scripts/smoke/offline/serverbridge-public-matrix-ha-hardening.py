@@ -119,7 +119,7 @@ require(
         "0028_zero_patch_topology_handoff_0148",
         "0029_serverbridge_public_matrix_ha_hardening_0149",
         "TestServerBridgeHA0149",
-        "exactly one nonce consumer",
+        "Ожидался ровно один потребитель одноразового значения nonce",
     ],
     "Сквозные проверки отказоустойчивости PostgreSQL",
 )

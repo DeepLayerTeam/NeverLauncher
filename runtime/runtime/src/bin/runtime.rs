@@ -5,8 +5,20 @@ use runtime::{
 use serde_json::json;
 use std::{collections::HashMap, env, path::{Path, PathBuf}, process::ExitCode};
 
-#[tokio::main]
-async fn main() -> ExitCode {
+fn main() -> ExitCode {
+    match std::thread::Builder::new().name("launcher-runtime".into()).stack_size(8 * 1024 * 1024).spawn(|| {
+        let executor = match tokio::runtime::Builder::new_multi_thread().enable_all().thread_stack_size(8 * 1024 * 1024).build() {
+            Ok(executor) => executor,
+            Err(err) => { eprintln!("runtime: {err}"); return ExitCode::FAILURE; }
+        };
+        executor.block_on(run_main())
+    }) {
+        Ok(handle) => handle.join().unwrap_or(ExitCode::FAILURE),
+        Err(err) => { eprintln!("runtime: {err}"); ExitCode::FAILURE }
+    }
+}
+
+async fn run_main() -> ExitCode {
     match run().await {
         Ok(value) => {
             match serde_json::to_string_pretty(&value) {

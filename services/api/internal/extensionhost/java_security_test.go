@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -20,7 +21,7 @@ func TestJavaScratch04811(t *testing.T) {
 	}
 	defer os.RemoveAll(scratch)
 	info, err := os.Stat(scratch)
-	if err != nil || info.Mode().Perm() != 0700 {
+	if err != nil || !info.IsDir() || (runtime.GOOS != "windows" && info.Mode().Perm() != 0700) {
 		t.Fatalf("режим временного каталога: %v, %v", info, err)
 	}
 	if cmd.Args[len(cmd.Args)-2] != "module.jar" || cmd.Args[len(cmd.Args)-1] != "status" {

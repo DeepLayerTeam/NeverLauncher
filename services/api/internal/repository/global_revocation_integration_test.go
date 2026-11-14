@@ -4,7 +4,11 @@ package repository
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -86,7 +90,12 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer a.db.ExecContext(context.Background(), `DELETE FROM projects WHERE id=$1`, project)
-	if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_nodes_v2(id,name,project_id,token_hash,kind,runtime_id,runtime_epoch) VALUES($1,'Revocation Proxy',$2,'','velocity',$3,1)`, node, project, runtimeID); err != nil {
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fingerprint := sha256.Sum256(pub)
+	if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_nodes_v2(id,name,project_id,token_hash,kind,runtime_id,runtime_epoch,key_algorithm,public_key,key_fingerprint,identity_epoch) VALUES($1,'Revocation Proxy',$2,'','velocity',$3,1,'ed25519',$4,$5,1)`, node, project, runtimeID, base64.RawURLEncoding.EncodeToString(pub), hex.EncodeToString(fingerprint[:])); err != nil {
 		t.Fatal(err)
 	}
 	defer a.db.ExecContext(context.Background(), `DELETE FROM server_bridge_nodes_v2 WHERE id=$1`, node)

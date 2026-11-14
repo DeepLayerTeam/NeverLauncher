@@ -18,7 +18,7 @@ func liveTrustFixture04210(t *testing.T) (*Supervisor, repository.Repository, *p
 	ctx := context.Background()
 	repo := repository.NewMemoryRepository("http://localhost")
 	id := "example.live-trust"
-	manifest := model.ExtensionManifest{SchemaVersion: "2.0", ID: id, Name: "Live trust", Version: "1.0.0", Publisher: "example", API: "1.0", Permissions: []string{"storage:read"}}
+	manifest := model.ExtensionManifest{SchemaVersion: "2.0", ID: id, Name: "Live trust", Version: "1.0.0", Publisher: "example", API: "1.0", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/extension"}}, Permissions: []string{"storage:read"}}
 	if _, err := repo.SaveExtensionVersion(ctx, manifest); err != nil {
 		t.Fatal(err)
 	}

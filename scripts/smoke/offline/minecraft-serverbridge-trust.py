@@ -105,11 +105,11 @@ require(
     "services/api/internal/httpapi/minecraft_serverbridge_trust_test.go",
     [
         "TestMinecraftTrust0127RequiresBoundDeviceAndInvalidatesTokenAfterRebind",
-        "unbound minecraft exchange was not denied",
-        "minecraft token survived parent device re-bind",
+        "обмен Minecraft без привязки не был отклонён",
+        "токен Minecraft сохранился после повторной привязки",
         "TestServerBridgeTrust0127LiveBindingAndRiskEnforcement",
-        "bridge ignored live risk policy",
-        "bridge accepted mismatched channel",
+        "мост проигнорировал действующую политику рисков",
+        "мост принял несовпадающий канал",
     ],
 )
 require(
@@ -125,7 +125,7 @@ require(
 require(
     "e2e/scripts/run-minecraft-e2e.sh",
     [
-        "bind canonical launcher session to a real Ed25519 trusted-device key",
+        "Привязка канонической сессии Launcher к реальному доверенному ключу устройства Ed25519",
         "openssl genpkey -algorithm Ed25519",
         "/api/v1/auth/devices/register/begin",
         "/api/v1/auth/devices/register/complete",

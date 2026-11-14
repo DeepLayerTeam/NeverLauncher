@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -54,7 +55,7 @@ func TestRuntimeStoragePersistenceIsolationAndLimits0303(t *testing.T) {
 	if err := runtimeWrite0303(context.Background(), global, path, json.RawMessage(`"`+strings.Repeat("a", runtimeValueLimit0303)+`"`)); err == nil {
 		t.Fatal("допущено состояние, превышающее лимит размера")
 	}
-	if st, err := os.Stat(path); err != nil || st.Mode().Perm()&0077 != 0 {
+	if st, err := os.Stat(path); err != nil || !st.Mode().IsRegular() || (runtime.GOOS != "windows" && st.Mode().Perm()&0077 != 0) {
 		t.Fatalf("права доступа к файлу состояния: %v %v", st, err)
 	}
 }

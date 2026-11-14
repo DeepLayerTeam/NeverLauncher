@@ -40,6 +40,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := created.Data.PackageID
+	configurePackageRuntimeTest(t, handler, token, id)
 	// Загрузите подлинные байты и используйте производственный конвейер проверки и
 	// подписи.
 	var upload bytes.Buffer

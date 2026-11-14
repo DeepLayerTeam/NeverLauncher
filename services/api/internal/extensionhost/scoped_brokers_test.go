@@ -3,8 +3,10 @@ package extensionhost
 import (
 	"context"
 	"encoding/base64"
+	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
@@ -35,6 +37,15 @@ func TestScopedBrokerCapabilities03110(t *testing.T) {
 	st := &processState{key: Key{ExtensionID: m.ID, Scope: "global"}, install: model.ExtensionInstall{ExtensionID: m.ID, CurrentVersion: m.Version}, manifest: m, sandboxReady: true}
 	data := base64.StdEncoding.EncodeToString([]byte("scoped-content"))
 	req := capabilityRequest{Name: "reports", Path: "my-file", BodyBase64: data}
+	if runtime.GOOS != "linux" {
+		if r := s.executeCapability(ctx, st, "fs.write", req); r.err == nil || r.status != http.StatusServiceUnavailable {
+			t.Fatalf("Небезопасный брокер на неподдерживаемой ОС: %+v", r)
+		}
+		if _, err := os.Stat(filepath.Join(root, req.Path)); !os.IsNotExist(err) {
+			t.Fatalf("Файл создан на неподдерживаемой ОС: %v", err)
+		}
+		return
+	}
 	if r := s.executeCapability(ctx, st, "fs.write", req); r.err != nil || r.status != 200 {
 		t.Fatalf("запись отклонена: %+v", r)
 	}

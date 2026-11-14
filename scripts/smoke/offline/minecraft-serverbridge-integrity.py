@@ -197,8 +197,8 @@ frontend = read("apps/desktop/src/main.tsx")
 require(
     frontend,
     [
-        "createContinuousGuardTicket(processId: string)",
-        "createServerJoinAfterLaunch(username: string, minecraftAccessToken: string, continuousGuardTicket?: string)",
+        "createContinuousGuardTicket(\n    processId: string,\n    minecraftAccessToken?: string,",
+        "createServerJoinAfterLaunch(\n    username: string,\n    minecraftAccessToken: string,\n    continuousGuardTicket?: string,",
         "continuousGuardTicket",
         "stop_runtime_process",
         "minecraftCredentials.accessToken",
@@ -241,7 +241,7 @@ require(
 openapi = read("schemas/openapi.yaml")
 require(
     openapi,
-    ["minecraftAccessToken", "pluginSha256", "Current ServerBridge JAR SHA-256"],
+    ["minecraftAccessToken", "pluginSha256", "Текущий SHA-256 JAR ServerBridge"],
     "Контракт целостности в OpenAPI",
 )
 

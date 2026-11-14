@@ -578,8 +578,8 @@ async fn guard_memory_integrity_fail_closed_on_executable_image_code_page_drift(
     assert!(!report.memory_integrity.healthy);
     assert!(report.memory_integrity.violation_count >= 1, "ожидалось нарушение целостности памяти: {report:?}");
     assert!(
-        report.memory_integrity.last_violation.contains("code-page drift")
-            || report.last_violation.contains("code-page drift"),
+        report.memory_integrity.last_violation.contains("изменение кодовой страницы")
+            || report.last_violation.contains("изменение кодовой страницы"),
         "unexpected Memory Integrity violation: {}",
         report.memory_integrity.last_violation
     );
@@ -671,8 +671,8 @@ async fn guard_thread_integrity_fail_closed_on_private_executable_thread_start()
         "Ожидалось нарушение целостности потоков и процессов: {report:?}"
     );
     assert!(
-        report.thread_process_integrity.last_violation.contains("non-image executable memory")
-            || report.last_violation.contains("non-image executable memory"),
+        report.thread_process_integrity.last_violation.contains("исполняемой памяти, не принадлежащей образу")
+            || report.last_violation.contains("исполняемой памяти, не принадлежащей образу"),
         "unexpected Thread Integrity violation: {}",
         report.thread_process_integrity.last_violation
     );
@@ -703,7 +703,8 @@ async fn guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_a
             Err(err) => err,
         };
         assert!(
-            err.contains("Debug & Instrumentation Guard rejected"),
+            err.contains("отклонён параметр инструментирования при запуске")
+                || (forbidden.starts_with("-javaagent:") && err.contains("Java-агент совместимости Guard требует явного корневого каталога игры")),
             "Неожиданный отказ для {forbidden}: {err}"
         );
     }
@@ -778,8 +779,8 @@ async fn guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach()
         "Ожидалось нарушение защиты от отладки и инструментирования: {report:?}"
     );
     assert!(
-        report.debug_instrumentation.last_violation.contains("debugger")
-            || report.last_violation.contains("debugger"),
+        report.debug_instrumentation.last_violation.contains("отладчик")
+            || report.last_violation.contains("отладчик"),
         "unexpected Debug Guard violation: {}",
         report.debug_instrumentation.last_violation
     );
@@ -871,8 +872,8 @@ async fn guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_al
     assert!(!report.jvm_aware.healthy);
     assert!(report.jvm_aware.violation_count >= 1, "ожидалось нарушение защиты JVM: {report:?}");
     assert!(
-        report.jvm_aware.last_violation.contains("outside jvm.dll provenance")
-            || report.last_violation.contains("outside jvm.dll provenance"),
+        report.jvm_aware.last_violation.contains("вне проверенного происхождения jvm.dll")
+            || report.last_violation.contains("вне проверенного происхождения jvm.dll"),
         "unexpected JVM-aware violation: {}",
         report.jvm_aware.last_violation
     );

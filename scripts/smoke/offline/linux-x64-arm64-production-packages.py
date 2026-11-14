@@ -48,7 +48,7 @@ require(
     [
         '"x64": (62, "EM_X86_64")',
         '"arm64": (183, "EM_AARCH64")',
-        "production package requires ELF64 little-endian",
+        "для рабочего пакета требуется ELF64 с порядком байтов от младшего к старшему",
         "launcher/LINUX_PACKAGE_MANIFEST.json",
         "gzip.GzipFile",
         "mtime=0",
@@ -118,7 +118,7 @@ production_release = read(".github/workflows/production-release-candidate.yml")
 require(
     production_release,
     [
-        "Download native Linux x64 + ARM64 production artifacts",
+        "Скачать промышленные нативные артефакты Linux x64 и ARM64",
         "pattern: launcher-linux-production-*-${{ github.sha }}",
         "path: linux-production-artifacts",
         "merge-multiple: true",

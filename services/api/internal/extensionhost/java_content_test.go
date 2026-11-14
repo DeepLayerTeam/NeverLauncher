@@ -48,13 +48,13 @@ func TestJavaContentRPC0486(t *testing.T) {
 	projectB := json.RawMessage(`{"projectId":"project-b","path":"example.jar"}`)
 	// Нет разрешения выпуска: работающая доверенная JVM никогда не должна получать
 	// обратный вызов.
-	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.source.resolve", projectA); e == nil || !strings.Contains(e.Error(), "permission") {
+	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.source.resolve", projectA); e == nil || !strings.Contains(e.Error(), "Разрешение на содержимое") {
 		t.Fatalf("Вызов RPC для содержимого без разрешения: %v", e)
 	}
 	if attempts != 0 {
 		t.Fatalf("Обратный вызов без разрешения достиг JVM: %d", attempts)
 	}
-	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.source.resolve", projectB); e == nil || !strings.Contains(e.Error(), "scope") {
+	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.source.resolve", projectB); e == nil || !strings.Contains(e.Error(), "Доступ к области проекта") {
 		t.Fatalf("Межпроектный RPC содержимого: %v", e)
 	}
 	if attempts != 0 {
@@ -72,14 +72,14 @@ func TestJavaContentRPC0486(t *testing.T) {
 			t.Fatalf("Разрешённый обратный вызов %s не выполнен: попыток=%d", method, attempts)
 		}
 	}
-	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.publish.unsigned", projectA); e == nil || !strings.Contains(e.Error(), "unsupported") {
+	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.publish.unsigned", projectA); e == nil || !strings.Contains(e.Error(), "Неподдерживаемый метод Java RPC") {
 		t.Fatalf("Ошибочно принят неуказанный метод работы с содержимым: %v", e)
 	}
 	if e := repo.RevokeExtensionPermission(ctx, id, "project", "project-a", "release:prepare"); e != nil {
 		t.Fatal(e)
 	}
 	before := attempts
-	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.package.prepare", projectA); e == nil || !strings.Contains(e.Error(), "permission") {
+	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.package.prepare", projectA); e == nil || !strings.Contains(e.Error(), "Разрешение на содержимое") {
 		t.Fatalf("Подготовка осталась разрешённой после отзыва права: %v", e)
 	}
 	if attempts != before {
@@ -94,7 +94,7 @@ func TestJavaContentRPC0486(t *testing.T) {
 		t.Fatal(e)
 	}
 	before = attempts
-	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.delivery.resolve", projectA); e == nil || !strings.Contains(e.Error(), "permission") {
+	if _, e := host.CallJavaRPC0304(ctx, st.key, "content.delivery.resolve", projectA); e == nil || !strings.Contains(e.Error(), "Разрешение на содержимое") {
 		t.Fatalf("Чтение содержимого после отзыва права: %v", e)
 	}
 	if attempts != before {

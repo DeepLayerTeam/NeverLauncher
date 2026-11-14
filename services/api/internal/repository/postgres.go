@@ -1794,6 +1794,10 @@ WHERE minecraft_sessions.status='active' AND EXCLUDED.status='active' AND
     minecraft_sessions.trusted_device_id IS NOT DISTINCT FROM EXCLUDED.trusted_device_id AND
     minecraft_sessions.binding_epoch=EXCLUDED.binding_epoch`, item.ID, item.UserID, item.LauncherSessionID, item.ProfileUUID, nullText(item.TrustedDeviceID), item.BindingEpoch, item.ClientToken, item.AccessTokenHash, item.IntegrityVerified, item.GuardAttestationSHA256, item.GuardEvidenceSHA256, item.GuardSHA256, item.LauncherSHA256, item.LauncherVersion, nullTime(item.IntegrityVerifiedAt), item.Status, item.CreatedAt, item.LastSeenAt, item.ExpiresAt, nullTime(item.RevokedAt), item.RevokedReason)
 	if err != nil {
+		var state interface{ SQLState() string }
+		if errors.As(err, &state) && state.SQLState() == "23514" {
+			return model.MinecraftSession{}, fmt.Errorf("%w: %w", ErrConflict, err)
+		}
 		return model.MinecraftSession{}, err
 	}
 	if affected, err := result.RowsAffected(); err != nil || affected != 1 {

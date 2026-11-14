@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -131,7 +132,7 @@ func TestBrowserPKCEPOCRedactsAllTokensAndNeverClaimsFormalApproval(t *testing.T
 			t.Fatalf("Утечка в отчёте: %q", secret)
 		}
 	}
-	if !strings.Contains(instructions.String(), "Microsoft personal-account") {
+	if !strings.Contains(instructions.String(), "личную учётную запись Microsoft") {
 		t.Fatal("Отсутствуют инструкции для браузера")
 	}
 }
@@ -159,7 +160,7 @@ func TestReportExclusivePrivateAndAtomicEnoughForProof(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0600 {
+	if !info.Mode().IsRegular() || (runtime.GOOS != "windows" && info.Mode().Perm() != 0600) {
 		t.Fatalf("Права доступа к отчёту: %o", info.Mode().Perm())
 	}
 	if err := writeReport(path, r); err == nil {

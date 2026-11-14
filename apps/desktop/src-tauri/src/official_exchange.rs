@@ -346,7 +346,7 @@ fn classify(status: u16, hint: &ErrorBody, retry_after: Option<u64>) -> Provider
         "invalid_grant" | "interaction_required" => return ProviderError::InvalidGrant,
         _ => {},
     }
-    if status==403 && (hint.message.to_ascii_lowercase().contains("Недопустимая регистрация приложения") || hint.error.to_ascii_lowercase().contains("invalid_app_registration")) { return ProviderError::AppNotAuthorized; }
+    if status==403 && (hint.message.to_ascii_lowercase().contains("invalid app registration") || hint.error.to_ascii_lowercase().contains("invalid_app_registration")) { return ProviderError::AppNotAuthorized; }
     if status==401 {
         return match hint.xerr.as_i64().or_else(||hint.xerr.as_str().and_then(|s|s.parse::<i64>().ok())) {
             Some(2148916233) => ProviderError::XboxAccount,
@@ -444,6 +444,7 @@ mod tests {
                 collected.push(wire);
                 let (status,body)=if reply.starts_with("403:") {("403 Forbidden",&reply[4..])}
                     else if reply.starts_with("400:") {("400 Bad Request",&reply[4..])}
+                    else if reply.starts_with("404:") {("404 Not Found",&reply[4..])}
                     else if reply.starts_with("429:") {("429 Too Many Requests",&reply[4..])}
                     else {("200 OK",reply)};
                 let response=format!("HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
@@ -498,9 +499,9 @@ mod tests {
     #[tokio::test]
     async fn official_reset_cape_requires_fresh_absence_of_active_cape() {
         let (origin,task)=fixture_server(vec![
-            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","capes":[{"id":"owned","state":"ACTIVE"}]}"#),
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","capes":[{"id":"owned","state":"ACTIVE","url":""}]}"#),
             ("DELETE /minecraft/profile/capes/active",""),
-            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","capes":[{"id":"owned","state":"INACTIVE"}]}"#),
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","capes":[{"id":"owned","state":"INACTIVE","url":""}]}"#),
         ]).await;
         let client=NativeProvider::fixture(&origin);
         let updated=client.texture("minecraft-token","resetCape",None,None).await.unwrap();

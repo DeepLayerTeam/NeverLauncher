@@ -43,11 +43,11 @@ func TestExplicitModeRejectsUnsafeCombinations(t *testing.T) {
 		mutate   func(*config.Config)
 		fragment string
 	}{
-		{"unsupported", func(c *config.Config) { c.DeploymentMode = "bogus" }, "unsupported"},
-		{"not-standalone", func(c *config.Config) { c.DeploymentMode = "single-node" }, "SQLite HTTP repository"},
-		{"sqlite-requires-persistent-path", func(c *config.Config) { c.RepositoryDriver = "sqlite" }, "absolute clean persistent path"},
-		{"mixed-HA", func(c *config.Config) { c.ServerBridgeHARequired = true }, "distributed HA"},
-		{"network-requires-s3", func(c *config.Config) { c.DeploymentMode = "network-ha" }, "shared S3"},
+		{"unsupported", func(c *config.Config) { c.DeploymentMode = "bogus" }, "Не поддерживается"},
+		{"not-standalone", func(c *config.Config) { c.DeploymentMode = "single-node" }, "HTTP-хранилище SQLite"},
+		{"sqlite-requires-persistent-path", func(c *config.Config) { c.RepositoryDriver = "sqlite" }, "абсолютный путь к чистому каталогу постоянного хранения"},
+		{"mixed-HA", func(c *config.Config) { c.ServerBridgeHARequired = true }, "распределённую отказоустойчивость"},
+		{"network-requires-s3", func(c *config.Config) { c.DeploymentMode = "network-ha" }, "общее S3-хранилище"},
 		{"network-requires-stable-replica-id", func(c *config.Config) {
 			c.DeploymentMode = "network-ha"
 			c.SQLiteCoordinatorPath = ""
@@ -62,18 +62,18 @@ func TestExplicitModeRejectsUnsafeCombinations(t *testing.T) {
 			c.ServerBridgeHARequired = true
 			c.RedisURL = "redis://redis.internal:6379"
 			c.ServerBridgeReplicaID = "api/a"
-		}, "stable non-whitespace"},
+		}, "идентификатором без пробелов"},
 		{"network-requires-redis", func(c *config.Config) {
 			c.DeploymentMode = "network-ha"
 			c.StorageDriver = "s3"
 			c.SQLiteCoordinatorPath = ""
 			c.ServerBridgeHARequired = true
 			c.RedisURL = ""
-		}, "requires Redis"},
-		{"fail-open", func(c *config.Config) { c.RateLimitFailClosed = false }, "fail-closed"},
-		{"disabled-limit", func(c *config.Config) { c.RateLimitEnabled = false }, "fail-closed"},
-		{"override-local", func(c *config.Config) { c.DeploymentLockPath = "/tmp/alternate.lock" }, "cannot be overridden"},
-		{"unsupported-repo", func(c *config.Config) { c.RepositoryDriver = "magic" }, "unsupported"},
+		}, "требуется Redis"},
+		{"fail-open", func(c *config.Config) { c.RateLimitFailClosed = false }, "отказом при сбое"},
+		{"disabled-limit", func(c *config.Config) { c.RateLimitEnabled = false }, "отказом при сбое"},
+		{"override-local", func(c *config.Config) { c.DeploymentLockPath = "/tmp/alternate.lock" }, "Нельзя переопределять"},
+		{"unsupported-repo", func(c *config.Config) { c.RepositoryDriver = "magic" }, "Неподдерживаемый драйвер"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

@@ -59,6 +59,7 @@ jobs:
       - name: Проверить предварительные условия и конфликты закреплённых JAR
         working-directory: services/api
         env:
+          LAUNCHER_TEST_JAVA_DEPENDENCY_KIND: spi
           LAUNCHER_TEST_JAVA_DEPENDENCY_JAR: ${{ github.workspace }}/examples/extensions/java-spi/build/package/backend/java-spi.jar
         run: go test -race -count=1 ./internal/extensionjava
       - name: Проверить все канонические метаданные релиза

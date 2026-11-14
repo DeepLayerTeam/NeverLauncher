@@ -221,8 +221,8 @@
       "size": 3887
     },
     ".github/workflows/full-real-ga.yml": {
-      "sha256": "389a2210ce1ed8b2e651ae6a6794acd9b3a3dad0adf0d45ad5b5881fcfebdf72",
-      "size": 11282
+      "sha256": "c60497f34a864228ea8acbea2ee5a7deac82910666b958fbc7b4ff4baeb646cf",
+      "size": 11259
     },
     ".github/workflows/game-world-backup.yml": {
       "sha256": "af6ea41f6e02bdfc339d1c59463e1af7aa18c7f6f9fbf194b4d2c211402e5a11",
@@ -353,8 +353,8 @@
       "size": 5136
     },
     ".github/workflows/integration-matrix.yml": {
-      "sha256": "93325e8363c20e32526ebf69707bdd5bad0de6cc52a68e338ee4a192463e3e0f",
-      "size": 13486
+      "sha256": "f0b4437932d370ef1ca90cf9e5519878542696516766db7752d44909951640df",
+      "size": 13481
     },
     ".github/workflows/isolated-build-worker.yml": {
       "sha256": "c23b7eec8a3916c0ac13f64fea6ed15d98c55b71ec519daa5d8f43a97749437b",
@@ -417,8 +417,8 @@
       "size": 1963
     },
     ".github/workflows/java-spi-registry.yml": {
-      "sha256": "19019e5c610d594324cf763c735d2f24b011b2b55c1f3cc57b0dd39139d8c5b3",
-      "size": 2743
+      "sha256": "2309de3964b2441f532ae73509477543c94932e626799f0677532901ea9674ce",
+      "size": 2793
     },
     ".github/workflows/java-state-upgrades.yml": {
       "sha256": "42126c9b4bb0f476ee53af01be7f0a284016fb564bbc423a0eeb91f86e076c86",
@@ -769,8 +769,8 @@
       "size": 2796
     },
     ".github/workflows/sqlite-pg-recovery.yml": {
-      "sha256": "99f8c3bf6cd44c65245dc582da4abf8eb9ed1c8bbf044caa801cbdf02132844b",
-      "size": 2582
+      "sha256": "1616a71b31a61387cd4e0f6e761e75f594f6e7d767a8dba058ca9f2950caade5",
+      "size": 2577
     },
     ".github/workflows/sqlite-postgresql-transfer.yml": {
       "sha256": "da31c91b8a96f1e5c01a4c96b1cc919adbce97f0e35a35457d6e2594fe7725ea",
@@ -1009,8 +1009,8 @@
       "size": 474
     },
     "runtime/runtime/Cargo.toml": {
-      "sha256": "02a48e70bc22bd662447a5a33a47d35c7e9a479a790f74beed5b549c50a12784",
-      "size": 1354
+      "sha256": "09dfa0481123e2117ccf4254fc32c8f382399a84b9542758e15e43f1be5ffb60",
+      "size": 1473
     },
     "schemas/openapi.yaml": {
       "sha256": "c1979b92b2f9e6b93ac65c81bd850231bed03809d66d87fe6c088253f257bd62",
@@ -1333,8 +1333,8 @@
       "size": 1030
     },
     "scripts/smoke/offline/device-trust-e2e-matrix.py": {
-      "sha256": "df23771baf5cfe1ff74d5c3eaedab7ff96c7a4f4bcdb4548e50c4d08a04b174a",
-      "size": 10600
+      "sha256": "fad6fd04e0384e269e02722a7987437b2db2a20da63145bdd22dda276421bac6",
+      "size": 10920
     },
     "scripts/smoke/offline/guard-windows-adversarial-ci.py": {
       "sha256": "fa70e7066e846f8c9b4ef0e6d1d8e4d72c492538b64dabca4523d69035a553e9",
@@ -1349,8 +1349,8 @@
       "size": 326448
     },
     "scripts/smoke/offline/serverbridge-forge-neoforge.py": {
-      "sha256": "a40efb51383c74d5d289055890411d5b1dd6b646e8ea5bc4a07d543473c551a7",
-      "size": 11329
+      "sha256": "ec73e4ffd23cbeb1ab1c40acf458586a52e921c147704ac95ea9e664b772da62",
+      "size": 11362
     },
     "scripts/smoke/offline/session-device-risk.py": {
       "sha256": "16aa55f6526a5fa5452958de1910edc2dc91aa026e57407b9aa055b135d09167",

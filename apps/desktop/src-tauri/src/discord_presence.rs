@@ -155,7 +155,11 @@ impl Connection {
 }
 
 fn transport_failure(message: &str) -> bool {
-    message.starts_with("Discord IPC ") || message == "IPC-соединение с Discord закрыто"
+    message == "IPC-соединение с Discord закрыто"
+        || ["Превышено время записи в IPC Discord", "Ошибка записи в IPC Discord:",
+            "Превышено время ожидания заголовка IPC Discord", "Ошибка заголовка IPC Discord:",
+            "Превышено время ожидания ответа IPC Discord", "Ошибка ответа IPC Discord:"]
+            .iter().any(|prefix| message.starts_with(prefix))
 }
 
 #[tauri::command]

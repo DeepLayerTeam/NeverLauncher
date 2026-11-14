@@ -292,8 +292,9 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 	if _, err = tx.Exec(ctx, "CREATE SCHEMA "+quoted(MinimalBundleSchema0377)); err != nil {
 		return report, err
 	}
+	// The receipt hash covers the exact exported manifest bytes; JSONB would normalize them.
 	ddls := []string{
-		`CREATE TABLE ` + minimalRef0377("receipt") + ` (id TEXT PRIMARY KEY, manifest JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+		`CREATE TABLE ` + minimalRef0377("receipt") + ` (id TEXT PRIMARY KEY, manifest TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
 		`CREATE TABLE ` + minimalRef0377("files") + ` (path TEXT PRIMARY KEY, kind TEXT NOT NULL, mode INTEGER NOT NULL, bytes BIGINT NOT NULL, sha256 TEXT NOT NULL)`,
 		`CREATE TABLE ` + minimalRef0377("chunks") + ` (path TEXT NOT NULL REFERENCES ` + minimalRef0377("files") + ` (path), ordinal BIGINT NOT NULL, sha256 TEXT NOT NULL, payload BYTEA NOT NULL, PRIMARY KEY(path,ordinal))`,
 	}

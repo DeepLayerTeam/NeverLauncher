@@ -26,7 +26,7 @@ jobs:
           PYTHONPATH=scripts/operations python3 -m unittest \
             scripts.operations.test_sqlite_pg_cutover \
             scripts.operations.test_sqlite_pg_recovery \
-            scripts.operations.test_legacy_upgrade_0476 -v
+            scripts.operations.test_legacy_upgrade -v
           python3 -m py_compile \
             scripts/operations/sqlite_pg_cutover.py \
             scripts/operations/test_sqlite_pg_recovery.py

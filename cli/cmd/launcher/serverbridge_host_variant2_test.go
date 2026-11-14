@@ -85,6 +85,7 @@ func TestHost0282EnvironmentAllowlistAndWorkingDirectory(t *testing.T) {
 	root, java := hostFixture0282(t, `printf 'pwd=%s\n' "$PWD"
 printf 'allowed=%s\n' "${TEST_GAME_ENV:-MISSING}"
 printf 'denied=%s\n' "${UNSAFE_LEAK_VALUE:-MISSING}"
+sleep 1
 exit 0`)
 	work := filepath.Join(root, "instance")
 	if err := os.Mkdir(work, 0700); err != nil {

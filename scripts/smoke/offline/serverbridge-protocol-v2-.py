@@ -71,7 +71,7 @@ require(
         "serverBridgeSupportedProtocols0191",
         "ConsumeServerBridgeJoinTicket",
         "validBridgeServerKindV2",
-        "one-time atomic join tickets",
+        "атомарные одноразовые билеты подключения",
         '"sourceOfTruth": "memory-dev-test"',
     ],
     "Runtime ServerBridge v2",
@@ -111,9 +111,9 @@ contract_tests = read(
 require(
     contract_tests,
     [
-        "v2 rolling-upgrade contract rejected",
-        "Protocol v2 contract must reject Protocol v3 feature field",
-        "v2 rolling heartbeat",
+        "Контракт поэтапного обновления v2 ошибочно отклонён",
+        "Контракт протокола v2 должен отклонять поле возможностей протокола v3",
+        "проверка активности при последовательном обновлении v2",
     ],
     "Регрессионные тесты последовательного обновления ServerBridge v2",
 )

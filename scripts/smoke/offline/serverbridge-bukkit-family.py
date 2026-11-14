@@ -213,11 +213,11 @@ require(
     "Проверка производственной конфигурации",
 )
 
-openapi_gen = read("scripts/contracts/generate_openapi.py")
+openapi_gen = "".join(read("scripts/contracts/generate_openapi.py").split())
 require(
     openapi_gen,
     [
-        'enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]'
+        'enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla",]'
     ],
     "Перечень значений семейства Bukkit в OpenAPI",
 )
@@ -266,21 +266,21 @@ require(
         "LAUNCHER_SPARK_BUILD_MAVEN_REPO",
         'includeModule("me.lucko", "bytesocks-java-client")',
         "bytesocks-build.json",
-        "bytesocksPinnedBuildDependency:true",
+        "bytesocksPinnedBuildDependency:($mode == \"full\")",
         "materialize_pinned_spark_paper_dependency()",
         ":spark-paper:shadowJar",
         "LAUNCHER_FOLIA_BUILD_MAVEN_REPO",
         'includeModule("me.lucko", "spark-paper")',
         "spark-paper-build.json",
-        "foliaPinnedBuildDependency:true",
+        "foliaPinnedBuildDependency:($mode == \"full\")",
         'GIT_AUTHOR_NAME="Launcher E2E"',
         'GIT_AUTHOR_EMAIL="launcher-e2e@invalid.local"',
         'GIT_COMMITTER_NAME="Launcher E2E"',
         'GIT_COMMITTER_EMAIL="launcher-e2e@invalid.local"',
         "createMojmapPaperclipJar",
         "folia-runtime.json",
-        "foliaPinnedRuntime:true",
-        "bukkitFamilyRuntime:true",
+        "foliaPinnedRuntime:($mode == \"full\")",
+        "bukkitFamilyRuntime:($mode == \"full\")",
     ],
     "Сквозные проверки Runtime на настоящих Spigot/Folia",
 )

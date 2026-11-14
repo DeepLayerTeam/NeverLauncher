@@ -308,7 +308,7 @@ require(
         "0026_fabric_server_bridge_0146",
         "0027_forge_neoforge_server_bridge_0147",
         "kind IN ('forge','neoforge')",
-        "non-canonical kind bypassed constraint",
+        "неканонический тип обошёл ограничение",
     ],
     "Сквозная проверка миграции с 0.14.6 на 0.14.7",
 )

@@ -32,7 +32,7 @@ require(
         'for image_type in ["jre", "jdk"]',
         "validate_managed_java_major",
         "archive_sha256",
-        "ensure_archive",
+        "ensure_managed_archive",
         "validate_installed_runtime",
         "Путь к Java в записи среды выполнения выходит за пределы управляемой Java через символическую ссылку",
     ],
@@ -64,7 +64,7 @@ ci = read(".github/workflows/ci.yml")
 require(
     ci,
     [
-        "Managed Java II Java 8/16/17/21/25 production E2E",
+        "Управляемая Java II — сквозные проверки Java 8/16/17/21/25 и поставка Temurin 21",
         "run-managed-java-II-e2e.sh",
         "MANAGED_JAVA_II_EVIDENCE.json",
     ],

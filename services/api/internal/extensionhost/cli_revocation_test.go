@@ -201,7 +201,7 @@ func TestCLIAuthorityPreflightRejectsRevocation04312(t *testing.T) {
 	st.manifest.Permissions = append(st.manifest.Permissions, "cli:contribute")
 	// В неизменяемом манифесте репозитория всё ещё нет разрешения CLI: одни
 	// дополнительные гранты никогда не разрешают исполнение кода.
-	if err := host.enforceCLITrust04312(ctx, st); err == nil || !strings.Contains(err.Error(), "revoked") {
+	if err := host.enforceCLITrust04312(ctx, st); err == nil || !strings.Contains(err.Error(), "Разрешение cli:contribute отозвано") {
 		t.Fatalf("Предоставлено не запрошенное право CLI: %v", err)
 	}
 	if _, err := repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: st.key.ExtensionID, Scope: "global", Reason: "incident", Source: "test"}); err != nil {

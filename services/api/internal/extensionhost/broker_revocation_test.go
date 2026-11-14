@@ -18,7 +18,7 @@ func TestBrokerResponseRevocation04312(t *testing.T) {
 	if err := repo.RevokeExtensionPermission(ctx, st.key.ExtensionID, "global", "", "storage:read"); err != nil {
 		t.Fatal(err)
 	}
-	if err := host.revalidateCapability04312(ctx, st, "runtime.storage.get", req); err == nil || !strings.Contains(err.Error(), "revoked") {
+	if err := host.revalidateCapability04312(ctx, st, "runtime.storage.get", req); err == nil || !strings.Contains(err.Error(), "Отозвано") {
 		t.Fatalf("Результат раскрыт после отзыва разрешения: %v", err)
 	}
 	if err := host.revalidateCapability04312(ctx, st, "unknown.privilege", req); err == nil {

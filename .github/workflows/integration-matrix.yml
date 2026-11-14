@@ -44,7 +44,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/nl0478"; chmod 700 "$RUNNER_TEMP/nl0478"
           echo "TMPDIR=$RUNNER_TEMP/nl0478" >> "$GITHUB_ENV"
           PYTHONPATH=scripts/operations python3 -m unittest scripts.operations.test_sqlite_pg_cutover scripts.operations.test_sqlite_pg_recovery scripts.integration.test_verify -v
-          sudo env PYTHONPATH=scripts/operations python3 -m unittest scripts.operations.test_legacy_upgrade_0476 -v
+          sudo env PYTHONPATH=scripts/operations python3 -m unittest scripts.operations.test_legacy_upgrade -v
           (cd services/api && go test -race -count=1 -timeout=20m ./internal/sqlitedurable ./internal/sqlitecore ./internal/sqlitecoord ./internal/sqlitepg)
           python3 scripts/version/manage.py check
   postgres-real:

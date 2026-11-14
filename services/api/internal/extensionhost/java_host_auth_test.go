@@ -11,7 +11,7 @@ func TestJavaAuthRPCMethodWhitelist0485(t *testing.T) {
 	s := &Supervisor{}
 	for _, method := range []string{"auth.health", "auth.password", "auth.resolve", "auth.session.verify", "auth.session.revoke"} {
 		_, err := s.CallJavaRPC0304(context.Background(), Key{ExtensionID: "missing.identity", Scope: "global"}, method, json.RawMessage(`{}`))
-		if err == nil || !strings.Contains(err.Error(), "not running") {
+		if err == nil || !strings.Contains(err.Error(), "Процесс хоста расширений не запущен") {
 			t.Errorf("Ожидался отказ для отсутствующего хоста %s: %v", method, err)
 		}
 	}

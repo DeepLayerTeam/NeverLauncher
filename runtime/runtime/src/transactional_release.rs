@@ -1204,7 +1204,7 @@ mod tests {
         assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
         let active=pointer(&root).unwrap().active.unwrap();
         assert_eq!(active.plan_sha256,Some(resolved_download_0246::resolve(&m,None).unwrap().sha256));
-        assert!(rollback(&root,&key).await.unwrap_err().contains("Отсутствует предыдущий работоспособный релиз"),
+        assert!(rollback(&root,&key).await.unwrap_err().contains("Отсутствует последняя подтверждённо исправная версия клиента"),
             "Восстановление начальной установки не должно считать повреждённые данные последней работоспособной версией");
         assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
         fs::remove_dir_all(root).unwrap();

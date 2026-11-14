@@ -51,10 +51,10 @@ jobs:
           set -euo pipefail
           python -m pip install 'cryptography>=42,<47' 'PyYAML>=6,<7'
           PYTHONPATH=scripts/release:scripts/acceptance:scripts/operations python -m unittest -q \
-            scripts.release.test_full_real_acceptance_0530 \
-            scripts.release.test_defect_rehearsal_05212 \
-            scripts.acceptance.test_sweep_05211 \
-            scripts.release.test_independent_current_05211
+            scripts.release.test_full_real_acceptance \
+            scripts.release.test_defect_rehearsal \
+            scripts.acceptance.test_sweep \
+            scripts.release.test_independent_current
           python scripts/version/manage.py check
 
   freeze:

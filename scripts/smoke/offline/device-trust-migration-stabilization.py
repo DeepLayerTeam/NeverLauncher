@@ -87,12 +87,12 @@ require(
     [
         "0017_device_key_recovery_rotation_0128",
         "0018_device_trust_stabilization_01210",
-        "0.12.9 schema (0001..0017)",
+        "схемы 0.12.9 (0001..0017)",
         "key-rotate",
         "key-recover",
-        "cross-user auth session/device binding unexpectedly succeeded",
-        "cross-user replacement link unexpectedly succeeded",
-        "cross-user Minecraft device snapshot unexpectedly succeeded",
+        "неожиданно разрешена привязка сеанса и устройства разных пользователей",
+        "неожиданно разрешена ссылка замены для разных пользователей",
+        "неожиданно получен снимок устройства Minecraft другого пользователя",
         "migration-stabilization.json",
     ],
     "Сквозная проверка обновления PostgreSQL 0.12.10",
@@ -126,7 +126,7 @@ if len(protocol_targets) != 1 or "migrationStabilization01210" not in protocol_t
 matrix = read("scripts/device_trust/matrix.py")
 require(
     matrix,
-    ["migrationStabilization01210", "migration stabilization 0.12.10"],
+    ["migrationStabilization01210", "стабилизации миграций 0.12.10"],
     "Публичная матрица доверия",
 )
 

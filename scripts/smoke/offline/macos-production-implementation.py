@@ -83,7 +83,7 @@ require(
         'target_os = "macos"',
         "GUARD_MACOS_PROCESS_POLICY_VERSION",
         "ensure_macos_production_hardening",
-        "Guard macOS production hardening verification failed",
+        "не пройдена проверка усиленной защиты Guard для рабочей сборки macOS",
     ],
     "Принудительное применение политик macOS в Desktop",
 )

@@ -139,7 +139,7 @@ require(
         "ConsumeDeviceChallenge",
         "validateGuardAttestation0134",
         "verifyDeviceSignature0123",
-        "Guard/Desktop release hash is not allowlisted",
+        "Хеш выпуска Guard/Desktop отсутствует в списке разрешённых",
         "guard-launch-v1",
         "consumeGuardLaunchTicket0134",
         "isWindowsDevicePlatform0134",

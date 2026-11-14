@@ -18,7 +18,7 @@ func TestPersistentEmergencyDisableBlocksHostBeforeExecution02012(t *testing.T) 
 		t.Fatal(err)
 	}
 	host := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
-	if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "emergency-disabled") {
+	if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "аварийно отключено") {
 		t.Fatalf("Аварийно отключённое расширение дошло до выполнения: %v", err)
 	}
 }
@@ -31,7 +31,7 @@ func TestQuarantinedPackageBlocksHostBeforeExecution02012(t *testing.T) {
 		t.Fatal(err)
 	}
 	host := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
-	if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "quarantined") {
+	if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "помещён в карантин") {
 		t.Fatalf("Расширение в карантине дошло до выполнения: %v", err)
 	}
 }

@@ -95,7 +95,7 @@ require(
     minecraft_http,
     [
         "ConsumeMinecraftJoin",
-        "only the first concurrent /hasJoined",
+        "Только первый из параллельных запросов /hasJoined",
     ],
     "Одноразовый запрос /hasJoined в Yggdrasil",
 )
@@ -109,8 +109,8 @@ require(
     [
         "TestOneTimeJoinTicket0143CSPRNGIdentifier",
         "TestOneTimeJoinTicket0143BindsIdentityAndConsumesExactlyOnce",
-        "expected exactly one ticket redemption",
-        "redemption audit proof was not persisted",
+        "Ожидалось ровно одно погашение билета",
+        "Аудиторское подтверждение погашения билета не сохранено",
     ],
     "Регрессионные тесты одноразовых запросов ServerBridge",
 )

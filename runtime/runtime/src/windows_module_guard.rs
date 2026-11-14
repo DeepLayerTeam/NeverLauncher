@@ -1037,7 +1037,20 @@ mod imp {
                 } else {
                     0
                 };
-                fail_closed(&state, pid, &err, dropped);
+                // Classify authenticated event failures by the wire reason, not localized text.
+                let subsystem = match event.reason {
+                    MODULE_EVENT_REASON_HOOK_READY | MODULE_EVENT_REASON_HOOK_HEARTBEAT | MODULE_EVENT_REASON_HOOK_TAMPER => Some("Hook Engine"),
+                    MODULE_EVENT_REASON_MEMORY_READY | MODULE_EVENT_REASON_MEMORY_HEARTBEAT | MODULE_EVENT_REASON_MEMORY_TAMPER => Some("Memory Integrity"),
+                    MODULE_EVENT_REASON_THREAD_PROCESS_READY | MODULE_EVENT_REASON_THREAD_PROCESS_HEARTBEAT | MODULE_EVENT_REASON_THREAD_PROCESS_TAMPER => Some("Thread & Process Integrity"),
+                    MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY | MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_HEARTBEAT | MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_TAMPER => Some("Debug & Instrumentation Guard"),
+                    MODULE_EVENT_REASON_JVM_AWARE_READY | MODULE_EVENT_REASON_JVM_AWARE_HEARTBEAT | MODULE_EVENT_REASON_JVM_AWARE_TAMPER => Some("JVM-Aware Protection"),
+                    _ => None,
+                };
+                let reason = match subsystem {
+                    Some(label) => format!("{label}: {err}"),
+                    None => err,
+                };
+                fail_closed(&state, pid, &reason, dropped);
                 return;
             }
 
@@ -1714,7 +1727,7 @@ mod imp {
         let mut debugged = 0i32;
         let success = unsafe { CheckRemoteDebuggerPresent(handle.raw(), &mut debugged) };
         if success != 0 && debugged != 0 {
-            "Guard: обнаружен подключённый отладчик; поток данных датчика прерван".to_string()
+            "Debug & Instrumentation Guard: обнаружен подключённый отладчик; поток данных датчика прерван".to_string()
         } else {
             default_reason.to_string()
         }

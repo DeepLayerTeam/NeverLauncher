@@ -171,17 +171,17 @@ if 'unzip -p "$FABRIC_ARTIFACT" fabric.mod.json | grep -q' in build:
     raise SystemExit(
         "Проверка выпуска Fabric по-прежнему использует текстовый grep, чувствительный к pipefail"
     )
-certifier = read("serverbridge/certify_release.py")
+certifier = " ".join(read("serverbridge/certify_release.py").split())
 require(
     certifier,
     [
-        "custom = data.get('custom')",
-        "launcher = custom.get('launcher') if isinstance(custom, dict) else None",
-        "launcher.get('clientModRequired') is not False",
+        'custom = data.get("custom")',
+        'launcher = ( custom.get("launcher") if isinstance(custom, dict) else None )',
+        'launcher.get("clientModRequired") is not False',
     ],
     "Путь к метаданным сертификации релиза Fabric",
 )
-if "data.get('clientModRequired') is not False" in certifier:
+if 'data.get("clientModRequired") is not False' in certifier:
     raise SystemExit(
         "Сертификатор выпуска Fabric по-прежнему считывает clientModRequired из корня дескриптора"
     )
