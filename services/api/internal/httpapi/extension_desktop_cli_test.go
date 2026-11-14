@@ -82,7 +82,7 @@ func TestDesktopInstallManifestDenyByDefault0209(t *testing.T) {
 	}
 	srv := Server{Repo: repo, ExtensionSecurity: security}
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	if _, _, err := srv.desktopInstallManifest0209(req, manifest.ID, "global", ""); err == nil || !strings.Contains(err.Error(), "not granted") {
+	if _, _, err := srv.desktopInstallManifest0209(req, manifest.ID, "global", ""); err == nil || !strings.Contains(err.Error(), "не предоставлено") {
 		t.Fatalf("Не применяется принцип запрета по умолчанию: %v", err)
 	}
 }

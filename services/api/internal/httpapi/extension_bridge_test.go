@@ -52,6 +52,9 @@ func TestDesktopBridgeRevocationAndGeneration0356(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := repo.SaveTrustedDevice(ctx, model.TrustedDevice{ID: "device-0356", UserID: user.ID, Name: "Desktop fixture", Platform: "linux", PublicKey: "test-public-key", KeyFingerprint: "0356035603560356035603560356035603560356035603560356035603560356"}); err != nil {
+		t.Fatal(err)
+	}
 	session, err = state.AuthSessions.bindTrustedDevice121(session.ID, user.ID, "device-0356", time.Now().UTC())
 	if err != nil {
 		t.Fatal(err)
@@ -65,6 +68,7 @@ func TestDesktopBridgeRevocationAndGeneration0356(t *testing.T) {
 		body, _ := json.Marshal(map[string]any{"protocol": desktopBridgeProtocol0209, "id": "rpc-1", "method": "bridge.authorize", "params": map[string]any{"version": version, "generation": generation, "action": action}})
 		req := httptest.NewRequest(http.MethodPost, "https://api.example.test/api/v1/desktop/extensions/example.desktop-0356/rpc?scope=global", bytes.NewReader(body))
 		req.SetPathValue("extensionId", manifest.ID)
+		req.RemoteAddr = login.RemoteAddr
 		req.Header.Set("Authorization", "Bearer "+token)
 		rec := httptest.NewRecorder()
 		srv.requireDesktopExtensionAuth0209(srv.desktopExtensionRPC0209).ServeHTTP(rec, req)

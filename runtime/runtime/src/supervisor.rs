@@ -1,5 +1,5 @@
 use crate::{
-    append_launch_history, check_files, create_launch_plan, create_launch_plan_with_credentials, join_classpath, now_unix,
+    append_launch_history, check_files, create_launch_plan, create_launch_plan_with_credentials, now_unix,
     verify_manifest_signature, LaunchHistoryEntry, Manifest, MinecraftLaunchCredentials, LaunchPreferences, apply_launch_preferences,
     RuntimeProcessPolicyReport,
 };
@@ -107,6 +107,7 @@ impl ProcessSupervisor {
         self.start_inner(manifest, root, java_path, Some(credentials.username.clone()), Some(credentials), Some(preferences), pinned_public_key).await
     }
 
+    #[allow(clippy::too_many_arguments)] // Keep launch authority inputs explicit.
     async fn start_inner(
         &self,
         manifest: &Manifest,

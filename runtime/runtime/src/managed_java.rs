@@ -1674,7 +1674,7 @@ struct InstallLock { _file: std::fs::File }
 async fn acquire_install_lock(dir: &Path) -> Result<InstallLock, String> {
     let path = dir.join(".install.lock");
     // Сохраняйте файл постоянно: удаление inode активной блокировки flock/LockFileEx позволяет второму процессу создать новый файл и войти одновременно.
-    let file = std::fs::OpenOptions::new().read(true).write(true).create(true)
+    let file = std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(false)
         .open(&path).map_err(|e| format!("Открытие блокировки управляемой Java: {e}"))?;
     for _ in 0..120 {
         match file.try_lock_exclusive() {

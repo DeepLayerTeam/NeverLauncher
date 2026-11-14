@@ -84,10 +84,10 @@ public class Game {
             config.extend((f'integrity.external.{i}.path={b64(path)}',
                            f'integrity.external.{i}.sha256={digest(path)}'))
         self.config=self.root/'guard.properties';self.config.write_text('\n'.join(config)+'\n')
-        cmd=['java','-javaagent:'+str(self.agent)+'='+str(self.config),'-cp',
+        cmd=['java','-Dfile.encoding=UTF-8','-Dsun.stderr.encoding=UTF-8','-javaagent:'+str(self.agent)+'='+str(self.config),'-cp',
              os.pathsep.join([str(self.game)]+list(map(str,extra))),
              'ru.launcher.trusted.MinecraftMain']+list(map(str,args))
-        return subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        return subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,encoding="utf-8")
 
     def finish(self, proc, timeout=20):
         try: out,err=proc.communicate(timeout=timeout)
@@ -111,9 +111,9 @@ public class Game {
         # ключ проверяется отдельно.
         proc.kill();proc.communicate()
         self.config.write_text(self.config.read_text().replace(digest(self.game),'0'*64))
-        cmd=['java','-javaagent:'+str(self.agent)+'='+str(self.config),'-cp',str(self.game),
+        cmd=['java','-Dfile.encoding=UTF-8','-Dsun.stderr.encoding=UTF-8','-javaagent:'+str(self.agent)+'='+str(self.config),'-cp',str(self.game),
              'ru.launcher.trusted.MinecraftMain']
-        r=subprocess.run(cmd,capture_output=True,text=True,timeout=20)
+        r=subprocess.run(cmd,capture_output=True,encoding="utf-8",timeout=20)
         self.assertNotEqual(r.returncode,0)
         self.assertIn('Подписанный файл среды выполнения отсутствует или заменён',r.stderr)
 

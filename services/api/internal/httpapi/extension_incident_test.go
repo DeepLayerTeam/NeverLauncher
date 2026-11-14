@@ -36,7 +36,7 @@ func TestEmergencyDisablePersistsDenyEvenWhenStateTransitionFails0424(t *testing
 	req.SetPathValue("extensionId", id)
 	rec := httptest.NewRecorder()
 	srv.extensionEmergencyDisable02012(rec, req)
-	if rec.Code != http.StatusInternalServerError || !strings.Contains(rec.Body.String(), "kill-switch active") {
+	if rec.Code != http.StatusInternalServerError || !strings.Contains(rec.Body.String(), "Аварийная блокировка активна") {
 		t.Fatalf("Отказ не отражён как сохранённое запрещение: %d %s", rec.Code, rec.Body.String())
 	}
 	if _, err := base.GetExtensionEmergencyDisable(ctx, id, "global", ""); err != nil {

@@ -32,7 +32,7 @@ impl PartialMetadata {
         self.schema_version == PARTIAL_SCHEMA &&
         self.expected_size == file.size &&
         self.expected_sha256.eq_ignore_ascii_case(&file.sha256) &&
-        self.etag.as_deref().map_or(true, strong_etag)
+        self.etag.as_deref().is_none_or(strong_etag)
     }
 }
 
@@ -212,6 +212,7 @@ async fn request_with_control(client: &reqwest::Client, url: &str,
 /// Продолжайте файл из проверенного манифеста, при необходимости используя
 /// сохранённый частичный файл от прерванного запуска. `transferred` учитывает байты *сети*.
 /// И Desktop-загрузки, и Repair вызывают это через download_scheduler::run.
+#[cfg(test)]
 pub(crate) async fn download_verified(
     client: &reqwest::Client, root: &Path, file: &ManifestFile, target: &Path,
     transferred: impl Fn(u64),
@@ -518,12 +519,13 @@ mod tests {
         assert!(!fs::try_exists(&metadata).await.unwrap());
         assert_eq!(transferred.load(std::sync::atomic::Ordering::Relaxed), 20);
         server.await.unwrap();
-        let history = requests.lock().unwrap();
-        assert_eq!(history.len(), 2);
-        assert!(!history[0].to_ascii_lowercase().contains("range: bytes="));
-        assert!(history[1].to_ascii_lowercase().contains("range: bytes=8-"));
-        assert!(history[1].to_ascii_lowercase().contains("if-range: \"v1\""));
-        drop(history);
+        {
+            let history = requests.lock().unwrap();
+            assert_eq!(history.len(), 2);
+            assert!(!history[0].to_ascii_lowercase().contains("range: bytes="));
+            assert!(history[1].to_ascii_lowercase().contains("range: bytes=8-"));
+            assert!(history[1].to_ascii_lowercase().contains("if-range: \"v1\""));
+        }
         fs::remove_dir_all(root).await.unwrap();
     }
 
@@ -562,11 +564,12 @@ mod tests {
         download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap();
         assert_eq!(fs::read(target).await.unwrap(), data);
         server.await.unwrap();
-        let history = requests.lock().unwrap();
-        assert_eq!(history.len(), 3);
-        assert!(history[1].to_ascii_lowercase().contains("range: bytes=8-"));
-        assert!(!history[2].to_ascii_lowercase().contains("range: bytes="));
-        drop(history);
+        {
+            let history = requests.lock().unwrap();
+            assert_eq!(history.len(), 3);
+            assert!(history[1].to_ascii_lowercase().contains("range: bytes=8-"));
+            assert!(!history[2].to_ascii_lowercase().contains("range: bytes="));
+        }
         fs::remove_dir_all(root).await.unwrap();
     }
 
@@ -630,9 +633,10 @@ mod tests {
         download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap();
         assert_eq!(fs::read(target).await.unwrap(), data);
         server.await.unwrap();
-        let observed = history.lock().unwrap();
-        assert!(!observed[1].to_ascii_lowercase().contains("range: bytes="));
-        drop(observed);
+        {
+            let observed = history.lock().unwrap();
+            assert!(!observed[1].to_ascii_lowercase().contains("range: bytes="));
+        }
         fs::remove_dir_all(root).await.unwrap();
     }
 
@@ -700,12 +704,13 @@ mod tests {
         download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap();
         assert_eq!(fs::read(&target).await.unwrap(), data);
         server.await.unwrap();
-        let h = history.lock().unwrap();
-        assert_eq!(h.len(), 3);
-        assert!(h[1].to_ascii_lowercase().contains("range: bytes=8-"));
-        assert!(h[2].to_ascii_lowercase().contains("range: bytes=14-"));
-        assert!(h[2].to_ascii_lowercase().contains("if-range: \"stable\""));
-        drop(h);
+        {
+            let h = history.lock().unwrap();
+            assert_eq!(h.len(), 3);
+            assert!(h[1].to_ascii_lowercase().contains("range: bytes=8-"));
+            assert!(h[2].to_ascii_lowercase().contains("range: bytes=14-"));
+            assert!(h[2].to_ascii_lowercase().contains("if-range: \"stable\""));
+        }
         fs::remove_dir_all(root).await.unwrap();
     }
 
@@ -731,11 +736,12 @@ mod tests {
         primary_server.await.unwrap();
         mirror_server.await.unwrap();
         assert_eq!(primary_history.lock().unwrap().len(), 1);
-        let h = mirror_history.lock().unwrap();
-        assert_eq!(h.len(), 1);
-        assert!(h[0].to_ascii_lowercase().contains("range: bytes=8-"));
-        assert!(!h[0].to_ascii_lowercase().contains("if-range:"));
-        drop(h);
+        {
+            let h = mirror_history.lock().unwrap();
+            assert_eq!(h.len(), 1);
+            assert!(h[0].to_ascii_lowercase().contains("range: bytes=8-"));
+            assert!(!h[0].to_ascii_lowercase().contains("if-range:"));
+        }
         fs::remove_dir_all(root).await.unwrap();
     }
 
@@ -767,12 +773,13 @@ mod tests {
         assert_eq!(fs::read(&target).await.unwrap(), data);
         first_server.await.unwrap();
         second_server.await.unwrap();
-        let h = requests.lock().unwrap();
-        assert_eq!(h.len(), 2);
-        assert!(!h[0].to_ascii_lowercase().contains("if-range:"));
-        assert!(h[1].to_ascii_lowercase().contains("range: bytes=13-"));
-        assert!(h[1].to_ascii_lowercase().contains("if-range: \"origin-b\""));
-        drop(h);
+        {
+            let h = requests.lock().unwrap();
+            assert_eq!(h.len(), 2);
+            assert!(!h[0].to_ascii_lowercase().contains("if-range:"));
+            assert!(h[1].to_ascii_lowercase().contains("range: bytes=13-"));
+            assert!(h[1].to_ascii_lowercase().contains("if-range: \"origin-b\""));
+        }
         fs::remove_dir_all(root).await.unwrap();
     }
 
@@ -801,11 +808,12 @@ mod tests {
         download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap();
         assert_eq!(fs::read(&target).await.unwrap(), data);
         server.await.unwrap();
-        let h = history.lock().unwrap();
-        assert_eq!(h.len(), 3);
-        assert!(h[1].to_ascii_lowercase().contains("range: bytes=8-"));
-        assert!(!h[2].to_ascii_lowercase().contains("range: bytes="));
-        drop(h);
+        {
+            let h = history.lock().unwrap();
+            assert_eq!(h.len(), 3);
+            assert!(h[1].to_ascii_lowercase().contains("range: bytes=8-"));
+            assert!(!h[2].to_ascii_lowercase().contains("range: bytes="));
+        }
         fs::remove_dir_all(root).await.unwrap();
     }
 

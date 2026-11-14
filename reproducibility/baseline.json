@@ -1,8 +1,8 @@
 {
   "files": {
     ".gitattributes": {
-      "sha256": "887cbfa21dfd4dabdee5b55246ae23abcf7f77b17971f1fe6df795db54c4572d",
-      "size": 1350
+      "sha256": "a1ad3ed9ae4179cb88d8f670876a8ddb4a334d1d4c7d4ed8b08ed491994eac5f",
+      "size": 1522
     },
     ".github/workflows/acceptance-inventory.yml": {
       "sha256": "b2c47b5d7b28c03ddd7ad1e2db7d5063381f9eeeb4ef41e7b9394abeb0e1448b",
@@ -773,7 +773,7 @@
       "size": 2577
     },
     ".github/workflows/sqlite-postgresql-transfer.yml": {
-      "sha256": "da31c91b8a96f1e5c01a4c96b1cc919adbce97f0e35a35457d6e2594fe7725ea",
+      "sha256": "9698b70fd0376ac7df8737e53c5fc34c1e531fff6e96e0a09859d94e1016c661",
       "size": 4422
     },
     ".github/workflows/sqlite-replay-join.yml": {
@@ -869,16 +869,16 @@
       "size": 84134
     },
     "cli/cmd/launcher/templates/production.zip": {
-      "sha256": "65930dcb739e91922fe8e3498b9f5c8a78ee707ffb70b494e7f0d409beef74f3",
-      "size": 6454
+      "sha256": "5102251fc56c22a9cf1e178afddc00ad6fd4d487940c7089d75f5be6b291ea66",
+      "size": 19212
     },
     "cli/go.mod": {
       "sha256": "b424cc4ce08130d52788bda84a843b32801676069e7aadea6b8d571bc8f110b2",
       "size": 48
     },
     "cli/internal/dbmigrate/catalog.zip": {
-      "sha256": "74999fa38662d8cfeb5a03761cf13db628e86e2275ee4f66f166c04bfed7a142",
-      "size": 128340
+      "sha256": "42d9d0927c090974e1fc56f676ba0a722831c9f434c31ee8f065778ea3cdcafb",
+      "size": 367423
     },
     "deploy/production/docker-compose.yml": {
       "sha256": "95828aad8cb6fb46589b2f76062791b263039fd90f5f1bdeb0db503cdb0b8c58",
@@ -1021,8 +1021,8 @@
       "size": 15001
     },
     "scripts/build/embedded_cli_assets.py": {
-      "sha256": "d9d8015457bc00939837d42f7139fcca0298238781e12c21a9c17dca48a7f55b",
-      "size": 4468
+      "sha256": "0e2e7216947585a2885c35d843b9c60d93b4aa31041ed7723a750799284c73de",
+      "size": 4507
     },
     "scripts/ci/build-minio.sh": {
       "sha256": "e88b28a4afc8ff0dadb58d21128ceee89681a853440ef9f393a48f25b31053e3",
@@ -1879,6 +1879,10 @@
     "services/api/internal/dbmigrate/sql/0117_session_admission_role.sql": {
       "sha256": "5dd7eb78412978ffbdcb964614acf99149883c88b85272ebec12a4ff2964ba1e",
       "size": 991
+    },
+    "services/api/internal/dbmigrate/sql/0118_release_snapshot_variable.sql": {
+      "sha256": "77a73af715370df594f2d632d75560d5b780b9d5a2831807e996f4421c0b57e5",
+      "size": 3091
     },
     "settings.gradle.kts": {
       "sha256": "98aaca12745e6cfa6ad610c3f409ccd2eaa73e0e90ba9f6098b03d25b4243120",

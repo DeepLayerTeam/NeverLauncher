@@ -207,7 +207,7 @@ func TestCLIAuthorityPreflightRejectsRevocation04312(t *testing.T) {
 	if _, err := repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: st.key.ExtensionID, Scope: "global", Reason: "incident", Source: "test"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := host.enforceCLITrust04312(ctx, st); err == nil || !strings.Contains(err.Error(), "emergency-disabled") {
+	if err := host.enforceCLITrust04312(ctx, st); err == nil || !strings.Contains(err.Error(), "аварийно отключено") {
 		t.Fatalf("Аварийно отключённая установка прошла предварительную проверку CLI: %v", err)
 	}
 }

@@ -45,14 +45,15 @@ def bundle(source: Path, prefix: str, pattern: str) -> tuple[bytes, int]:
     archive_names = [names.get(p.name, p.name) for p in files]
     if len(set(archive_names)) != len(files) or any(Path(name).name != name or not name.endswith(".sql") for name in archive_names if prefix == "sql/"):
         raise ValueError("Invalid or duplicate migration names")
+    # Stored members keep archives byte-identical across Python/zlib versions.
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_STORED) as archive:
         for path in files:
             info = zipfile.ZipInfo(prefix + names.get(path.name, path.name), (1980, 1, 1, 0, 0, 0))
             info.create_system = 3
-            info.compress_type = zipfile.ZIP_DEFLATED
+            info.compress_type = zipfile.ZIP_STORED
             info.external_attr = 0o100644 << 16
-            archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_STORED)
     return buffer.getvalue(), len(files)
 
 

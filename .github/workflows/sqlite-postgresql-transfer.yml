@@ -75,7 +75,7 @@ jobs:
           python3 - "$TMPDIR/report.json" <<'PY'
           import json,sys
           r=json.load(open(sys.argv[1]))
-          assert r['sqliteSchema']==326
+          assert r['sqliteSchema']==327
           assert r['readyForBackendCutover'] is False
           assert len(r['tables']) >= 30
           PY
@@ -86,7 +86,7 @@ jobs:
           import json,sys
           r=json.load(open(sys.argv[1]))
           assert r['readyForBackendCutover'] is False
-          assert r['sqliteSchema']==326
+          assert r['sqliteSchema']==327
           PY
           if "$RUNNER_TEMP/nl-sqlite" sqlite-to-postgres --backup "$TMPDIR/cli/backup.db" --ack-staging-only; then
              echo 'ОШИБКА: существующая промежуточная схема перезаписана'; exit 1

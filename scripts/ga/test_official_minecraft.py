@@ -193,7 +193,7 @@ class OfficialGATest(unittest.TestCase):
             lambda d: d["checks"].update(logout="failed"),
             resign=True,
         )
-        with self.assertRaisesRegex(gate.GateError, "vault/lifecycle"):
+        with self.assertRaisesRegex(gate.GateError, "Не подтверждены нативное хранилище секретов ОС и жизненный цикл"):
             self.verify()
 
     def test_failed_signer_or_wrong_commit(self):
@@ -222,18 +222,18 @@ class OfficialGATest(unittest.TestCase):
         att["externalApproval"]["manuallyConfirmed"] = True
         att["checks"]["signed-native-delivery"] = "skipped"
         self.resign(folder, att)
-        with self.assertRaisesRegex(gate.GateError, "skipped GA"):
+        with self.assertRaisesRegex(gate.GateError, "Приёмочная проверка финального выпуска отсутствует, не пройдена или пропущена"):
             self.verify()
 
     def test_stale_missing_or_linked_proof_fails(self):
         with self.assertRaisesRegex(gate.GateError, "Свидетельство финального выпуска отсутствует, устарело"):
             gate.verify_all(self.root, self.pub, SHA, now=NOW + timedelta(days=15))
         (self.root / "windows-arm64" / "device.json").unlink()
-        with self.assertRaisesRegex(gate.GateError, "missing/symlinked"):
+        with self.assertRaisesRegex(gate.GateError, "Файл свидетельства отсутствует или является символической ссылкой"):
             self.verify()
 
     def test_duplicate_json_and_artifact_traversal_rejected(self):
-        with self.assertRaisesRegex(gate.GateError, "duplicate"):
+        with self.assertRaisesRegex(gate.GateError, "Повторяющееся поле JSON"):
             gate.strict_json(b'{"x":1,"x":2}')
         with self.assertRaises(gate.GateError):
             gate.file_bytes(self.root, "../secret.json", "f" * 64)
@@ -261,11 +261,11 @@ class OfficialGATest(unittest.TestCase):
             serialization.PrivateFormat.Raw,
             serialization.NoEncryption(),
         ).hex()
-        with self.assertRaisesRegex(Exception, "differs"):
+        with self.assertRaisesRegex(Exception, "Ключ подписи оператора не соответствует защищённому проверочному якорю"):
             signer.sign_attestation(folder, "e" * 64, seed, SHA)
         signer.sign_attestation(folder, self.pub, seed, SHA)
         self.assertEqual((folder / "attestation.sig").stat().st_mode & 0o777, 0o600)
-        with self.assertRaisesRegex(Exception, "already exists"):
+        with self.assertRaisesRegex(Exception, "Подпись уже существует"):
             signer.sign_attestation(folder, self.pub, seed, SHA)
 
     def test_release_has_local_approval_key(self):

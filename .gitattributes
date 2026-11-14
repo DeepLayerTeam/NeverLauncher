@@ -24,6 +24,9 @@
 *.bash text eol=lf
 *.sql text eol=lf
 *.properties text eol=lf
+# Embedded production templates are compared byte-for-byte on every platform.
+deploy/production/nginx.conf text eol=lf
+deploy/production/env.production.example text eol=lf
 *.ps1 text eol=crlf
 # This release input is hashed byte-for-byte on every platform.
 scripts/release/build-windows-desktop.ps1 text eol=lf

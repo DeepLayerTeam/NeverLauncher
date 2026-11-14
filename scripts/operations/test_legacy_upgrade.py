@@ -54,7 +54,7 @@ class UpgradeTests(unittest.TestCase):
         self.assertEqual(json.loads((b / 'inventory.json').read_text())['files'], data)
         (self.root / 'profiles' / 'prod-profile' / 'saves.dat').write_bytes(b'corrupted')
         self.assertEqual((b / 'user-data' / 'profiles' / 'prod-profile' / 'saves.dat').read_bytes(), b'\x00user-save\xff')
-        with self.assertRaisesRegex(u.LegacyUpgradeError, 'altered'):
+        with self.assertRaisesRegex(u.LegacyUpgradeError, 'Обновление изменило защищённые данные пользователя'):
             u.verify_preservation(self.root, data, ['profiles', 'settings'])
 
     def test_client_real_native_path_preserves_files_and_advances_version(self):
@@ -87,7 +87,7 @@ class UpgradeTests(unittest.TestCase):
             (self.root / 'settings' / 'preferences.json').write_text('{"projectId":"demo"}')
             return {'nativeReport': {'status': 'committed', 'toVersion': u.TARGET}}
         with patch.object(u.native, 'checked_file'), patch.object(u.native,'client_package',side_effect=apply):
-            with self.assertRaisesRegex(u.LegacyUpgradeError, 'altered'):
+            with self.assertRaisesRegex(u.LegacyUpgradeError, 'Обновление изменило защищённые данные пользователя'):
                 u.execute(self.args())
         self.assertEqual(json.loads((self.backups / 'run' / 'journal.json').read_text())['phase'], 'manual-reconciliation-required')
         self.assertIn('real-project',(self.backups / 'run' / 'user-data' / 'settings' / 'preferences.json').read_text())
@@ -195,7 +195,7 @@ class UpgradeTests(unittest.TestCase):
     def test_installed_version_mismatch_blocks_before_native_update(self):
         self.client_state('0.47.4')
         with patch.object(u.native, 'checked_file'), patch.object(u.native, 'client_package') as call:
-            with self.assertRaisesRegex(u.LegacyUpgradeError, 'SHA-256 API не совпадает'):
+            with self.assertRaisesRegex(u.LegacyUpgradeError, 'Заявленный исходный релиз отличается от установленного'):
                 u.execute(self.args(from_version='0.47.5'))
             call.assert_not_called()
 

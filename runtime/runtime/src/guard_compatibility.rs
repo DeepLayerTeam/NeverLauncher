@@ -203,7 +203,7 @@ impl GamePolicy0503 {
   self.policy.loader_class_bytes.iter().map(|c|(c.name.clone(),c.sha256.clone())).collect()
  }
  pub fn loader_libraries(&self,root:&Path,loader:&str)->Result<Vec<(std::path::PathBuf,String)>,String>{
-  let kind=loader.to_ascii_lowercase().replace('-', "").replace('_', "");
+  let kind=loader.to_ascii_lowercase().replace(['-', '_'], "");
   if !["vanilla","fabric","quilt","forge","neoforge"].contains(&kind.as_str()) {
    return Err("Guard: идентификатор загрузчика не поддерживается доверенной JVM".into())
   }

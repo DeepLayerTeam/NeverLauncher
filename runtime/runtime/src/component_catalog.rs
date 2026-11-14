@@ -6,7 +6,7 @@ use serde::{Deserialize,Serialize};
 use sha2::{Digest,Sha256};
 use std::collections::{BTreeMap,HashMap,HashSet};
 
-fn empty(s:&String)->bool{s.is_empty()}
+fn empty(s:&str)->bool{s.is_empty()}
 fn no(v:&bool)->bool{!*v}
 fn map_empty(v:&BTreeMap<String,String>)->bool{v.is_empty()}
 #[derive(Debug,Clone,Serialize,Deserialize)]
@@ -191,7 +191,7 @@ fn validate_conditions_0244(cat:&ComponentCatalog)->Result<(),String>{
         if v.java_major_min>99||v.java_major_max>99||(v.java_major_max!=0&&v.java_major_min>v.java_major_max){return Err(format!("Некорректное условие версии Java для компонента {}",c.id))}
         distinct_conditions_0244(&v.minecraft_versions,64,|s|!s.is_empty()&&s.len()<=80&&!s.bytes().any(|b|b.is_ascii_whitespace()||b==0))?;
         distinct_conditions_0244(&v.loaders,12,|s|matches!(s,"vanilla"|"fabric"|"quilt"|"forge"|"neoforge"))?;
-        distinct_conditions_0244(&v.permissions,32,|s|valid_permission_0244(s))?;
+        distinct_conditions_0244(&v.permissions,32,valid_permission_0244)?;
         for r in [&v.minecraft_version_range,&v.loader_version_range]{if !r.is_empty(){matches_range_0243("1.0.0",r)?;}}
     }
     Ok(())
@@ -276,11 +276,11 @@ fn condition_unavailable_0244(c:&CatalogComponent,env:&ComponentEnvironment0244)
     if v.java_major_min!=0&&(env.java_major==0||env.java_major<v.java_major_min){return Ok(Some(format!("Версия Java {} ниже минимальной {}",env.java_major,v.java_major_min)))}
     if v.java_major_max!=0&&(env.java_major==0||env.java_major>v.java_major_max){return Ok(Some(format!("Версия Java {} выше максимальной {}",env.java_major,v.java_major_max)))}
     if !v.minecraft_versions.is_empty()&&!v.minecraft_versions.contains(&env.minecraft_version){return Ok(Some(format!("Версия Minecraft {} не разрешена",env.minecraft_version)))}
-    if !v.minecraft_version_range.is_empty() {
-        if !matches_range_0243(&env.minecraft_version,&v.minecraft_version_range).unwrap_or(false){return Ok(Some(format!("Версия Minecraft {} не входит в диапазон {}",env.minecraft_version,v.minecraft_version_range)))}
+    if !v.minecraft_version_range.is_empty() && !matches_range_0243(&env.minecraft_version,&v.minecraft_version_range).unwrap_or(false) {
+        return Ok(Some(format!("Версия Minecraft {} не входит в диапазон {}",env.minecraft_version,v.minecraft_version_range)))
     }
     if !v.loaders.is_empty()&&!v.loaders.contains(&env.loader){return Ok(Some(format!("Загрузчик {} не разрешён",env.loader)))}
-    if !v.loader_version_range.is_empty(){if !matches_range_0243(&env.loader_version,&v.loader_version_range).unwrap_or(false){return Ok(Some(format!("Версия загрузчика {} не входит в диапазон {}",env.loader_version,v.loader_version_range)))}}
+    if !v.loader_version_range.is_empty() && !matches_range_0243(&env.loader_version,&v.loader_version_range).unwrap_or(false){return Ok(Some(format!("Версия загрузчика {} не входит в диапазон {}",env.loader_version,v.loader_version_range)))}
     for name in &v.permissions{if !env.verified_permissions.contains(name){return Ok(Some(format!("Отсутствует подтверждённое разрешение: {name}")))}}
     Ok(None)
 }
@@ -606,7 +606,7 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
         let resolved=if cat.schema_version=="4.0"||cat.schema_version=="5.0"{
             resolve_conditional_0244(cat,preset.unwrap_or_default(),&verified_environment_0392(m))?
         }else{resolve_graph_v3(cat,preset.unwrap_or_default())?};
-        for c in &cat.components {if resolved.contains(c.id.as_str()) {active.extend(crate::component_actions_0245::effective_files(c).into_iter());}}
+        for c in &cat.components {if resolved.contains(c.id.as_str()) {active.extend(crate::component_actions_0245::effective_files(c));}}
         return Ok(active)
     }
     if cat.schema_version=="1.0"{

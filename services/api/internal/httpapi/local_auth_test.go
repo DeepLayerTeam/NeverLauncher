@@ -112,7 +112,7 @@ func TestImportedFileAuthYggdrasilLoginPreservesUUID0295(t *testing.T) {
 		h.ServeHTTP(result, req)
 		return result
 	}
-	if result := makeRequest("wrong-password"); result.Code != http.StatusForbidden {
+	if result := makeRequest("wrong-password"); result.Code != http.StatusUnauthorized {
 		t.Fatalf("Неверный статус при ошибочном пароле: %d", result.Code)
 	}
 	result := makeRequest("Known-gravit-password")

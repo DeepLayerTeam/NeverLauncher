@@ -133,7 +133,7 @@ func TestExtensionHostCrashLoopDetection0205(t *testing.T) {
 	store := storage.NewLocalStorage(filepath.Join(t.TempDir(), "storage"))
 	install := hostFixtureInstall0205(t, repo, root, "example.crashhost", true)
 	// Автоматический перезапуск повторно читает постоянное состояние, поэтому сохраняйте статус активного жизненного цикла.
-	_, err := repo.TransitionExtensionInstall(context.Background(), model.ExtensionLifecycleTransition{ExtensionID: install.ExtensionID, Scope: "global", DesiredVersion: "1.0.0", CurrentVersion: "1.0.0", DesiredState: model.ExtensionInstallStateEnabled, CurrentState: model.ExtensionInstallStateEnabled, Enabled: true, Operation: "enable", Source: "test", ExpectedGeneration: 0})
+	install, err := repo.TransitionExtensionInstall(context.Background(), model.ExtensionLifecycleTransition{ExtensionID: install.ExtensionID, Scope: "global", DesiredVersion: "1.0.0", CurrentVersion: "1.0.0", DesiredState: model.ExtensionInstallStateEnabled, CurrentState: model.ExtensionInstallStateEnabled, Enabled: true, Operation: "enable", Source: "test", ExpectedGeneration: 0})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func TestExtensionHostCrashLoopDetection0205(t *testing.T) {
 		_ = host.Close(ctx)
 	})
 	err = host.StartInstallation(context.Background(), install)
-	if err != nil && !strings.Contains(err.Error(), "exited") {
+	if err != nil && !strings.Contains(err.Error(), "завершил") {
 		t.Fatalf("Первоначальный запуск: %v", err)
 	}
 	deadline := time.Now().Add(5 * time.Second)
@@ -170,7 +170,7 @@ func TestExtensionHostCrashLoopDetection0205(t *testing.T) {
 			if _, err := repo.GetExtensionEmergencyDisable(context.Background(), install.ExtensionID, "global", ""); err != nil {
 				t.Fatalf("Отсутствует сохранённое экстренное отключение: %v", err)
 			}
-			if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "emergency-disabled") {
+			if err := host.StartInstallation(context.Background(), install); err == nil || !strings.Contains(err.Error(), "аварийно отключено") {
 				t.Fatalf("Расширение перезапущено после повторных сбоев вопреки аварийному выключателю: %v", err)
 			}
 			return

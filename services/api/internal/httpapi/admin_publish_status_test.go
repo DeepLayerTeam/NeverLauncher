@@ -50,6 +50,8 @@ func TestAdminPreparePublishUsesPersistedIntegrityStatus0213(t *testing.T) {
 	// Повторите канонический конвейер sign -> stage -> integrity-check
 	// до начала административной транзакции публикации.
 	manifest := current.Manifest
+	manifest.Minecraft = model.MinecraftInfo{Version: "1.21.1", Loader: "vanilla", MainClass: "net.minecraft.client.main.Main"}
+	manifest.Runtime = model.RuntimeInfo{Java: model.JavaInfo{MajorVersion: 21, Distribution: "any"}, Launch: model.RuntimeLaunch{MainClass: "net.minecraft.client.main.Main", ClasspathStrategy: "libraries"}}
 	manifest.Files = []model.ManifestFile{{Path: "client/data.jar", URL: "http://127.0.0.1/api/v1/files/" + release.ProjectID + "/" + release.ID + "/" + key, Size: size, SHA256: hex.EncodeToString(sum[:]), Required: true}}
 	signed, err := srv.signManifest(manifest)
 	if err != nil {

@@ -39,6 +39,7 @@ fn insert_pin(pins:&mut BTreeMap<String,(String,&'static str)>,root:&Path,path:&
 }
 /// Точные идентичности нативных библиотек для живого Windows Module Guard. Учитываются только
 /// подписанные манифестом или отдельно разрешённые Ed25519 артефакты Guard.
+#[cfg(windows)]
 pub fn signed_native_pins(manifest:&Manifest,root:&Path)->Result<Option<Vec<(std::path::PathBuf,String)>>,String>{
     let Some(policy)=crate::guard_compatibility_0502::verified_for_game(root,&manifest.project_id,
         &manifest.minecraft.version,&manifest.minecraft.loader)? else{return Ok(None)};

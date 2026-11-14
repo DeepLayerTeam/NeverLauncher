@@ -128,7 +128,7 @@ fn lock(root: &Path) -> Result<fs::File, String> {
     safe_dir(&root, &base(&root))?;
     let path = base(&root).join("release.lock");
     file_ownership::ensure_no_symlinks(&root, &path)?;
-    let file = fs::OpenOptions::new().read(true).write(true).create(true).open(path).map_err(|e| e.to_string())?;
+    let file = fs::OpenOptions::new().read(true).write(true).create(true).truncate(false).open(path).map_err(|e| e.to_string())?;
     file.try_lock_exclusive().map_err(|e| format!("Файлы релиза заняты (возможно, запущен Minecraft): {e}"))?;
     Ok(file)
 }
@@ -294,7 +294,7 @@ fn restore(root: &Path, j: &Journal) -> Result<(), String> {
         if let Some(ref digest) = e.old_sha256 {
             let saved = safe_join(&back, &e.path)?;
             file_ownership::ensure_no_symlinks(root, &saved)?;
-            if hash(&saved)?.to_ascii_lowercase() != digest.to_ascii_lowercase() {
+            if !hash(&saved)?.eq_ignore_ascii_case(digest) {
                 return Err(format!("Резервная копия последней работоспособной версии повреждена: {}", e.path));
             }
         }
@@ -411,7 +411,7 @@ pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -
         safe_dir(&root, &base(&root))?;
         let path = base(&root).join("release.lock");
         file_ownership::ensure_no_symlinks(&root, &path)?;
-        let file = fs::OpenOptions::new().read(true).write(true).create(true).open(&path).map_err(|e| e.to_string())?;
+        let file = fs::OpenOptions::new().read(true).write(true).create(true).truncate(false).open(&path).map_err(|e| e.to_string())?;
         // Сначала восстановите данные, если игра не запущена. Если другая игра удерживает
         // общую аренду, журнал уже должен быть завершён.
         match file.try_lock_exclusive() {
@@ -1451,7 +1451,8 @@ mod tests {
         let (new_manifest,_) = fixture(&root,"new",&[("libraries/core.jar",b"NEXT")]);
         let next = Release { manifest:new_manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",62),preset:None,plan_sha256:None };
         let dest = root.join("libraries/core.jar");
-        let mut permissions = fs::metadata(&dest).unwrap().permissions();
+        let original_permissions = fs::metadata(&dest).unwrap().permissions();
+        let mut permissions = original_permissions.clone();
         permissions.set_readonly(true);
         fs::set_permissions(&dest, permissions).unwrap();
         let before = journal(&root).unwrap().unwrap().generation;
@@ -1459,9 +1460,7 @@ mod tests {
         assert_eq!(journal(&root).unwrap().unwrap().generation, before);
         assert_eq!(fs::read(&dest).unwrap(),b"OLD");
         assert_eq!(pointer(&root).unwrap().active.unwrap().manifest.version,"base");
-        let mut permissions = fs::metadata(&dest).unwrap().permissions();
-        permissions.set_readonly(false);
-        fs::set_permissions(&dest, permissions).unwrap();
+        fs::set_permissions(&dest, original_permissions).unwrap();
         let _ = fs::remove_dir_all(root);
     }
 

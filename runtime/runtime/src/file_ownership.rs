@@ -94,7 +94,7 @@ pub fn protected(p: &str) -> bool {
 }
 
 pub fn validate_policy(m: &Manifest) -> Result<(), String> {
-    if (m.schema_version != "2.0" && m.schema_version != "3.0") { return Ok(()); }
+    if m.schema_version != "2.0" && m.schema_version != "3.0" { return Ok(()); }
     validate_name_collisions(m.files.iter().map(|f| f.path.clone()))?;
     let mut seen = HashSet::new();
     for f in &m.files {
@@ -113,10 +113,10 @@ pub fn validate_policy(m: &Manifest) -> Result<(), String> {
            (r.action == "exclude" && !matches!(r.ownership.as_str(), "user-owned" | "generated")) { return Err(format!("Некорректная принадлежность файла в правиле: {}",r.pattern)) }
         if r.action == "include" && protected(r.pattern.strip_suffix("/**").unwrap_or(&r.pattern)) { return Err(format!("Правило включения затрагивает защищённые данные: {}",r.pattern)) }
         if m.file_rules[..i].iter().any(|prev| overlap(&prev.pattern, &r.pattern)) { return Err(format!("Пересекающиеся правила: {}",r.pattern)) }
-        for f in &m.files { if matches(&r.pattern,&f.path) {
-            if (r.action == "exclude" && !matches!(effective_ownership(f), "user-owned" | "generated")) ||
-               (r.action == "include" && matches!(effective_ownership(f), "user-owned" | "generated")) { return Err(format!("Правило для файлов конфликтует с файлом: {}",f.path)) }
-        } }
+        for f in &m.files {
+            if matches(&r.pattern,&f.path) && ((r.action == "exclude" && !matches!(effective_ownership(f), "user-owned" | "generated")) ||
+               (r.action == "include" && matches!(effective_ownership(f), "user-owned" | "generated"))) { return Err(format!("Правило для файлов конфликтует с файлом: {}",f.path)) }
+        }
     }
     Ok(())
 }
@@ -142,13 +142,12 @@ pub fn can_quarantine(m: &Manifest, path: &str) -> bool {
 // повторного разбора могут перенаправлять ввод-вывод, даже когда
 // Metadata::file_type().is_symlink() возвращает false.
 fn is_link_or_reparse(meta: &std::fs::Metadata) -> bool {
-    if meta.file_type().is_symlink() { return true; }
     #[cfg(windows)] {
         use std::os::windows::fs::MetadataExt;
         const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
         if meta.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 { return true; }
     }
-    false
+    meta.file_type().is_symlink()
 }
 
 // Никогда не читайте через символические ссылки родительских каталогов
@@ -172,6 +171,23 @@ pub fn ensure_no_symlinks(root: &Path, target: &Path) -> Result<(), String> {
             Ok(_) => (),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => break,
             Err(e) => return Err(format!("{}: {e}",cur.display())),
+        }
+    }
+    Ok(())
+}
+
+// Проверяется при подписании релиза и повторно перед любым изменением
+// сети или файловой системы.
+pub fn validate_download_targets(m: &Manifest) -> Result<(), String> {
+    validate_name_collisions(m.files.iter().map(|f| f.path.clone()))?;
+    for f in &m.files {
+        if !valid_path(&f.path, false) { return Err(format!("Небезопасный путь к управляемому файлу: {}", f.path)); }
+        if !matches!(effective_ownership(f), "required" | "managed" | "optional") { continue }
+        let decoded = hex::decode(&f.sha256).map_err(|_| format!("Некорректное значение: «SHA-256: {}»",f.path))?;
+        if decoded.len() != 32 {return Err(format!("Некорректная длина SHA-256 для файла: {}",f.path))}
+        let url = reqwest::Url::parse(&f.url).map_err(|e| format!("Некорректный URL загрузки файла {}: {e}",f.path))?;
+        if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
+            return Err(format!("Небезопасный URL загрузки файла: {}",f.path));
         }
     }
     Ok(())
@@ -248,21 +264,4 @@ mod tests {
         assert!(ensure_no_symlinks(&dir,&dir.join("mods/x.jar")).is_err());
         std::fs::remove_dir_all(&dir).unwrap();
     }
-}
-
-// Проверяется при подписании релиза и повторно перед любым изменением
-// сети или файловой системы.
-pub fn validate_download_targets(m: &Manifest) -> Result<(), String> {
-    validate_name_collisions(m.files.iter().map(|f| f.path.clone()))?;
-    for f in &m.files {
-        if !valid_path(&f.path, false) { return Err(format!("Небезопасный путь к управляемому файлу: {}", f.path)); }
-        if !matches!(effective_ownership(f), "required" | "managed" | "optional") { continue }
-        let decoded = hex::decode(&f.sha256).map_err(|_| format!("Некорректное значение: «SHA-256: {}»",f.path))?;
-        if decoded.len() != 32 {return Err(format!("Некорректная длина SHA-256 для файла: {}",f.path))}
-        let url = reqwest::Url::parse(&f.url).map_err(|e| format!("Некорректный URL загрузки файла {}: {e}",f.path))?;
-        if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
-            return Err(format!("Небезопасный URL загрузки файла: {}",f.path));
-        }
-    }
-    Ok(())
 }

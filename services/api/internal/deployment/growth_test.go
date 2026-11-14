@@ -95,7 +95,7 @@ func TestS3CrossClientProbeAndCleanup03212(t *testing.T) {
 	}
 	fake.corrupt = true
 	fake.mu.Unlock()
-	if err := verifyS3Growth(ctx, cfg); err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
+	if err := verifyS3Growth(ctx, cfg); err == nil || !strings.Contains(err.Error(), "Не совпадает содержимое или контрольная сумма S3") {
 		t.Fatalf("Некорректное чтение повреждённых данных S3 принято: %v", err)
 	}
 	fake.mu.Lock()
@@ -105,7 +105,7 @@ func TestS3CrossClientProbeAndCleanup03212(t *testing.T) {
 	fake.corrupt = false
 	fake.denyDelete = true
 	fake.mu.Unlock()
-	if err := verifyS3Growth(ctx, cfg); err == nil || !strings.Contains(err.Error(), "remove S3 probe object") {
+	if err := verifyS3Growth(ctx, cfg); err == nil || !strings.Contains(err.Error(), "Удаление тестового объекта S3") {
 		t.Fatalf("Неудачная очистка ошибочно принята: %v", err)
 	}
 }

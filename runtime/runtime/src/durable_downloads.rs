@@ -312,10 +312,11 @@ mod tests {
         assert_eq!(fs::read(root.join("libraries/large.jar")).await.unwrap(), payload);
         assert!(pending(&root, &trust_key).await.unwrap().is_none());
         server.await.unwrap();
-        let requests = requests.lock().unwrap();
-        assert!(requests[1].to_ascii_lowercase().contains("range: bytes=8-"));
-        assert!(requests[1].to_ascii_lowercase().contains("if-range: \"v1\""));
-        drop(requests);
+        {
+            let requests = requests.lock().unwrap();
+            assert!(requests[1].to_ascii_lowercase().contains("range: bytes=8-"));
+            assert!(requests[1].to_ascii_lowercase().contains("if-range: \"v1\""));
+        }
         fs::remove_dir_all(root).await.unwrap();
     }
 }

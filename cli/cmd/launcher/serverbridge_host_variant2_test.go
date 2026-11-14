@@ -159,6 +159,7 @@ func TestHost0282IdentityRecoveryAndStalePID(t *testing.T) {
 
 func TestHost0282CrashLoopWindowAndLogRotation(t *testing.T) {
 	root, java := hostFixture0282(t, `echo "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+sleep 0.2
 exit 8`)
 	if err := configureServerBridgeHost01910([]string{"--server-root", root, "--platform", "paper", "--server-jar", "paper.jar", "--java", java, "--restart-policy", "on-failure", "--max-restarts", "2", "--restart-backoff-ms", "10", "--crash-window-seconds", "120", "--log-max-bytes", "1024", "--log-backups", "2"}); err != nil {
 		t.Fatal(err)

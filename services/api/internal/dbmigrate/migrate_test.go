@@ -30,7 +30,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("Неожиданный статус: %+v", st)
 	}
-	if st.Current != "0117_session_admission_role" {
+	if st.Current != "0118_release_snapshot_variable" {
 		t.Fatalf("Неожиданная текущая миграция %q", st.Current)
 	}
 }

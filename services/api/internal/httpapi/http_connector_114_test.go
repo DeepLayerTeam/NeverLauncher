@@ -88,7 +88,7 @@ func TestFederationCore114RegistersAndAuthenticatesHTTPProvider(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Provider.ID != "cms" || result.Identity.Subject != "cms-user-42" || result.User.Email != "player@example.test" {
+	if result.Provider.ID != "cms" || result.Identity.Subject != "cms-user-42" || result.Identity.Email != "player@example.test" || !strings.HasSuffix(result.User.Email, "@identity.invalid") {
 		t.Fatalf("Неожиданный результат федерации: %+v", result)
 	}
 	if result.User.PasswordHash != "" {

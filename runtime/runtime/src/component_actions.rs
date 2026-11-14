@@ -33,11 +33,11 @@ pub fn digest_v5(cat:&ComponentCatalog)->String {
 }
 
 fn safe_argument(t:&str,arg:&str)->bool {
-    if arg.is_empty()||arg.len()>256||arg.bytes().any(|b|b<33||b>126||b"@\\\"'`$;|&<>".contains(&b)){return false}
+    if arg.is_empty()||arg.len()>256||arg.bytes().any(|b|!(33..=126).contains(&b)||b"@\\\"'`$;|&<>".contains(&b)){return false}
     if t=="JvmArgs" {
         if matches!(arg,"-ea"|"-da"|"-XX:+UseG1GC"){return true}
         if let Some(n)=arg.strip_prefix("-XX:MaxGCPauseMillis=") {
-            return n.parse::<u32>().is_ok_and(|n|n>=1&&n<=10000)&&!n.starts_with('+');
+            return n.parse::<u32>().is_ok_and(|n|(1..=10000).contains(&n))&&!n.starts_with('+');
         }
         let Some(prop)=arg.strip_prefix("-D") else {return false};
         let Some((key,value))=prop.split_once('=') else {return false};

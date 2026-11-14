@@ -2,7 +2,7 @@
 //! Каждому файлу очереди выделяется один слот обработчика; разрешение хоста
 //! захватывается до его запуска. Тело HTTP не накапливается в памяти,
 //! а запись на диск естественным образом создаёт обратное давление.
-use crate::{content_cache::{self, CacheStore}, file_ownership, manifest_file_applies, safe_join, sha256_file, network_resilience::{self, Directive},
+use crate::{content_cache::CacheStore, file_ownership, manifest_file_applies, safe_join, sha256_file, network_resilience::{self, Directive},
     DownloadResult, Manifest, ManifestFile};
 use serde::Serialize;
 #[cfg(test)]
@@ -207,6 +207,7 @@ fn file_host(url: &str) -> Result<String, String> {
 // Блокировка содержимого удерживается на всём протяжении операции,
 // включая зеркала и публикацию: два профиля не могут одновременно скачивать
 // один объект с одинаковым SHA-256.
+#[allow(clippy::too_many_arguments)] // Explicit operation context and cancellation inputs.
 async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Statistics,
     mut control: watch::Receiver<Directive>, initial_permits: (OwnedSemaphorePermit, OwnedSemaphorePermit),
     local_hosts: &HashMap<String, Arc<Semaphore>>,
@@ -649,20 +650,21 @@ mod tests {
                 format!("file:/{i}"));
         }
         assert!(!root.join("libraries/7.jar").exists());
-        let events = events.lock().unwrap();
-        assert!(events.iter().any(|p| p.phase == "downloading"));
-        let final_event = events.last().unwrap();
-        assert_eq!(final_event.phase, "failed");
-        assert_eq!(final_event.completed, 7);
-        assert_eq!(final_event.failed, 1);
-        assert_eq!(final_event.active, 0);
-        assert_eq!(final_event.queued, 0);
-        assert_eq!(final_event.bytes_transferred, result.bytes_downloaded);
-        assert_eq!(final_event.bytes_verified, (0..7).map(|i| format!("file:/{i}").len() as u64).sum::<u64>());
-        assert!(final_event.bytes_verified < final_event.bytes_expected);
-        assert_eq!(final_event.eta_seconds, None);
-        assert!(events.iter().all(|e| e.bytes_verified <= e.bytes_expected));
-        drop(events);
+        {
+            let events = events.lock().unwrap();
+            assert!(events.iter().any(|p| p.phase == "downloading"));
+            let final_event = events.last().unwrap();
+            assert_eq!(final_event.phase, "failed");
+            assert_eq!(final_event.completed, 7);
+            assert_eq!(final_event.failed, 1);
+            assert_eq!(final_event.active, 0);
+            assert_eq!(final_event.queued, 0);
+            assert_eq!(final_event.bytes_transferred, result.bytes_downloaded);
+            assert_eq!(final_event.bytes_verified, (0..7).map(|i| format!("file:/{i}").len() as u64).sum::<u64>());
+            assert!(final_event.bytes_verified < final_event.bytes_expected);
+            assert_eq!(final_event.eta_seconds, None);
+            assert!(events.iter().all(|e| e.bytes_verified <= e.bytes_expected));
+        }
         a.task.abort();
         b.task.abort();
         fs::remove_dir_all(&root).await.unwrap();
@@ -781,11 +783,12 @@ mod concurrent_operations_tests {
         assert_eq!(result.bytes_downloaded, 20, "после сбоя должны были передаваться только недостающие данные");
         assert_eq!(fs::read(root.join("libraries/retry.jar")).await.unwrap(), bytes);
         server.await.unwrap();
-        let requests = requests.lock().unwrap();
-        assert_eq!(requests.len(), 3);
-        assert!(requests[2].to_ascii_lowercase().contains("range: bytes=8-"));
-        assert!(requests[2].to_ascii_lowercase().contains("if-range: \"stable\""));
-        drop(requests);
+        {
+            let requests = requests.lock().unwrap();
+            assert_eq!(requests.len(), 3);
+            assert!(requests[2].to_ascii_lowercase().contains("range: bytes=8-"));
+            assert!(requests[2].to_ascii_lowercase().contains("if-range: \"stable\""));
+        }
         fs::remove_dir_all(root).await.unwrap();
     }
 

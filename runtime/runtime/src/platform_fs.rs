@@ -165,22 +165,20 @@ mod tests {
         fs::create_dir_all(root.join("Mods")).unwrap();
         fs::write(root.join("Mods/a.jar"), b"PLAYER").unwrap();
         assert!(preflight_targets(&root, &[root.join("mods/a.jar")]).is_err());
-        let mut permissions = fs::metadata(root.join("Mods/a.jar")).unwrap().permissions();
+        let original_permissions = fs::metadata(root.join("Mods/a.jar")).unwrap().permissions();
+        let mut permissions = original_permissions.clone();
         permissions.set_readonly(true);
         fs::set_permissions(root.join("Mods/a.jar"), permissions).unwrap();
         assert!(check_target(&root, &root.join("Mods/a.jar")).is_err());
         // Windows может не удалить файл только для чтения даже от имени владельца.
-        let mut permissions = fs::metadata(root.join("Mods/a.jar")).unwrap().permissions();
-        permissions.set_readonly(false);
-        fs::set_permissions(root.join("Mods/a.jar"), permissions).unwrap();
+        fs::set_permissions(root.join("Mods/a.jar"), original_permissions).unwrap();
         #[cfg(unix)] {
-            let mut dir_permissions = fs::metadata(root.join("Mods")).unwrap().permissions();
+            let original_dir_permissions = fs::metadata(root.join("Mods")).unwrap().permissions();
+            let mut dir_permissions = original_dir_permissions.clone();
             dir_permissions.set_readonly(true);
             fs::set_permissions(root.join("Mods"), dir_permissions).unwrap();
             assert!(check_target(&root, &root.join("Mods/a.jar")).is_err());
-            let mut dir_permissions = fs::metadata(root.join("Mods")).unwrap().permissions();
-            dir_permissions.set_readonly(false);
-            fs::set_permissions(root.join("Mods"), dir_permissions).unwrap();
+                    fs::set_permissions(root.join("Mods"), original_dir_permissions).unwrap();
         }
         fs::remove_dir_all(root).unwrap();
     }

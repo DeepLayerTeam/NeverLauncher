@@ -79,7 +79,7 @@ fn config_text(main: &str, plugins: &[(PathBuf, String)], transforms: &[(String,
         return Err("Guard Trusted JVM: некорректный идентификатор загрузчика".into());
     }
     if libraries.len()>128 {return Err("Превышен лимит библиотек загрузчика доверенной JVM для Guard".into())}
-    text.push_str(&format!("loader.id={}\nloader.count={}\n", loader.to_ascii_lowercase().replace('-', "").replace('_', ""), libraries.len()));
+    text.push_str(&format!("loader.id={}\nloader.count={}\n", loader.to_ascii_lowercase().replace(['-', '_'], ""), libraries.len()));
     for (i, (path,digest)) in libraries.iter().enumerate() {
         if !is_digest(digest) {return Err("Некорректное значение: хеш библиотеки загрузчика Guard".into())}
         text.push_str(&format!("loader.{i}.path={}\nloader.{i}.sha256={digest}\n", STANDARD.encode(path.to_string_lossy().as_bytes())));

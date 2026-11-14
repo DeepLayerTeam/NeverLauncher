@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -58,7 +59,9 @@ class TestGameJoinEvidence(unittest.TestCase):
         self.assertEqual(evidence["matchingEvents"], 1)
         target = self.root / "evidence.json"
         module.save_private_exclusive(target, evidence)
-        self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+        if os.name != "nt":  # Windows stat reports DOS flags, not the file DACL.
+            self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(json.loads(target.read_text(encoding="utf-8")), evidence)
         with self.assertRaises(FileExistsError):
             module.save_private_exclusive(target, evidence)
 

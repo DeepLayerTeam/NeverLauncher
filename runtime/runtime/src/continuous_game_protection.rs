@@ -217,9 +217,8 @@ pub async fn wait_protected(child: &mut Child, guard: LiveGameGuard0506,
             let _=child.wait().await;
             return Ok(ProtectedExit0506{status:None,timed_out:true,violation:None});
         }
-        match timeout(wait_for, child.wait()).await {
-            Ok(result) => return Ok(ProtectedExit0506{status:Some(result.map_err(|e|e.to_string())?),timed_out:false,violation:None}),
-            Err(_) => (),
+        if let Ok(result) = timeout(wait_for, child.wait()).await {
+            return Ok(ProtectedExit0506{status:Some(result.map_err(|e|e.to_string())?),timed_out:false,violation:None});
         }
         if deadline.map(|d|Instant::now()>=d).unwrap_or(false) {continue}
         let check = tokio::task::spawn_blocking({let guard=guard.clone(); move ||guard.verify()}).await

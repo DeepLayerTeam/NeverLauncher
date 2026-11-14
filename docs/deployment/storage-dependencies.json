@@ -19966,6 +19966,41 @@
       ]
     },
     {
+      "path": "services/api/internal/dbmigrate/sql/0118_release_snapshot_variable.sql",
+      "findings": [
+        {
+          "category": "postgresql-migration-file",
+          "line": 1,
+          "evidence": "-- Correct ambiguous PL/pgSQL variable in the release snapshot guard without altering applied migrations."
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 3,
+          "evidence": "DECLARE snap JSONB;"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 4,
+          "evidence": "DECLARE snapshot_spec JSONB;"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 34,
+          "evidence": "jsonb_typeof(snap-\u003e'revision') IS DISTINCT FROM 'number' OR"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 49,
+          "evidence": "jsonb_typeof(NEW.manifest-\u003e'componentCatalog'-\u003e'components') IS DISTINCT FROM 'array' OR"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 50,
+          "evidence": "jsonb_typeof(NEW.manifest-\u003e'componentCatalog'-\u003e'revision') IS DISTINCT FROM 'number' OR"
+        }
+      ]
+    },
+    {
       "path": "services/api/internal/deployment/growth.go",
       "findings": [
         {

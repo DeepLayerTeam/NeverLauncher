@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -169,7 +170,11 @@ func (s Server) reconcileSessionDeviceRisk0126(r *http.Request, rec authSessionR
 			// Необязательное наблюдение HWID — не аттестация. Сбой хранилища не вызывает
 			// массовый отзыв или автоматическую блокировку.
 			if store, ok := s.Repo.(repository.HWIDStore0299); ok {
-				observation, hwidErr := store.GetHWID0299(r.Context(), rec.UserID, rec.TrustedDeviceID, now)
+				ctx := context.Background()
+				if r != nil {
+					ctx = r.Context()
+				}
+				observation, hwidErr := store.GetHWID0299(ctx, rec.UserID, rec.TrustedDeviceID, now)
 				if hwidErr == nil && observation.State == "changed" {
 					reasons = mergeRiskReasons118(reasons, "hwid-signal-changed")
 				} else if hwidErr == nil && observation.State == "recognized" {

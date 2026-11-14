@@ -6,7 +6,7 @@ use crate::{file_ownership, replace_verified_managed_file_0224, set_executable_i
 use fs2::FileExt;
 use sha2::{Digest, Sha256};
 use std::{collections::HashMap, path::{Path, PathBuf}, sync::{Arc, Mutex, OnceLock, Weak}};
-use tokio::{fs, io::{AsyncReadExt, AsyncWriteExt}, sync::{Mutex as AsyncMutex, OwnedMutexGuard}};
+use tokio::{fs, io::AsyncReadExt, sync::{Mutex as AsyncMutex, OwnedMutexGuard}};
 
 static OBJECT_LOCKS: OnceLock<Mutex<HashMap<String, Weak<AsyncMutex<()>>>>> = OnceLock::new();
 
@@ -102,7 +102,7 @@ impl CacheStore {
         // Блокирующая блокировка захватывается вне асинхронного исполнителя. Блокировки файлов
         // действуют в масштабе ОС и автоматически снимаются при завершении процесса.
         let handle = tokio::task::spawn_blocking(move || -> Result<std::fs::File, String> {
-            let handle = std::fs::OpenOptions::new().read(true).write(true).create(true)
+            let handle = std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(false)
                 .open(&lockpath).map_err(|e| format!("Не удалось открыть блокировку кеша: {e}"))?;
             handle.lock_exclusive().map_err(|e| format!("Не удалось заблокировать объект кеша: {e}"))?;
             Ok(handle)

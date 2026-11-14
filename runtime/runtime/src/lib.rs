@@ -494,7 +494,7 @@ pub struct LaunchPreferences {
 }
 
 pub fn validate_launch_preferences(manifest: &Manifest, p: &LaunchPreferences, authenticated: bool) -> Result<(), String> {
-    if (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") { return Err("Для настроек запуска Desktop необходим подписанный манифест v2/v3".into()); }
+    if manifest.schema_version != "2.0" && manifest.schema_version != "3.0" { return Err("Для настроек запуска Desktop необходим подписанный манифест v2/v3".into()); }
     if p.offline {
         if authenticated || !manifest.runtime.launch.offline_mode {
             return Err("Автономный запуск не разрешён подписанным профилем".into());
@@ -1128,6 +1128,7 @@ pub async fn launch_with_timeout_matching(
 
 /// Аутентифицированная проверка подготовленного выпуска использует те же защищённые
 /// Java Runtime и неизменяемую установку релиза, что и обычный лаунчер. Без дополнительного загрузчика.
+#[allow(clippy::too_many_arguments)] // Public launch API: explicit identity and trust inputs.
 pub async fn launch_with_timeout_matching_authenticated(
     manifest: &Manifest, root: &Path, java_path: Option<String>,
     username: Option<String>, pinned_public_key: &str, max_runtime_seconds: Option<u64>,
@@ -1309,7 +1310,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     launch_identity_0269::identity(credentials)?;
     let offline_username_0269 = username.clone().unwrap_or_else(|| "Player".into());
     let strategy = manifest.runtime.launch.classpath_strategy.trim().to_ascii_lowercase();
-    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") { validate_runtime_constraints_0223(manifest)?; }
+    if manifest.schema_version == "2.0" || manifest.schema_version == "3.0" { validate_runtime_constraints_0223(manifest)?; }
     let mut required_java = manifest.runtime.java.major_version;
     if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") && manifest.runtime.java.recommended_major_version > 0 {
         required_java = manifest.runtime.java.recommended_major_version;
@@ -1326,7 +1327,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             "natives"
         };
         let natives_base = manifest_directory(root, natives_name, "natives")?;
-        let natives_dir = if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
+        let natives_dir = if manifest.schema_version == "2.0" || manifest.schema_version == "3.0" {
             signed_platform_natives_directory_0227(manifest, root, &natives_base)?
         } else {
             platform_natives_directory(&natives_base).await
@@ -1389,7 +1390,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         create_manifest_launch_plan(manifest, root, "", credentials.map(|c| c.username.clone()).or(username), credentials).await?
     };
 
-    if (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") {
+    if manifest.schema_version != "2.0" && manifest.schema_version != "3.0" {
         if let Some(credentials) = credentials {
             apply_minecraft_auth119(manifest, root, credentials, &mut plan)?;
         }
@@ -1406,7 +1407,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     )
     .await?;
     plan.java_executable = java_executable;
-    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
+    if manifest.schema_version == "2.0" || manifest.schema_version == "3.0" {
         let java = &manifest.runtime.java;
         if (java.minimum_major_version > 0 && required_java < java.minimum_major_version) ||
            (java.maximum_major_version > 0 && required_java > java.maximum_major_version) {
@@ -1414,7 +1415,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         }
     }
 
-    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
+    if manifest.schema_version == "2.0" || manifest.schema_version == "3.0" {
         apply_explicit_paths_0223(manifest, root, &mut plan)?;
         component_actions_0245::apply_installed_actions(manifest, root, &mut plan)?;
         verify_launch_inputs_0227(manifest, root, &plan, &verified_metadata_paths).await?;
@@ -1423,7 +1424,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         validate_memory_arguments_0223(&manifest.runtime.memory, &plan.jvm_args)?;
     }
     apply_memory_policy(&manifest.runtime.memory, &mut plan.jvm_args);
-    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
+    if manifest.schema_version == "2.0" || manifest.schema_version == "3.0" {
         validate_memory_arguments_0223(&manifest.runtime.memory, &plan.jvm_args)?;
         // Инъектор authlib — внутренний доверенный аргумент, полученный только из закреплённого
         // подписанного артефакта манифеста. Не считайте его пользовательскими аргументами.
@@ -1449,7 +1450,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     if credentials.is_none() && launch_identity_0269::forbidden_auth_agent(&plan.jvm_args) {
         return Err("Автономная игра не может загружать агент сетевой авторизации".into());
     }
-    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
+    if manifest.schema_version == "2.0" || manifest.schema_version == "3.0" {
         // Идентичность воспроизводимого плана охватывает разрешённые метаданные, порядок и
         // параметры, но намеренно исключает локальные корни установки и секреты авторизации.
         plan.deterministic_sha256 = deterministic_launch::plan_digest(manifest, root, required_java, &plan, credentials)?;

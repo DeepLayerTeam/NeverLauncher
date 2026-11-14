@@ -111,7 +111,7 @@ func TestSymlinkAndUnsafePermissionsRejected(t *testing.T) {
 	if err := os.Chmod(filepath.Dir(p.LockPath), 0777); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Acquire(p); err == nil || !strings.Contains(err.Error(), "writable") {
+	if _, err := Acquire(p); err == nil || !strings.Contains(err.Error(), "доступен для записи") {
 		t.Fatalf("Принят небезопасный родительский каталог: %v", err)
 	}
 }

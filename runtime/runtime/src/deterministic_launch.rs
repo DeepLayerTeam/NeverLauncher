@@ -55,7 +55,7 @@ fn normalize(value: &str, root: &Path, credentials: Option<&MinecraftLaunchCrede
     roots.dedup();
     for installed_root in roots {
         if installed_root.is_empty() || installed_root == "." || installed_root == "/" { continue; }
-        let normalized_root = installed_root.trim_end_matches(|c: char| c == '/' || c == '\\');
+        let normalized_root = installed_root.trim_end_matches(['/', '\\']);
         if normalized == normalized_root { normalized = "${client.root}".to_string(); }
         for separator in ["/", "\\"] {
             normalized = normalized.replace(&format!("{normalized_root}{separator}"), &format!("${{client.root}}{separator}"));

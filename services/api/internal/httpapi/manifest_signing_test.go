@@ -13,7 +13,7 @@ import (
 const p1TestSigningSeed = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
 
 func TestSignManifestProducesVerifiedEd25519Signature(t *testing.T) {
-	s := Server{Config: config.Config{Environment: "production", ManifestSigningPrivateKey: p1TestSigningSeed}, State: NewRuntimeState()}
+	s := Server{Config: config.Config{Environment: "test", ManifestSigningPrivateKey: p1TestSigningSeed}, State: NewRuntimeState()}
 	manifest := model.Manifest{SchemaVersion: "1.0", ProjectID: "demo-project", ProfileID: "vanilla", Channel: "stable", Version: "0.21.2-test", Files: []model.ManifestFile{{Path: "libraries/fixture.jar", Size: 7, SHA256: "239f59ed55e737c77147cf55ad0c1b030b6d7ee748a7426952f9b852d5a935e5", Required: true}}}
 
 	signed, err := s.signManifest(manifest)
@@ -46,5 +46,14 @@ func TestSignManifestFailsClosedWithInvalidProductionKey(t *testing.T) {
 	s := Server{Config: config.Config{Environment: "production", ManifestSigningPrivateKey: "not-a-key"}, State: NewRuntimeState()}
 	if _, err := s.signManifest(model.Manifest{SchemaVersion: "1.0", ProjectID: "demo-project", ProfileID: "vanilla", Channel: "stable", Version: "0.21.2-test"}); err == nil {
 		t.Fatal("Подписание должно завершаться ошибкой при недействительном производственном ключе")
+	}
+}
+
+func TestProductionManifestSigningRequiresTrustPolicy(t *testing.T) {
+	t.Setenv("LAUNCHER_GAME_TRUST_POLICY_FILE", "")
+	t.Setenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY", "")
+	s := Server{Config: config.Config{Environment: "production", ManifestSigningPrivateKey: p1TestSigningSeed}, State: NewRuntimeState()}
+	if _, err := s.signManifest(model.Manifest{SchemaVersion: "1.0", ProjectID: "demo-project", ProfileID: "vanilla", Channel: "stable", Version: "test"}); err == nil {
+		t.Fatal("Промышленная подпись без доверенной политики должна быть отклонена")
 	}
 }
