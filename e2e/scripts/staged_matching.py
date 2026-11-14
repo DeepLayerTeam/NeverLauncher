@@ -365,7 +365,7 @@ class MatchingServer:
                 raise RuntimeError(
                     "ServerBridge должен находиться в каталоге плагинов или модов загрузчика"
                 )
-        (self.root / "eula.txt").write_text("eula=true\n")
+        (self.root / "eula.txt").write_text("eula=true\n", encoding="utf-8")
         # Выделенный временный интеграционный сервер только для loopback в офлайн-режиме. Он НЕ
         # удостоверяет официальный вход, пользовательскую авторизацию или промышленную политику Guard.
         props = {
@@ -389,7 +389,7 @@ class MatchingServer:
         }
         # Не позволяйте предоставленному злоумышленником server.properties переопределить loopback.
         (self.root / "server.properties").write_text(
-            "".join(f"{key}={value}\n" for key, value in props.items())
+            "".join(f"{key}={value}\n" for key, value in props.items()), encoding="utf-8"
         )
         return self
 

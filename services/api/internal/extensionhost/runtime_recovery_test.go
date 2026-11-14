@@ -19,7 +19,7 @@ import (
 // токен экземпляра и состояние процесса.
 func TestRuntimeBrokerDocumentsSurviveSupervisorRestart0423(t *testing.T) {
 	ctx := context.Background()
-	root := t.TempDir()
+	root := canonicalRuntimeTestTempDir(t)
 	repo := repository.NewMemoryRepository("http://example.test")
 	const id = "test.storage0423"
 	manifest := model.ExtensionManifest{

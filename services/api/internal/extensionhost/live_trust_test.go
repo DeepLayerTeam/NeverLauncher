@@ -33,7 +33,7 @@ func liveTrustFixture04210(t *testing.T) (*Supervisor, repository.Repository, *p
 	if _, err := repo.GrantExtensionPermission(ctx, model.ExtensionPermissionGrant{ExtensionID: id, Scope: "global", Permission: "storage:read", GrantedBy: "test"}); err != nil {
 		t.Fatal(err)
 	}
-	host := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
+	host := New(Config{ExtensionRoot: canonicalRuntimeTestTempDir(t)}, repo, storage.NewLocalStorage(t.TempDir()))
 	st := &processState{key: Key{ExtensionID: id, Scope: "global"}, install: install, manifest: manifest, state: "running"}
 	return host, repo, st
 }

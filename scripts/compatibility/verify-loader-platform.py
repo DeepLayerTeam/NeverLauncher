@@ -34,6 +34,7 @@ def main() -> int:
     )
     parser.add_argument("--install", type=Path, required=True)
     parser.add_argument("--certification", type=Path, required=True)
+    parser.add_argument("--live-join", type=Path)
     parser.add_argument("--loader", required=True)
     parser.add_argument("--os", dest="os_name", required=True)
     parser.add_argument("--arch", required=True)
@@ -58,7 +59,26 @@ def main() -> int:
     ):
         fail("Свидетельство установки загрузчика не подтверждает состояние «установлен и проверен»")
     if cert.get("status") != "passed":
-        fail("Сертификация Runtime не пройдена")
+        live = load(args.live_join) if args.live_join else {}
+        if not (
+            cert.get("status") == "inconclusive"
+            and (cert.get("success") is True or cert.get("timedOut") is True)
+            and live.get("schema") == "launcher.compatibility-live-join/0.52.4"
+            and live.get("status") == "passed"
+            and live.get("loader") == loader
+            and live.get("loaderVersion") == install.get("loaderVersion")
+            and live.get("minecraftVersion") == install.get("minecraftVersion")
+            and live.get("profileId") == cert.get("minecraftVersion")
+            and live.get("javaMajor") == cert.get("detectedJavaMajor")
+            and cert.get("requiredJavaMajor") == cert.get("detectedJavaMajor")
+            and cert.get("matchingServer") == "127.0.0.1"
+            and live.get("serverPort") == cert.get("matchingServerPort")
+            and live.get("playerJoined") is True
+            and live.get("playerOnlineViaRcon") is True
+            and live.get("worldTicksAdvanced") is True
+            and live.get("clientCertificationSha256") == hashlib.sha256(args.certification.read_bytes()).hexdigest()
+        ):
+            fail("Сертификация Runtime не пройдена")
 
     vanilla = install.get("vanilla")
     if (

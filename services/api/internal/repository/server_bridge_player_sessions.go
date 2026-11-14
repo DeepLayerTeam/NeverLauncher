@@ -90,7 +90,8 @@ func (r *SQLRepository) invalidatePlayerSessionRowTx0197(ctx context.Context, tx
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE session_correlation_id=$1 AND status='active'`, correlationID, now.UTC()); err != nil {
 		return false, err
 	}
-	kickReason := "Сеанс Launcher аннулирован"
+	// Match the durable database trigger (0116) so both paths generate the same idempotency key.
+	kickReason := "Launcher session invalidated"
 	if strings.TrimSpace(reason) != "" {
 		kickReason += ": " + strings.TrimSpace(reason)
 	}

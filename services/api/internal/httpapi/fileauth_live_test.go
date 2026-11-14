@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -27,6 +28,9 @@ func TestLiveFileAuthFederatedLogin0426(t *testing.T) {
 	uuid := "37a144c1-263e-4e9b-820f-917640f95b2d"
 	data := fmt.Sprintf(`{"%s":{"username":"Player_426","uuid":"%s","password":"%s","permissions":{"roles":["ADMIN"]}}}`, uuid, uuid, hex.EncodeToString(sum[:]))
 	if err := os.WriteFile(db, []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := privatefile.Restrict(db, false); err != nil {
 		t.Fatal(err)
 	}
 	cfg := config.Config{

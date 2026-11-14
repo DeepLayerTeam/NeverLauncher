@@ -28,7 +28,7 @@ class JavaGATests(unittest.TestCase):
                 if x.is_file()
             }
             self.assertEqual(one, two)
-            self.assertEqual(len([p for p in one if p.endswith(".jar")]), 6)
+            self.assertEqual(len([p for p in one if p.endswith(".jar")]), 3 * len(MODULES))
             # Проверка совместимости публичного API историческая; для публикации текущих
             # артефактов используется фактически проверяемая версия.
             version = (ROOT / "VERSION").read_text().strip()

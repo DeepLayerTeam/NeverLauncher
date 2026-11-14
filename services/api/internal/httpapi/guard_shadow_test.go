@@ -5,8 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +18,7 @@ import (
 func shadowKeyFixture05012(t *testing.T) (string, string) {
 	t.Helper()
 	directory := t.TempDir()
-	if err := os.Chmod(directory, 0700); err != nil {
+	if err := privatefile.Restrict(directory, true); err != nil {
 		t.Fatal(err)
 	}
 	keyFile := filepath.Join(directory, "server-key")
@@ -48,7 +51,7 @@ func TestGuardShadow05012RealAppendAndIntegrity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stat.Mode().Perm()&0077 != 0 {
+	if !privatefile.Check(matches[0], stat, 0077) {
 		t.Fatal("Журнал раскрыт другим пользователям")
 	}
 	content, err := os.ReadFile(matches[0])
@@ -97,13 +100,17 @@ func mustDecodeHex05012(t *testing.T, text string) []byte {
 
 func TestGuardShadow05012RejectsWeakKeyPermissionsAndBadResults(t *testing.T) {
 	dir, keyFile := shadowKeyFixture05012(t)
-	if err := os.Chmod(keyFile, 0644); err != nil {
+	if runtime.GOOS == "windows" {
+		if out, err := exec.Command("icacls.exe", keyFile, "/grant", "*S-1-1-0:R").CombinedOutput(); err != nil {
+			t.Fatalf("icacls: %v: %s", err, out)
+		}
+	} else if err := os.Chmod(keyFile, 0644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := newGuardShadowJournal05012(dir, keyFile, "0.52.9"); err == nil {
 		t.Fatal("Принят открытый ключ сервера")
 	}
-	if err := os.Chmod(keyFile, 0600); err != nil {
+	if err := privatefile.Restrict(keyFile, false); err != nil {
 		t.Fatal(err)
 	}
 	j, err := newGuardShadowJournal05012(dir, keyFile, "0.52.9")

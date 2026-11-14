@@ -40,7 +40,16 @@ func TestRecoveryFromAlreadyRevokedDevice0435(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stepped, err := state.AuthSessions.stepUp(claims.SessionID, claims.Sub, []string{"passkey", "user-verification"}, "phishing-resistant", time.Now().UTC())
+	revoked, err := repo.GetTrustedDevice(claims.Sub, lost.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authTime := time.Now().UTC()
+	for !authTime.After(revoked.RevokedAt) {
+		time.Sleep(time.Millisecond)
+		authTime = time.Now().UTC()
+	}
+	stepped, err := state.AuthSessions.stepUp(claims.SessionID, claims.Sub, []string{"passkey", "user-verification"}, "phishing-resistant", authTime)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +140,16 @@ func TestRecoveryCannotRebindUnrelatedTrustedDevice0435(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stepped, err := state.AuthSessions.stepUp(claims.SessionID, claims.Sub, []string{"passkey", "user-verification"}, "phishing-resistant", time.Now().UTC())
+	revoked, err := repo.GetTrustedDevice(claims.Sub, lost.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authTime := time.Now().UTC()
+	for !authTime.After(revoked.RevokedAt) {
+		time.Sleep(time.Millisecond)
+		authTime = time.Now().UTC()
+	}
+	stepped, err := state.AuthSessions.stepUp(claims.SessionID, claims.Sub, []string{"passkey", "user-verification"}, "phishing-resistant", authTime)
 	if err != nil {
 		t.Fatal(err)
 	}

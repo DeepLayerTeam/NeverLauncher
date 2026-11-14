@@ -16,6 +16,7 @@ concurrency:
 
 env:
   CI: "true"
+  PYTHONUTF8: "1"
 
 jobs:
   matrix-plan:

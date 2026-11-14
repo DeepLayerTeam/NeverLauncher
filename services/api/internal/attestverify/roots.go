@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 	"io"
 	"os"
 	"path/filepath"
@@ -57,7 +58,7 @@ func Load(path string, now time.Time) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Корневые сертификаты TPM: %w", err)
 	}
-	if !fi.Mode().IsRegular() || fi.Size() > 1<<20 || fi.Mode().Perm()&0022 != 0 {
+	if !fi.Mode().IsRegular() || fi.Size() > 1<<20 || !privatefile.Check(path, fi, 0022) {
 		return nil, errors.New("Корневые сертификаты TPM: неверный тип или размер файла")
 	}
 	raw, err := os.ReadFile(path)

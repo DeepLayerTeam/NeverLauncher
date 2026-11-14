@@ -66,7 +66,7 @@ class ComponentMatrixTests(unittest.TestCase):
                 m.selected_components(self.manifest(), choice)
         manifest = self.manifest()
         manifest["componentCatalog"]["components"][0]["conflicts"] = [{"id": "beta"}]
-        with self.assertRaisesRegex(ValueError, "conflicting"):
+        with self.assertRaisesRegex(ValueError, "конфликтуют"):
             m.selected_components(manifest, "@custom:v1:minimal:+beta")
 
     def test_attestor_rejects_unselected_staged_mod_after_real_selection(self):
@@ -181,7 +181,7 @@ class ComponentMatrixTests(unittest.TestCase):
             self.assertEqual(evidence["preset"], "minimal")
             self.assertIn("component-selection.json", evidence["artifactHashes"])
             (work / "client" / "mods" / "bonus.jar").write_bytes(optional)
-            with self.assertRaisesRegex(ValueError, "unselected optional component"):
+            with self.assertRaisesRegex(ValueError, "Невыбранный дополнительный компонент"):
                 attestor.verify_local_artifacts(
                     work, issued, "1" * 64, "f" * 40, "2" * 64, "0" * 64
                 )

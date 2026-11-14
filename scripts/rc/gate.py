@@ -89,7 +89,10 @@ def verify(
             "Отсутствуют отпечатки нативного исполняемого файла или тестового образца",
         )
         need(
-            "not Minecraft/GUI E2E" in nr.get("certificationScope", ""),
+            nr.get("certificationScope") in {
+                "real native commands; not Minecraft/GUI E2E",
+                "Выполнены только реальные нативные проверки подписанной синхронизации, верификации, восстановления и отказа; E2E Minecraft/GUI не проводились",
+            },
             "Нативный тест не должен заявлять о сертификации реального игрового запуска",
         )
         verify_run(nr, version, commit)

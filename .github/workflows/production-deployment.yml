@@ -27,7 +27,7 @@ jobs:
       - name: Проверить развёртывание с помощью Python
         run: |
           python3 -m py_compile scripts/install/production-deploy.py
-          python3 -m unittest discover -s scripts/install -p "test_production*py" -v
+          sudo env PYTHONDONTWRITEBYTECODE=1 "$(command -v python3)" -m unittest discover -s scripts/install -p "test_production*py" -v
       - uses: actions/setup-go@v6
         with:
           go-version-file: installer/go.mod

@@ -296,7 +296,12 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 					break
 				}
 				seenPaths[normalized] = true
-				if !gravitSafePath02210(entry) || gravitProtected02210(entry) {
+				if gravitProtected02210(entry) {
+					report(key, "blocked", "", "Путь к классам ссылается на защищённые данные пользователя: "+entry)
+					good = false
+					break
+				}
+				if !gravitSafePath02210(entry) {
 					report(key, "blocked", "", "Небезопасная запись пути к классам: "+entry)
 					good = false
 					break

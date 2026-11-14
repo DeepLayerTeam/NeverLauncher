@@ -36,7 +36,7 @@ class ReleaseApprovalTests(unittest.TestCase):
             run('openssl','genpkey','-algorithm','ed25519','-out',str(priv))
             run('openssl','pkey','-in',str(priv),'-pubout','-out',str(pub))
             summary=review(sorted(evidence.rglob('integration-0310.json')),SHA)
-            receipt.write_text(json.dumps(summary,indent=2)+'\n')
+            receipt.write_bytes((json.dumps(summary,indent=2)+'\n').encode("utf-8"))
             run('openssl','pkeyutl','-sign','-rawin','-inkey',str(priv),'-in',str(receipt),'-out',str(sig))
             # Историческое одобрение оператора 0.31.0 проверяйте по изолированному VERSION
             # 0.31.0, не по текущему проекту. Никогда не меняйте настоящий VERSION и не

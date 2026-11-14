@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -42,11 +43,11 @@ func newGuardShadowJournal05012(directory, keyFile, version string) (*guardShado
 		return nil, errors.New("Каталог и ключ теневого режима Guard: требуется «абсолютный путь»")
 	}
 	di, err := os.Lstat(directory)
-	if err != nil || !di.IsDir() || di.Mode()&os.ModeSymlink != 0 || di.Mode().Perm()&0077 != 0 {
+	if err != nil || !di.IsDir() || di.Mode()&os.ModeSymlink != 0 || !privatefile.Check(directory, di, 0077) {
 		return nil, errors.New("Каталог теневой проверки Guard должен существовать и иметь ограниченные права доступа")
 	}
 	ki, err := os.Lstat(keyFile)
-	if err != nil || !ki.Mode().IsRegular() || ki.Mode().Perm()&0077 != 0 {
+	if err != nil || !ki.Mode().IsRegular() || !privatefile.Check(keyFile, ki, 0077) {
 		return nil, errors.New("Ключ теневого режима Guard: требуется «закрытый обычный файл»")
 	}
 	raw, err := os.ReadFile(keyFile)

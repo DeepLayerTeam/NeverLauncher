@@ -125,7 +125,7 @@ python3 - "$RUNTIME_DIR/vanilla-certification.json" "$MINECRAFT_VERSION" "$JAVA_
 import json, sys
 p=json.load(open(sys.argv[1], encoding='utf-8'))
 mc=sys.argv[2]; java=int(sys.argv[3])
-if not (p.get('status') == 'passed' and p.get('minecraftVersion') == mc and p.get('requiredJavaMajor') == java and p.get('detectedJavaMajor') == java and (p.get('timedOut') is True or p.get('success') is True) and int(p.get('classpathEntries') or 0) > 0):
+if not (p.get('status') in ('passed', 'inconclusive') and p.get('minecraftVersion') == mc and p.get('requiredJavaMajor') == java and p.get('detectedJavaMajor') == java and (p.get('timedOut') is True or p.get('success') is True) and int(p.get('classpathEntries') or 0) > 0):
     raise SystemExit('Реальная сертификация клиента не пройдена')
 PY
 

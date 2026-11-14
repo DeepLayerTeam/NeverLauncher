@@ -36,7 +36,7 @@ jobs:
           python3 -m unittest discover -s scripts/acceptance -p 'test_owner_admin_real.py' -v
           python3 -m unittest discover -s scripts/acceptance -p 'test_minimal_live_e2e.py' -v
           python3 -m unittest discover -s scripts/acceptance -p 'test_final_bundle_e2e.py' -v
-          python3 -m unittest discover -s scripts/install -p 'test_production_deploy.py' -v
+          sudo env PYTHONDONTWRITEBYTECODE=1 "$(command -v python3)" -m unittest discover -s scripts/install -p 'test_production_deploy.py' -v
       - name: Убедиться, что отсутствие реального промышленного хоста никогда не даёт результат успех
         run: |
           set -euo pipefail

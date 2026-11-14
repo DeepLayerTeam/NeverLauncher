@@ -44,8 +44,8 @@ class RuntimeIntegrityLive0505(unittest.TestCase):
         source.write_text('''package fixture;
 public class Game {
     public static void main(String[] args) throws Exception {
-        System.out.println("GAME_STARTED");System.out.flush();
         if(args.length>0 && args[0].endsWith(".so")) System.load(args[0]);
+        System.out.println("GAME_STARTED");System.out.flush();
         if(args.length>0) Thread.sleep(12500);
     }
 }''', encoding='utf-8')

@@ -12,14 +12,14 @@ $ErrorActionPreference = 'Stop'
 $p = $env:LAUNCHER_IDENTITY_ACL_PATH
 $me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
 $system = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
-$acl = Get-Acl -LiteralPath $p
+$acl = [System.IO.Directory]::GetAccessControl($p)
 $acl.SetAccessRuleProtection($true, $false)
 foreach ($rule in @($acl.Access)) { $acl.RemoveAccessRuleSpecific($rule) }
 foreach ($sid in @($me, $system)) {
     $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($sid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
     $acl.AddAccessRule($rule)
 }
-Set-Acl -LiteralPath $p -AclObject $acl
+[System.IO.Directory]::SetAccessControl($p, $acl)
 `); err != nil {
 		return err
 	}

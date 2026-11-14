@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -63,6 +64,9 @@ func makeCertifyFixtureWithScheme(t *testing.T, linuxEcdsaScheme bool) (Evidence
 			t.Fatal(e)
 		}
 		if e = os.WriteFile(storePath, data, 0600); e != nil {
+			t.Fatal(e)
+		}
+		if e = privatefile.Restrict(storePath, false); e != nil {
 			t.Fatal(e)
 		}
 	}

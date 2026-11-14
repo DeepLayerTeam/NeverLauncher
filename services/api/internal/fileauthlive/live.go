@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 	"io"
 	"os"
 	"path/filepath"
@@ -180,7 +181,7 @@ func (c *LiveConnector) current(ctx context.Context) (*liveSnapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !before.Mode().IsRegular() || before.Mode().Perm()&0007 != 0 {
+	if !before.Mode().IsRegular() || !privatefile.Check(c.cfg.DatabasePath, before, 0007) {
 		return nil, errors.New("Файл Database.json системы FileAuth: требуется «обычный файл без доступа для посторонних пользователей»")
 	}
 	f, err := os.Open(c.cfg.DatabasePath)

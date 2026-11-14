@@ -58,13 +58,13 @@ func TestJavaSyncPoliciesFailClosed0487(t *testing.T) {
 		t.Fatal(err)
 	}
 	bus.SetDispatcher(&permanentDispatcher0487{})
-	err = bus.DispatchSync(ctx, PublishInput{Type: "release.before-publish", ProjectID: "p1", AggregateType: "release", AggregateID: "r1", IdempotencyKey: "blocked", Payload: map[string]any{"signed": false}})
+	err = bus.DispatchSync(ctx, PublishInput{Type: "release.before-publish", ProjectID: "p1", AggregateType: "release", AggregateID: "r1", IdempotencyKey: "blocked", Source: "test.events", Payload: map[string]any{"signed": false}})
 	if !errors.Is(err, ErrHookRejected) {
 		t.Fatalf("ожидалось отклонение: %v", err)
 	}
 	cancelled, cancel := context.WithDeadline(ctx, time.Now().Add(-time.Second))
 	defer cancel()
-	err = bus.DispatchSync(cancelled, PublishInput{Type: "release.before-publish", ProjectID: "p1", AggregateType: "release", AggregateID: "r1", IdempotencyKey: "cancelled", Payload: map[string]any{}})
+	err = bus.DispatchSync(cancelled, PublishInput{Type: "release.before-publish", ProjectID: "p1", AggregateType: "release", AggregateID: "r1", IdempotencyKey: "cancelled", Source: "test.events", Payload: map[string]any{}})
 	if err == nil {
 		t.Fatal("отменённый обработчик события ошибочно принят")
 	}

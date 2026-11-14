@@ -36,6 +36,8 @@ jobs:
           cp deploy/production/env.production.example "$RUNNER_TEMP/ha.env"
           chmod 600 "$RUNNER_TEMP/ha.env"
           cat >> "$RUNNER_TEMP/ha.env" <<'EOF'
+          LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON=[]
+          LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON=[]
           POSTGRES_PASSWORD=ha-ci-only-Postgres
           REDIS_PASSWORD=ha-ci-only-Redis
           LAUNCHER_STORAGE_S3_ENDPOINT=https://s3.example.invalid

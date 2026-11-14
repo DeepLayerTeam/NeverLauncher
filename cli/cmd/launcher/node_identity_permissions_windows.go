@@ -44,7 +44,7 @@ func verifyNodeIdentityPermissions0199(path string, _ os.FileInfo) error {
 	return windowsIdentityACL0199(path, `
 $ErrorActionPreference = 'Stop'
 $p = $env:LAUNCHER_IDENTITY_ACL_PATH
-$acl = Get-Acl -LiteralPath $p
+$acl = if ([System.IO.Directory]::Exists($p)) { [System.IO.Directory]::GetAccessControl($p) } else { [System.IO.File]::GetAccessControl($p) }
 if (-not $acl.AreAccessRulesProtected) { throw 'Идентификатор узла наследует записи ACL' }
 $me = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $allowed = @($me, 'S-1-5-18')

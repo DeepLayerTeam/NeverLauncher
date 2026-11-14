@@ -343,6 +343,15 @@ if scope == "client":
             and witness["tickAfter"] > witness["tickBefore"]
         )
         checks["liveMultiplayerJoin"] = live_ok
+        # An inconclusive standalone probe is acceptable only with independent,
+        # hash-bound proof of actual multiplayer participation.
+        if live_ok and probe.get("status") == "inconclusive" and (probe.get("timedOut") is True or probe.get("success") is True):
+            checks["actualClient"] = True
+            if "loaderPlatformLaunch" in checks:
+                checks["loaderPlatformLaunch"] = (
+                    int(probe.get("classpathEntries") or 0) > 0
+                    and probe.get("mainClass") == install.get("mainClass")
+                )
     matching = read("matching-server.json") or {}
     server_install = read("vanilla-server-install.json") or {}
     if matching_server:

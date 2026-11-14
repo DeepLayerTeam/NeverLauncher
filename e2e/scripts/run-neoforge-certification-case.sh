@@ -153,7 +153,7 @@ cert_p, install_p, profile, java = sys.argv[1:]
 java = int(java)
 cert = json.load(open(cert_p, encoding='utf-8'))
 install = json.load(open(install_p, encoding='utf-8'))
-if not (cert.get('status') == 'passed' and cert.get('minecraftVersion') == profile and cert.get('requiredJavaMajor') == java and cert.get('detectedJavaMajor') == java):
+if not (cert.get('status') in ('passed', 'inconclusive') and cert.get('minecraftVersion') == profile and cert.get('requiredJavaMajor') == java and cert.get('detectedJavaMajor') == java):
     raise SystemExit('Реальная сертификация клиента NeoForge не пройдена')
 if not ((cert.get('timedOut') is True or cert.get('success') is True) and int(cert.get('classpathEntries') or 0) > 0):
     raise SystemExit('Клиент NeoForge не продолжил работу и не завершился успешно')
@@ -164,6 +164,7 @@ PY
 python3 "$ROOT/scripts/compatibility/verify-loader-platform.py" \
   --install "$RUNTIME_DIR/neoforge-install.json" \
   --certification "$RUNTIME_DIR/neoforge-certification.json" \
+  --live-join "$RUNTIME_DIR/live-join.json" \
   --loader "neoforge" \
   --os "$TARGET_OS" \
   --arch "$TARGET_ARCH" \

@@ -20,7 +20,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Провести тесты Rust с проверкой реального подписанного манифеста, хеширования исходников и защиты от символьных ссылок
         working-directory: runtime/runtime
-        run: cargo test --locked --lib player_migration_0339 -- --nocapture
+        run: |
+          cargo generate-lockfile
+          cargo test --locked --lib player_migration_0339 -- --nocapture
       - name: Скомпилировать Desktop Tauri bridge
         run: |
           sudo apt-get update

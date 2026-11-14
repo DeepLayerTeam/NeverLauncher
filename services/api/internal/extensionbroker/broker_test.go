@@ -129,7 +129,7 @@ func TestSignedOutboundOrigin03110(t *testing.T) {
 	if HasGrant(grants, "api.example.com:444") {
 		t.Fatal("запрос к конечной точке без выданного разрешения")
 	}
-	if !strings.Contains(ErrDenied.Error(), "denied") {
+	if !strings.Contains(ErrDenied.Error(), "Доступ запрещён") {
 		t.Fatal("неожиданный отказ")
 	}
 }

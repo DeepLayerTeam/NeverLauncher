@@ -79,9 +79,9 @@ class GuardLoaderLiveJVM0504(unittest.TestCase):
             path.write_text('\n'.join(config)+'\n', encoding='ascii')
             names = authorized if available is None else available
             cp = os.pathsep.join(str(self.jars[name]) for name in (['game']+list(names)))
-            args = ['java','-javaagent:'+str(AGENT)+'='+str(path),'-cp',str(AGENT)+os.pathsep+cp,
+            args = ['java','-Dfile.encoding=UTF-8','-Dsun.stdout.encoding=UTF-8','-Dsun.stderr.encoding=UTF-8','-Dstdout.encoding=UTF-8','-Dstderr.encoding=UTF-8','-javaagent:'+str(AGENT)+'='+str(path),'-cp',str(AGENT)+os.pathsep+cp,
                     'ru.launcher.trusted.MinecraftMain',MARKERS[marker]]
-            return subprocess.run(args, capture_output=True, text=True, timeout=30)
+            return subprocess.run(args, capture_output=True, encoding="utf-8", timeout=30)
 
     def test_authorized_loader_and_mixin(self):
         for loader in ('fabric','quilt','forge','neoforge'):

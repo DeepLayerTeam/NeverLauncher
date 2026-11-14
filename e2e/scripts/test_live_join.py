@@ -121,6 +121,27 @@ class LiveJoinNegativeTests(unittest.TestCase):
         self.assertEqual(result['serverLogSha256'], gate.file_sha256(runtime / 'matching-server.log'))
         self.assertEqual(result['clientCertificationSha256'], gate.file_sha256(runtime / 'fabric-certification.json'))
 
+    def test_inconclusive_probe_requires_independent_multiplayer_witness(self):
+        runtime, args = self.construct_fake_negative_fixture()
+        cert = gate.read_json(runtime / 'fabric-certification.json')
+        cert['status'] = 'inconclusive'
+        put(runtime / 'fabric-certification.json', cert)
+        self.assertEqual(gate.verify(args), 0)
+        (runtime / 'live-join.json').unlink()
+        witness = gate.read_json(runtime / 'live-server-witness.json')
+        witness['playerOnlineViaRcon'] = False
+        put(runtime / 'live-server-witness.json', witness)
+        with self.assertRaisesRegex(RuntimeError, 'не подтвердили реальное подключение клиента'):
+            gate.verify(args)
+
+    def test_failed_probe_rejected_even_with_online_witness(self):
+        runtime, args = self.construct_fake_negative_fixture()
+        cert = gate.read_json(runtime / 'fabric-certification.json')
+        cert['status'] = 'failed'
+        put(runtime / 'fabric-certification.json', cert)
+        with self.assertRaisesRegex(RuntimeError, 'не был направлен'):
+            gate.verify(args)
+
     def test_false_online_witness_blocked(self):
         runtime, args = self.construct_fake_negative_fixture()
         witness = gate.read_json(runtime / 'live-server-witness.json')
