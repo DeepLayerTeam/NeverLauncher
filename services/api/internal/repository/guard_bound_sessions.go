@@ -114,7 +114,7 @@ func (r *SQLRepository) ListDueGuardBoundSessions0507(ctx context.Context, node 
 	qualifiedColumns := "g." + strings.ReplaceAll(guardBoundColumns0507, ",", ",g.")
 	rows, err := r.db.QueryContext(ctx, `SELECT `+qualifiedColumns+`,p.user_id,p.session_id,p.minecraft_session_id,p.trusted_device_id,p.binding_epoch,p.project_id,p.profile_id,p.channel,p.username,p.player_uuid FROM server_bridge_guard_sessions_0507 g JOIN server_bridge_player_sessions_v3 p USING(correlation_id)
         WHERE p.status='active' AND (p.proxy_node_id=$1 OR p.backend_node_id=$1)
-        AND (g.last_checked_at IS NULL OR g.last_checked_at < $2 - interval '10 seconds')
+        AND (g.last_checked_at IS NULL OR g.last_checked_at < $2::timestamptz - interval '10 seconds')
         ORDER BY g.last_checked_at NULLS FIRST,g.correlation_id LIMIT $3`, node, now.UTC(), max)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,8 @@
 package extensionpolicy
 
 import (
+	"gitflic.ru/skif4er/launcher/services/api/internal/linuxsandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/macossandbox"
 	"gitflic.ru/skif4er/launcher/services/api/internal/windowssandbox"
 	"runtime"
 	"strings"
@@ -42,9 +44,18 @@ func TestSignedPolicy0318NormalizeAndReject(t *testing.T) {
 	}
 }
 func TestSignedPolicy0318FailClosedRuntime(t *testing.T) {
-	if err := LaunchAllowed(signedPolicy0318()); runtime.GOOS == "windows" && windowssandbox.Available() == nil {
+	var available error
+	switch runtime.GOOS {
+	case "windows":
+		available = windowssandbox.Available()
+	case "darwin":
+		available = macossandbox.Available()
+	default:
+		available = linuxsandbox.Available()
+	}
+	if err := LaunchAllowed(signedPolicy0318()); available == nil {
 		if err != nil {
-			t.Fatalf("Предварительная проверка Windows AppContainer отклонена: %v", err)
+			t.Fatalf("Предварительная проверка доступной песочницы отклонена: %v", err)
 		}
 	} else if err == nil || !strings.Contains(err.Error(), "sandbox-unavailable") {
 		t.Fatalf("Политика изоляции принята без возможности запуска изолированной среды: %v", err)

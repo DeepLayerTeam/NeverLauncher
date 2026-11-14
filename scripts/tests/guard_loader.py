@@ -99,32 +99,32 @@ class GuardLoaderLiveJVM0504(unittest.TestCase):
         self.assertEqual(good.returncode,0,good.stderr)
         wrong=self.invoke('fabric','fabric',['fabric'],class_sha='0'*64)
         self.assertNotEqual(wrong.returncode,0)
-        self.assertIn('Байткод классов загрузчика не совпадает',wrong.stderr)
+        self.assertIn('Несоответствие байтов класса загрузчика',wrong.stderr)
 
     def test_reject_wrong_loader(self):
         result=self.invoke('fabric','quilt',['quilt'])
         self.assertNotEqual(result.returncode,0)
-        self.assertIn('loader mismatch',result.stderr)
+        self.assertIn('Несоответствие загрузчика',result.stderr)
 
     def test_reject_unpinned_class_source(self):
         result=self.invoke('fabric','fabric',['mixin'],available=['mixin','fabric'])
         self.assertNotEqual(result.returncode,0)
-        self.assertIn('not operator-authorized',result.stderr)
+        self.assertIn('JAR загрузчика не разрешён администратором',result.stderr)
 
     def test_reject_missing_loader_binding(self):
         result=self.invoke('fabric','fabric',[],available=['fabric'])
         self.assertNotEqual(result.returncode,0)
-        self.assertIn('Исходники загрузчика отсутствуют',result.stderr)
+        self.assertIn('источники загрузчика отсутствуют',result.stderr)
 
     def test_reject_vanilla_mixin(self):
         result=self.invoke('vanilla','mixin',[],available=['mixin'])
         self.assertNotEqual(result.returncode,0)
-        self.assertIn('loader mismatch',result.stderr)
+        self.assertIn('Несоответствие загрузчика',result.stderr)
 
     def test_reject_tampered_loader_before_main(self):
         result=self.invoke('fabric','fabric',['fabric'],corrupt=True)
         self.assertNotEqual(result.returncode,0)
-        self.assertIn('Хеш JAR-файла загрузчика изменился',result.stderr)
+        self.assertIn('контрольная сумма JAR загрузчика изменилась',result.stderr)
 
 
 if __name__ == '__main__':

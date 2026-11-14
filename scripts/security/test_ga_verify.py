@@ -33,7 +33,7 @@ class GAVerification0320(unittest.TestCase):
                 results = [{'package':pkg,'status':'PASS','exitCode':0,'required':{name:'PASS' for name in gate.EXPECTED_TESTS[tier][pkg]}} for pkg in sorted(gate.REQUIRED[tier])]
             else:
                 results = [{'name':name,'status':'PASS','simulated':False,'actualExecution':True,'evidenceSha256':'c'*64} for name in sorted(gate.MANUAL[tier])]
-            doc = {'schema':gate.SCHEMA,'tier':tier,'status':'PASS','commit':self.commit, 'productVersion':'0.32.0','sourceSha256':self.source, 'generatedAt':self.now.isoformat(), 'host':{'system':host, 'architecture':'amd64'}, 'results':results}
+            doc = {'schema':gate.SCHEMA,'tier':tier,'status':'PASS','commit':self.commit, 'productVersion':gate.PRODUCT_VERSION,'sourceSha256':self.source, 'generatedAt':self.now.isoformat(), 'host':{'system':host, 'architecture':'amd64'}, 'results':results}
             self.documents[tier] = doc
             path = self.root / f'{tier}.json'
             self.paths.append(path)

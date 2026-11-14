@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import json
+import re
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -54,7 +55,7 @@ require(
     "В контексте Host для Admin отсутствует версия API",
 )
 require(
-    "type: 'host.context', context:" in desktop
+    re.search(r'type:\s*["\']host\.context["\']\s*,\s*context:\s*\{', desktop) is not None
     and "extensionApiVersion: EXTENSION_API_VERSION" in desktop,
     "В контексте Host для Desktop отсутствует оболочка сообщения или версия API",
 )
@@ -75,7 +76,7 @@ for token in ["/extension-ga/status", "/extension-ga/reconcile"]:
 cli = read("cli/cmd/launcher/extension_ga.go")
 for token in [
     "upgrade-source",
-    "signed .nlext packages are immutable",
+    "Подписанные пакеты .nlext неизменяемы",
     "requiresRepackAndResign",
     "ExtensionsSDKVersion0210",
     "strings.ReplaceAll",

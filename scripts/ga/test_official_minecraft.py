@@ -264,7 +264,9 @@ class OfficialGATest(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "Ключ подписи оператора не соответствует защищённому проверочному якорю"):
             signer.sign_attestation(folder, "e" * 64, seed, SHA)
         signer.sign_attestation(folder, self.pub, seed, SHA)
-        self.assertEqual((folder / "attestation.sig").stat().st_mode & 0o777, 0o600)
+        if os.name != "nt":
+            self.assertEqual((folder / "attestation.sig").stat().st_mode & 0o777, 0o600)
+        self.assertTrue((folder / "attestation.sig").read_bytes())
         with self.assertRaisesRegex(Exception, "Подпись уже существует"):
             signer.sign_attestation(folder, self.pub, seed, SHA)
 

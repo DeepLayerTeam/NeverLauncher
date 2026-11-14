@@ -43,7 +43,7 @@ class ReleaseApprovalTests(unittest.TestCase):
             # ослабляйте производственный verify().
             historical=base/'historical-root';historical.mkdir()
             (historical/'VERSION').write_text('0.31.0\n')
-            with patch('verify_java_ga_0310.ROOT',historical):
+            with patch('verify_java_ga.ROOT',historical):
                 self.assertTrue(verify(evidence,SHA,pub,sig)['crossPlatformIntegrationGatesPassed'])
                 # Другой коммит, изменённый результат сценария или подпись не могут разрешать GA.
                 with self.assertRaises(ValueError):verify(evidence,'e'*40,pub,sig)

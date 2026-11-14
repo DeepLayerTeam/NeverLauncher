@@ -84,6 +84,11 @@ if __name__ == "__main__":
     proc = subprocess.Popen(
         [
             "java",
+            "-Dfile.encoding=UTF-8",
+            "-Dstdout.encoding=UTF-8",
+            "-Dstderr.encoding=UTF-8",
+            "-Dsun.stdout.encoding=UTF-8",
+            "-Dsun.stderr.encoding=UTF-8",
             "-cp",
             classpath,
             "ru.launcher.sdk.core.ExtensionRunner",
@@ -95,6 +100,7 @@ if __name__ == "__main__":
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
     )
     Handler.expected_pid = proc.pid
     try:

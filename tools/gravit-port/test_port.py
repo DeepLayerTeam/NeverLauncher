@@ -66,7 +66,7 @@ public final class Module extends LauncherModule {
         self.source.joinpath("Module.java").write_text("package example; public final class Module {}")
         result = subprocess.run(self.cmd(), cwd=ROOT, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("must directly extend", result.stderr)
+        self.assertIn("должна напрямую наследовать", result.stderr)
         self.assertFalse((self.base / "build").exists())
 
     def test_manifest_permissions_and_symlink_fail_closed(self):
@@ -79,7 +79,7 @@ public final class Module extends LauncherModule {
         (self.source / "Link.java").symlink_to(self.source / "Module.java")
         result = subprocess.run(self.cmd(), cwd=ROOT, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("symlink", result.stderr)
+        self.assertIn("символическая ссылка", result.stderr)
 
     def test_signing_requires_all_credentials(self):
         result = subprocess.run(self.cmd() + ["--private-key", "arbitrary.pem"], cwd=ROOT, capture_output=True, text=True)

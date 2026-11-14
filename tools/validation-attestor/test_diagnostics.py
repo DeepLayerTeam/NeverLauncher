@@ -36,7 +36,7 @@ class DiagnosticPrivacyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as base:
             worker=Path(base)/'worker';worker.write_text('nothing')
             folder=Path(base)/'world';folder.mkdir(mode=0o755)
-            with self.assertRaisesRegex(ValueError,'owner-only'):
+            with self.assertRaisesRegex(ValueError,'доступ только владельцу хоста'):
                 retain(worker,folder,'b'*48)
             with self.assertRaisesRegex(ValueError,'Недопустимый идентификатор диагностического запуска'):
                 retain(worker,Path(base)/'private','../../secret')

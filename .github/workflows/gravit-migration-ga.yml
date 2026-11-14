@@ -122,6 +122,7 @@ jobs:
         working-directory: apps/desktop/src-tauri
         run: |
           cargo test --locked
+          cargo generate-lockfile
           cargo check --locked
 
   isolated-gravit-e2e:

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -35,6 +36,9 @@ func TestSQLiteHTTPStateCoverage0372(t *testing.T) {
 }
 
 func TestSQLiteHTTPPersistenceAndCAS0372(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Durable SQLite HTTP is certified only on Linux; unsupported platforms have a dedicated rejection test")
+	}
 	ctx := context.Background()
 	path := filepath.Join(privateSQLiteTempDir(t), "http-repository.db")
 	open := func() *SQLiteHTTPRepository0372 {
@@ -109,6 +113,9 @@ func TestSQLiteHTTPPersistenceAndCAS0372(t *testing.T) {
 }
 
 func TestSQLiteHTTPConcurrentWritesAndSafeFailure0372(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Durable SQLite HTTP is certified only on Linux; unsupported platforms have a dedicated rejection test")
+	}
 	ctx := context.Background()
 	path := filepath.Join(privateSQLiteTempDir(t), "concurrency.db")
 	r, err := OpenSQLiteHTTPRepository0372(ctx, path, "")
@@ -152,6 +159,9 @@ func TestSQLiteHTTPConcurrentWritesAndSafeFailure0372(t *testing.T) {
 }
 
 func TestSQLiteHTTPMutationsCannotReportSuccessWithoutCommit0372(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Durable SQLite HTTP is certified only on Linux; unsupported platforms have a dedicated rejection test")
+	}
 	ctx := context.Background()
 	path := filepath.Join(privateSQLiteTempDir(t), "commit-failure.db")
 	r, err := OpenSQLiteHTTPRepository0372(ctx, path, "")
@@ -186,6 +196,9 @@ func TestSQLiteHTTPMutationsCannotReportSuccessWithoutCommit0372(t *testing.T) {
 }
 
 func TestSQLiteHTTPFilePermissions0372(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Durable SQLite HTTP is certified only on Linux; unsupported platforms have a dedicated rejection test")
+	}
 	path := filepath.Join(privateSQLiteTempDir(t), "mode.db")
 	r, err := OpenSQLiteHTTPRepository0372(context.Background(), path, "")
 	if err != nil {

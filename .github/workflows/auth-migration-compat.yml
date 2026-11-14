@@ -41,10 +41,22 @@ jobs:
           go build -o /tmp/nl-upgrade ./cmd/launcher
       - name: "Воспроизвести обновление из точного каталога миграций 0.29.10"
         run: |
-          # Скопировать каталог миграций CLI, исключив ТОЛЬКО 0086. Так создаётся
-          # база данных со всеми неизменяемыми миграциями вплоть до 0.29.10.
+          # Историческая база должна содержать только миграции до 0086,
+          # с исходными именами и неизменёнными байтами встроенного каталога.
           cp -a cli /tmp/nl-cli-prior
-          rm /tmp/nl-cli-prior/internal/dbmigrate/sql/0086_auth_upgrade_integrity.sql
+          python3 - <<'PYCODE'
+          from pathlib import Path
+          import zipfile
+          path = Path('/tmp/nl-cli-prior/internal/dbmigrate/catalog.zip')
+          temp = path.with_suffix('.tmp')
+          with zipfile.ZipFile(path) as source, zipfile.ZipFile(temp, 'w') as target:
+              entries = [i for i in source.infolist() if int(i.filename.split('/')[1].split('_')[0]) < 86]
+              assert entries and len(entries) < len(source.infolist())
+              assert any(i.filename.startswith('sql/0085_') for i in entries)
+              for entry in entries:
+                  target.writestr(entry, source.read(entry))
+          temp.replace(path)
+          PYCODE
           (cd /tmp/nl-cli-prior && go build -o /tmp/nl-prior ./cmd/launcher)
           /tmp/nl-prior db migrate apply
       - name: "Создать данные двух изолированных издателей до обновления"

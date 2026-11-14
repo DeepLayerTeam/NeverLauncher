@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -57,6 +58,9 @@ func fieldsOrPrivatePrefix(raw []byte) []byte {
 }
 
 func TestSQLiteHTTP0471RejectsUnrelatedDatabaseAndMissingSnapshot(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Durable SQLite HTTP is certified only on Linux; unsupported platforms have a dedicated rejection test")
+	}
 	ctx := context.Background()
 	path := filepath.Join(privateSQLiteTempDir(t), "existing.db")
 	store, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path})
@@ -83,6 +87,9 @@ func TestSQLiteHTTP0471RejectsUnrelatedDatabaseAndMissingSnapshot(t *testing.T) 
 }
 
 func TestSQLiteHTTP0471HealthVerifiesDocumentAndCache(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Durable SQLite HTTP is certified only on Linux; unsupported platforms have a dedicated rejection test")
+	}
 	ctx := context.Background()
 	path := filepath.Join(privateSQLiteTempDir(t), "state.db")
 	repo, err := OpenSQLiteHTTPRepository0372(ctx, path, "")

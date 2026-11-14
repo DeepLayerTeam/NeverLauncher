@@ -71,7 +71,7 @@ services:
   volume-init:
     image: alpine:3.20
     user: "0:0"
-    command: ["sh", "-ec", "mkdir -p /storage/current /backups && chown -R 10001:10001 /storage /backups && chmod 0750 /storage /storage/current /backups"]
+    command: ["sh", "-ec", "mkdir -p /storage/current /backups && chown -R 10001:10001 /storage /backups && chmod 0700 /storage /storage/current /backups"]
     volumes:
       - federation-storage:/storage
       - federation-backups:/backups

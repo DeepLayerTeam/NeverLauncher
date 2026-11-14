@@ -79,7 +79,7 @@ func TestRecoveryRefusesRestoreWhenJVMCannotStop0499(t *testing.T) {
 	if _, err := r.SaveExtensionUpdateTransaction(ctx, tx); err != nil {
 		t.Fatal(err)
 	}
-	if err := m.recoverTransaction02011(ctx, tx, 30*time.Millisecond); err == nil || !strings.Contains(err.Error(), "cannot stop") {
+	if err := m.recoverTransaction02011(ctx, tx, 30*time.Millisecond); err == nil || !strings.Contains(err.Error(), "Не удалось остановить") {
 		t.Fatalf("Восстановление должно отклонять работающий хост: %v", err)
 	}
 	if h.restores != 0 || h.content != `{"schema":2}` {
@@ -108,7 +108,7 @@ func TestRecoveryDoesNotSilentlySkipDatabaseError0499(t *testing.T) {
 	tx := model.ExtensionUpdateTransaction{ID: "extupd-222222222222222222222222", Scope: "global", Status: "running", StartedAt: time.Now().UTC(), Plan: model.ExtensionUpdatePlan{
 		Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", Operation: "unchanged", FromVersion: "1.0.0", ToVersion: "1.0.0"}}}}
 	err := m.recoverTransaction02011(ctx, tx, 30*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "database connection lost") {
+	if err == nil || !strings.Contains(err.Error(), "соединение с базой данных потеряно") {
 		t.Fatalf("Ошибка базы данных ошибочно признана успешным откатом: %v", err)
 	}
 }
@@ -190,7 +190,7 @@ func TestRollbackCannotClaimSuccessWithUnhealthyOldJVM0499(t *testing.T) {
 	m := &Manager{Repo: r, Lifecycle: &fakeLifecycle02011{r}, Host: h, Config: Config{HealthTimeout: 25 * time.Millisecond}}
 	plan := model.ExtensionUpdatePlan{Scope: "global", Items: []model.ExtensionUpdatePlanItem{{ExtensionID: "update.test", FromVersion: "1.0.0", ToVersion: "2.0.0", PackageIdentity: target.Artifact.PackageIdentity, Operation: "update"}}}
 	tx, err := m.Apply(ctx, plan)
-	if err == nil || tx.Status != "rollback_failed" || !strings.Contains(tx.Failure, "restored JVM unhealthy") {
+	if err == nil || tx.Status != "rollback_failed" || !strings.Contains(tx.Failure, "Восстановленная JVM работает некорректно") {
 		t.Fatalf("Небезопасное завершение отката: статус=%s сбой=%s ошибка=%v", tx.Status, tx.Failure, err)
 	}
 	h.healthy = true

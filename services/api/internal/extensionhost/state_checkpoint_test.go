@@ -8,7 +8,7 @@ import (
 )
 
 func TestCheckpointRestoresRealState04810(t *testing.T) {
-	root := t.TempDir()
+	root := canonicalRuntimeTestTempDir(t)
 	ctx := context.Background()
 	key := Key{ExtensionID: "example.state", Scope: "global"}
 	dir := runtimeDir0303(root, key)
@@ -47,7 +47,7 @@ func TestCheckpointRestoresRealState04810(t *testing.T) {
 	}
 }
 func TestCheckpointTamperRefusesOverwrite04810(t *testing.T) {
-	root := t.TempDir()
+	root := canonicalRuntimeTestTempDir(t)
 	ctx := context.Background()
 	key := Key{ExtensionID: "example.audit", Scope: "project", ScopeID: "p1"}
 	dir := runtimeDir0303(root, key)
@@ -72,7 +72,7 @@ func TestCheckpointTamperRefusesOverwrite04810(t *testing.T) {
 	}
 }
 func TestAbsentCheckpointIsolation04810(t *testing.T) {
-	root := t.TempDir()
+	root := canonicalRuntimeTestTempDir(t)
 	ctx := context.Background()
 	key := Key{ExtensionID: "example.state", Scope: "project", ScopeID: "a"}
 	other := Key{ExtensionID: "example.state", Scope: "project", ScopeID: "b"}
@@ -102,7 +102,7 @@ func TestAbsentCheckpointIsolation04810(t *testing.T) {
 	}
 }
 func TestCheckpointRejectsSymlinkAndInvalidID04810(t *testing.T) {
-	root := t.TempDir()
+	root := canonicalRuntimeTestTempDir(t)
 	ctx := context.Background()
 	key := Key{ExtensionID: "example.state", Scope: "global"}
 	if err := snapshotRuntime04810(ctx, root, key, "../unsafe"); err == nil {

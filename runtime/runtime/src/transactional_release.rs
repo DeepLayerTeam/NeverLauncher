@@ -535,7 +535,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         // устойчиво записан. В дельта-транзакции ему не соответствует промежуточный файл.
         if reusable_file(root,current.active.as_ref(),&next,path)? {continue}
         let file_path = safe_join(stage, path)?;
-        fs::File::open(&file_path).and_then(|f| f.sync_all())
+        fs::OpenOptions::new().write(true).open(&file_path).and_then(|f| f.sync_all())
             .map_err(|e| format!("Сохранение подготовленного файла {path}: {e}"))?;
         if let Some(parent) = file_path.parent() { parents.insert(parent.to_path_buf()); }
     }

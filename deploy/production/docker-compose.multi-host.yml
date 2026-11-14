@@ -89,7 +89,7 @@ services:
     image: ${LAUNCHER_INIT_IMAGE:?требуется закреплённый OCI-образ инициализации}
     restart: 'no'
     user: '0:0'
-    command: ['sh', '-ec', 'for d in /a/storage /a/storage/current /a/backups /a/factory /a/coordinator /a/extensions /b/storage /b/storage/current /b/backups /b/factory /b/coordinator /b/extensions; do mkdir -p "$$d"; chown 10001:10001 "$$d"; chmod 0750 "$$d"; done']
+    command: ['sh', '-ec', 'for d in /a/storage /a/storage/current /a/backups /a/factory /a/coordinator /a/extensions /b/storage /b/storage/current /b/backups /b/factory /b/coordinator /b/extensions; do mkdir -p "$$d"; chown 10001:10001 "$$d"; chmod 0700 "$$d"; done']
     volumes:
       - api_storage:/a/storage
       - api_backups:/a/backups

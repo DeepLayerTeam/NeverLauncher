@@ -57,7 +57,7 @@ for migration in "$ROOT"/services/api/internal/dbmigrate/sql/*.sql; do
   base="$(basename "$migration")"
   ordinal="${base%%_*}"
   (( 10#$ordinal > 17 )) && continue
-  version="${base%.sql}"
+  version="$(python3 -c 'import json,sys; from pathlib import Path; names=json.loads(Path(sys.argv[1]).read_text()); print(names.get(sys.argv[2],sys.argv[2]).removesuffix(".sql"))' "$ROOT/services/api/internal/dbmigrate/migration_names.json" "$base")"
   checksum="$(sha256sum "$migration" | awk '{print $1}')"
   psql "$DB_DSN" -X -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
   psql "$DB_DSN" -X -v ON_ERROR_STOP=1 -v version="$version" -v checksum="$checksum" <<'SQL' >/dev/null
@@ -124,7 +124,7 @@ printf '[device-trust-migration-e2e] обновление поставляемы
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.json"
 
 latest_after="$(psql "$DB_DSN" -Atqc "SELECT max(version) FROM schema_migrations")"
-shipping_latest="$(find "$ROOT/services/api/internal/dbmigrate/sql" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | tail -n1 | sed 's/\.sql$//')"
+shipping_latest="$(python3 -c 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); print(max(n.removeprefix("sql/").removesuffix(".sql") for n in z.namelist()))' "$ROOT/cli/internal/dbmigrate/catalog.zip")"
 [[ -n "$shipping_latest" && "$latest_after" == "$shipping_latest" ]] || { echo "Неожиданная миграция после обновления: БД=$latest_after, поставка=$shipping_latest" >&2; exit 1; }
 sealed="$(psql "$DB_DSN" -Atqc "SELECT (checksum<>'' AND description<>'')::text FROM schema_migrations WHERE version='0018_device_trust_stabilization_01210'")"
 [[ "$sealed" == "true" ]]

@@ -105,7 +105,7 @@ exit 91
                 (root / ".launcher/server-bridge/host/runtime.json").read_text()
             )
             assert runtime["status"] == "stopped", runtime
-            assert runtime["stopMethod"] == "console-stop", runtime
+            assert runtime["stopMethod"] == "signal-console-stop", runtime
             print(
                 "ПРОЙДЕНО: READY, WATCHDOG, SIGTERM, остановка Minecraft через stdin, сохранение данных игроков и плагинов"
             )

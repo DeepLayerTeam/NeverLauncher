@@ -85,7 +85,7 @@ func TestAdminVersionUploadPublishFlow(t *testing.T) {
 	token := loginAdmin(t, handler)
 	token, _ = registerTestPasskey117(t, handler, token)
 
-	versionBody := strings.NewReader(`{"profileId":"vanilla","channel":"stable","version":"2.2.0"}`)
+	versionBody := strings.NewReader(`{"profileId":"vanilla","channel":"dev","version":"2.2.0"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/projects/demo-project/versions", versionBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")

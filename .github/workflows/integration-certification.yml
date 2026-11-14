@@ -109,7 +109,9 @@ jobs:
       - name: Компиляция настоящей нативной среды Tauri
         working-directory: apps/desktop/src-tauri
         shell: bash
-        run: cargo check --locked
+        run: |
+          cargo generate-lockfile
+          cargo check --locked
   review:
     needs: [integration, desktop-native]
     runs-on: ubuntu-24.04

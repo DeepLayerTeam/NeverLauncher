@@ -260,7 +260,7 @@ class SecurityGATests(unittest.TestCase):
             verify_security_archive(self.bundle, self.approval, 401234, 2, now=NOW)
         path = self.evidence / "targets/linux-arm64/security-0431/securityLauncherGuard.jsonl"
         path.write_bytes(b"tamper")
-        with self.assertRaisesRegex(ValueError, "altered security observation"):
+        with self.assertRaisesRegex(ValueError, "журнал наблюдений защиты был изменён"):
             package(self.evidence, self.approval, destination, now=NOW)
         self.assertFalse(destination.exists())
 

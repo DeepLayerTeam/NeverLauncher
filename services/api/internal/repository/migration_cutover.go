@@ -86,7 +86,7 @@ func checkCutoverReadiness03311(ctx context.Context, tx *sql.Tx, runID, stageID,
    SELECT 1 FROM minecraft_profiles mp WHERE mp.user_id=i.target_user_id AND mp.uuid=i.minecraft_uuid)))
  OR (i.status='pending_import' AND NOT EXISTS (
    SELECT 1 FROM migration_security_targets_0336 t JOIN minecraft_profiles mp ON mp.user_id=t.user_id
-   WHERE t.run_id=i.run_id AND t.expected_uuid=i.minecraft_uuid AND t.expected_name=i.username AND mp.uuid=i.minecraft_uuid)))
+   WHERE t.run_id=i.run_id AND t.expected_uuid=i.minecraft_uuid AND t.expected_name=i.username AND mp.uuid=i.minecraft_uuid))
  ) FROM migration_identity_rows_0334 i WHERE i.run_id=$1`, runID).Scan(&identityCount, &blocked) != nil || identityCount == 0 || blocked > 0 {
 		return mw.ErrConflict
 	}

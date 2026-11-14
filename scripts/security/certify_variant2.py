@@ -59,8 +59,9 @@ def main():
     args = parser.parse_args()
     if not __import__("re").fullmatch("[0-9a-f]{40}", args.commit):
         parser.error("Требуется: «точный SHA коммита Git»")
-    if (ROOT / "VERSION").read_text().strip() != "0.32.0":
-        parser.error("VERSION исходников должна быть равна 0.32.0")
+    product_version = (ROOT / "VERSION").read_text().strip()
+    if not __import__("re").fullmatch(r"\d+\.\d+\.\d+", product_version) or tuple(map(int, product_version.split("."))) < (0, 32, 0):
+        parser.error("VERSION исходников должна быть не ниже 0.32.0")
     if (ROOT / ".git").exists():
         current = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
@@ -114,7 +115,7 @@ def main():
     )
     report = {
         "schema": "launcher/security-certification/0320",
-        "productVersion": "0.32.0",
+        "productVersion": product_version,
         "tier": args.tier,
         "commit": args.commit,
         "status": status,

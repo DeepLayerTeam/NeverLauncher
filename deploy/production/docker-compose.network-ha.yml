@@ -6,7 +6,7 @@ services:
     image: alpine:3.20
     restart: 'no'
     user: '0:0'
-    command: ['sh', '-ec', 'for d in /a/storage /a/backups /a/factory /a/coordinator /b/storage /b/backups /b/factory /b/coordinator /c/storage /c/backups /c/factory /c/coordinator /d/storage /d/backups /d/factory /d/coordinator; do mkdir -p "$$d"; chown 10001:10001 "$$d"; chmod 0750 "$$d"; done']
+    command: ['sh', '-ec', 'for d in /a/storage /a/backups /a/factory /a/coordinator /b/storage /b/backups /b/factory /b/coordinator /c/storage /c/backups /c/factory /c/coordinator /d/storage /d/backups /d/factory /d/coordinator; do mkdir -p "$$d"; chown 10001:10001 "$$d"; chmod 0700 "$$d"; done']
     volumes:
       - ha_a_storage:/a/storage
       - ha_a_backups:/a/backups

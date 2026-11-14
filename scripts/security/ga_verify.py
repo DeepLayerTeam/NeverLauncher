@@ -23,6 +23,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 import certify as prior
 
 ROOT = Path(__file__).resolve().parents[2]
+PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 DOMAIN = b"Launcher-0.32.0-security-evidence-v1\n"
 SCHEMA = "launcher/security-certification/0320"
 TIERS = {
@@ -132,7 +133,7 @@ def verify_evidence(
         raise ValueError(f"{tier}: некорректная схема доказательств")
     if doc.get("status") != "PASS" or doc.get("sourceSha256") != source_sha:
         raise ValueError(f"{tier}: не совпадает статус или отпечаток исходников")
-    if doc.get("commit") != commit or doc.get("productVersion") != "0.32.0":
+    if doc.get("commit") != commit or doc.get("productVersion") != PRODUCT_VERSION:
         raise ValueError(f"{tier}: доказательства не привязаны к точному коммиту и версии релиза")
     try:
         when = dt.datetime.fromisoformat(doc["generatedAt"].replace("Z", "+00:00"))
@@ -237,7 +238,7 @@ def verify_all(
         raise ValueError("Обязательные уровни отсутствуют или повторяются")
     return {
         "schema": "launcher.ga.device-guard-isolation.v1",
-        "version": "0.32.0",
+        "version": PRODUCT_VERSION,
         "commit": commit,
         "sourceSha256": source_sha,
         "status": "PASS",

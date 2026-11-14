@@ -45,7 +45,7 @@ class ExactPackagesTest(unittest.TestCase):
     def test_altered_package_rejected(self):
         with (self.bundle / PACKAGES["windows-amd64"]).open("ab") as f:
             f.write(b"modified after approval")
-        with self.assertRaisesRegex(GateError, "differs"):
+        with self.assertRaisesRegex(GateError, "отличается от независимо сертифицированного"):
             verify_shipped(self.bundle, self.receipt)
 
     def test_missing_and_symlinked_package_rejected(self):
@@ -66,7 +66,7 @@ class ExactPackagesTest(unittest.TestCase):
     def test_duplicate_target_rejected(self):
         self.data["targets"][-1] = self.data["targets"][0]
         self.save()
-        with self.assertRaisesRegex(GateError, "duplicate"):
+        with self.assertRaisesRegex(GateError, "повторяющаяся"):
             verify_shipped(self.bundle, self.receipt)
 
 

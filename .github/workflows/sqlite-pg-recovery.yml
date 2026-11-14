@@ -23,7 +23,7 @@ jobs:
       - name: Проверить резервные копии SQLite, WAL и внедрённые оператором сбои
         run: |
           set -euo pipefail
-          PYTHONPATH=scripts/operations python3 -m unittest \
+          sudo env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$PWD/scripts/operations" "$(command -v python3)" -m unittest \
             scripts.operations.test_sqlite_pg_cutover \
             scripts.operations.test_sqlite_pg_recovery \
             scripts.operations.test_legacy_upgrade -v

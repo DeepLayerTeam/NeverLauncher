@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -32,10 +33,11 @@ class IntegrationCertificationTests(unittest.TestCase):
             # Имитируйте набор Go-тестов с кодом выхода 0, который молча пропустил E2E.
             # Его никогда нельзя считать успешной сертификацией.
             with patch.dict(CASES, {'skip': (("go", "test", "-v", "./internal/lanmdns"),)}):
-                with patch("run_integration_variant2.subprocess.Popen") as spawn:
+                with patch("run_integration_variant2.subprocess.Popen") as spawn, patch("run_integration_variant2.subprocess.run") as run:
                     child = spawn.return_value
                     child.communicate.return_value = (b"=== RUN   TestReal\n--- SKIP: TestReal (0.00s)\nPASS\n", b"")
                     child.returncode = 0
+                    run.return_value = subprocess.CompletedProcess(["go"], 0, stdout=child.communicate.return_value[0], stderr=b"")
                     r = run_cases(['skip'], Path(td)/'skip.json', timeout=3, cli='', commit=SHA)
                 self.assertFalse(r['passed'])
                 self.assertEqual(r['results'][0]['steps'][0]['status'], 'skipped')

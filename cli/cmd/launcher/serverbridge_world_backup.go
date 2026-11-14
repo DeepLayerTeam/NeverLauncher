@@ -223,10 +223,10 @@ func worldBackupPrivateDir02810(path string) error {
 	if err != nil {
 		return err
 	}
-	if !fi.IsDir() || fi.Mode().Perm()&0077 != 0 {
+	if !fi.IsDir() || fi.Mode()&os.ModeSymlink != 0 {
 		return errors.New("Каталог резервного копирования игрового мира: требуется закрытый каталог с правами 0700, не являющийся символической ссылкой")
 	}
-	return nil
+	return worldBackupVerifyPrivateDir02810(path, fi)
 }
 func worldBackupRandom02810() (string, error) {
 	b := make([]byte, 16)

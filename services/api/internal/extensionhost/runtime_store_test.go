@@ -16,8 +16,17 @@ import (
 	"time"
 )
 
+func canonicalRuntimeTestTempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
 func TestRuntimeStoragePersistenceIsolationAndLimits0303(t *testing.T) {
-	root := t.TempDir()
+	root := canonicalRuntimeTestTempDir(t)
 	global := runtimeDir0303(root, Key{ExtensionID: "test.example", Scope: "global"})
 	project := runtimeDir0303(root, Key{ExtensionID: "test.example", Scope: "project", ScopeID: "p1"})
 	other := runtimeDir0303(root, Key{ExtensionID: "other.example", Scope: "global"})
@@ -61,7 +70,7 @@ func TestRuntimeStoragePersistenceIsolationAndLimits0303(t *testing.T) {
 }
 
 func TestRuntimeStorageSymlinksRejected0303(t *testing.T) {
-	root := t.TempDir()
+	root := canonicalRuntimeTestTempDir(t)
 	outside := t.TempDir()
 	if err := os.Symlink(outside, filepath.Join(root, "runtime-data")); err != nil {
 		t.Skipf("символическая ссылка недоступна: %v", err)
@@ -77,7 +86,7 @@ func TestRuntimeStorageSymlinksRejected0303(t *testing.T) {
 }
 
 func TestRuntimeStoreQuotas0303(t *testing.T) {
-	root := t.TempDir()
+	root := canonicalRuntimeTestTempDir(t)
 	dir := runtimeDir0303(root, Key{ExtensionID: "test.example", Scope: "global"})
 	value := json.RawMessage(`"` + strings.Repeat("a", 60000) + `"`)
 	for i := 0; i < 72; i++ {
@@ -109,7 +118,7 @@ func TestRuntimeHTTPPermissions0303(t *testing.T) {
 	if _, err := repo.GrantExtensionPermission(ctx, model.ExtensionPermissionGrant{ExtensionID: manifest.ID, Scope: "global", Permission: "storage:read", GrantedBy: "test"}); err != nil {
 		t.Fatal(err)
 	}
-	host := New(Config{ExtensionRoot: t.TempDir()}, repo, storage.NewLocalStorage(t.TempDir()))
+	host := New(Config{ExtensionRoot: canonicalRuntimeTestTempDir(t)}, repo, storage.NewLocalStorage(t.TempDir()))
 	if err := host.Start(ctx); err != nil {
 		t.Fatal(err)
 	}

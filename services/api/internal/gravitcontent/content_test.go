@@ -195,7 +195,7 @@ func TestContentRejectsProtectedClasspath0443(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Ready || !strings.Contains(strings.Join(p.Blockers, " "), "unsafe classpath") {
+	if p.Ready || !strings.Contains(strings.Join(p.Blockers, " "), "Путь к классам ссылается на защищённые данные пользователя") {
 		t.Fatalf("Принят защищённый путь классов: %+v", p)
 	}
 }
@@ -322,7 +322,7 @@ func TestContentModdedLaunchAndOptionalMaterialization0493(t *testing.T) {
 	})
 	ctx := context.Background()
 	blocked, err := Prepare(ctx, bytes.NewReader(raw), int64(len(raw)), saved, "profiles/forge.json", "project", "forge", "Forge", "forge")
-	if err != nil || blocked.Ready || !strings.Contains(strings.Join(blocked.Blockers, ";"), "exact loader version") {
+	if err != nil || blocked.Ready || !strings.Contains(strings.Join(blocked.Blockers, ";"), "Требуется точная версия загрузчика") {
 		t.Fatalf("Принята конфигурация без версии загрузчика: %v %+v", err, blocked.Blockers)
 	}
 	plan, err := Prepare(ctx, bytes.NewReader(raw), int64(len(raw)), saved, "profiles/forge.json", "project", "forge", "Forge", "forge", "49.0.38")

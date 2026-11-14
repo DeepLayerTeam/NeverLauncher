@@ -109,6 +109,7 @@ jobs:
             --commit '${{ github.sha }}' \
             --run-id '${{ github.run_id }}' \
             --log e2e/device-trust-result/native-cargo-test.txt \
+            --go-log e2e/device-trust-result/native-go-device-binding.txt \
             --output e2e/device-trust-result/device-trust-result.json
       - name: Загрузить свидетельства Device Trust, допускающие машинную проверку
         if: always()
