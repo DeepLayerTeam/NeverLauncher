@@ -542,7 +542,7 @@ func ValidateProduction(cfg Config) error {
 				RequiredFeatures         []string                      `json:"requiredFeatures"`
 				Releases                 map[string]bridgeReleaseEntry `json:"releases"`
 			}
-			if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &document); err != nil || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
+			if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &document); err != nil || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "88cb75f5ebc97da6c86fc35b9c26ff2d9550ae9c7ae39166b837c0218a3ac718") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
 				problems = append(problems, "Метаданные сертификации безопасности ServerBridge 3 в LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON некорректны")
 			} else {
 				bridgeAllowlist = document.Releases

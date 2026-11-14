@@ -137,7 +137,7 @@ func TestResolutionErrorTyped0243(t *testing.T) {
 	m = topologyFixture0242()
 	m.ComponentCatalog.Components[0].Version = "1.0.0"
 	m.ComponentCatalog.Digest = ComponentCatalogDigest0242(*m.ComponentCatalog)
-	if err = ValidateManifestSchema(m); err == nil || !strings.Contains(err.Error(), "unsigned v3 constraints") {
+	if err = ValidateManifestSchema(m); err == nil || !strings.Contains(err.Error(), "неподписанные ограничения v3") {
 		t.Fatalf("Старая схема ошибочно приняла неподписанные правила: %v", err)
 	}
 }

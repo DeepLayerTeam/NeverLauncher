@@ -805,7 +805,7 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 			return "", fmt.Errorf("%s не содержит полного сертифицированного набора ServerBridge 3 версии %s", certPath, artifactVersion)
 		}
 		if serverBridgeSecurityCertificationRequired01912(artifactVersion) {
-			if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
+			if cert.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(cert.SecurityCapabilityDigest, "88cb75f5ebc97da6c86fc35b9c26ff2d9550ae9c7ae39166b837c0218a3ac718") || !cert.CapabilityDowngrade || !cert.CommandSignatures || !cert.EventSignatures || !cert.RuntimeInstanceBinding || !cert.OnlineKeyRotation || !serverBridgeSecurityFeaturesExact01912(cert.RequiredSecurityFeatures) {
 				return "", errors.New("Несовпадение: метаданные сертификации безопасности ServerBridge 3")
 			}
 		}
@@ -832,7 +832,7 @@ func verifyBridgeArtifactReleaseMetadata0199(path, platform, artifactVersion, di
 	if err := json.Unmarshal(raw, &document); err != nil {
 		return "", fmt.Errorf("Некорректное значение: %s: %w", allowPath, err)
 	}
-	if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
+	if document.SchemaVersion != "3.0" || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "88cb75f5ebc97da6c86fc35b9c26ff2d9550ae9c7ae39166b837c0218a3ac718") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
 		return "", errors.New("Несовпадение: метаданные безопасности списка разрешённых артефактов ServerBridge 3")
 	}
 	if serverBridgeGARequired0200(artifactVersion) && (!document.GA || !document.ProtocolV3Frozen || !strings.EqualFold(document.ProtocolV3FeatureDigest, serverBridgeV3FrozenFeatureDigest0200) || document.ProtocolV2Mode != "compatibility-deprecated") {

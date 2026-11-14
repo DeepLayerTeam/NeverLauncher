@@ -4,8 +4,13 @@ package repository
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 	"os"
 	"strings"
 	"testing"
@@ -37,13 +42,20 @@ func TestServerBoundGuardPostgres0507(t *testing.T) {
 	correlation := fmt.Sprintf("%x", sha256.Sum256([]byte(suffix)))
 	runtimeID := strings.Repeat("b", 64)
 	uuid := "05070000-0000-4000-8000-" + fmt.Sprintf("%012d", time.Now().UnixNano()%1000000000000)
+	if _, err := r.SaveUser(model.User{ID: user, Email: user + "@example.test", DisplayName: "Guard 0507", RoleID: "player", Status: "active", PasswordHash: "hash-before"}); err != nil {
+		t.Fatal(err)
+	}
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fingerprint := sha256.Sum256(pub)
 	for _, q := range []struct {
 		sql  string
 		args []any
 	}{
-		{`INSERT INTO users(id,email,display_name,role_id,status,password_hash) VALUES($1,$2,'Guard 0507','player','active','hash-before')`, []any{user, user + "@example.test"}},
 		{`INSERT INTO projects(id,name) VALUES($1,'Guard Session 0507 Integration')`, []any{project}},
-		{`INSERT INTO server_bridge_nodes_v2(id,name,project_id,token_hash,kind,runtime_id,runtime_epoch) VALUES($1,'Guard Session Proxy',$2,'','velocity',$3,1)`, []any{node, project, runtimeID}},
+		{`INSERT INTO server_bridge_nodes_v2(id,name,project_id,token_hash,kind,runtime_id,runtime_epoch,key_algorithm,public_key,key_fingerprint,identity_epoch) VALUES($1,'Guard Session Proxy',$2,'','velocity',$3,1,'ed25519',$4,$5,1)`, []any{node, project, runtimeID, base64.RawURLEncoding.EncodeToString(pub), hex.EncodeToString(fingerprint[:])}},
 	} {
 		if _, err := r.db.ExecContext(ctx, q.sql, q.args...); err != nil {
 			t.Fatal(err)

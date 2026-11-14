@@ -63,6 +63,9 @@ COUNT=$((COUNT+1))
 printf '%s' "$COUNT" > "$COUNT_FILE"
 echo "stdout-run-$COUNT"
 echo "stderr-run-$COUNT" >&2
+# Allow the supervisor to verify and publish the identity of the live child.
+# Unlike an immediate exit, this exercises the crash/restart contract.
+sleep 1
 if [ "$COUNT" -eq 1 ]; then exit 7; fi
 exit 0`)
 	if err := configureServerBridgeHost01910([]string{

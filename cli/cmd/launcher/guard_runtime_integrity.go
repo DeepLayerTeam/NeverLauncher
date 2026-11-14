@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -19,11 +20,22 @@ func guardRuntimeInventory0505(root string, p guardCompatPolicy0502) (string, er
 	if err != nil {
 		return "", err
 	}
+	rootInfo, err := os.Lstat(absoluteRoot)
+	if err != nil {
+		return "", err
+	}
+	if rootInfo.Mode()&os.ModeSymlink != 0 || !rootInfo.IsDir() {
+		return "", fmt.Errorf("Guard: корень клиента должен быть реальным каталогом")
+	}
+	absoluteRoot, err = filepath.EvalSymlinks(absoluteRoot)
+	if err != nil {
+		return "", err
+	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "integrity.required=true\nintegrity.code.strict=false\nintegrity.root=%s\nintegrity.count=%d\n",
 		base64.StdEncoding.EncodeToString([]byte(absoluteRoot)), len(p.Artifacts))
 	for i, a := range p.Artifacts {
-		file, err := guardCompatPath0502(root, a.Path)
+		file, err := guardCompatPath0502(absoluteRoot, a.Path)
 		if err != nil {
 			return "", err
 		}
@@ -31,7 +43,7 @@ func guardRuntimeInventory0505(root string, p guardCompatPolicy0502) (string, er
 		if err != nil {
 			return "", err
 		}
-		hash, err := guardCompatHashFile0502(root, a.Path)
+		hash, err := guardCompatHashFile0502(absoluteRoot, a.Path)
 		if err != nil {
 			return "", err
 		}

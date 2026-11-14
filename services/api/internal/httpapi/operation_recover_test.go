@@ -22,9 +22,9 @@ func TestRecoverOriginalOperation0388(t *testing.T) {
 	handler := Server{Version: "0.38.8-test", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(cfg.StorageLocalPath)}.Handler()
 	token := loginAdmin(t, handler)
 	input := model.DurableJob{Kind: "package-publish", ActorType: "user", ActorID: "admin", Action: "release:publish", ProjectID: "demo-project", ResourceType: "package", ResourceID: "pkg-recover", IdempotencyKey: "recovery-lost-ack-0388", Payload: []byte(`{"packageId":"pkg-recover"}`), MaxAttempts: 8}
-	saved, reused, err := repo.EnqueueDurableJob(context.Background(), input, time.Hour)
-	if err != nil || reused || saved.ID == "" {
-		t.Fatalf("Постановка в очередь: %+v, повторно использовано=%v, ошибка=%v", saved, reused, err)
+	saved, created, err := repo.EnqueueDurableJob(context.Background(), input, time.Hour)
+	if err != nil || !created || saved.ID == "" {
+		t.Fatalf("Постановка в очередь: %+v, создано=%v, ошибка=%v", saved, created, err)
 	}
 	lookup := func(path, bearer string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodGet, path, nil)

@@ -106,7 +106,7 @@ require(
     client,
     [
         "SUPPORTED_PROTOCOLS = List.of(BridgeDefaults.PROTOCOL_VERSION)",
-        "Protocol v3 downgrade detected",
+        "Обнаружено понижение версии протокола ServerBridge v3",
         "BridgeProtocolSecurity.REQUIRED_FEATURES",
         "X-Launcher-Runtime-Id",
         "X-Launcher-Capability-Digest",
@@ -124,7 +124,7 @@ require(
         "verifyCapabilities",
         "persistPins",
         "previousPublicKey",
-        "command endpoint can never bootstrap trust",
+        "Конечная точка команд не может самостоятельно устанавливать доверие",
     ],
     "доверие при оперативной ротации ключей",
 )
@@ -143,7 +143,7 @@ require(
         '"schemaVersion":"3.0"',
         '"release":"ServerBridge 3"',
         "serverbridge3-security-01912",
-        "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4",
+        "88cb75f5ebc97da6c86fc35b9c26ff2d9550ae9c7ae39166b837c0218a3ac718",
     ],
     "Разрешённый список релиза ServerBridge 3",
 )
@@ -161,7 +161,7 @@ require(
     cli,
     [
         "serverBridgeSecurityCertificationRequired01912",
-        "ServerBridge 3 release allowlist security metadata mismatch",
+        "Несовпадение: метаданные безопасности списка разрешённых артефактов ServerBridge 3",
     ],
     "проверка релиза в CLI",
 )
@@ -226,14 +226,14 @@ if (
 require(
     harness,
     [
-        "overlap key rotation",
-        "retired previous key cannot authorize rotation after finalize",
-        "capability downgrade rejected",
-        "tampered bridge artifact rejected by certified hash",
-        "replayed event preserves original signed sequence",
-        "tampered/runtime-replayed command rejected",
-        "tampered/runtime-replayed event rejected",
-        "tampered node runtime rejected",
+        "Перекрывающая ротация ключей",
+        "Выведенный из обращения прежний ключ не может разрешать ротацию после завершения",
+        "понижение разрешений отклонено",
+        "подменённый артефакт моста отклонён по сертифицированному хешу",
+        "Повторно полученное событие сохраняет исходную подписанную последовательность",
+        "Изменённая или повторно воспроизведённая в другой среде команда отклонена",
+        "Изменённое или повторно воспроизведённое в другой среде событие отклонено",
+        "подменённая среда выполнения узла отклонена",
     ],
     "Среда атакующих тестов Runtime",
 )

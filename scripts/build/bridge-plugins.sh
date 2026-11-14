@@ -194,7 +194,7 @@ cat > "$OUT/BRIDGE_RELEASE_ALLOWLIST.json" <<JSON
   "protocolV3FeatureDigest":"098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc",
   "protocolV2Mode":"compatibility-deprecated",
   "securityProfile":"serverbridge3-security-01912",
-  "securityCapabilityDigest":"088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4",
+  "securityCapabilityDigest":"88cb75f5ebc97da6c86fc35b9c26ff2d9550ae9c7ae39166b837c0218a3ac718",
   "requiredFeatures":["security.protocol-v3-signing-domain","security.capability-downgrade-protection","security.command-signatures-v3","security.event-signatures-v3","security.runtime-instance-binding-v3","security.online-key-rotation-v1"],
   "releases":{
     "${VERSION}":{"velocitySha256":["${VELOCITY_SHA256}"],"bungeeCordSha256":["${BUNGEECORD_SHA256}"],"waterfallSha256":["${WATERFALL_SHA256}"],"bukkitSha256":["${BUKKIT_SHA256}"],"spigotSha256":["${SPIGOT_SHA256}"],"paperSha256":["${PAPER_SHA256}"],"purpurSha256":["${PURPUR_SHA256}"],"foliaSha256":["${FOLIA_SHA256}"],"fabricSha256":["${FABRIC_SHA256}"],"quiltSha256":["${QUILT_SHA256}"],"forgeSha256":["${FORGE_SHA256}"],"neoforgeSha256":["${NEOFORGE_SHA256}"],"spongeSha256":["${SPONGE_SHA256}"],"vanillaSha256":["${VANILLA_SHA256}"]}

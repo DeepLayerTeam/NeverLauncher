@@ -22,7 +22,7 @@ jobs:
       - name: Проверить старую установку, точную побайтовую резервную копию и нативный модуль обновления
         run: |
           set -euo pipefail
-          PYTHONPATH=scripts/operations python3 -m unittest \
+          sudo env PYTHONPATH="$PWD/scripts/operations" "$(command -v python3)" -m unittest \
             scripts/operations/test_legacy_upgrade.py \
             scripts/operations/test_component_upgrade.py -v
           python3 -m py_compile scripts/operations/legacy_upgrade.py scripts/operations/component_upgrade.py

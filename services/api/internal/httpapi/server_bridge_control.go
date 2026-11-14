@@ -729,12 +729,12 @@ func (b *serverBridgeStore) leaseControl0195(serverID string, epoch int64, runti
 			c.CompletedAt, c.UpdatedAt, c.LeaseUntil = now, now, time.Time{}
 			b.controlCommands[id] = c
 		}
-		if c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) || c.DeliverySequence <= resumeAfter {
-			continue
-		}
 		updated := reconcileControlInMemory0285(c, now)
 		if updated.Status != c.Status {
 			b.controlCommands[id] = updated
+			continue
+		}
+		if c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) || c.DeliverySequence <= resumeAfter {
 			continue
 		}
 		if c.Status == "leased" && c.LeaseOwner == leaseOwner && c.LeaseUntil.After(now) {

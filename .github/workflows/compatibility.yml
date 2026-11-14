@@ -35,6 +35,7 @@ jobs:
           python3 e2e/scripts/test_prepare_vanilla_1171_void_world.py
           python3 e2e/scripts/test_vanilla_1171_resource_ready_proxy.py
           python3 e2e/scripts/test_live_join.py
+          python3 e2e/scripts/test_fetch_server_bundle.py
           full_matrix="$(python3 scripts/compatibility/matrix.py plan --targets compatibility/targets.json)"
           matrix="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[:mid]},separators=(",",":")))' <<<"$full_matrix")"
           matrix_b="$(python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d["include"]; mid=(len(rows)+1)//2; print(json.dumps({"include":rows[mid:]},separators=(",",":")))' <<<"$full_matrix")"
@@ -145,6 +146,19 @@ jobs:
           ./scripts/compatibility/install-windows-mesa.ps1 `
             -Architecture '${{ matrix.arch }}' `
             -JavaExecutable "$env:LAUNCHER_E2E_JAVA"
+      - name: Загрузить утверждённый серверный комплект для временного CI runner
+        id: server_bundle
+        if: matrix.scope == 'client' && !matrix.matchingServer && vars.LAUNCHER_E2E_SERVER_RELEASE_TAG != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SERVER_RELEASE_TAG: ${{ vars.LAUNCHER_E2E_SERVER_RELEASE_TAG }}
+          SERVER_PINS_SHA256: ${{ vars.LAUNCHER_E2E_SERVER_PINS_SHA256 }}
+          SERVER_TARGET: ${{ matrix.id }}
+        shell: bash
+        run: |
+          python3 e2e/scripts/fetch_server_bundle.py --repo "$GITHUB_REPOSITORY" \
+            --tag "$SERVER_RELEASE_TAG" --manifest-sha256 "$SERVER_PINS_SHA256" \
+            --target "$SERVER_TARGET" --directory "$RUNNER_TEMP/compat-server-$SERVER_TARGET"
       - name: Запуск проверки совместимости на настоящем клиенте
         env:
           LAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
@@ -157,8 +171,8 @@ jobs:
           LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
           # Подготовленные оператором ZIP соответствующего сервера с независимым закреплённым SHA-256.
           # Отсутствие дистрибутивов намеренно БЛОКИРУЕТ обязательные цели многопользовательской игры.
-          LAUNCHER_E2E_SERVER_PINS: ${{ vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
-          LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
+          LAUNCHER_E2E_SERVER_PINS: ${{ steps.server_bundle.outputs.pins || vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
+          LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ steps.server_bundle.outputs.bundle_dir || vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
           LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '120' || '90' }}
           # У агентов CI нет физического аудиоустройства — принудительно включается настоящий
@@ -358,6 +372,19 @@ jobs:
           ./scripts/compatibility/install-windows-mesa.ps1 `
             -Architecture '${{ matrix.arch }}' `
             -JavaExecutable "$env:LAUNCHER_E2E_JAVA"
+      - name: Загрузить утверждённый серверный комплект для временного CI runner
+        id: server_bundle
+        if: matrix.scope == 'client' && !matrix.matchingServer && vars.LAUNCHER_E2E_SERVER_RELEASE_TAG != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SERVER_RELEASE_TAG: ${{ vars.LAUNCHER_E2E_SERVER_RELEASE_TAG }}
+          SERVER_PINS_SHA256: ${{ vars.LAUNCHER_E2E_SERVER_PINS_SHA256 }}
+          SERVER_TARGET: ${{ matrix.id }}
+        shell: bash
+        run: |
+          python3 e2e/scripts/fetch_server_bundle.py --repo "$GITHUB_REPOSITORY" \
+            --tag "$SERVER_RELEASE_TAG" --manifest-sha256 "$SERVER_PINS_SHA256" \
+            --target "$SERVER_TARGET" --directory "$RUNNER_TEMP/compat-server-$SERVER_TARGET"
       - name: Запуск проверки совместимости на настоящем клиенте
         env:
           LAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
@@ -370,8 +397,8 @@ jobs:
           LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
           # Подготовленные оператором ZIP соответствующего сервера с независимым закреплённым SHA-256.
           # Отсутствие дистрибутивов намеренно БЛОКИРУЕТ обязательные цели многопользовательской игры.
-          LAUNCHER_E2E_SERVER_PINS: ${{ vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
-          LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
+          LAUNCHER_E2E_SERVER_PINS: ${{ steps.server_bundle.outputs.pins || vars.LAUNCHER_E2E_SERVER_PINS_PATH }}
+          LAUNCHER_E2E_SERVER_BUNDLE_DIR: ${{ steps.server_bundle.outputs.bundle_dir || vars.LAUNCHER_E2E_SERVER_BUNDLE_DIR }}
           LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
           LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '120' || '90' }}
           # У агентов CI нет физического аудиоустройства — принудительно включается настоящий

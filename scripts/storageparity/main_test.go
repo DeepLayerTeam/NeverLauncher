@@ -102,3 +102,10 @@ func TestReportIsDeterministicAndMethodCoverageNotSemantic0371(t *testing.T) {
 		t.Fatal("Совпадение имён методов не доказывает совместимость")
 	}
 }
+
+func TestEvidenceTruncatesAtUTF8Boundary(t *testing.T) {
+	input := strings.Repeat("a", 179) + "Язык"
+	if got := shortenEvidence(input); got != strings.Repeat("a", 179) {
+		t.Fatalf("unexpected evidence %q", got)
+	}
+}

@@ -128,7 +128,7 @@ func (r *SQLRepository) EnsureMigrationContent0337(ctx context.Context, runID, o
 	}
 	now := time.Now().UTC()
 	profile.Revision, profile.CreatedAt, profile.UpdatedAt = 1, now, now
-	res, e := tx.ExecContext(ctx, `INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest) VALUES($1,$2,$3,$4,$5,$6,false,$7,$7,'2.0',1,$8) ON CONFLICT (project_id,id) DO NOTHING`, profile.ID, profile.ProjectID, profile.Name, profile.Description, profile.Loader, profile.Preset, now, profile.Digest)
+	res, e := tx.ExecContext(ctx, `INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest,minecraft_version,loader_version,java_major) VALUES($1,$2,$3,$4,$5,$6,false,$7,$7,'2.0',1,$8,$9,$10,$11) ON CONFLICT (project_id,id) DO NOTHING`, profile.ID, profile.ProjectID, profile.Name, profile.Description, profile.Loader, profile.Preset, now, profile.Digest, profile.MinecraftVersion, profile.LoaderVersion, profile.JavaMajor)
 	if e != nil {
 		return BuildWorkspace{}, e
 	}

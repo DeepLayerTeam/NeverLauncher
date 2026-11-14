@@ -101,6 +101,8 @@ func TestAdminVersionUploadPublishFlow(t *testing.T) {
 		t.Fatalf("не удалось прочитать созданную версию: id=%q err=%v body=%s", created.ID, err, res.Body.String())
 	}
 
+	configurePackageRuntimeTest(t, handler, token, created.ID)
+
 	var payload bytes.Buffer
 	writer := multipart.NewWriter(&payload)
 	if err := writer.WriteField("path", "mods/example.jar"); err != nil {

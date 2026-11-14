@@ -888,9 +888,11 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 	// существующую tombstone-запись, но никогда изменение статуса или ключа.
 	oldUpdate := `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1 AND user_id=$6 AND status='active' AND replaced_by_device_id IS NULL RETURNING ` + trustedDeviceColumns0121
 	if oldStatus == "revoked" {
-		oldUpdate = `UPDATE trusted_devices SET replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1 AND user_id=$6 AND status='revoked' AND trust_state='revoked' AND replaced_by_device_id IS NULL RETURNING ` + trustedDeviceColumns0121
+		oldUpdate = `UPDATE trusted_devices SET replaced_at=$2,replaced_by_device_id=$3,replacement_reason=$4,updated_at=$2 WHERE id=$1 AND user_id=$5 AND status='revoked' AND trust_state='revoked' AND replaced_by_device_id IS NULL RETURNING ` + trustedDeviceColumns0121
+		row = tx.QueryRowContext(ctx, oldUpdate, oldDeviceID, now, replacement.ID, mode, userID)
+	} else {
+		row = tx.QueryRowContext(ctx, oldUpdate, oldDeviceID, now, reason, replacement.ID, mode, userID)
 	}
-	row = tx.QueryRowContext(ctx, oldUpdate, oldDeviceID, now, reason, replacement.ID, mode, userID)
 	result.OldDevice, err = scanTrustedDevice0121(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: старое доверенное устройство изменилось во время замены", ErrConflict)

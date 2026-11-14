@@ -50,7 +50,7 @@ func TestEnableDeniesQuarantinedPackage0424(t *testing.T) {
 		t.Fatal(err)
 	}
 	manager := New(t.TempDir(), 2, repo, nil)
-	if _, err := manager.Enable(ctx, id, Scope{Scope: "global"}); err == nil || !strings.Contains(err.Error(), "quarantined") {
+	if _, err := manager.Enable(ctx, id, Scope{Scope: "global"}); err == nil || !strings.Contains(err.Error(), "карантин") {
 		t.Fatalf("Включён пакет в карантине: %v", err)
 	}
 	after, err := repo.GetExtensionInstallState(ctx, id, "global", "")
@@ -85,7 +85,7 @@ func TestEnableRechecksRevokedPublisherKey0424(t *testing.T) {
 	if _, err := repo.RevokeExtensionRegistryPublisherKey(ctx, publisher, fp); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := manager.Enable(ctx, before.ExtensionID, Scope{Scope: "global"}); err == nil || !strings.Contains(err.Error(), "revoked") {
+	if _, err := manager.Enable(ctx, before.ExtensionID, Scope{Scope: "global"}); err == nil || !strings.Contains(err.Error(), "отозван") {
 		t.Fatalf("Отозванный ключ подписи позволил включить расширение: %v", err)
 	}
 	after, err := repo.GetExtensionInstallState(ctx, before.ExtensionID, "global", "")

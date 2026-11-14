@@ -24,13 +24,13 @@ func TestOwnerProfileConfigurationAndRevision0382(t *testing.T) {
 	project := "/api/v1/admin/projects/owner-profile-0382"
 	call(http.MethodPost, "/api/v1/admin/projects", `{"id":"owner-profile-0382","name":"Owner profile"}`, 201, "owner-profile-0382")
 	create := `{"id":"fabric","name":"Fabric","description":"Modded","minecraftVersion":"1.21.1","loader":"fabric","loaderVersion":"0.16.14","javaMajor":21,"preset":"modded","isDefault":true}`
-	call(http.MethodPost, project+"/profiles", create, 201, `"isDefault":true`)
+	call(http.MethodPost, project+"/profiles", create, 201, `"isDefault":false`)
 	call(http.MethodPost, project+"/profiles", create, 409, "Профиль уже существует")
-	call(http.MethodPatch, project+"/profiles/fabric", `{"description":"","preset":"","minecraftVersion":"1.21.4","loader":"fabric","loaderVersion":"0.16.14","javaMajor":21,"expectedRevision":1}`, 200, `"isDefault":true`)
-	call(http.MethodPatch, project+"/profiles/fabric", `{"minecraftVersion":"1.21.5","expectedRevision":1}`, 409, "revision conflict")
+	call(http.MethodPatch, project+"/profiles/fabric", `{"description":"","preset":"","minecraftVersion":"1.21.4","loader":"fabric","loaderVersion":"0.16.14","javaMajor":21,"isDefault":true,"expectedRevision":1}`, 200, `"isDefault":true`)
+	call(http.MethodPatch, project+"/profiles/fabric", `{"minecraftVersion":"1.21.5","expectedRevision":1}`, 409, "Конфликт ревизий профиля")
 	call(http.MethodGet, "/api/v1/projects/owner-profile-0382/profiles/fabric/revisions", "", 200, `"revision":1`)
 	call(http.MethodGet, "/api/v1/projects/owner-profile-0382/profiles/fabric/revisions", "", 200, `"revision":2`)
 	call(http.MethodPost, project+"/profiles/fabric/clone", `{"id":"fabric-copy","name":"Fabric copy","sourceRevision":1}`, 201, `"isDefault":false`)
 	// Прямое создание пакета не должно обходить настроенную версию профиля.
-	call(http.MethodPost, "/api/v1/packages", `{"projectId":"owner-profile-0382","profileId":"fabric","channel":"stable","version":"0.1","minecraftVersion":"1.19.4","loader":"fabric"}`, 409, "profile launch mismatch")
+	call(http.MethodPost, "/api/v1/packages", `{"projectId":"owner-profile-0382","profileId":"fabric","channel":"stable","version":"0.1","minecraftVersion":"1.19.4","loader":"fabric"}`, 409, "Несовпадение параметров запуска профиля")
 }

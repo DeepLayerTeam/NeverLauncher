@@ -89,12 +89,20 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = repo.db.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,expires_at) VALUES($1,$2,$3,'player',$4,'pre-migration','active',$5,now()+interval '2 hours')`, sid, userID, "Sec336@fileauth.invalid", did, "fam-"+suffix)
+	tx, err := repo.db.BeginTx(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = repo.db.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id,status) VALUES($1,$2,$3,'active')`, "fam-"+suffix, sid, userID)
+	defer tx.Rollback()
+	_, err = tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,expires_at) VALUES($1,$2,$3,'player',$4,'pre-migration','active',$5,now()+interval '2 hours')`, sid, userID, "Sec336@fileauth.invalid", did, "fam-"+suffix)
 	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id,status) VALUES($1,$2,$3,'active')`, "fam-"+suffix, sid, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
 	_, err = repo.db.ExecContext(ctx, `INSERT INTO refresh_tokens(id,family_id,session_id,token_hash,status,expires_at) VALUES($1,$2,$3,$4,'current',now()+interval '2 hours')`, "rt-"+suffix, "fam-"+suffix, sid, "hash-"+suffix)

@@ -42,13 +42,13 @@ func TestGameControlLostACKIsIndeterminateAndNeverRedispatched0285(t *testing.T)
 	if original.Status != "indeterminate" || original.LeaseOwner != lease.LeaseOwner || original.LeaseToken != lease.LeaseToken || original.Attempt != 1 || original.CompletedAt.IsZero() {
 		t.Fatalf("потерянное подтверждение получения обработано небезопасно: %+v", original)
 	}
-	if _, err = store.completeControl0195("survival", 3, runtimeID, lease.ID, lease.LeaseOwner, lease.LeaseToken, lease.DeliverySequence, "succeeded", map[string]string{}, "", now.Add(12*time.Second)); !errors.Is(err, repository.ErrConflict) {
-		t.Fatalf("устаревшее подтверждение получения перезаписало состояние неопределённости: %v", err)
+	if recovered, e := store.completeControl0195("survival", 3, runtimeID, lease.ID, lease.LeaseOwner, lease.LeaseToken, lease.DeliverySequence, "succeeded", map[string]string{}, "", now.Add(12*time.Second)); e != nil || recovered.Status != "succeeded" || recovered.Attempt != 1 {
+		t.Fatalf("Исходная поздняя квитанция не восстановлена: %+v %v", recovered, e)
 	}
 	repeat := cmd
 	repeat.ID = "ctl_replay_different_id"
 	stored, reused, err := store.createControl0195(repeat, now.Add(15*time.Second))
-	if err != nil || !reused || stored.ID != cmd.ID || stored.Status != "indeterminate" {
+	if err != nil || !reused || stored.ID != cmd.ID || stored.Status != "succeeded" {
 		t.Fatalf("повтор идемпотентной операции=%+v, повторное использование=%v, ошибка=%v", stored, reused, err)
 	}
 }

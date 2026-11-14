@@ -40,7 +40,7 @@ func TestTPMProofCannotSurviveSessionRevocation0436(t *testing.T) {
 	user, device, session, family := "tpm-user-"+suffix, "tpm-device-"+suffix, "tpm-session-"+suffix, "tpm-family-"+suffix
 	fp := strings.Repeat("a", 64)
 	rootFP, akFP := strings.Repeat("b", 64), strings.Repeat("c", 64)
-	_, err := first.db.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,password_hash) VALUES($1,$2,'TPM Proof Test','player','active','test-hash')`, user, user+"@example.test")
+	_, err := first.SaveUser(model.User{ID: user, Email: user + "@example.test", DisplayName: "TPM Proof Test", RoleID: "player", Status: "active", PasswordHash: "test-hash"})
 	if err != nil {
 		t.Fatal(err)
 	}

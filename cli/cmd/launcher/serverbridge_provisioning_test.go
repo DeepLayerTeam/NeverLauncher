@@ -79,7 +79,7 @@ func writeCertifiedArtifact0199(t *testing.T, dir, platform, ver string) string 
 	}
 	if serverBridgeSecurityCertificationRequired01912(ver) {
 		cert.SecurityProfile = "serverbridge3-security-01912"
-		cert.SecurityCapabilityDigest = "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4"
+		cert.SecurityCapabilityDigest = "88cb75f5ebc97da6c86fc35b9c26ff2d9550ae9c7ae39166b837c0218a3ac718"
 		cert.RequiredSecurityFeatures = append([]string(nil), serverBridgeSecurityFeatures01912...)
 		cert.CapabilityDowngrade = true
 		cert.CommandSignatures = true

@@ -803,9 +803,8 @@ func prepareState0474(ctx context.Context, tx pgx.Tx) error {
 }
 
 func moveState0474(ctx context.Context, tx pgx.Tx, receipt Report, report *LiveReport0473, keys MFASecrets0474) error {
-	if err := prepareState0474(ctx, tx); err != nil {
-		return err
-	}
+	// Schema preparation is performed before any imported rows in live.go.
+	// Repeating ALTER TABLE here conflicts with deferred constraint triggers.
 	for _, r := range stateRules0474() {
 		expected, ok := tableReport0473(receipt, r.source)
 		if !ok {

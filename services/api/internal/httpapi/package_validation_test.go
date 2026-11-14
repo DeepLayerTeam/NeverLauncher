@@ -75,6 +75,7 @@ func createStagedIntegrityPackageInChannel0341(t *testing.T, handler http.Handle
 		t.Fatalf("Отсутствует идентификатор пакета: %v %s", err, res.Body.String())
 	}
 	packageID := created.Data.PackageID
+	configurePackageRuntimeTest(t, handler, token, packageID)
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
@@ -171,7 +172,7 @@ func TestRuntimePolicyRequiresSignedExactManifestEvidence0212(t *testing.T) {
 		handler.ServeHTTP(res, req)
 		return res
 	}
-	if res := publish(); res.Code != http.StatusConflict || !strings.Contains(res.Body.String(), "runtime PASS") {
+	if res := publish(); res.Code != http.StatusConflict || !strings.Contains(res.Body.String(), "Runtime со статусом PASS") {
 		t.Fatalf("Публикация без подтверждения Runtime должна завершиться ошибкой => %d %s", res.Code, res.Body.String())
 	}
 

@@ -103,7 +103,7 @@ func TestExtensionLifecycleFilesystemRollbackOnRepositoryFailure0204(t *testing.
 	before := seedLifecycleInstall0204(t, baseRepo, id, "1.0.0", model.ExtensionInstallStateEnabled)
 	writeCurrentPayload0204(t, root, id, "keep-me")
 	manager := New(root, 10, failingLifecycleRepo0204{Repository: baseRepo, err: errors.New("принудительно вызванная ошибка хранилища")}, nil)
-	if _, err := manager.Uninstall(ctx, id, Scope{Scope: "global"}); err == nil || err.Error() != "forced repository failure" {
+	if _, err := manager.Uninstall(ctx, id, Scope{Scope: "global"}); err == nil || err.Error() != "принудительно вызванная ошибка хранилища" {
 		t.Fatalf("Ошибка удаления=%v", err)
 	}
 	data, err := os.ReadFile(filepath.Join(currentDir0204(root, Scope{Scope: "global"}, id), "backend", "extension"))

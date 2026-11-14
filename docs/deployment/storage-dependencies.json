@@ -711,7 +711,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 14,
-          "evidence": "# Включайте только при запуске нескольких реплик управляющего сервиса с PostgreSQL и Redis в режиме высок\ufffd"
+          "evidence": "# Включайте только при запуске нескольких реплик управляющего сервиса с PostgreSQL и Redis в режиме высок"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -920,32 +920,32 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 101,
-          "evidence": "- name: \"Проверить настоящие реплики PostgreSQL, каскадный отзыв доступа, блокировки и SQL-аутентификацию п\ufffd"
+          "line": 100,
+          "evidence": "- name: \"Проверить настоящие реплики PostgreSQL, каскадный отзыв доступа, блокировки и SQL-аутентификацию п"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 105,
+          "line": 104,
           "evidence": "go test -json -count=1 -timeout=12m ./internal/httpapi -run '^TestSecurityRealAuthPostgresTwoReplicas02912$' | tee \"$RUNNER_TEMP/auth-postgres.json\""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 106,
+          "line": 105,
           "evidence": "go test -json -count=1 -timeout=12m ./internal/repository -run '^TestGlobalSessionRevocationPostgres0297$|^TestProtectionBanPostgres0298$' | tee -a \"$RUNNER_TEMP/auth-postgres.json"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 107,
+          "line": 106,
           "evidence": "python3 ../../scripts/ga/assert_go_test.py \"$RUNNER_TEMP/auth-postgres.json\" \\"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 113,
+          "line": 112,
           "evidence": "--require TestLiveSQLLegacyAuthentication0294/postgresql \\"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 131,
+          "line": 130,
           "evidence": "${{ runner.temp }}/auth-postgres.json"
         }
       ]
@@ -1085,12 +1085,12 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 117,
+          "line": 118,
           "evidence": "jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \\"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 330,
+          "line": 344,
           "evidence": "jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \\"
         }
       ]
@@ -1766,7 +1766,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 258,
-          "evidence": "name: Обязательные реальные испытания восстановления на новом узле и отказов PostgreSQL/API в изолированн\ufffd"
+          "evidence": "name: Обязательные реальные испытания восстановления на новом узле и отказов PostgreSQL/API в изолированн"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2351,7 +2351,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 211,
-          "evidence": "return releaseDeviceTrustCertification{}, errors.New(\"Релизная проверка доверия устройств требует обязательную цель пров\ufffd"
+          "evidence": "return releaseDeviceTrustCertification{}, errors.New(\"Релизная проверка доверия устройств требует обязательную цель пров"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2371,7 +2371,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 307,
-          "evidence": "fail(\"строгая предварительная проверка не умеет запускать сквозной тест федерации с несколькими эк\ufffd"
+          "evidence": "fail(\"строгая предварительная проверка не умеет запускать сквозной тест федерации с несколькими эк"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2606,7 +2606,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 376,
-          "evidence": "fmt.Printf(\"Инвентаризация хранилища проверена: файлов PostgreSQL — %d; методов HTTP — %d; пересечений имён SQLite \ufffd"
+          "evidence": "fmt.Printf(\"Инвентаризация хранилища проверена: файлов PostgreSQL — %d; методов HTTP — %d; пересечений имён SQLite "
         }
       ]
     },
@@ -2881,7 +2881,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 152,
-          "evidence": "r.issue(\"warning\", \"postgres.connections\", fmt.Sprintf(\"%d/%d\", p.ActiveConnections, p.MaxConnections), \"Использовано не менее 80 % от max_connections\", \"Ус\ufffd"
+          "evidence": "r.issue(\"warning\", \"postgres.connections\", fmt.Sprintf(\"%d/%d\", p.ActiveConnections, p.MaxConnections), \"Использовано не менее 80 % от max_connections\", \"Ус"
         },
         {
           "category": "database-sql-handle",
@@ -3066,7 +3066,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 185,
-          "evidence": "p.Limitations = append(p.Limitations, \"Один процесс API; высокой доступности нет\", \"PostgreSQL по-прежнему необходим; коорд\ufffd"
+          "evidence": "p.Limitations = append(p.Limitations, \"Один процесс API; высокой доступности нет\", \"PostgreSQL по-прежнему необходим; коорд"
         },
         {
           "category": "storage-configuration-read",
@@ -7421,7 +7421,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 159,
-          "evidence": "VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16)`, s[\"id\"], uid, email, role, s[\"device_id\"], status, family, created, seen, expires, revoked, \"Обновле\ufffd"
+          "evidence": "VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16)`, s[\"id\"], uid, email, role, s[\"device_id\"], status, family, created, seen, expires, revoked, \"Обновле"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -7686,7 +7686,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 538,
-          "evidence": "return report, fmt.Errorf(\"Перенос опубликован, но результат фиксации чтения PostgreSQL не подтверждён; проверьте \ufffd"
+          "evidence": "return report, fmt.Errorf(\"Перенос опубликован, но результат фиксации чтения PostgreSQL не подтверждён; проверьте "
         }
       ]
     },
@@ -7776,7 +7776,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 211,
-          "evidence": "return releaseDeviceTrustCertification{}, errors.New(\"Релизная проверка доверия устройств требует обязательную цель пров\ufffd"
+          "evidence": "return releaseDeviceTrustCertification{}, errors.New(\"Релизная проверка доверия устройств требует обязательную цель пров"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7956,7 +7956,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 233,
-          "evidence": "return Checkpoint{}, errors.New(\"Сканирование авторизации PostgreSQL вернуло пустой результат; контрольная точка не \ufffd"
+          "evidence": "return Checkpoint{}, errors.New(\"Сканирование авторизации PostgreSQL вернуло пустой результат; контрольная точка не "
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10066,7 +10066,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 332,
-          "evidence": "\"Сквозная проверка протокола доверия устройств версии 0.13.0 на настоящем PostgreSQL с учётом стабилизац\ufffd"
+          "evidence": "\"Сквозная проверка протокола доверия устройств версии 0.13.0 на настоящем PostgreSQL с учётом стабилизац"
         }
       ]
     },
@@ -10101,7 +10101,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 185,
-          "evidence": "\"note\": \"Этот снимок только для чтения не разрешает публикацию; PostgreSQL повторно проверит данные при фи\ufffd"
+          "evidence": "\"note\": \"Этот снимок только для чтения не разрешает публикацию; PostgreSQL повторно проверит данные при фи"
         }
       ]
     },
@@ -10336,7 +10336,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 165,
-          "evidence": "require(url.scheme in ('postgres','postgresql') and url.hostname and url.path not in ('', '/'), 'Некорректная строка подключения к PostgreSQL в ра\ufffd"
+          "evidence": "require(url.scheme in ('postgres','postgresql') and url.hostname and url.path not in ('', '/'), 'Некорректная строка подключения к PostgreSQL в ра"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10346,7 +10346,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 168,
-          "evidence": "require(set(params) \u003c= {'sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'connect_timeout'} and all(len(v)==1 for v in params.values()), 'Неподдерживаемый парам\ufffd"
+          "evidence": "require(set(params) \u003c= {'sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'connect_timeout'} and all(len(v)==1 for v in params.values()), 'Неподдерживаемый парам"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10366,22 +10366,22 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 200,
-          "evidence": "require(state.get('completed') == list(STAGES) and state.get('cutoverSupported') is True and state.get('writeBoundaryCrossed') is True and not state.get('rolledBack'), 'Опера\ufffd"
+          "evidence": "require(state.get('completed') == list(STAGES) and state.get('cutoverSupported') is True and state.get('writeBoundaryCrossed') is True and not state.get('rolledBack'), 'Опера"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 202,
-          "evidence": "require(receipt.get('verified') is True and receipt.get('readyForBackendCutover') is True and receipt.get('ownerId') == owner['id'], 'Квитанция владельца или \ufffd"
+          "evidence": "require(receipt.get('verified') is True and receipt.get('readyForBackendCutover') is True and receipt.get('ownerId') == owner['id'], 'Квитанция владельца или "
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 208,
-          "evidence": "require(a.target_storage is not None and a.target_storage.resolve() != a.storage.resolve(), 'Для проверки чтения из PostgreSQL требуется независ\ufffd"
+          "evidence": "require(a.target_storage is not None and a.target_storage.resolve() != a.storage.resolve(), 'Для проверки чтения из PostgreSQL требуется независ"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 210,
-          "evidence": "require(baseline['storage'] == {'sha256': target_sha, 'objects': target_n, 'bytes': target_size}, 'Локальное хранилище целевого PostgreSQL побайто\ufffd"
+          "evidence": "require(baseline['storage'] == {'sha256': target_sha, 'objects': target_n, 'bytes': target_size}, 'Локальное хранилище целевого PostgreSQL побайто"
         }
       ]
     },
@@ -10556,7 +10556,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 229,
-          "evidence": "\"PostgreSQL не является единственным доступным для записи основным узлом или существуют посторонние к\ufffd"
+          "evidence": "\"PostgreSQL не является единственным доступным для записи основным узлом или существуют посторонние к"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10621,12 +10621,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 622,
-          "evidence": "\"limitations\": \"PITR вне общей контрольной точки применим только к PostgreSQL; игровые миры и S3 требуют соответс\ufffd"
+          "evidence": "\"limitations\": \"PITR вне общей контрольной точки применим только к PostgreSQL; игровые миры и S3 требуют соответс"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 646,
-          "evidence": "# Держите миры заблокированными во время снимка PostgreSQL/S3. Освобождайте их только после всех чтений \ufffd"
+          "evidence": "# Держите миры заблокированными во время снимка PostgreSQL/S3. Освобождайте их только после всех чтений "
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10666,7 +10666,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 708,
-          "evidence": "# запуска PostgreSQL на изолированном целевом узле. Не возвращайте табличные пространства на исходные \ufffd"
+          "evidence": "# запуска PostgreSQL на изолированном целевом узле. Не возвращайте табличные пространства на исходные "
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10696,7 +10696,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 242,
-          "evidence": "work.resolve() not in Path(args.pgdata).resolve().parents, \"Целевой каталог PostgreSQL пересекается с защищённой резервной копие\ufffd"
+          "evidence": "work.resolve() not in Path(args.pgdata).resolve().parents, \"Целевой каталог PostgreSQL пересекается с защищённой резервной копие"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10851,7 +10851,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 510,
-          "evidence": "'limitation': 'Останавливается одна служба systemd, а не физический узел; отдельно проверьте переключение л\ufffd"
+          "evidence": "'limitation': 'Останавливается одна служба systemd, а не физический узел; отдельно проверьте переключение л"
         }
       ]
     },
@@ -10876,7 +10876,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 149,
-          "evidence": "# Штатная PostgreSQL изолирована внутри этого проекта Compose. При неожиданном активном клиенте завершайт\ufffd"
+          "evidence": "# Штатная PostgreSQL изолирована внутри этого проекта Compose. При неожиданном активном клиенте завершайт"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -10951,7 +10951,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 859,
-          "evidence": "# После копирования объектов повторно проверяйте наличие посторонних клиентов PostgreSQL в течение ок\ufffd"
+          "evidence": "# После копирования объектов повторно проверяйте наличие посторонних клиентов PostgreSQL в течение ок"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -11071,12 +11071,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 450,
-          "evidence": "record(\"postgresql\", \"RISK\", \"На проверенных узлах найден только один контейнер PostgreSQL; внешнее переключение пр\ufffd"
+          "evidence": "record(\"postgresql\", \"RISK\", \"На проверенных узлах найден только один контейнер PostgreSQL; внешнее переключение пр"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 452,
-          "evidence": "record(\"postgresql\", \"UNVERIFIED\", \"Топология внешнего PostgreSQL или управляемого кластера не определяется по провер\ufffd"
+          "evidence": "record(\"postgresql\", \"UNVERIFIED\", \"Топология внешнего PostgreSQL или управляемого кластера не определяется по провер"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -11586,7 +11586,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 417,
-          "evidence": "raise CutoverError(\"Исходный Backend должен использовать SQLite; изменение существующего развёртывания PostgreSQL за\ufffd"
+          "evidence": "raise CutoverError(\"Исходный Backend должен использовать SQLite; изменение существующего развёртывания PostgreSQL за"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -11686,7 +11686,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 661,
-          "evidence": "raise CutoverError(\"Результат предыдущего импорта неизвестен: перед продолжением вручную проверьте состо\ufffd"
+          "evidence": "raise CutoverError(\"Результат предыдущего импорта неизвестен: перед продолжением вручную проверьте состо"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -11826,7 +11826,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1,
-          "evidence": "\"\"\"Регрессионные тесты реальных байтов резервного копирования/восстановления SQLite и безопасной ор\ufffd"
+          "evidence": "\"\"\"Регрессионные тесты реальных байтов резервного копирования/восстановления SQLite и безопасной ор"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -12851,7 +12851,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 309,
-          "evidence": "fail(\"строгая предварительная проверка не умеет запускать сквозной тест федерации с несколькими эк\ufffd"
+          "evidence": "fail(\"строгая предварительная проверка не умеет запускать сквозной тест федерации с несколькими эк"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -12951,7 +12951,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1861,
-          "evidence": "fail(f\"В проверке «0.16.1 сквозная проверка PostgreSQL назначения запроса Guard» отсутствует обязательный ком\ufffd"
+          "evidence": "fail(f\"В проверке «0.16.1 сквозная проверка PostgreSQL назначения запроса Guard» отсутствует обязательный ком"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -13315,73 +13315,73 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 50,
+          "line": 51,
           "evidence": "pgDialect = regexp.MustCompile(`(?i)(\\$[1-9][0-9]*|::(?:jsonb?|uuid|text|timestamptz|interval)|\\b(?:FOR\\s+UPDATE|SKIP\\s+LOCKED|BIGSERIAL|TIMESTAMPTZ|pg_advisory_[a-z_]+|jsonb_[a-z_"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 50,
+          "line": 51,
           "evidence": "pgDialect = regexp.MustCompile(`(?i)(\\$[1-9][0-9]*|::(?:jsonb?|uuid|text|timestamptz|interval)|\\b(?:FOR\\s+UPDATE|SKIP\\s+LOCKED|BIGSERIAL|TIMESTAMPTZ|pg_advisory_[a-z_]+|jsonb_[a-z_"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 51,
+          "line": 52,
           "evidence": "pgConfig = regexp.MustCompile(`(?i)(LAUNCHER_(?:POSTGRES|PG_|DATABASE_DSN|REPOSITORY_DRIVER|SQL_DRIVER)|postgres(?:ql)?://|\\b(?:postgres|postgresql|pgx|jsonb|bigserial|timestamptz)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 51,
+          "line": 52,
           "evidence": "pgConfig = regexp.MustCompile(`(?i)(LAUNCHER_(?:POSTGRES|PG_|DATABASE_DSN|REPOSITORY_DRIVER|SQL_DRIVER)|postgres(?:ql)?://|\\b(?:postgres|postgresql|pgx|jsonb|bigserial|timestamptz)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 199,
+          "line": 209,
           "evidence": "if e == nil \u0026\u0026 (strings.Contains(s, \"pgx\") || strings.Contains(s, \"pq\") || strings.Contains(s, \"postgres\")) {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 200,
+          "line": 210,
           "evidence": "add(\"postgres-driver-import\", i.Pos())"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 219,
+          "line": 229,
           "evidence": "add(\"postgres-repository-construction\", v.Pos())"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 225,
+          "line": 235,
           "evidence": "add(\"postgres-repository-construction\", v.Pos())"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 243,
+          "line": 253,
           "evidence": "add(\"postgresql-sql-dialect\", v.Pos())"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 246,
+          "line": 256,
           "evidence": "add(\"postgresql-config-or-literal\", v.Pos())"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 273,
+          "line": 283,
           "evidence": "kinds = append(kinds, \"postgresql-sql-dialect\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 276,
+          "line": 286,
           "evidence": "kinds = append(kinds, \"postgresql-config-or-literal\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 282,
+          "line": 292,
           "evidence": "kinds = append(kinds, \"postgresql-migration-file\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 376,
-          "evidence": "fmt.Printf(\"Инвентаризация хранилища проверена: файлов PostgreSQL — %d; методов HTTP — %d; пересечений имён SQLite \ufffd"
+          "line": 384,
+          "evidence": "fmt.Printf(\"Инвентаризация хранилища проверена: файлов PostgreSQL — %d; методов HTTP — %d; пересечений имён SQLite "
         }
       ]
     },
@@ -13676,7 +13676,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 19,
-          "evidence": "acknowledge := flags.Bool(\"ack-no-backend-cutover\", false, \"Подтвердить, что это проверенный автономный перенос данных, а не \ufffd"
+          "evidence": "acknowledge := flags.Bool(\"ack-no-backend-cutover\", false, \"Подтвердить, что это проверенный автономный перенос данных, а не "
         },
         {
           "category": "postgresql-config-or-literal",
@@ -13706,7 +13706,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 20,
-          "evidence": "acknowledge := flags.Bool(\"ack-no-backend-cutover\", false, \"Подтвердить, что экспорт создаёт проверенный автономный снимок, \ufffd"
+          "evidence": "acknowledge := flags.Bool(\"ack-no-backend-cutover\", false, \"Подтвердить, что экспорт создаёт проверенный автономный снимок, "
         },
         {
           "category": "postgresql-config-or-literal",
@@ -13951,7 +13951,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 152,
-          "evidence": "r.issue(\"warning\", \"postgres.connections\", fmt.Sprintf(\"%d/%d\", p.ActiveConnections, p.MaxConnections), \"Использовано не менее 80 % от max_connections\", \"Ус\ufffd"
+          "evidence": "r.issue(\"warning\", \"postgres.connections\", fmt.Sprintf(\"%d/%d\", p.ActiveConnections, p.MaxConnections), \"Использовано не менее 80 % от max_connections\", \"Ус"
         },
         {
           "category": "database-sql-handle",
@@ -20331,12 +20331,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 21,
-          "evidence": "{\"id\": \"backup-restore\", \"status\": \"ok\", \"message\": \"Резервное копирование и восстановление обеспечивают проверяемое ар\ufffd"
+          "evidence": "{\"id\": \"backup-restore\", \"status\": \"ok\", \"message\": \"Резервное копирование и восстановление обеспечивают проверяемое ар"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 29,
-          "evidence": "\"cards\": []string{\"API\", \"PostgreSQL\", \"Хранилище\", \"Redis (необязательно)\", \"Сборка панели администратора\", \"Сборка наст\ufffd"
+          "evidence": "\"cards\": []string{\"API\", \"PostgreSQL\", \"Хранилище\", \"Redis (необязательно)\", \"Сборка панели администратора\", \"Сборка наст"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -20726,7 +20726,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 578,
-          "evidence": "\"implemented\": []string{\"Канонический домен подписи протокола v3\", \"Защита от понижения согласованных возможн\ufffd"
+          "evidence": "\"implemented\": []string{\"Канонический домен подписи протокола v3\", \"Защита от понижения согласованных возможн"
         }
       ]
     },
@@ -21676,7 +21676,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 619,
-          "evidence": "base[\"implemented\"] = []string{\"PostgreSQL — основной источник данных\", \"Протокол ServerBridge 3 GA v3 зафиксирован; совместим\ufffd"
+          "evidence": "base[\"implemented\"] = []string{\"PostgreSQL — основной источник данных\", \"Протокол ServerBridge 3 GA v3 зафиксирован; совместим"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -22486,71 +22486,71 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 891,
-          "evidence": "oldUpdate = `UPDATE trusted_devices SET replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1 AND user_id=$6 AND status='revoked' AND trust_state="
+          "evidence": "oldUpdate = `UPDATE trusted_devices SET replaced_at=$2,replaced_by_device_id=$3,replacement_reason=$4,updated_at=$2 WHERE id=$1 AND user_id=$5 AND status='revoked' AND trust_state="
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 902,
+          "line": 904,
           "evidence": "if res, err := tx.ExecContext(ctx, `UPDATE device_challenges SET consumed_at=$2 WHERE device_id=$1 AND consumed_at IS NULL`, oldDeviceID, now); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 908,
+          "line": 910,
           "evidence": "rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' AND id\u003c\u003e$3 FOR UPDATE`, userID, oldD"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 929,
+          "line": 931,
           "evidence": "if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array("
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 934,
+          "line": 936,
           "evidence": "if _, err := tx.ExecContext(ctx, `UPDATE refresh_token_families SET status='revoked',revoked_at=$2,revoked_reason=$3 WHERE id=$1 AND status\u003c\u003e'revoked'`, a.family, now, reason); err"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 937,
+          "line": 939,
           "evidence": "if _, err := tx.ExecContext(ctx, `UPDATE refresh_tokens SET status='revoked',revoked_at=$2 WHERE family_id=$1 AND status\u003c\u003e'revoked'`, a.family, now); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 941,
+          "line": 943,
           "evidence": "if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoke"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 950,
+          "line": 952,
           "evidence": "if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoke"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 955,
+          "line": 957,
           "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-key-replaced',jsonb_build_obje"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 980,
+          "line": 982,
           "evidence": "res, err := r.db.ExecContext(ctx, `UPDATE trusted_devices SET last_seen_at=now(),last_verified_at=now(),last_ip=$3,last_user_agent=$4,updated_at=now() WHERE id=$1 AND user_id=$2 AN"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1001,
+          "line": 1003,
           "evidence": "res, err := r.db.ExecContext(ctx, `UPDATE trusted_devices SET attestation_state='verified',attestation_method=$3,attested_at=$4,attestation_expires_at=$5,assurance='challenge-respo"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1028,
+          "line": 1030,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8)`, "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1028,
+          "line": 1030,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8)`, "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1043,
+          "line": 1045,
           "evidence": "err := r.db.QueryRowContext(ctx, `UPDATE device_challenges SET consumed_at=$6 WHERE id=$1 AND user_id=$2 AND device_id=$3 AND purpose=$4 AND challenge_hash=$5 AND consumed_at IS NU"
         }
       ]
@@ -23721,7 +23721,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 96,
-          "evidence": "res, err := tx.ExecContext(ctx, `INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest)"
+          "evidence": "res, err := tx.ExecContext(ctx, `INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest,minecraft_version"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -23775,82 +23775,77 @@
       "findings": [
         {
           "category": "postgres-repository-construction",
-          "line": 25,
+          "line": 30,
           "evidence": "r, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 25,
+          "line": 30,
           "evidence": "r, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 27,
+          "line": 32,
           "evidence": "t.Fatal(\"Ожидался репозиторий PostgreSQL\")"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 44,
-          "evidence": "{`INSERT INTO users(id,email,display_name,role_id,status,password_hash) VALUES($1,$2,'Guard 0507','player','active','hash-before')`, []any{user, user + \"@example.test\"}},"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 45,
+          "line": 57,
           "evidence": "{`INSERT INTO projects(id,name) VALUES($1,'Guard Session 0507 Integration')`, []any{project}},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 46,
-          "evidence": "{`INSERT INTO server_bridge_nodes_v2(id,name,project_id,token_hash,kind,runtime_id,runtime_epoch) VALUES($1,'Guard Session Proxy',$2,'','velocity',$3,1)`, []any{node, project, runt"
+          "line": 58,
+          "evidence": "{`INSERT INTO server_bridge_nodes_v2(id,name,project_id,token_hash,kind,runtime_id,runtime_epoch,key_algorithm,public_key,key_fingerprint,identity_epoch) VALUES($1,'Guard Session P"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 60,
+          "line": 72,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,refresh_family_id,status,expires_at) VALUES($1,$2,$3,'player',$4,'active',now()+interval '1 hour"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 64,
+          "line": 76,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id) VALUES($1,$2,$3)`, family, session, user); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 71,
+          "line": 83,
           "evidence": "if _, err = r.db.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,session_id,minecraft_session_id,trus"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 81,
+          "line": 93,
           "evidence": "{`DELETE FROM server_bridge_guard_sessions_0507 WHERE correlation_id=$1`, correlation},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 82,
+          "line": 94,
           "evidence": "{`DELETE FROM server_bridge_player_sessions_v3 WHERE correlation_id=$1`, correlation},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 83,
+          "line": 95,
           "evidence": "{`DELETE FROM server_bridge_nodes_v2 WHERE id=$1`, node},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 84,
+          "line": 96,
           "evidence": "{`DELETE FROM projects WHERE id=$1`, project},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 85,
+          "line": 97,
           "evidence": "{`DELETE FROM users WHERE id=$1`, user},"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 150,
+          "line": 162,
           "evidence": "if err := r.db.QueryRowContext(ctx, `SELECT status,invalidated_reason FROM server_bridge_player_sessions_v3 WHERE correlation_id=$1`, correlation).Scan(\u0026status, \u0026reason); err != ni"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 157,
+          "line": 169,
           "evidence": "if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_control_commands_v3 WHERE payload-\u003e\u003e'sessionCorrelationId'=$1 AND command_type='player.kick'`, correlation)."
         }
       ]
@@ -24581,7 +24576,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 131,
-          "evidence": "res, e := tx.ExecContext(ctx, `INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest) VALUES($1,$2,$3,$4"
+          "evidence": "res, e := tx.ExecContext(ctx, `INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest,minecraft_version,l"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -25004,133 +24999,123 @@
           "evidence": "q(`INSERT INTO migration_source_inventory_0333(run_id,source_sha256,manifest_sha256,inventory) VALUES($1,$2,$2,'{}'::jsonb)`, runID, hash)"
         },
         {
-          "category": "postgresql-config-or-literal",
-          "line": 89,
-          "evidence": "q(`INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,created_at,updated_at) VALUES($1,$2,'TestPlayer','player','active','{}'::jsonb,'test',now(),no"
-        },
-        {
           "category": "postgresql-sql-dialect",
-          "line": 89,
-          "evidence": "q(`INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,created_at,updated_at) VALUES($1,$2,'TestPlayer','player','active','{}'::jsonb,'test',now(),no"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 90,
+          "line": 92,
           "evidence": "q(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,'TestPlayer','launcher','local',$2,'gravit-import-v1',"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 91,
+          "line": 93,
           "evidence": "q(`INSERT INTO migration_identity_snapshots_0334(run_id,source_sha256,inventory_sha256,entries_sha256) VALUES($1,$2,$2,$2)`, runID, hash)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 92,
+          "line": 94,
           "evidence": "q(`INSERT INTO migration_identity_rows_0334(run_id,ordinal,provider,source_id,username,minecraft_uuid,source_path,status,reason) VALUES($1,0,'fileauth','42','TestPlayer',$2,'Databa"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 93,
+          "line": 95,
           "evidence": "q(`INSERT INTO migration_auth_imports_0335(run_id,source_sha256,identity_sha256,decision_sha256,report) VALUES($1,$2,$2,$2,'{\"manualReset\":0,\"dryRun\":false,\"rows\":[{\"state\":\"import"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 93,
+          "line": 95,
           "evidence": "q(`INSERT INTO migration_auth_imports_0335(run_id,source_sha256,identity_sha256,decision_sha256,report) VALUES($1,$2,$2,$2,'{\"manualReset\":0,\"dryRun\":false,\"rows\":[{\"state\":\"import"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 94,
+          "line": 96,
           "evidence": "q(`INSERT INTO migration_security_targets_0336(run_id,user_id,expected_name,expected_uuid) VALUES($1,$2,'TestPlayer',$3)`, runID, user, player)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 95,
+          "line": 97,
           "evidence": "q(`INSERT INTO migration_security_resets_0336(run_id,auth_decision_sha256,active_jwt_kid,manifest_public_sha256,report) VALUES($1,$2,'new-key',$2,'{\"verified\":true}'::jsonb)`, runI"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 95,
+          "line": 97,
           "evidence": "q(`INSERT INTO migration_security_resets_0336(run_id,auth_decision_sha256,active_jwt_kid,manifest_public_sha256,report) VALUES($1,$2,'new-key',$2,'{\"verified\":true}'::jsonb)`, runI"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 96,
+          "line": 98,
           "evidence": "q(`INSERT INTO migration_modules_0338(run_id,source_sha256,inventory_sha256,report) VALUES($1,$2,$2,'{\"ready\":true,\"blockers\":[]}'::jsonb)`, runID, hash)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 96,
+          "line": 98,
           "evidence": "q(`INSERT INTO migration_modules_0338(run_id,source_sha256,inventory_sha256,report) VALUES($1,$2,$2,'{\"ready\":true,\"blockers\":[]}'::jsonb)`, runID, hash)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 97,
+          "line": 99,
           "evidence": "q(`INSERT INTO build_workspaces_0226(id,project_id,owner_id,revision,data) VALUES($1,$2,'operator',1,$3::jsonb)`, wsID, project, fmt.Sprintf(`{\"packageId\":%q,\"state\":\"built\",\"files"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 97,
+          "line": 99,
           "evidence": "q(`INSERT INTO build_workspaces_0226(id,project_id,owner_id,revision,data) VALUES($1,$2,'operator',1,$3::jsonb)`, wsID, project, fmt.Sprintf(`{\"packageId\":%q,\"state\":\"built\",\"files"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 98,
+          "line": 100,
           "evidence": "q(`INSERT INTO migration_content_0337(run_id,profile_path,source_sha256,manifest_sha256,files_sha256,profile_id,workspace_id,owner_id,report) VALUES($1,'profiles/client.json',$2,$2"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 98,
+          "line": 100,
           "evidence": "q(`INSERT INTO migration_content_0337(run_id,profile_path,source_sha256,manifest_sha256,files_sha256,profile_id,workspace_id,owner_id,report) VALUES($1,'profiles/client.json',$2,$2"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 119,
+          "line": 121,
           "evidence": "q(`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($1,$2,$3,$4,$5,'published',$6::jsonb)`, targetID, project, profile, channel, m.Vers"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 119,
+          "line": 121,
           "evidence": "q(`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($1,$2,$3,$4,$5,'published',$6::jsonb)`, targetID, project, profile, channel, m.Vers"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 126,
+          "line": 128,
           "evidence": "q(`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($1,$2,$3,$4,'old','published',$5::jsonb)`, oldID, project, profile, channel, string"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 126,
+          "line": 128,
           "evidence": "q(`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($1,$2,$3,$4,'old','published',$5::jsonb)`, oldID, project, profile, channel, string"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 127,
+          "line": 129,
           "evidence": "q(`INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest) VALUES($1,$2,$3,8,$4,'old',$5)`, project, profile, channel, oldID, oldDigest"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 140,
+          "line": 142,
           "evidence": "if _, e = r.db.ExecContext(ctx, `UPDATE channel_heads SET revision=9 WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 161,
+          "line": 163,
           "evidence": "if e = r.db.QueryRowContext(ctx, `SELECT release_id,revision FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel).Scan(\u0026head, \u0026rev);"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 168,
+          "line": 170,
           "evidence": "if _, e = r.db.ExecContext(ctx, `UPDATE channel_heads SET version='unapproved' WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 171,
+          "line": 173,
           "evidence": "if _, e = r.db.ExecContext(ctx, `DELETE FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 228,
+          "line": 230,
           "evidence": "if e = r.db.QueryRowContext(ctx, `SELECT release_id,revision FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel).Scan(\u0026head, \u0026rev);"
         }
       ]
@@ -26390,42 +26375,42 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 92,
-          "evidence": "_, err = repo.db.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,expires_at) VALUES($1,$2,$3,'player',$4,'pre-migrati"
+          "line": 97,
+          "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO auth_sessions(id,user_id,email,role_id,device_id,device,status,refresh_family_id,expires_at) VALUES($1,$2,$3,'player',$4,'pre-migration','"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 96,
-          "evidence": "_, err = repo.db.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id,status) VALUES($1,$2,$3,'active')`, \"fam-\"+suffix, sid, userID)"
+          "line": 101,
+          "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO refresh_token_families(id,session_id,user_id,status) VALUES($1,$2,$3,'active')`, \"fam-\"+suffix, sid, userID)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 100,
+          "line": 108,
           "evidence": "_, err = repo.db.ExecContext(ctx, `INSERT INTO refresh_tokens(id,family_id,session_id,token_hash,status,expires_at) VALUES($1,$2,$3,$4,'current',now()+interval '2 hours')`, \"rt-\"+s"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 110,
+          "line": 118,
           "evidence": "if err = repo.db.QueryRowContext(ctx, `SELECT status FROM auth_sessions WHERE id=$1`, sid).Scan(\u0026state); err != nil || state != \"active\" {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 117,
+          "line": 125,
           "evidence": "for _, q := range []string{`SELECT status FROM auth_sessions WHERE id=$1`, `SELECT status FROM refresh_token_families WHERE session_id=$1`} {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 122,
+          "line": 130,
           "evidence": "if err = repo.db.QueryRowContext(ctx, `SELECT status FROM trusted_devices WHERE id=$1`, did).Scan(\u0026state); err != nil || state != \"revoked\" {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 132,
+          "line": 140,
           "evidence": "_, err = repo.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,public_key,key_fingerprint) VALUES($1,$2,'fresh enrollment"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 140,
+          "line": 148,
           "evidence": "if err = repo.db.QueryRowContext(ctx, `SELECT status FROM trusted_devices WHERE id=$1`, newDevice).Scan(\u0026state); err != nil || state != \"active\" {"
         }
       ]
@@ -28741,17 +28726,17 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 56,
-          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('stable_gate_token',$1,true)`, token); e != nil {"
+          "evidence": "if _, e = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); e != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 60,
-          "evidence": "if _, e = tx.ExecContext(ctx, `UPDATE release_versions SET status='published' WHERE id=$1`, id); e == nil || !strings.Contains(e.Error(), \"stable_runtime_gate_03411\") {"
+          "evidence": "if _, e = tx.ExecContext(ctx, `UPDATE release_versions SET status='published' WHERE id=$1`, id); e == nil || !strings.Contains(e.Error(), \"stable_runtime_gate_0350\") {"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 70,
-          "evidence": "if _, err = tx.ExecContext(ctx, `SELECT set_config('stable_gate_token',$1,true)`, token); err != nil {"
+          "evidence": "if _, err = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -29840,11 +29825,6 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 43,
-          "evidence": "_, err := first.db.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,password_hash) VALUES($1,$2,'TPM Proof Test','player','active','test-hash')`, user, user"
-        },
-        {
-          "category": "postgresql-sql-dialect",
           "line": 47,
           "evidence": "defer first.db.ExecContext(context.Background(), `DELETE FROM users WHERE id=$1`, user)"
         },
@@ -30506,7 +30486,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "return result, errors.New(\"Необходимо указать SHA-256 источника, DSN PostgreSQL, идентификатор проекта и электронную по\ufffd"
+          "evidence": "return result, errors.New(\"Необходимо указать SHA-256 источника, DSN PostgreSQL, идентификатор проекта и электронную по"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -30851,7 +30831,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 159,
-          "evidence": "VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16)`, s[\"id\"], uid, email, role, s[\"device_id\"], status, family, created, seen, expires, revoked, \"Обновле\ufffd"
+          "evidence": "VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16)`, s[\"id\"], uid, email, role, s[\"device_id\"], status, family, created, seen, expires, revoked, \"Обновле"
         },
         {
           "category": "postgresql-sql-dialect",

@@ -36,11 +36,11 @@ func TestJavaManagerDependencyAndReverseProtection0305(t *testing.T) {
 	}
 	b := manifest0305("example.b", "1.0.0")
 	addDependencyInstall0305(t, repo, b, model.ExtensionInstallStateDisabled)
-	if err := manager.checkGraph0305(ctx, a, Scope{Scope: "global"}, true); err == nil || !strings.Contains(err.Error(), "disabled") {
+	if err := manager.checkGraph0305(ctx, a, Scope{Scope: "global"}, true); err == nil || !strings.Contains(err.Error(), "отключена") {
 		t.Fatalf("Отключённая зависимость ошибочно принята: %v", err)
 	}
 	addDependencyInstall0305(t, repo, a, model.ExtensionInstallStateDisabled)
-	if err := manager.checkGraph0305(ctx, manifest0305("example.b", "2.0.0"), Scope{Scope: "global"}, false); err == nil || !strings.Contains(err.Error(), "would break") {
+	if err := manager.checkGraph0305(ctx, manifest0305("example.b", "2.0.0"), Scope{Scope: "global"}, false); err == nil || !strings.Contains(err.Error(), "нарушит работу") {
 		t.Fatalf("Принято обновление с несовместимыми изменениями: %v", err)
 	}
 }
@@ -54,12 +54,12 @@ func TestJavaManagerCycleAndConflicts0305(t *testing.T) {
 	b.Dependencies = []model.ExtensionDependency{{ID: "example.a", Version: "*"}}
 	addDependencyInstall0305(t, repo, b, model.ExtensionInstallStateDisabled)
 	addDependencyInstall0305(t, repo, a, model.ExtensionInstallStateDisabled)
-	if err := manager.checkGraph0305(ctx, a, Scope{Scope: "global"}, false); err == nil || !strings.Contains(err.Error(), "cycle") {
+	if err := manager.checkGraph0305(ctx, a, Scope{Scope: "global"}, false); err == nil || !strings.Contains(err.Error(), "Циклическая зависимость") {
 		t.Fatalf("Ошибочно принята циклическая зависимость: %v", err)
 	}
 	a.Dependencies = nil
 	a.Conflicts = []model.ExtensionConflict{{ID: "example.b", Version: "*"}}
-	if err := manager.checkGraph0305(ctx, a, Scope{Scope: "global"}, false); err == nil || !strings.Contains(err.Error(), "conflict") {
+	if err := manager.checkGraph0305(ctx, a, Scope{Scope: "global"}, false); err == nil || !strings.Contains(err.Error(), "Конфликт") {
 		t.Fatalf("Конфликт ошибочно принят: %v", err)
 	}
 }

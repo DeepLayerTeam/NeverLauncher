@@ -203,7 +203,7 @@ func TestServerBridgeNodeIdentity0142RejectsBodyTamperAndRetiredKey(t *testing.T
 	}
 
 	duplicate := registerTestBridgeNode0142(t, h, admin, "crypto-duplicate-0142", "Crypto Duplicate 0142", "velocity", "demo-project", "vanilla", secondIdentity)
-	if duplicate.Code != http.StatusBadRequest || !strings.Contains(duplicate.Body.String(), "public key") {
+	if duplicate.Code != http.StatusBadRequest || !strings.Contains(duplicate.Body.String(), "открытый ключ") {
 		t.Fatalf("Повторяющийся публичный ключ узла ошибочно принят: %d %s", duplicate.Code, duplicate.Body.String())
 	}
 }

@@ -45,8 +45,8 @@
       "size": 4993
     },
     ".github/workflows/auth-platform-protection-ga.yml": {
-      "sha256": "4ec34131e0730629201911bc5c70c53a809f9fddf3080b5a97bf9402beebb383",
-      "size": 7390
+      "sha256": "98caafff2c993bf93f43953f4e65aa81ac8647bca4041cf622dfa8bedf480bfa",
+      "size": 7349
     },
     ".github/workflows/auth-provider-wizard.yml": {
       "sha256": "eb0918a770587b7aa25a294c9063c844efbf02d1e7a0b8274842fe7e7371fb49",
@@ -101,8 +101,8 @@
       "size": 1185
     },
     ".github/workflows/compatibility.yml": {
-      "sha256": "b7b4a107b87afa622a40a13f8bc69a1fbce28cc32c940db18f6cbc97dc36ab56",
-      "size": 32193
+      "sha256": "86e967aaedd7d3c45f88746d59a68e4ff09ed6f28427935803c5d5a12846969b",
+      "size": 34015
     },
     ".github/workflows/component-upgrade.yml": {
       "sha256": "f477271c3384a28a0148cbdfd2bc59627c9453efe622fc607fb44d0de5d41ef6",
@@ -433,8 +433,8 @@
       "size": 1795
     },
     ".github/workflows/legacy-upgrade.yml": {
-      "sha256": "ff8bd484fcb22af1b4d6f754390637d1115bf416d71bc0c2340f2bd7f6b39182",
-      "size": 1162
+      "sha256": "3ec71740d453ce4c5ee93dad5d30639c4ded3c9c293362cbb664ee208f8948f0",
+      "size": 1194
     },
     ".github/workflows/linux-arm64-native-sandbox.yml": {
       "sha256": "e4b57efe8bcab1919fe57dff8fcfe67f6237f6d385b246d384bddbbc4ea19ad2",
@@ -1017,7 +1017,7 @@
       "size": 702963
     },
     "scripts/build/bridge-plugins.sh": {
-      "sha256": "9e16720c610791c9b0c7675a8fe0c296338599d1472501314936d613e57c4345",
+      "sha256": "12ca55ca36c83f0247d01f76dc62b1ad756333040637e67f65780460c0e8ef89",
       "size": 15001
     },
     "scripts/build/embedded_cli_assets.py": {

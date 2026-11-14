@@ -16,7 +16,7 @@ import (
 )
 
 func TestServerBridgeSecurityCapabilityDigest01912(t *testing.T) {
-	const expected = "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4"
+	const expected = "88cb75f5ebc97da6c86fc35b9c26ff2d9550ae9c7ae39166b837c0218a3ac718"
 	if got := serverBridgeExpectedSecurityCapabilityDigest01912(); got != expected {
 		t.Fatalf("Контрольная сумма возможностей изменилась: получено %s, ожидалось %s", got, expected)
 	}

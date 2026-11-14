@@ -93,8 +93,8 @@ func (r *SQLRepository) CreateGravitProfileWorkspace02210(ctx context.Context, p
 	}
 	defer tx.Rollback()
 	now := time.Now().UTC()
-	res, err := tx.ExecContext(ctx, `INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest)
- VALUES($1,$2,$3,$4,$5,$6,false,$7,$7,'2.0',1,$8) ON CONFLICT (project_id,id) DO NOTHING`, p.ID, p.ProjectID, p.Name, p.Description, p.Loader, p.Preset, now, p.Digest)
+	res, err := tx.ExecContext(ctx, `INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest,minecraft_version,loader_version,java_major)
+ VALUES($1,$2,$3,$4,$5,$6,false,$7,$7,'2.0',1,$8,$9,$10,$11) ON CONFLICT (project_id,id) DO NOTHING`, p.ID, p.ProjectID, p.Name, p.Description, p.Loader, p.Preset, now, p.Digest, p.MinecraftVersion, p.LoaderVersion, p.JavaMajor)
 	if err != nil {
 		return p, w, err
 	}

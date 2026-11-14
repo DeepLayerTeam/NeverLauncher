@@ -17,6 +17,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -103,7 +104,7 @@ func readJSON(file string, out any) error {
 // рабочего дерева и необычные типы файлов. Аудит не должен читать произвольные
 // пути из изменённого реестра свидетельств.
 func SafeRepoFile(root, relative string) (string, error) {
-	if relative == "" || strings.Contains(relative, "\\") || strings.Contains(relative, "\x00") || filepath.IsAbs(relative) || filepath.Clean(relative) != relative || relative == "." || relative == ".." || strings.HasPrefix(relative, "../") {
+	if relative == "" || strings.Contains(relative, "\\") || strings.Contains(relative, "\x00") || filepath.IsAbs(relative) || path.Clean(relative) != relative || filepath.VolumeName(relative) != "" || strings.Contains(relative, ":") || relative == "." || relative == ".." || strings.HasPrefix(relative, "../") {
 		return "", fmt.Errorf("Некорректное значение: путь к подтверждающим данным %q", relative)
 	}
 	p := root

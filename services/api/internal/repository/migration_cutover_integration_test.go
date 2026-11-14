@@ -86,7 +86,9 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	q(`UPDATE migration_runs_0331 SET status='prepared',step='source_assessment' WHERE id=$1`, runID)
 	hash := strings.Repeat("a", 64)
 	q(`INSERT INTO migration_source_inventory_0333(run_id,source_sha256,manifest_sha256,inventory) VALUES($1,$2,$2,'{}'::jsonb)`, runID, hash)
-	q(`INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,created_at,updated_at) VALUES($1,$2,'TestPlayer','player','active','{}'::jsonb,'test',now(),now())`, user, project+"@example.test")
+	if _, e := r.SaveUser(model.User{ID: user, Email: project + "@example.test", DisplayName: "TestPlayer", RoleID: "player", Status: "active", PasswordHash: "test"}); e != nil {
+		t.Fatal(e)
+	}
 	q(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,'TestPlayer','launcher','local',$2,'gravit-import-v1',now(),now())`, user, player)
 	q(`INSERT INTO migration_identity_snapshots_0334(run_id,source_sha256,inventory_sha256,entries_sha256) VALUES($1,$2,$2,$2)`, runID, hash)
 	q(`INSERT INTO migration_identity_rows_0334(run_id,ordinal,provider,source_id,username,minecraft_uuid,source_path,status,reason) VALUES($1,0,'fileauth','42','TestPlayer',$2,'Database.json','pending_import','test')`, runID, player)

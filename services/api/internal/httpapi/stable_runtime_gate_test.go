@@ -32,7 +32,7 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 	publish := func() {
 		t.Helper()
 		rr := send(http.MethodPost, "/api/v1/packages/"+packageID+"/publish", "")
-		if rr.Code != http.StatusConflict || !strings.Contains(rr.Body.String(), "stable runtime gate") {
+		if rr.Code != http.StatusConflict || !strings.Contains(rr.Body.String(), "Проверка стабильного Runtime") {
 			t.Fatalf("Стабильный канал должен быть заблокирован, получено %d %s", rr.Code, rr.Body.String())
 		}
 	}
@@ -95,7 +95,7 @@ func TestStableMissingPolicyStillBlocksAndPersistsReason0341(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = srv.validatePublishEvidenceContext0213(context.Background(), packageLookup{Release: release})
-	if err == nil || !strings.Contains(err.Error(), "stable runtime gate") {
+	if err == nil || !strings.Contains(err.Error(), "Проверка стабильного Runtime") {
 		t.Fatalf("Отсутствие политики позволило обойти ограничения стабильного канала: %v", err)
 	}
 	events := repo.ListAuditEvents()

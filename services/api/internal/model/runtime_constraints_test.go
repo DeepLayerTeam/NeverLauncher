@@ -70,7 +70,7 @@ func TestRuntimeConstraints0223PreservesUnconfiguredV2Draft(t *testing.T) {
 	}
 	m.Runtime.Java.MajorVersion = 21
 	m.Runtime.Launch.ClasspathEntries = []string{"bad.jar"}
-	if err := ValidateRuntimeConstraints0223(m); err == nil || !strings.Contains(err.Error(), "not a required") {
+	if err := ValidateRuntimeConstraints0223(m); err == nil || !strings.Contains(err.Error(), "не является обязательным") {
 		t.Fatalf("Необъявленный путь классов должен отклоняться: %v", err)
 	}
 }

@@ -117,7 +117,7 @@ func TestVerifyServerBridge3GACertification0200(t *testing.T) {
 		SchemaVersion: "1.1", Release: "ServerBridge 3", Version: ver, ProtocolVersion: 3,
 		Status: "certified", TargetCount: len(serverBridgeUniversalReleaseTargets0198), ZeroPatch: true,
 		NodeIdentity: "Ed25519", OneTimeJoin: true,
-		SecurityProfile: "serverbridge3-security-01912", SecurityCapabilityDigest: "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4",
+		SecurityProfile: "serverbridge3-security-01912", SecurityCapabilityDigest: "88cb75f5ebc97da6c86fc35b9c26ff2d9550ae9c7ae39166b837c0218a3ac718",
 		RequiredSecurityFeatures: append([]string(nil), serverBridgeSecurityFeatures01912...), CapabilityDowngrade: true,
 		CommandSignatures: true, EventSignatures: true, RuntimeInstanceBinding: true, OnlineKeyRotation: true,
 		GA: true, ProtocolV3Frozen: true, ProtocolV3FeatureDigest: serverBridgeV3FrozenFeatureDigest0200,
@@ -143,7 +143,7 @@ func TestVerifyServerBridge3GACertification0200(t *testing.T) {
 	}
 	allow := serverBridgeReleaseAllowlist01912{
 		SchemaVersion: "3.0", Release: "ServerBridge 3", ProtocolVersion: 3, MinimumProtocolVersion: 3,
-		SecurityProfile: "serverbridge3-security-01912", SecurityCapabilityDigest: "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4",
+		SecurityProfile: "serverbridge3-security-01912", SecurityCapabilityDigest: "88cb75f5ebc97da6c86fc35b9c26ff2d9550ae9c7ae39166b837c0218a3ac718",
 		RequiredFeatures: append([]string(nil), serverBridgeSecurityFeatures01912...), GA: true, ProtocolV3Frozen: true,
 		ProtocolV3FeatureDigest: serverBridgeV3FrozenFeatureDigest0200, ProtocolV2Mode: "compatibility-deprecated",
 		Releases: map[string]map[string][]string{ver: policy},

@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 type Finding struct {
@@ -166,16 +167,25 @@ func methodSurface(root string) (Surface, error) {
 	}
 	return Surface{Interface: iface, PostgreSQL: pg, SQLite: sqlite, SameNames: overlapping, Missing: missing}, nil
 }
+
+// Truncate at a UTF-8 boundary so the serialized evidence is stable across Go versions.
+func shortenEvidence(s string) string {
+	if len(s) <= 180 {
+		return s
+	}
+	n := 180
+	for !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
+}
 func readEvidence(b []byte, pos token.Position) string {
 	lines := bytes.Split(b, []byte{'\n'})
 	if pos.Line < 1 || pos.Line > len(lines) {
 		return ""
 	}
 	s := strings.Join(strings.Fields(string(lines[pos.Line-1])), " ")
-	if len(s) > 180 {
-		s = s[:180]
-	}
-	return s
+	return shortenEvidence(s)
 }
 func scanGo(root, rel string) (File, error) {
 	path := filepath.Join(root, filepath.FromSlash(rel))
@@ -286,9 +296,7 @@ func scanText(root, rel string) (File, error) {
 		}
 		for _, kind := range kinds {
 			s := strings.Join(strings.Fields(line), " ")
-			if len(s) > 180 {
-				s = s[:180]
-			}
+			s = shortenEvidence(s)
 			findings = append(findings, Finding{Category: kind, Line: i + 1, Evidence: s})
 		}
 	}

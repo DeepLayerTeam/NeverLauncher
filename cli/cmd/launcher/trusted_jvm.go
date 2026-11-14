@@ -77,7 +77,11 @@ func trustedAnchor0306(root, key string) error {
 	if err != nil {
 		return err
 	}
-	absoluteRoot, err := filepath.Abs(root)
+	canonicalRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return err
+	}
+	absoluteRoot, err := filepath.Abs(canonicalRoot)
 	if err != nil {
 		return err
 	}
