@@ -55,7 +55,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
       - name: Установка целевой Java ${{ matrix.javaMajor }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: ${{ matrix.javaDistribution }}
           # Forge 1.16.3/1.16.4 содержит ModLauncher 8.0.x, который использует
@@ -83,7 +83,7 @@ jobs:
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21
         id: java21_tooling
         continue-on-error: true
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           # Только для Gradle и инструментов; реальный клиент использует закреплённую JDK.
           # На публичных агентах Temurin обычно кэширован заранее, что по возможности избегает
@@ -97,7 +97,7 @@ jobs:
       # продолжить сертификацию клиента даже без работоспособной JDK.
       - name: Повторная установка инструментов Java 21 после временного сбоя распаковки
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21 && steps.java21_tooling.outcome == 'failure'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -268,7 +268,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
       - name: Установка целевой Java ${{ matrix.javaMajor }}
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: ${{ matrix.javaDistribution }}
           # Forge 1.16.3/1.16.4 содержит ModLauncher 8.0.x, который использует
@@ -296,7 +296,7 @@ jobs:
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21
         id: java21_tooling
         continue-on-error: true
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           # Только для Gradle и инструментов; реальный клиент использует закреплённую JDK.
           # На публичных агентах Temurin обычно кэширован заранее, что по возможности избегает
@@ -310,7 +310,7 @@ jobs:
       # продолжить сертификацию клиента даже без работоспособной JDK.
       - name: Повторная установка инструментов Java 21 после временного сбоя распаковки
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21 && steps.java21_tooling.outcome == 'failure'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
