@@ -2,6 +2,11 @@ package repository
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"os"
 	"strings"
@@ -39,7 +44,12 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	}
 	_, _ = a.db.ExecContext(ctx, `DELETE FROM server_bridge_control_commands_v3 WHERE server_id=$1`, nodeID)
 	_, _ = a.db.ExecContext(ctx, `DELETE FROM server_bridge_nodes_v2 WHERE id=$1`, nodeID)
-	node := model.ServerBridgeNode{ID: nodeID, Name: nodeID, Kind: "paper", ProjectID: projectID, KeyAlgorithm: "ed25519", PublicKey: "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE", KeyFingerprint: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", IdentityEpoch: 1, IdentityRotatedAt: now, Status: "active", ProtocolVersion: 3, CreatedAt: now}
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fingerprint := sha256.Sum256(pub)
+	node := model.ServerBridgeNode{ID: nodeID, Name: nodeID, Kind: "paper", ProjectID: projectID, KeyAlgorithm: "ed25519", PublicKey: base64.RawURLEncoding.EncodeToString(pub), KeyFingerprint: hex.EncodeToString(fingerprint[:]), IdentityEpoch: 1, IdentityRotatedAt: now, Status: "active", ProtocolVersion: 3, CreatedAt: now}
 	if _, err := a.SaveServerBridgeNode(ctx, node); err != nil {
 		t.Fatal(err)
 	}

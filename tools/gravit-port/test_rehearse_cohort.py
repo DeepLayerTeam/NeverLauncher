@@ -205,7 +205,7 @@ class CohortTests(unittest.TestCase):
             else:
                 write(target, b"{}")
         with patch.object(mod, "cli", side_effect=stale_client):
-            with self.assertRaisesRegex(mod.Blocked, "upgraded executable"):
+            with self.assertRaisesRegex(mod.Blocked, "не обновлённый исполняемый файл"):
                 mod.execute_project(str(self.launcher), self.config["backend"], p, self.out)
 
     def test_no_output_when_prerequisites_missing(self):

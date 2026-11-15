@@ -33,16 +33,16 @@
       "size": 2448
     },
     ".github/workflows/arm64-game-integration.yml": {
-      "sha256": "3f371d7e0a9e5b6bd1b9042344a2d5d0c1592338bf2306a07a00a242b336c7f3",
-      "size": 5340
+      "sha256": "c2d0c87d4ffb11568b1e5b5342b9acba5fd7a82242a95ccd23a91b5ffd5684ec",
+      "size": 5458
     },
     ".github/workflows/auth-identity-real.yml": {
       "sha256": "21c65f9b30c23c7488a867396c32a797ae0e3353e8aab63392c9e75456af62e0",
       "size": 6031
     },
     ".github/workflows/auth-migration-compat.yml": {
-      "sha256": "71dd6a6db375053362d33aca861ae9eef8a50b5967e0b9d664933a635f9f9c92",
-      "size": 4993
+      "sha256": "4f52c887abbfafccc6f08240f7684f9c6bda0dec144ccdbcdde93df1ec3de575",
+      "size": 5594
     },
     ".github/workflows/auth-platform-protection-ga.yml": {
       "sha256": "98caafff2c993bf93f43953f4e65aa81ac8647bca4041cf622dfa8bedf480bfa",
@@ -101,8 +101,8 @@
       "size": 1185
     },
     ".github/workflows/compatibility.yml": {
-      "sha256": "86e967aaedd7d3c45f88746d59a68e4ff09ed6f28427935803c5d5a12846969b",
-      "size": 34015
+      "sha256": "d00555c9d8e5418c862a84ffe2a8484f93dfeb1c84b4251d485d3564f4ed5171",
+      "size": 34093
     },
     ".github/workflows/component-upgrade.yml": {
       "sha256": "f477271c3384a28a0148cbdfd2bc59627c9453efe622fc607fb44d0de5d41ef6",
@@ -141,8 +141,8 @@
       "size": 449
     },
     ".github/workflows/deployment-modes.yml": {
-      "sha256": "c70e1dccbffc6f276b810050959cf806c8dd7389d18e20377483b3b86c14b0e7",
-      "size": 2095
+      "sha256": "7f35ba5ac9e49636f7a5adda2ff2a5f320d3d300b82a2543d4e77fd2b9acceb4",
+      "size": 2143
     },
     ".github/workflows/desktop-accessibility.yml": {
       "sha256": "c55daa19608c3d0b2d66be87b1a14807945fc2c2614f491db7b504d0139b9cdf",
@@ -173,8 +173,8 @@
       "size": 9018
     },
     ".github/workflows/device-trust.yml": {
-      "sha256": "2b0893474cd20f9aaff515a88828ddfa6a7a5716ed2143f60baf3ae917abc91f",
-      "size": 7512
+      "sha256": "d75fe08f293833d969c1ff3e7bd6e3c5cd2c975c2d5be34b4e486e1c6af88d77",
+      "size": 7588
     },
     ".github/workflows/devtools-test-isolation.yml": {
       "sha256": "0828e73209fd1b4766eda7cde1b3d210d1cb39314a2a85d3fd4e1ffd5caad9b4",
@@ -213,8 +213,8 @@
       "size": 3179
     },
     ".github/workflows/extensions-ga.yml": {
-      "sha256": "cfce0e74345938957ff6537e7839d58e19db98cb7c227086553f12e83d96c888",
-      "size": 5628
+      "sha256": "e9efc4c21e606f5a235507d6703a7a44c31af6f3b7b4b394e4c82d74fbd84341",
+      "size": 5739
     },
     ".github/workflows/extensions-trust-recovery.yml": {
       "sha256": "924c42a371c7829d57371e513a32ac00fff73c5e3d7ed136f25b8bbfe0e7e5e0",
@@ -257,8 +257,8 @@
       "size": 2975
     },
     ".github/workflows/gravit-migration-ga.yml": {
-      "sha256": "9343c9157e28d210bfd97e5d5b62ac92de6325f9ff659a4ad47b2be885ced363",
-      "size": 10934
+      "sha256": "f22793e8dc827d83fd2f08026a8f8b797186e7813d4ba4bbf53b8ca02971d5e7",
+      "size": 10968
     },
     ".github/workflows/gravit-migration-reports.yml": {
       "sha256": "2da3a7512ac32f01fb1933ac02cffc3f9308e966b2e0897899c6d0eadcada638",
@@ -349,8 +349,8 @@
       "size": 6619
     },
     ".github/workflows/integration-certification.yml": {
-      "sha256": "2ba37e7b2e5b66b26aa5e2bb3db55b0ff2e8e7d6e372f6f5f2a46f18eb801038",
-      "size": 5136
+      "sha256": "75d9dc7c0f5789bb33e9b7569128615f2cd48a2d3786d65dc7228bc9cd0cb5a1",
+      "size": 5273
     },
     ".github/workflows/integration-matrix.yml": {
       "sha256": "f0b4437932d370ef1ca90cf9e5519878542696516766db7752d44909951640df",
@@ -401,8 +401,8 @@
       "size": 4919
     },
     ".github/workflows/java-sdk-module-parity-ga.yml": {
-      "sha256": "0023a2d513c418a9725f2d95c8238b64b7213f9e7790edb5d3317e786b55dca2",
-      "size": 5757
+      "sha256": "6a6bb59b485d30695a9268101788b8c28899736b044cbee53a5cf4135d2d2e90",
+      "size": 5862
     },
     ".github/workflows/java-sdk-runtime.yml": {
       "sha256": "d42ec4619e572c94dc835f61347e8ba7c8a17ff37db8711e6ab822f54333f22f",
@@ -433,8 +433,8 @@
       "size": 1795
     },
     ".github/workflows/legacy-upgrade.yml": {
-      "sha256": "3ec71740d453ce4c5ee93dad5d30639c4ded3c9c293362cbb664ee208f8948f0",
-      "size": 1194
+      "sha256": "d4e0d039b93b7a978bff4e5b5355a9c7114b3ec7ed827cc2a027ed5907abd664",
+      "size": 1220
     },
     ".github/workflows/linux-arm64-native-sandbox.yml": {
       "sha256": "e4b57efe8bcab1919fe57dff8fcfe67f6237f6d385b246d384bddbbc4ea19ad2",
@@ -513,8 +513,8 @@
       "size": 7315
     },
     ".github/workflows/module-parity-completion.yml": {
-      "sha256": "35e07ec224d9a9d23e64337a3d43c154c3470e3c3dd151d5e59f92709536ec08",
-      "size": 4264
+      "sha256": "5aba3c30c2badb4f1768594993dda572fd66116622659964807d3c47f673b7ce",
+      "size": 4323
     },
     ".github/workflows/module-parity.yml": {
       "sha256": "f6ada60876d21318caa06c1a59087aad8a8e452ef2ebaa99633c8784abda61c7",
@@ -533,8 +533,8 @@
       "size": 4212
     },
     ".github/workflows/multi-node-ha.yml": {
-      "sha256": "f54d70628c717b9787566d0e2100d3e33468865c4c329091f2bc797985c827a1",
-      "size": 3622
+      "sha256": "3ca1f9861442b7fc440e25dff34fe9e79a26562dd1aa5fa48df8762561857921",
+      "size": 3725
     },
     ".github/workflows/native-extension-revocation.yml": {
       "sha256": "d66b9e16f1811f3be0aaddcca5967f02a58a128e24eb7360b853398797b2716d",
@@ -601,8 +601,8 @@
       "size": 2550
     },
     ".github/workflows/owner-admin-real.yml": {
-      "sha256": "6761c4ac9d10a43aa0dc5b4b5c6ccdb21c9295c272f9ecf72d6d39aabc24b20d",
-      "size": 5517
+      "sha256": "b944e2b906285db86f1b3e80da7ddbb5728402b4843ac7c757b70cc83d3b4519",
+      "size": 5568
     },
     ".github/workflows/owner-lifecycle.yml": {
       "sha256": "3b2d2a67bb81f1e035af344c3f1fc954f2ea1cc01047d061adecd17c808a957a",
@@ -613,24 +613,24 @@
       "size": 2919
     },
     ".github/workflows/performance.yml": {
-      "sha256": "dab4943bdd9e7a17dc50b05322b320c8aa63a0f6b490df3c75204080f50423cb",
-      "size": 4237
+      "sha256": "900d71044bef3d1346cce58a16cf3c03a0ebf08bd1b6e04c2a8b931b0d31236e",
+      "size": 4403
     },
     ".github/workflows/physical-ha-dr.yml": {
       "sha256": "9ab30dcdaf0a7e8130919a9bf0612a18bc14a25daec7c06387258c05b03de617",
       "size": 8667
     },
     ".github/workflows/player-migration.yml": {
-      "sha256": "0a2398a50e0a548d93e071c046b6489adfd94bd15e22e95a6d63b09f74b3db76",
-      "size": 1701
+      "sha256": "eb242a536bf9f42a285d1477025bc94fb2d99ae693c28aeedb3b47d7e0c87a17",
+      "size": 1781
     },
     ".github/workflows/prestarter.yml": {
       "sha256": "fbcda32ba2a38dc07193c0ff736395ecdf9f4f47e391e5581d2ba7ef4f39a57e",
       "size": 2104
     },
     ".github/workflows/production-deployment.yml": {
-      "sha256": "96f5f792b7045a5215e182f4524eecd5dc0a211798830f3cd19678c5e4cf35be",
-      "size": 3144
+      "sha256": "f26f432c80b0eb4fa2ef43f4e876e3e9a75de86692b782408ad2df7fa2a5031e",
+      "size": 3195
     },
     ".github/workflows/production-rc.yml": {
       "sha256": "a4c0f35030330953fa5fae928b6d54aa8c22cfc2be4dbb370bf0d38dd371d962",
@@ -669,8 +669,8 @@
       "size": 2186
     },
     ".github/workflows/release-candidate.yml": {
-      "sha256": "0476928df41d45561741214841361b7845b6b469def09333d5282982c17873ac",
-      "size": 10251
+      "sha256": "9918304cdd0d7b9294ad8069319575c2469f759a321ab4c800ecb68e2af3e118",
+      "size": 10278
     },
     ".github/workflows/reproducibility-current.yml": {
       "sha256": "29608e4fb42c2126b9b2f931116128edddd017221d8c519d4fadfd30d6142f31",
@@ -717,7 +717,7 @@
       "size": 2779
     },
     ".github/workflows/serverbridge-failover.yml": {
-      "sha256": "f01c1b3f33859a67550e97bbc76f7d50d21ada0f244ccdbe2806c5d389f5f5f0",
+      "sha256": "4a54645114d44d1b4e23ce05967ba3c2974f78699c9bcb01ecd55677d5e88733",
       "size": 4382
     },
     ".github/workflows/serverbridge-operator.yml": {
@@ -769,8 +769,8 @@
       "size": 2796
     },
     ".github/workflows/sqlite-pg-recovery.yml": {
-      "sha256": "1616a71b31a61387cd4e0f6e761e75f594f6e7d767a8dba058ca9f2950caade5",
-      "size": 2577
+      "sha256": "9ca9794a50057c076f4edfcbeabb87eee9a6a4ca37828e641582b2cfde48c8f8",
+      "size": 2635
     },
     ".github/workflows/sqlite-postgresql-transfer.yml": {
       "sha256": "9698b70fd0376ac7df8737e53c5fc34c1e531fff6e96e0a09859d94e1016c661",
@@ -861,15 +861,15 @@
       "size": 4040
     },
     "apps/desktop/src-tauri/Cargo.toml": {
-      "sha256": "348a49f02c96252a80d113a59dff7edda30fbed4643315fc55f4cb75855b8a8a",
-      "size": 1521
+      "sha256": "2fdb623812e269f72b0a5be2e0feae565c8b5ec90d85f8aaee4479e3d0a5380b",
+      "size": 1734
     },
     "cli/cmd/launcher/release_commands.go": {
       "sha256": "1033dc2ebc82289059cc80cfec993ad4158f4f5b62cdb067ad5ba52f1ea52c82",
       "size": 84134
     },
     "cli/cmd/launcher/templates/production.zip": {
-      "sha256": "5102251fc56c22a9cf1e178afddc00ad6fd4d487940c7089d75f5be6b291ea66",
+      "sha256": "57667996316a0be052afa368308e37210633991f27b5064d263c24f76ffc6528",
       "size": 19212
     },
     "cli/go.mod": {
@@ -877,11 +877,11 @@
       "size": 48
     },
     "cli/internal/dbmigrate/catalog.zip": {
-      "sha256": "42d9d0927c090974e1fc56f676ba0a722831c9f434c31ee8f065778ea3cdcafb",
-      "size": 367423
+      "sha256": "86ae7c059078ee66738642bcaf57c283503b5f0c2db716a8b47668e105135acd",
+      "size": 370339
     },
     "deploy/production/docker-compose.yml": {
-      "sha256": "95828aad8cb6fb46589b2f76062791b263039fd90f5f1bdeb0db503cdb0b8c58",
+      "sha256": "84f7226a96e599652480d79436ae09d8bafec73a876c2797bbb5610e8a7c0421",
       "size": 8043
     },
     "deploy/production/env.production.example": {
@@ -1345,8 +1345,8 @@
       "size": 8883
     },
     "scripts/smoke/offline/repository-policy.py": {
-      "sha256": "dae5829ed810afa1406ab54126c4b385a09e80a78d8df201a27ebe4d204fc48e",
-      "size": 326448
+      "sha256": "31cacbe5c4d365ad54d50517fade5fb3d7376c64bbcee04f71da47dece083ced",
+      "size": 326722
     },
     "scripts/smoke/offline/serverbridge-forge-neoforge.py": {
       "sha256": "ec73e4ffd23cbeb1ab1c40acf458586a52e921c147704ac95ea9e664b772da62",
@@ -1883,6 +1883,10 @@
     "services/api/internal/dbmigrate/sql/0118_release_snapshot_variable.sql": {
       "sha256": "77a73af715370df594f2d632d75560d5b780b9d5a2831807e996f4421c0b57e5",
       "size": 3091
+    },
+    "services/api/internal/dbmigrate/sql/0119_bridge_late_receipt.sql": {
+      "sha256": "251456a83c6a1eda339ea1c4af8f207dbceea96a255976146339e2914253e6e9",
+      "size": 2776
     },
     "settings.gradle.kts": {
       "sha256": "98aaca12745e6cfa6ad610c3f409ccd2eaa73e0e90ba9f6098b03d25b4243120",

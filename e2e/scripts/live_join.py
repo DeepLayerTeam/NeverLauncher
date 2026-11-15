@@ -248,8 +248,22 @@ def verify(args):
             witness['tickAfter'] > witness['tickBefore'], 'Время в реальном мире Minecraft не изменилось')
     # The standalone probe cannot certify GUI readiness; independent server evidence above
     # establishes actual multiplayer participation, not just JVM lifetime.
+    client_port = ready.get('port')
+    proxy_fields = {}
+    proxy_path = runtime / 'resource-ready-proxy.json'
+    if proxy_path.exists():
+        proxy = read_json(proxy_path)
+        require(args.loader == 'vanilla' and proxy.get('minecraftVersion') == args.minecraft
+                and proxy.get('schemaVersion') == '1.0' and proxy.get('status') == 'released'
+                and proxy.get('atlasReady') is True and proxy.get('backendConnected') is True
+                and proxy.get('backendHost') == proxy.get('listenHost') == '127.0.0.1'
+                and proxy.get('backendPort') == ready.get('port')
+                and type(proxy.get('listenPort')) is int and 1 <= proxy['listenPort'] <= 65535
+                and proxy['listenPort'] != ready.get('port'), 'Недействительное свидетельство барьера ресурсов')
+        client_port = proxy['listenPort']
+        proxy_fields = {'clientConnectPort': client_port, 'resourceGateSha256': file_sha256(proxy_path)}
     require(cert.get('status') in ('passed', 'inconclusive') and cert.get('matchingServer') == '127.0.0.1' and
-            cert.get('matchingServerPort') == ready.get('port') and
+            cert.get('matchingServerPort') == client_port and
             (cert.get('success') is True or cert.get('timedOut') is True),
             'Проверенный клиент не был направлен на фактический выделенный сервер')
     require(args.profile == cert.get('minecraftVersion'), 'Профиль клиента не соответствует установленному профилю загрузчика')
@@ -264,6 +278,7 @@ def verify(args):
         'minecraftVersion': args.minecraft, 'loader': args.loader,
         'loaderVersion': args.loader_version, 'profileId': args.profile,
         'javaMajor': args.java_major, 'serverPort': ready['port'],
+        **proxy_fields,
         'serverArtifactSha256': ready['serverArtifactSha256'],
         'serverProcessId': ready['serverPid'], 'username': PLAYER,
         'serverLogSha256': file_sha256(log_path),

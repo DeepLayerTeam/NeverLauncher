@@ -468,6 +468,10 @@ class MatchingServer:
             "max-players": "2",
             "motd": "Launcher isolated staged gameplay test",
         }
+        # Use the normal generator for 1.17.1: its flat codec can produce an invalid/void world.
+        if self.minecraft == "1.17.1":
+            props["level-type"] = "default"
+            props["level-seed"] = "1"
         # Не позволяйте предоставленному злоумышленником server.properties переопределить loopback.
         (self.root / "server.properties").write_text(
             "".join(f"{key}={value}\n" for key, value in props.items()), encoding="utf-8"

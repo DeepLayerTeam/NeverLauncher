@@ -44,6 +44,13 @@ class MacOSSDL3RetryTest(unittest.TestCase):
     def test_specific_native_abort_can_retry(self) -> None:
         self.assertTrue(MOD.is_retryable(self.report, self.root))
 
+    def test_localized_native_abort_can_retry(self) -> None:
+        self.log.write_text("SDL revision: SDL-3.4\n--- завершение Runtime --- код=None, сигнал=Some(6)\n", encoding="utf-8")
+        self.assertTrue(MOD.is_retryable(self.report, self.root))
+        with self.log.open("a", encoding="utf-8") as f:
+            f.write("--- Guard: остановка при нарушении безопасности ---\n")
+        self.assertFalse(MOD.is_retryable(self.report, self.root))
+
     def test_retry_passed_or_normal_crash(self) -> None:
         for k, v in (
             ("status", "passed"),

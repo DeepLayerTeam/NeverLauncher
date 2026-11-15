@@ -61,11 +61,12 @@ class MatrixToolTests(unittest.TestCase):
                 "java-runtime.json",
                 "result.json",
             ]
-            if not target.get("matchingServer") or target["minecraft"] != "1.17.1":
-                checks["liveMultiplayerJoin"] = True
-                files.extend(["live-join.json", "live-server-ready.json",
-                              "live-server-witness.json", "live-server-stopped.json", "matching-server.log",
-                              "live-server-execution.log"])
+            checks["liveMultiplayerJoin"] = True
+            files.extend(["live-join.json", "live-server-ready.json",
+                          "live-server-witness.json", "live-server-stopped.json", "matching-server.log",
+                          "live-server-execution.log"])
+            if target["loader"] == "vanilla" and target["os"] == "linux" and re.fullmatch(r"1\.(14|15|16|17|18)(\.\d+)?", target["minecraft"]):
+                files.append("resource-ready-proxy.json")
             if target.get("matchingServer") is True:
                 checks.update(
                     {

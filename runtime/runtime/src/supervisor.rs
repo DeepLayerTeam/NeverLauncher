@@ -185,10 +185,11 @@ impl ProcessSupervisor {
         let mut command = tokio::process::Command::new(&plan.java_executable);
         command.current_dir(Path::new(&plan.working_directory));
         command.args(&plan.jvm_args);
-        crate::apply_launch_command_0223(&mut command, &plan);
+        crate::prepare_launch_environment_0223(&mut command, &plan);
         #[cfg(windows)]
         let mut sensor_bootstrap = crate::windows_sensor::prepare_sensor_command_for_game(&mut command, root, manifest)
             .map_err(|err| format!("Запуск заблокирован: ошибка подготовки датчика Guard: {err}"))?;
+        crate::append_launch_target_0223(&mut command, &plan);
         command
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))

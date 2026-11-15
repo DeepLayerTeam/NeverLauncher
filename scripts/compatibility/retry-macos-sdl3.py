@@ -39,8 +39,10 @@ def is_retryable(report_path: Path, client_root: Path) -> bool:
             tail = handle.read(MAX_LOG_BYTES).decode("utf-8", errors="replace")
         return (
             "SDL revision: SDL-3." in tail
-            and "--- runtime exit --- code=None signal=Some(6)" in tail
+            and ("--- runtime exit --- code=None signal=Some(6)" in tail
+                 or "--- завершение Runtime --- код=None, сигнал=Some(6)" in tail)
             and "Guard fail-closed" not in tail
+            and "Guard: остановка при нарушении безопасности" not in tail
         )
     except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
         return False

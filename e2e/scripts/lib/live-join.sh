@@ -3,6 +3,11 @@
 # совместимости. Используется в пяти сценариях сертификации установленных клиентов.
 
 certification_live_cleanup() {
+  if [[ -n "${LIVE_JOIN_PROXY_PID:-}" ]]; then
+    kill "$LIVE_JOIN_PROXY_PID" 2>/dev/null || true
+    wait "$LIVE_JOIN_PROXY_PID" 2>/dev/null || true
+    unset LIVE_JOIN_PROXY_PID
+  fi
   if [[ -n "${LIVE_JOIN_DAEMON_PID:-}" ]]; then
     # Координатор должен остановить настоящую JVM и закрыть окончательный журнал сервера,
     # прежде чем привязать квитанции по SHA-256. Межплатформенный маркер остановки работает
@@ -52,6 +57,24 @@ if ready.get('targetId') != sys.argv[2] or type(p) is not int or not 1 <= p <= 6
 print(p)
 PY
 )" || return 3
+  # The loopback proxy forwards actual game traffic only after the block atlas is ready.
+  # Its endpoint is bound to the original server by live_join.verify; RCON still observes that server.
+  if [[ "$loader" == vanilla && "${TARGET_OS:-}" == linux && "$MINECRAFT_VERSION" =~ ^1\.(14|15|16|17|18)(\.[0-9]+)?$ ]]; then
+    [[ ! -e "$root/resource-ready-proxy.port" && ! -e "$root/resource-ready-proxy.json" ]] || return 3
+    python3 "$ROOT/e2e/scripts/vanilla-1171-resource-ready-proxy.py" \
+      --minecraft "$MINECRAFT_VERSION" --backend-port "$LIVE_JOIN_SERVER_PORT" \
+      --logs "$profile_root/logs" --port-file "$root/resource-ready-proxy.port" \
+      --evidence "$root/resource-ready-proxy.json" --timeout 90 > "$root/resource-ready-proxy.log" 2>&1 &
+    LIVE_JOIN_PROXY_PID=$!
+    for ((attempt=0;attempt<80;attempt++)); do
+      [[ -s "$root/resource-ready-proxy.port" ]] && break
+      kill -0 "$LIVE_JOIN_PROXY_PID" 2>/dev/null || return 3
+      sleep 0.25
+    done
+    [[ -s "$root/resource-ready-proxy.port" ]] || return 3
+    LIVE_JOIN_SERVER_PORT="$(cat "$root/resource-ready-proxy.port")"
+    [[ "$LIVE_JOIN_SERVER_PORT" =~ ^[0-9]+$ ]] && (( LIVE_JOIN_SERVER_PORT >= 1 && LIVE_JOIN_SERVER_PORT <= 65535 )) || return 3
+  fi
   # Настраивайте только этот одноразовый корневой каталог клиента. Это предотвращает предупреждение
   # Minecraft о мультиплеере при первом запуске, которое мешало бы Quick Play даже при доступном сервере.
   if [[ ! -e "$profile_root/options.txt" ]]; then

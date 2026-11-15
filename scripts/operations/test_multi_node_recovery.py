@@ -33,7 +33,7 @@ class MultiNodeRecovery0455(unittest.TestCase):
         with patch.object(dr, 'compose', return_value=result) as call:
             dr.check_restored_worker_0455('nl-dr-ha0455', Path('/tmp/target.env'), 'worker-b', timeout=2)
             self.assertIn('worker-b', call.call_args.args)
-        with self.assertRaisesRegex(dr.DrillError, 'invalid'):
+        with self.assertRaisesRegex(dr.DrillError, 'Некорректная служба рабочего узла HA'):
             dr.check_restored_worker_0455('nl-dr-ha0455', Path('/tmp/target.env'), 'api')
 
 

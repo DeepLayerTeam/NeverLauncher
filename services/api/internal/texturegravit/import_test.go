@@ -211,7 +211,7 @@ func TestGravitTextureSelectionCollisionPreventsWrites0445(t *testing.T) {
 }
 
 func TestGravitTextureDistinctSkinCapeAllowed0445(t *testing.T) {
-	r, rows, _ := createFixture02510(t)
+	_, rows, _ := createFixture02510(t)
 	cape := rows[0]
 	cape.ID = "cape-row"
 	cape.TextureType = "CAPE"

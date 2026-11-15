@@ -38,7 +38,7 @@ def report(runtime: Path, minecraft: str, java_major: int, target: str) -> dict:
         'serverHost': '127.0.0.1', 'serverPort': live['serverPort'],
         'serverProcessAlive': True,  # alive through the witness, then stopped cleanly
         'serverVersionMatched': True, 'clientJoinedServer': True, 'actualClient': True,
-        'clientConnectPort': live['serverPort'], 'serverLog': 'matching-server.log',
+        'clientConnectPort': live.get('clientConnectPort', live['serverPort']), 'serverLog': 'matching-server.log',
         'serverArtifactEvidence': 'vanilla-server-install.json',
         'liveJoinSha256': file_sha256(runtime / 'live-join.json'),
     }

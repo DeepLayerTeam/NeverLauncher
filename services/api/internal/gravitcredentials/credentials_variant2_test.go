@@ -34,7 +34,7 @@ func TestFileAuthMissingVerifierRequiresReset0444(t *testing.T) {
 		"modules-config/FileAuthSystem/Database.json": `{"11111111-2222-4333-8444-555555555555":{"username":"Player335"}}`,
 	})
 	got, err := Extract(context.Background(), bytes.NewReader(src), int64(len(src)), snapshot, "sha256-hex")
-	if err != nil || len(got) != 1 || got[0].State != "manual_reset" || got[0].PasswordHash != "" || !strings.Contains(got[0].Reason, "missing") {
+	if err != nil || len(got) != 1 || got[0].State != "manual_reset" || got[0].PasswordHash != "" || !strings.Contains(got[0].Reason, "Отсутствует проверочный хеш") {
 		t.Fatalf("Отсутствует проверочный секрет: %+v %v", got, err)
 	}
 }

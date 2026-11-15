@@ -1539,7 +1539,7 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 // расследования.
 func (r *SQLRepository) reconcileControlLeases0285(ctx context.Context, tx *sql.Tx, serverID string, now time.Time) error {
 	_, err := tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3
-SET status='indeterminate', updated_at=$2, completed_at=$2,
+SET status='indeterminate', lease_reconciled=true, updated_at=$2, completed_at=$2,
     error=CASE WHEN expires_at<=$2 THEN 'Срок действия доставленной команды истёк без подтверждения завершения'
                WHEN lease_until IS NOT NULL AND lease_until>$2 THEN 'Доставка привязана к устаревшему идентификатору Runtime'
                ELSE 'Срок аренды доставки истёк без подтверждения завершения' END,
@@ -1679,8 +1679,14 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	// Агент уже надёжно завершил работу, но его ACK может прийти после истечения исходной аренды или
 	// согласования при чтении. Сохраните исходную идентичность аренды (проверенную выше); не выдавайте новое
 	// исполнение.
+	var reconciled bool
 	if recoverableServerBridgeLease0412(current) {
-		if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
+		if err = tx.QueryRowContext(ctx, `SELECT lease_reconciled FROM server_bridge_control_commands_v3 WHERE id=$1`, commandID).Scan(&reconciled); err != nil {
+			return model.ServerBridgeControlCommand{}, err
+		}
+	}
+	if reconciled {
+		if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL,lease_reconciled=false WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
 			return model.ServerBridgeControlCommand{}, err
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,$3,$4,'','ServerBridge Control API',$5) ON CONFLICT(id) DO NOTHING`, "serverbridge-control-late-receipt-"+commandID, serverID, "serverbridge:control:late-receipt:"+status, current.Type+":"+commandID, now.UTC()); err != nil {
@@ -1702,7 +1708,7 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	if current.Status != "leased" {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: аренда команды управления неактивна", ErrConflict)
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL,lease_reconciled=false WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,$3,$4,'','ServerBridge Control API',$5) ON CONFLICT(id) DO NOTHING`, `serverbridge-control-complete-`+commandID, serverID, "serverbridge:control:"+status, current.Type+":"+commandID, now.UTC()); err != nil {
@@ -1731,6 +1737,7 @@ func serverBridgeControlStringMapEqual0195(a, b map[string]string) bool {
 func (r *SQLRepository) reconcileControlRead0285(ctx context.Context, serverID, commandID string) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET
 status=CASE WHEN status='leased' THEN 'indeterminate' ELSE 'expired' END,
+lease_reconciled=(status='leased'),
 error=CASE WHEN status='leased' THEN 'Доставленная команда потеряла аренду или среду выполнения до подтверждения' ELSE 'Срок действия истёк до доставки' END,
 updated_at=now(),completed_at=now(),lease_until=NULL
 WHERE ($1='' OR server_id=$1) AND ($2='' OR id=$2) AND (status='pending' AND expires_at<=now() OR status='leased' AND ((lease_until IS NULL OR lease_until<=now()) OR expires_at<=now()

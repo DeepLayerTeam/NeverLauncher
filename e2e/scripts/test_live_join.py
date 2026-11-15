@@ -164,6 +164,31 @@ class LiveJoinNegativeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'не подтвердили реальное подключение клиента'):
             gate.verify(args)
 
+    def test_proxy_must_bind_client_to_original_server(self):
+        runtime, args = self.construct_fake_negative_fixture()
+        args.loader = 'vanilla'; args.loader_version = ''; args.minecraft = '1.18'
+        for name in ('live-server-ready.json', 'live-server-witness.json', 'live-server-stopped.json'):
+            doc = gate.read_json(runtime / name)
+            doc.update(loader='vanilla', loaderVersion='', minecraftVersion=args.minecraft)
+            put(runtime / name, doc)
+        cert = gate.read_json(runtime / 'fabric-certification.json')
+        cert.update(matchingServerPort=4444, minecraftVersion=args.minecraft)
+        args.profile = args.minecraft
+        put(runtime / 'vanilla-certification.json', cert)
+        proxy = {'schemaVersion':'1.0', 'status':'released', 'minecraftVersion':args.minecraft,
+                 'atlasReady':True, 'backendConnected':True, 'listenHost':'127.0.0.1',
+                 'backendHost':'127.0.0.1', 'listenPort':4444, 'backendPort':3334}
+        put(runtime / 'resource-ready-proxy.json', proxy)
+        with self.assertRaisesRegex(RuntimeError, 'барьера ресурсов'):
+            gate.verify(args)
+        proxy['backendPort'] = 3333
+        put(runtime / 'resource-ready-proxy.json', proxy)
+        self.assertEqual(gate.verify(args), 0)
+        live = gate.read_json(runtime / 'live-join.json')
+        self.assertEqual(live['serverPort'], 3333)
+        self.assertEqual(live['clientConnectPort'], 4444)
+        self.assertEqual(live['resourceGateSha256'], gate.file_sha256(runtime / 'resource-ready-proxy.json'))
+
     def test_failed_probe_rejected_even_with_online_witness(self):
         runtime, args = self.construct_fake_negative_fixture()
         cert = gate.read_json(runtime / 'fabric-certification.json')

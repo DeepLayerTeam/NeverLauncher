@@ -2928,7 +2928,11 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     runtime_01610 = read("runtime/runtime/src/lib.rs") + read(
         "runtime/runtime/src/bin/runtime.rs"
     )
-    matching_case_01610 = read("e2e/scripts/run-vanilla-matching-e2e.sh")
+    matching_case_01610 = "\n".join(read(path) for path in (
+        "e2e/scripts/run-vanilla-matching-e2e.sh", "e2e/scripts/run-vanilla-certification-case.sh",
+        "e2e/scripts/lib/live-join.sh", "e2e/scripts/live_join.py",
+        "e2e/scripts/staged_matching.py", "e2e/scripts/matching_live_report.py",
+    ))
     compat_case_01610 = read("e2e/scripts/run-compatibility-case.sh")
     matrix_01610 = read("scripts/compatibility/matrix.py")
     matrix_tests_01610 = read("scripts/compatibility/test_matrix.py")
@@ -2966,9 +2970,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 f"0.16.10 Прямой запуск Runtime с подключением к соответствующему серверу реализован не полностью: {required}"
             )
     for required in [
-        "runtime vanilla-server",
+        '"vanilla-server"',
         "server.jar",
-        "online-mode=false",
+        '"online-mode": "true" if self.online_mode else "false"',
         "clientJoinedServer",
         "serverVersionMatched",
         "joined the game|logged in with entity id",

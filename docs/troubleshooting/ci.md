@@ -84,3 +84,33 @@ python3 e2e/scripts/prepare_server_bundle.py --spec server-sources.json --output
 независимо, затем опубликуйте файлы (только при наличии прав на распространение)
 и настройте переменные из предыдущего раздела. Для локального self-hosted runner
 можно использовать абсолютные пути к манифесту и каталогу вместо публикации.
+
+#### Получение кандидатов из установщиков
+
+Для обычных Linux-целей `e2e/scripts/build_server_candidates.py` запускает
+одноразовый установщик `itzg/minecraft-server` в Docker с `SETUP_ONLY=TRUE`.
+Спецификация задаёт точный digest образа, разрешённую версию загрузчика из
+клиентского lock и фактическую точку входа сервера. Например, для Fabric:
+
+```json
+{
+  "fabric-1.21-linux-x64": {
+    "image": "itzg/minecraft-server@sha256:<проверенный-digest-образа>",
+    "loaderVersion": "0.20.1",
+    "serverEntry": "server.jar"
+  }
+}
+```
+
+```bash
+python3 e2e/scripts/build_server_candidates.py --spec candidates.json \
+  --output ci-server-candidates --accept-minecraft-eula
+```
+
+Укажите образ с подходящей версией Java, точные версии и имя файла для
+каждой цели; для Forge/NeoForge с `run.sh` сохраните необходимые библиотеки.
+Команда требует согласия с EULA, Docker и доступ к upstream. Она не запускает
+игровую сертификацию и не публикует релиз. Проверьте происхождение, состав,
+версию, лицензии и хеши полученных кандидатов независимо перед утверждением.
+Старые версии Vanilla, отсутствующие в метаданных Mojang, по-прежнему требуют
+дистрибутива из проверенного источника.

@@ -296,7 +296,7 @@ if scope == "client":
             })
     # Каждая обычная цель клиента версии 0.52.4 требует одновременного серверного
     # подтверждения мультиплеера, а не просто бездействующей JVM, прожившей N секунд.
-    if not matching_server or minecraft != "1.17.1":
+    if scope == "client":
         live = read("live-join.json") or {}
         server_log_path = runtime / "matching-server.log"
         cert_path = runtime / probe_name
@@ -320,7 +320,9 @@ if scope == "client":
             and live.get("playerOnlineViaRcon") is True
             and live.get("worldTicksAdvanced") is True
             and probe.get("matchingServer") == "127.0.0.1"
-            and probe.get("matchingServerPort") == live.get("serverPort")
+            and probe.get("matchingServerPort") == live.get("clientConnectPort", live.get("serverPort"))
+            and (not live.get("resourceGateSha256") or ((runtime / "resource-ready-proxy.json").is_file() and live.get("resourceGateSha256") == file_sha256(runtime / "resource-ready-proxy.json")))
+            and (not (loader == "vanilla" and os_name == "linux" and re.fullmatch(r"1\.(14|15|16|17|18)(\.\d+)?", minecraft)) or bool(live.get("resourceGateSha256")))
             and server_log_path.is_file()
             and cert_path.is_file()
             and witness_path.is_file()
@@ -366,10 +368,10 @@ if scope == "client":
         "client-package.json", "materialized-client-verify.json", install_name, "vanilla-server-install.json",
         probe_name, f"{loader}-resolution-lock.json", "loader-platform.json", "loader-hardening.json", "loader-hardening-package.json", "matching-server.json", "matching-server.log", "result.json"
     ] if (runtime / name).is_file()]
-    if not matching_server or minecraft != "1.17.1":
+    if scope == "client":
         evidence_files += [name for name in (
             "live-join.json", "live-server-ready.json", "live-server-witness.json", "live-server-stopped.json",
-            "live-server-execution.log", "matching-server.log", "matching-server-install.json"
+            "live-server-execution.log", "matching-server.log", "matching-server-install.json", "resource-ready-proxy.json"
         ) if (runtime / name).is_file() and name not in evidence_files]
 else:
     base = read("result.json") or {}

@@ -813,7 +813,7 @@ pub fn observe_memory_transition(
 
 fn current_sensor_image_range() -> Result<(usize, usize), String> {
     let mut module = std::ptr::null_mut();
-    let address = capture_transition_provenance as usize as *const u16;
+    let address = capture_transition_provenance as *const () as *const u16;
     let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
     if unsafe { GetModuleHandleExW(flags, address, &mut module) } == 0 || module.is_null() {
         return Err(format!(

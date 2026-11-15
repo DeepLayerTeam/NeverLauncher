@@ -20,7 +20,7 @@ import tempfile
 import time
 
 ATLAS_READY = re.compile(
-    rb"Created:\s*\d+x\d+x\d+\s+minecraft:textures/atlas/blocks\.png-atlas"
+    rb"Created:\s*\d+x\d+(?:x\d+)?\s+(?:minecraft:textures/atlas/blocks\.png-atlas|textures-atlas)\b"
 )
 MAX_READ_BYTES = 256 * 1024
 
@@ -39,11 +39,11 @@ def write_atomic(path: Path, data: str) -> None:
             os.unlink(tmp)
 
 
-def atlas_ready(logs: Path) -> bool:
+def atlas_ready(logs: Path, minecraft: str = "1.17.1") -> bool:
     if not logs.is_dir() or logs.is_symlink():
         return False
     # Проверяйте только журналы, созданные под этим изолированным корнем сертификации.
-    for path in logs.glob("runtime-vanilla-certification-1.17.1-*.log"):
+    for path in logs.glob(f"runtime-vanilla-certification-{minecraft}-*.log"):
         if path.is_symlink() or not path.is_file():
             continue
         with path.open("rb") as stream:
@@ -54,6 +54,8 @@ def atlas_ready(logs: Path) -> bool:
 
 
 def serve(args: argparse.Namespace) -> None:
+    if not re.fullmatch(r"1\.(?:14|15|16|17|18)(?:\.\d+)?", args.minecraft):
+        raise ValueError("Unsupported resource gate version")
     if not (1 <= args.backend_port <= 65535) or not (0 <= args.listen_port <= 65535):
         raise ValueError("Недопустимый порт")
     evidence = {
@@ -63,6 +65,7 @@ def serve(args: argparse.Namespace) -> None:
         "backendPort": args.backend_port,
         "listenHost": "127.0.0.1",
         "listenPort": 0,
+        "minecraftVersion": args.minecraft,
         "resourceGate": "minecraft:textures/atlas/blocks.png-atlas",
         "atlasReady": False,
         "backendConnected": False,
@@ -88,7 +91,7 @@ def serve(args: argparse.Namespace) -> None:
         with client:
             deadline = time.monotonic() + args.timeout
             while time.monotonic() < deadline:
-                if atlas_ready(args.logs):
+                if atlas_ready(args.logs, args.minecraft):
                     evidence["atlasReady"] = True
                     break
                 time.sleep(0.15)
@@ -129,6 +132,7 @@ def serve(args: argparse.Namespace) -> None:
 
 def main() -> int:
     p = argparse.ArgumentParser()
+    p.add_argument("--minecraft", default="1.17.1")
     p.add_argument("--listen-port", type=int, default=0)
     p.add_argument("--backend-port", type=int, required=True)
     p.add_argument("--logs", type=Path, required=True)

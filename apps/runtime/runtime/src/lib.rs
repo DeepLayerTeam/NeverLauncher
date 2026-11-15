@@ -976,10 +976,11 @@ pub async fn certify_vanilla_compatibility(
     command.args(&plan.jvm_args);
     // Подписанная политика окружения лаунчера очищает унаследованные переменные.
     // Подготавливайте Guard *после* этого шага, чтобы его защищённый канал и секрет достигли JVM.
-    apply_launch_command_0223(&mut command, &plan);
+    prepare_launch_environment_0223(&mut command, &plan);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
         .map_err(|err| format!("Сертификация Vanilla заблокирована Guard Sensor: {err}"))?;
+    append_launch_target_0223(&mut command, &plan);
     command
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
@@ -1189,10 +1190,11 @@ pub async fn launch_with_timeout_matching_authenticated(
     command.args(&plan.jvm_args);
     // Сначала env_clear удаляет параметры вызывающей стороны; затем Guard Sensor добавляет
     // свежие аутентифицированные конечную точку IPC и секрет, которые не должны стираться.
-    apply_launch_command_0223(&mut command, &plan);
+    prepare_launch_environment_0223(&mut command, &plan);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command_for_game(&mut command, root, manifest)
         .map_err(|err| format!("Запуск заблокирован: ошибка подготовки датчика Guard: {err}"))?;
+    append_launch_target_0223(&mut command, &plan);
     command
         .stdin(Stdio::null())
         .stdout(Stdio::from(stdout_file))
@@ -1741,7 +1743,7 @@ async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &Laun
     Ok(())
 }
 
-pub(crate) fn apply_launch_command_0223(command: &mut Command, plan: &LaunchPlan) {
+fn prepare_launch_environment_0223(command: &mut Command, plan: &LaunchPlan) {
     if plan.restrict_java_environment {
         let inherited: Vec<(String, String)> = plan.environment_allowlist.iter().filter_map(|key| std::env::var(key).ok().map(|value| (key.clone(), value))).collect();
         command.env_clear();
@@ -1756,6 +1758,9 @@ pub(crate) fn apply_launch_command_0223(command: &mut Command, plan: &LaunchPlan
             command.env_remove(forbidden);
         }
     }
+}
+
+fn append_launch_target_0223(command: &mut Command, plan: &LaunchPlan) {
     if !plan.classpath_entries.is_empty() {
         command.arg("-cp").arg(join_classpath(&plan.classpath_entries));
     }
@@ -1765,6 +1770,12 @@ pub(crate) fn apply_launch_command_0223(command: &mut Command, plan: &LaunchPlan
     if !plan.main_module.is_empty() { command.arg("-m").arg(&plan.main_module); }
     else { command.arg(&plan.main_class); }
     command.args(&plan.game_args);
+}
+
+#[cfg(test)]
+pub(crate) fn apply_launch_command_0223(command: &mut Command, plan: &LaunchPlan) {
+    prepare_launch_environment_0223(command, plan);
+    append_launch_target_0223(command, plan);
 }
 
 fn apply_memory_policy(memory: &MemoryInfo, jvm_args: &mut Vec<String>) {
@@ -2010,9 +2021,11 @@ mod tests {
         };
         let mut cmd = Command::new("java");
         cmd.args(&plan.jvm_args);
-        apply_launch_command_0223(&mut cmd, &plan);
+        prepare_launch_environment_0223(&mut cmd, &plan);
+        cmd.arg("-agentpath:guard-sensor.dll").arg("-XX:+DisableAttachMechanism");
+        append_launch_target_0223(&mut cmd, &plan);
         let args: Vec<String> = cmd.as_std().get_args().map(|v| v.to_string_lossy().to_string()).collect();
-        assert_eq!(args, vec!["-Xmx1G", "-cp", "lib one.jar", "--module-path", "mod one.jar", "-m", "example.mod/example.Main", "value with spaces"]);
+        assert_eq!(args, vec!["-Xmx1G", "-agentpath:guard-sensor.dll", "-XX:+DisableAttachMechanism", "-cp", "lib one.jar", "--module-path", "mod one.jar", "-m", "example.mod/example.Main", "value with spaces"]);
         plan.main_module.clear();
         plan.modulepath_entries.clear();
         let mut legacy_cmd = Command::new("java");

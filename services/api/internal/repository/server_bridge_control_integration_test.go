@@ -173,8 +173,28 @@ func TestServerBridgeControl0195Postgres(t *testing.T) {
 	if err != nil || current.Status != "indeterminate" {
 		t.Fatalf("Просроченная команда не согласована: %+v, %v", current, err)
 	}
+	if _, err := second.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd3.ID, channel, "wrong_token_0123456789abcdef", pending.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", time.Now().UTC()); !errors.Is(err, ErrConflict) {
+		t.Fatalf("Принята поздняя квитанция с чужим токеном: %v", err)
+	}
 	resolved, err := second.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd3.ID, channel, pending.LeaseToken, pending.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", time.Now().UTC().Add(6*time.Hour))
 	if err != nil || resolved.Status != "succeeded" {
 		t.Fatalf("Позднее подтверждение исходной надёжной доставки отклонено: %+v, %v", resolved, err)
 	}
+	cmd4 := cmd2
+	cmd4.ID = "ctl_control0195_agent_indeterminate"
+	cmd4.IdempotencyKey = "control0195-agent-indeterminate"
+	if _, _, err = repo.CreateServerBridgeControlCommand(ctx, cmd4, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	leased4, err := repo.LeaseServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, channel, "agent_token_0123456789abcdef", pending.DeliverySequence, time.Now().UTC(), 30*time.Second)
+	if err != nil || leased4.ID != cmd4.ID {
+		t.Fatalf("Захват команды 4: %+v %v", leased4, err)
+	}
+	if _, err = repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd4.ID, channel, leased4.LeaseToken, leased4.DeliverySequence, "indeterminate", map[string]string{}, "Срок аренды доставки истёк без подтверждения завершения", time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = repo.CompleteServerBridgeControlCommand(ctx, node.ID, 11, runtimeID, cmd4.ID, channel, leased4.LeaseToken, leased4.DeliverySequence, "succeeded", map[string]string{"saved": "true"}, "", time.Now().UTC()); !errors.Is(err, ErrConflict) {
+		t.Fatalf("Неопределённый результат агента перезаписан: %v", err)
+	}
+
 }
