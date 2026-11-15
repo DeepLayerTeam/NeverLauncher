@@ -302,6 +302,7 @@ async fn linux_tpm_certify_0314(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Explicit fields in the Tauri command contract.
 async fn measured_boot_quote_0315(
  backend_url:String,user_id:String,device_id:String,tpm_extra_data_sha256:String,
  pcr_selection:String,ak_key:String,ak_certificate_pem:String,intermediates_pem:Vec<String>,
@@ -1585,7 +1586,7 @@ async fn launch_minecraft_inner_0392(
         let credentials=official_manager.launch_credentials(&context.backend_url, &context.token, &context.session_id).await?;
         // Для запуска игры должна использоваться та же учётная запись, что выбрана для авторизации ServerBridge,
         // даже при асинхронном переключении хранилища.
-        if credentials.uuid.replace('-', "").to_ascii_lowercase()!=context.expected_uuid.replace('-', "").to_ascii_lowercase() {
+        if !credentials.uuid.replace('-', "").eq_ignore_ascii_case(&context.expected_uuid.replace('-', "")) {
             return Err("UUID официального запуска отличается от авторизованной идентификации ServerBridge".into());
         }
         Some(credentials)
@@ -1732,7 +1733,7 @@ async fn guard_guard_attestation_v2(
 }
 
 
-fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::path::Path) -> Result<PathBuf, String> {
+fn create_staged_updater_helper02310(helper: &std::path::Path) -> Result<PathBuf, String> {
     let helper_meta = std::fs::symlink_metadata(helper).map_err(|e| e.to_string())?;
     if !helper_meta.file_type().is_file() || helper_meta.file_type().is_symlink() {
         return Err("Небезопасный нативный вспомогательный процесс обновления".into());
@@ -1773,7 +1774,7 @@ fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::pa
     let helper_stage_dir = helper_stage_root.join(hex::encode(nonce));
     std::fs::create_dir(&helper_stage_dir).map_err(|e| format!("Подготовка области обновления: {e}"))?;
     let staged_helper = helper_stage_dir.join(launcher_update_helper_name());
-    std::fs::copy(&helper, &staged_helper).map_err(|e| format!("Копирование вспомогательного файла обновления: {e}"))?;
+    std::fs::copy(helper, &staged_helper).map_err(|e| format!("Копирование вспомогательного файла обновления: {e}"))?;
     let copied = std::fs::metadata(&staged_helper).map_err(|e| e.to_string())?;
     if !copied.is_file() || copied.len() != helper_meta.len() {
         return Err("Проверка промежуточной области вспомогательного файла обновления не пройдена".into());
@@ -1848,7 +1849,7 @@ async fn install_launcher_update(
         return Err(format!("Вспомогательный процесс транзакционного обновления небезопасен: {}", helper.display()));
     }
 
-    let staged_helper = create_staged_updater_helper02310(&helper, bin_dir)?;
+    let staged_helper = create_staged_updater_helper02310(&helper)?;
     // Guard удерживает дескрипторы и IPC, из-за которых Windows может считать исполняемый файл занятым.
     // Остановите его до того, как внешний помощник начнёт ожидание Desktop и выполнение транзакции.
     guard.shutdown().await.map_err(|e| format!("не удалось остановить Guard перед обновлением: {e}"))?;
@@ -1995,7 +1996,7 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
     let report: serde_json::Value = serde_json::from_slice(&status.stdout)
         .map_err(|e| format!("Некорректное значение: состояние обновления компонентов: {e}"))?;
     if report.get("status").and_then(serde_json::Value::as_str) != Some("recovery-required") { return Ok(()); }
-    let staged = create_staged_updater_helper02310(&helper, bin_dir)?;
+    let staged = create_staged_updater_helper02310(&helper)?;
     std::process::Command::new(staged)
         .args(["update", "recover", "--root"])
         .arg(root)

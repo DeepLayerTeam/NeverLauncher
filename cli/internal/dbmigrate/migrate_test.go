@@ -72,6 +72,9 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		}
 	}
 
+	if !strings.Contains(apply, "\\echo already-applied 0081_auth_canonical_issuer_0291\n\\else\nBEGIN;\nSET CONSTRAINTS ALL IMMEDIATE;\n") {
+		t.Fatal("0081 must validate deferred constraints before its DML and DDL")
+	}
 	verify, err := BuildVerifyScript()
 	if err != nil {
 		t.Fatal(err)

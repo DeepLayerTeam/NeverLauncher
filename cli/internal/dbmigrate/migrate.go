@@ -95,6 +95,11 @@ func BuildApplyScript() (string, error) {
 		b.WriteString("\\if :" + varName + "\n")
 		b.WriteString("UPDATE schema_migrations SET checksum=" + sqlLiteral(m.Checksum) + ", description=CASE WHEN description='' THEN " + sqlLiteral(m.Version) + " ELSE description END WHERE version=" + sqlLiteral(m.Version) + " AND checksum='';\n")
 		b.WriteString("\\echo already-applied " + m.Version + "\n\\else\nBEGIN;\n")
+		// 0081 backfills existing identities before changing their constraints.
+		// Run deferred checks immediately so PostgreSQL has no pending trigger events.
+		if m.Version == "0081_auth_canonical_issuer_0291" {
+			b.WriteString("SET CONSTRAINTS ALL IMMEDIATE;\n")
+		}
 		b.WriteString(m.SQL)
 		if !strings.HasSuffix(strings.TrimSpace(m.SQL), ";") {
 			b.WriteString(";")

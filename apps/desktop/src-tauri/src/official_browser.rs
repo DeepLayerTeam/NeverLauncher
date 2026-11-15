@@ -92,7 +92,7 @@ pub fn parse_callback(request: &str, port: u16, state: &str) -> Callback {
     if !values.get("state").is_some_and(|value| equals_secret(state,value)) { return Callback::Reject; }
     if values.contains_key("error") { return Callback::Declined; }
     let Some(code) = values.remove("code") else { return Callback::Reject };
-    if code.is_empty() || code.len() > 4096 || code.bytes().any(|c| c < 0x21 || c > 0x7e) { return Callback::Reject; }
+    if code.is_empty() || code.len() > 4096 || code.bytes().any(|c| !(0x21..=0x7e).contains(&c)) { return Callback::Reject; }
     Callback::Code(code)
 }
 

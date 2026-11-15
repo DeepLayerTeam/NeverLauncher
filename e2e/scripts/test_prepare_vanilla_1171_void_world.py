@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Регрессионные Python-тесты автономного преобразования пустого мира для версии 1.17.1."""
 import importlib.util
-import json
-import struct
+import hashlib
+import tempfile
+import zipfile
 import unittest
 from pathlib import Path
 
@@ -88,26 +89,32 @@ class VoidWorldTests(unittest.TestCase):
         with self.assertRaisesRegex(world.NBTError, 'WorldGenSettings'):
             world.prepare(before)
 
-    def test_1171_server_properties_supply_complete_flat_codec(self):
+    def test_1171_server_properties_use_normal_world_and_matching_witness(self):
+        from staged_matching import MatchingServer
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / 'server.zip'
+            with zipfile.ZipFile(bundle, 'w') as archive:
+                archive.writestr('server.jar', b'fixture only, not a real server')
+            digest = hashlib.sha256(bundle.read_bytes()).hexdigest()
+            for version, expected in [('1.17.1', 'default'), ('1.17', 'flat')]:
+                work = root / version
+                work.mkdir()
+                server = MatchingServer(work, 'java', 'cli', version, 'vanilla', '',
+                                        bundle=str(bundle), bundle_sha=digest)
+                server.prepare()
+                props = dict(line.split('=', 1) for line in
+                             (server.root / 'server.properties').read_text().splitlines())
+                self.assertEqual(props['level-type'], expected)
+                self.assertEqual(props['server-ip'], '127.0.0.1')
+                self.assertEqual(props['enable-rcon'], 'true')
+                self.assertEqual(props['rcon.port'], str(server.rcon_port))
+                if version == '1.17.1':
+                    self.assertEqual(props['level-seed'], '1')
         script = Path(__file__).with_name('run-vanilla-matching-e2e.sh').read_text()
-        settings = [line.split('=', 1)[1] for line in script.splitlines()
-                    if line.startswith('generator-settings=')]
-        self.assertEqual(len(settings), 1)
-        flat = json.loads(settings[0])
-        self.assertEqual(flat['biome'], 'minecraft:plains')
-        self.assertTrue(flat['layers'])
-        self.assertEqual(flat['structures'], {'structures': {}})
-        self.assertFalse(flat['features'])
-        self.assertFalse(flat['lakes'])
-        self.assertIn('if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then', script)
-        self.assertLess(script.index('if [[ "$MINECRAFT_VERSION" == "1.17.1" ]]; then'),
-                        script.index('generator-settings='))
-        self.assertIn('cp "$RUNTIME_DIR/matching-server.log" "$RUNTIME_DIR/matching-server.initial.log"', script)
-        self.assertIn('1.17.1: некритичное предупреждение кодека мира; проверяем реальным подключением клиента', script)
-        self.assertNotIn("raise SystemExit('Кодек мира версии 1.17.1 отклонил созданные настройки')", script)
-        self.assertIn('clientJoinedServer', script)
-        self.assertIn(') < "$SERVER_STDIN" > "$RUNTIME_DIR/matching-server.log" 2>&1 &', script)
-        self.assertNotIn(') < "$SERVER_STDIN" >> "$RUNTIME_DIR/matching-server.log" 2>&1 &', script)
+        self.assertIn('run-vanilla-certification-case.sh', script)
+        self.assertIn('matching_live_report.py', script)
+        self.assertIn('--minecraft "$MINECRAFT_VERSION"', script)
 
 if __name__ == '__main__':
     unittest.main()

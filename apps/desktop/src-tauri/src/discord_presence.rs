@@ -78,9 +78,9 @@ async fn connect() -> Result<Box<dyn Socket>, String> {
         roots.push(std::path::PathBuf::from("/tmp"));
         for root in roots {
             for index in 0..10 {
-                if let Ok(socket) = timeout(IO_TIMEOUT,
+                if let Ok(Ok(socket)) = timeout(IO_TIMEOUT,
                     UnixStream::connect(root.join(format!("discord-ipc-{index}")))).await {
-                    if let Ok(socket) = socket { return Ok(Box::new(socket)); }
+                    return Ok(Box::new(socket));
                 }
             }
         }

@@ -10,6 +10,18 @@ SCRIPT = Path(__file__).with_name('upload_release.py')
 VERSION = SCRIPT.parents[2].joinpath('VERSION').read_text().strip()
 COMMIT = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=SCRIPT.parents[2], text=True).strip()
 
+def fixture_cli(root):
+    if os.name == 'nt':
+        script = root / 'sentry_fixture.py'
+        script.write_text('import os, sys\nwith open(os.environ["SENTRY_TEST_LOG"], "a", encoding="utf-8") as f:\n    f.write(" ".join(sys.argv[1:]) + "\\n")\n', encoding='utf-8')
+        cli = root / 'sentry-cli.cmd'
+        cli.write_text(f'@echo off\n"{sys.executable}" "{script}" %*\n', encoding='utf-8')
+    else:
+        cli = root / 'sentry-cli'
+        cli.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$SENTRY_TEST_LOG"\n')
+        cli.chmod(0o755)
+    return cli
+
 class ReleaseUploadTests(unittest.TestCase):
     def test_upload_and_strip(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -17,7 +29,7 @@ class ReleaseUploadTests(unittest.TestCase):
             (assets/'app-abc.js').write_text('console.log(1)')
             sm=assets/'app-abc.js.map';sm.write_text(json.dumps({'version':3,'sources':['x.ts'],'mappings':'AAAA'}))
             log=root/'commands'
-            cli=root/'sentry-cli';cli.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$SENTRY_TEST_LOG"\n');cli.chmod(0o755)
+            cli=fixture_cli(root)
             env={**os.environ,'SENTRY_AUTH_TOKEN':'test-secret','SENTRY_ORG':'test-org','SENTRY_PROJECT':'test-project','SENTRY_TEST_LOG':str(log)}
             run=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit',COMMIT,'--js-dist',str(assets.parent),'--cli',str(cli)],env=env,capture_output=True,text=True)
             self.assertEqual(run.returncode,0,run.stderr)
@@ -49,9 +61,7 @@ class ReleaseUploadTests(unittest.TestCase):
             with zipfile.ZipFile(bundle,'w') as z:
                 z.writestr('META-INF/sentry-debug-meta.properties', 'io.sentry.proguard.uuid='+uuid+'\n')
             log=root/'upload.log'
-            cli=root/'sentry-cli'
-            cli.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$SENTRY_TEST_LOG"\n')
-            cli.chmod(0o755)
+            cli=fixture_cli(root)
             env={**os.environ,'SENTRY_AUTH_TOKEN':'test-secret','SENTRY_ORG':'test-org',
                  'SENTRY_PROJECT':'test-project','SENTRY_TEST_LOG':str(log)}
             result=subprocess.run([sys.executable,str(SCRIPT),'--version',VERSION,'--commit',COMMIT,

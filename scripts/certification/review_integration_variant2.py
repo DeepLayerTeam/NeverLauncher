@@ -8,9 +8,9 @@
 import argparse
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
-from run_integration_variant2 import CASES
+from run_integration_variant2 import case_commands
 
 COMMON = {
     "java-sdk",
@@ -68,7 +68,7 @@ def review(paths: list[Path], revision: str) -> dict:
         ):
             raise ValueError(f"Обязательные сквозные тесты на {platform} выполнены не полностью")
         for case in results:
-            expected_commands = CASES[case["case"]]
+            expected_commands = case_commands(case["case"], platform)
             if (
                 case.get("status") != "passed"
                 or not isinstance(case.get("steps"), list)
@@ -86,7 +86,7 @@ def review(paths: list[Path], revision: str) -> dict:
                         if (
                             not isinstance(actual, str)
                             or not actual
-                            or not __import__("pathlib").Path(actual).is_absolute()
+                            or not (Path(actual).is_absolute() or (platform == "windows" and PureWindowsPath(actual).is_absolute()))
                         ):
                             raise ValueError(
                                 "Команда E2E содержит не абсолютный путь к этапу"
@@ -94,7 +94,7 @@ def review(paths: list[Path], revision: str) -> dict:
                     elif required == __import__("sys").executable:
                         if (
                             not __import__("pathlib")
-                            .Path(str(actual))
+                            .PureWindowsPath(str(actual))
                             .name.lower()
                             .startswith("python")
                         ):

@@ -110,7 +110,9 @@ CASES = {
             "--root",
             "{root}",
             "--baseline",
-            "0.31.0",
+            "0.42.11",
+            "--module",
+            "{modules}",
             "--run-tests",
             "--require-tests",
             "--timeout",
@@ -120,6 +122,17 @@ CASES = {
         ),
     ),
 }
+# The full audit includes Linux systemd and POSIX-only process fixtures.
+# Linux exercises all 19 modules; the other hosts run their supported scopes.
+MODULE_SCOPES = {
+    "linux": ",".join(f"M{i:02d}" for i in range(1, 20)),
+    "darwin": ",".join(f"M{i:02d}" for i in range(1, 20) if i != 16),
+    "windows": "M01,M02,M03,M04,M05,M06,M07,M10,M13,M14,M15,M17,M18,M19",
+}
+
+def case_commands(name, osname):
+    return tuple(tuple(MODULE_SCOPES[osname] if arg == "{modules}" else arg for arg in command) for command in CASES[name])
+
 CLI_CASES = {
     "trusted-agent-e2e",
     "devtools-e2e",
@@ -171,7 +184,7 @@ def run_cases(
         started = time.monotonic()
         entry = {"case": name, "status": "failed", "steps": [], "elapsedSeconds": 0}
         report["results"].append(entry)
-        for cmd in CASES[name]:
+        for cmd in case_commands(name, report["platform"]):
             command = [replacements.get(arg, arg) for arg in cmd]
             cwd = case_directory(name) if command[0] == "go" else ROOT
             try:

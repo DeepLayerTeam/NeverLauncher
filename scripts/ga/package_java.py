@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -33,8 +34,8 @@ def package(cli: Path, private_key: Path, public_key: Path, output: Path) -> dic
         raise ValueError("Каталог вывода должен существовать и быть пустым")
     output.mkdir(parents=True, exist_ok=True)
     version = (ROOT / "VERSION").read_text().strip()
-    if version != "0.31.0":
-        raise ValueError("Релиз пакета должен соответствовать VERSION=0.31.0")
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+        raise ValueError("Некорректная версия пакета в VERSION")
     records = []
     for name in EXAMPLES:
         # Скрипт вызывает существующие работающие компилятор Java и подписант.

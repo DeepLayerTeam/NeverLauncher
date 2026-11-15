@@ -80,9 +80,12 @@ func ipcPaths() []string {
 	return out
 }
 func dial() (io.ReadWriteCloser, error) {
-	for _, p := range ipcPaths() {
+	return dialPaths(ipcPaths())
+}
+func dialPaths(paths []string) (io.ReadWriteCloser, error) {
+	for _, p := range paths {
 		if runtime.GOOS == "windows" {
-			f, err := os.OpenFile(p, os.O_RDWR, 0)
+			f, err := openWindowsPipe(p)
 			if err == nil {
 				return f, nil
 			}
@@ -162,10 +165,13 @@ func (c *Client) Close() error {
 	return err
 }
 func Connect(ctx context.Context, appID string) (*Client, error) {
+	return connectWith(ctx, appID, dial)
+}
+func connectWith(ctx context.Context, appID string, connect func() (io.ReadWriteCloser, error)) (*Client, error) {
 	if !snowflake.MatchString(appID) {
 		return nil, errors.New("Идентификатор приложения Discord должен быть десятичным snowflake")
 	}
-	raw, err := dial()
+	raw, err := connect()
 	if err != nil {
 		return nil, err
 	}

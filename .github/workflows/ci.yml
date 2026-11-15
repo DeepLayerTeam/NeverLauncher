@@ -29,6 +29,10 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Проверить совпадение встроенных ресурсов CLI с каноническими исходниками
         run: python3 scripts/build/embedded_cli_assets.py --check
       - name: Проверить политику репозитория и согласованность версий

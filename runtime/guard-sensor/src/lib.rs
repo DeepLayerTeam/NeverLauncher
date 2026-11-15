@@ -1056,7 +1056,13 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     guard_fail_closed_abort();
                 }
                 Err(err) => {
-                    let tamper = memory_tamper_event(&err);
+                    // The independent memory scan may win the race with the JVM
+                    // monitor. Report its precise provenance violation first if
+                    // one was independently observed; never suppress the abort.
+                    let tamper = match jvm_awareness::reconcile_and_verify() {
+                        Err(jvm_err) => jvm_aware_tamper_event(&jvm_err),
+                        Ok(_) => memory_tamper_event(&err),
+                    };
                     let _ = write_module_event(
                         &mut channel.stream,
                         &channel.secret,

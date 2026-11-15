@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Установить зависимости регрессионных тестов
+        run: python3 -m pip install PyYAML==6.0.2
       - name: Проверить обновление и восстановление, разные версии и регрессии HA-зависимостей
         run: |
           set -euo pipefail
@@ -35,7 +37,7 @@ jobs:
       - name: "Проверить неизменность каталога миграций PostgreSQL и версии релиза"
         run: |
           set -euo pipefail
-          PYTHONPATH=scripts/operations python3 -c 'import nn1_compat_0516 as n; c, d=n.migration_catalog(); assert len(c) >= 100; print("закреплённый SHA-256 SQL:",d)'
+          PYTHONPATH=scripts/operations python3 -c 'import nn1_compat as n; c, d=n.migration_catalog(); assert len(c) >= 100; print("закреплённый SHA-256 SQL:",d)'
           python3 scripts/version/manage.py check
       - uses: actions/setup-go@v6
         with:

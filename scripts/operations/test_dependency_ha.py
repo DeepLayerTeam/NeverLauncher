@@ -116,7 +116,7 @@ class DependencyHATests(unittest.TestCase):
         self.assertTrue(ha.health(s)['healthy'])
         s['postgres_primary']['b'] = 'UP'
         self.assertFalse(ha.health(s)['healthy'])
-        self.assertTrue(any('split-brain' in x for x in ha.health(s)['issues']))
+        self.assertTrue(any('разделение кластера' in x for x in ha.health(s)['issues']))
         s['postgres_primary']['b'] = 'DOWN'
         s['s3_gateways']['a'] = 'DOWN'
         self.assertFalse(ha.health(s, redundant=True)['healthy'])

@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -46,15 +43,7 @@ func TestDiscordActivityRejectsCredentialedAndMalformedLinks(t *testing.T) {
 }
 
 func TestLocalDiscordSession(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Имитации именованных каналов Windows требуется среда тестирования Windows IPC")
-	}
-	dir := t.TempDir()
-	t.Setenv("XDG_RUNTIME_DIR", dir)
-	listener, err := net.Listen("unix", filepath.Join(dir, "discord-ipc-0"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	listener, connect := testDiscordEndpoint(t, 1)
 	defer listener.Close()
 	errCh := make(chan error, 1)
 	go func() {
@@ -94,7 +83,7 @@ func TestLocalDiscordSession(t *testing.T) {
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	client, err := Connect(ctx, "123456789012345678")
+	client, err := connect(ctx, "123456789012345678")
 	if err != nil {
 		t.Fatal(err)
 	}

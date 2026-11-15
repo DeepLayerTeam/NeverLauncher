@@ -12,18 +12,22 @@ import (
 // SET_ACTIVITY заменяет или очищает состояние; повтор после потерянного ответа не вызывает новых
 // побочных эффектов. Явное отклонение RPC никогда не повторяется.
 type Session struct {
-	mu     sync.Mutex
-	appID  string
-	client *Client
-	closed bool
+	mu      sync.Mutex
+	appID   string
+	client  *Client
+	closed  bool
+	connect func(context.Context, string) (*Client, error)
 }
 
 func NewSession(ctx context.Context, applicationID string) (*Session, error) {
-	client, err := Connect(ctx, applicationID)
+	return newSessionWith(ctx, applicationID, Connect)
+}
+func newSessionWith(ctx context.Context, applicationID string, connect func(context.Context, string) (*Client, error)) (*Session, error) {
+	client, err := connect(ctx, applicationID)
 	if err != nil {
 		return nil, err
 	}
-	return &Session{appID: applicationID, client: client}, nil
+	return &Session{appID: applicationID, client: client, connect: connect}, nil
 }
 
 func connectionLost(err error) bool {
@@ -49,7 +53,7 @@ func (s *Session) SetActivity(ctx context.Context, activity *Activity) error {
 		return err
 	}
 	if s.client == nil {
-		client, err := Connect(ctx, s.appID)
+		client, err := s.connect(ctx, s.appID)
 		if err != nil {
 			return err
 		}
@@ -61,7 +65,7 @@ func (s *Session) SetActivity(ctx context.Context, activity *Activity) error {
 	}
 	_ = s.client.Close()
 	s.client = nil
-	replacement, connectErr := Connect(ctx, s.appID)
+	replacement, connectErr := s.connect(ctx, s.appID)
 	if connectErr != nil {
 		return connectErr
 	}

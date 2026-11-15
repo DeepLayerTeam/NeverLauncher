@@ -45,6 +45,10 @@ jobs:
           go test -race -count=1 -timeout 5m ./internal/gravitcredentials ./internal/gravitidentity ./internal/gravitinventory ./internal/fileauth ./internal/localpassword
           go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationAuthAtomicIdempotent0335|TestMigrationIdentityTransactional0334|TestMigrationDurability0331|TestMigratedSQLUserIDDoesNotCollideAcrossSources0444'
           go test -count=1 -timeout 5m ./internal/httpapi -run 'TestImportedFileAuthLocalLoginAndAtomicRehash0295|TestMigrationTargetSteps0331'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Собрать CLI и запустить тесты
         working-directory: cli
         run: go test -count=1 ./cmd/launcher

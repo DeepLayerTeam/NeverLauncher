@@ -18,6 +18,7 @@ func hostJavaFixture0283(t *testing.T) (string, string) {
 	root := t.TempDir()
 	java := writeFakeJava01910(t, root, `printf '%s\n' "$@" > "${PWD}/actual-launch-argv.txt"
 echo 'Java fixture started'
+sleep 1
 exit 0`)
 	return root, java
 }

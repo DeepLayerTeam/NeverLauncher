@@ -104,7 +104,7 @@ CASES = {
             "--root",
             "{root}",
             "--baseline",
-            "0.30.12",
+            "0.42.11",
             "--module",
             "M02,M04,M13,M14,M15,M17,M18,M19",
             "--run-tests",

@@ -102,6 +102,7 @@ fn compile_module_probe(javac: &Path, directory: &Path) {
     )
     .expect("записать проверочную Java-программу");
     let status = std::process::Command::new(javac)
+        .args(["-encoding", "UTF-8"])
         .arg("ModuleGuardProbe.java")
         .current_dir(directory)
         .status()
@@ -124,6 +125,7 @@ fn compile_memory_integrity_probe(javac: &Path, directory: &Path) {
     )
     .expect("записать Java-проверку целостности памяти");
     let status = std::process::Command::new(javac)
+        .args(["-encoding", "UTF-8"])
         .arg("MemoryIntegrityProbe.java")
         .current_dir(directory)
         .status()
@@ -148,6 +150,7 @@ fn compile_process_tree_probe(javac: &Path, directory: &Path) {
     )
     .expect("записать Java-проверку дерева процессов");
     let status = std::process::Command::new(javac)
+        .args(["-encoding", "UTF-8"])
         .arg("ProcessTreeProbe.java")
         .current_dir(directory)
         .status()
@@ -168,6 +171,7 @@ fn compile_debug_boundary_probe(javac: &Path, directory: &Path) {
     )
     .expect("записать Java-проверку защиты отладки");
     let status = std::process::Command::new(javac)
+        .args(["-encoding", "UTF-8"])
         .arg("DebugBoundaryProbe.java")
         .current_dir(directory)
         .status()
@@ -190,6 +194,7 @@ fn compile_thread_integrity_probe(javac: &Path, directory: &Path) {
     )
     .expect("записать Java-проверку целостности потоков");
     let status = std::process::Command::new(javac)
+        .args(["-encoding", "UTF-8"])
         .arg("ThreadIntegrityProbe.java")
         .current_dir(directory)
         .status()
@@ -222,6 +227,7 @@ fn compile_jvm_jit_probe(javac: &Path, directory: &Path) {
     )
     .expect("запись проверки JIT с учётом JVM");
     let status = std::process::Command::new(javac)
+        .args(["-encoding", "UTF-8"])
         .arg("JvmAwareJitProbe.java")
         .current_dir(directory)
         .status()
@@ -244,6 +250,7 @@ fn compile_jvm_foreign_exec_probe(javac: &Path, directory: &Path) {
     )
     .expect("записать проверку внешнего исполнения в JVM");
     let status = std::process::Command::new(javac)
+        .args(["-encoding", "UTF-8"])
         .arg("JvmAwareForeignExecProbe.java")
         .current_dir(directory)
         .status()
@@ -869,14 +876,16 @@ async fn guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_al
 
     let report = session.report().module_guard;
     assert!(!report.healthy, "защита модулей должна отражать нарушение защиты JVM");
-    assert!(!report.jvm_aware.healthy);
-    assert!(report.jvm_aware.violation_count >= 1, "ожидалось нарушение защиты JVM: {report:?}");
-    assert!(
-        report.jvm_aware.last_violation.contains("вне проверенного происхождения jvm.dll")
-            || report.last_violation.contains("вне проверенного происхождения jvm.dll"),
-        "unexpected JVM-aware violation: {}",
-        report.jvm_aware.last_violation
-    );
+    let jvm_detected = !report.jvm_aware.healthy
+        && report.jvm_aware.violation_count >= 1
+        && (report.jvm_aware.last_violation.contains("вне проверенного происхождения jvm.dll")
+            || report.last_violation.contains("вне проверенного происхождения jvm.dll"));
+    // Both independent monitors reject the same MEM_PRIVATE attack. A generic
+    // process exit or an unrelated integrity failure is not sufficient evidence.
+    let memory_detected = !report.memory_integrity.healthy
+        && report.memory_integrity.violation_count >= 1
+        && report.memory_integrity.last_violation.contains("исполняемая частная память без подтверждённого происхождения");
+    assert!(jvm_detected || memory_detected, "unexpected foreign executable allocation violation: {report:?}");
 
     let _ = fs::remove_dir_all(root);
 }

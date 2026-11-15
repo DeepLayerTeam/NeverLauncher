@@ -74,7 +74,7 @@ fn read_bounded_regular(path: &Path, maximum: usize) -> Result<Vec<u8>, String> 
     // O_NOFOLLOW закрывает гонку переименования в симлинк между stat и open.
     let mut opts=OpenOptions::new();
     opts.read(true).custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC);
-    let mut f=opts.open(path).map_err(|e|format!("Не удалось открыть данные ключа TPM: {e}"))?;
+    let f=opts.open(path).map_err(|e|format!("Не удалось открыть данные ключа TPM: {e}"))?;
     let fdmd=f.metadata().map_err(|e|e.to_string())?;
     if !fdmd.is_file() || fdmd.uid()!=md.uid() || fdmd.ino()!=md.ino() || fdmd.len()!=md.len() {
         return Err("Данные ключа TPM изменились во время открытия".into());
@@ -268,13 +268,13 @@ fn pcr_indices0315(selection: &str) -> Result<Vec<u8>,String> {
     let indices=selection.strip_prefix("sha256:").ok_or("Поддерживается только банк PCR с SHA-256")?;
     let mut values=Vec::new();
     for component in indices.split(',') {
-        if component.len()>2 || component.len()==0 || (component.starts_with('0') && component!="0") ||
+        if component.len()>2 || component.is_empty() || (component.starts_with('0') && component!="0") ||
            !component.bytes().all(|b|b.is_ascii_digit()) {return Err("Недопустимый индекс PCR".into());}
         let i=component.parse::<u8>().map_err(|_|"Недопустимый индекс PCR")?;
-        if i>23 || values.last().map_or(false,|previous|*previous>=i) {return Err("Индексы PCR должны быть уникальными, строго возрастать и находиться в диапазоне 0–23".into());}
+        if i>23 || values.last().is_some_and(|previous|*previous>=i) {return Err("Индексы PCR должны быть уникальными, строго возрастать и находиться в диапазоне 0–23".into());}
         values.push(i);
     }
-    if values.len()==0 || values.len()>24 {return Err("Некорректное число индексов PCR".into());}
+    if values.is_empty() || values.len()>24 {return Err("Некорректное число индексов PCR".into());}
     Ok(values)
 }
 pub fn quote0315(

@@ -267,6 +267,14 @@ func Apply(ctx context.Context, db *sql.DB) (Status, error) {
 			tx.Rollback()
 			return Status{}, err
 		}
+		// Preserve the published migration bytes and validate deferred constraints
+		// before 0081 backfills identities and changes their schema.
+		if m.Version == "0081_auth_canonical_issuer_0291" {
+			if _, err = tx.ExecContext(ctx, "SET CONSTRAINTS ALL IMMEDIATE"); err != nil {
+				tx.Rollback()
+				return Status{}, fmt.Errorf("применение %s: %w", m.Version, err)
+			}
+		}
 		if _, err = tx.ExecContext(ctx, m.SQL); err != nil {
 			tx.Rollback()
 			return Status{}, fmt.Errorf("применение %s: %w", m.Version, err)

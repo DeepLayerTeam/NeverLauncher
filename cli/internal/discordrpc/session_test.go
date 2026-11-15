@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 )
@@ -14,15 +12,7 @@ import (
 // Тест запускает реальный Unix IPC endpoint, затем имитирует перезапуск Discord
 // после принятия SET_ACTIVITY, но до подтверждения.
 func TestSessionRecoversDisconnectedDesktopIPC(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Тест Unix-сокета; Windows использует именованные каналы")
-	}
-	dir := t.TempDir()
-	t.Setenv("XDG_RUNTIME_DIR", dir)
-	listener, err := net.Listen("unix", filepath.Join(dir, "discord-ipc-0"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	listener, connect := testDiscordEndpoint(t, 2)
 	defer listener.Close()
 	completed := make(chan error, 1)
 	go func() {
@@ -64,7 +54,7 @@ func TestSessionRecoversDisconnectedDesktopIPC(t *testing.T) {
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
-	session, err := NewSession(ctx, "123456789012345678")
+	session, err := newSessionWith(ctx, "123456789012345678", connect)
 	if err != nil {
 		t.Fatal(err)
 	}

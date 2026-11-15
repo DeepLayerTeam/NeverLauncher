@@ -108,32 +108,32 @@ class TestLiveAcceptance0500(unittest.TestCase):
     def test_missing_module_blocks_before_live_verification(self):
         self.module_checks.pop('M17')
         with patch.object(ga, 'live_certificate_verification') as verify:
-            with self.assertRaisesRegex(ga.Blocked, '19 real'):
+            with self.assertRaisesRegex(ga.Blocked, '19 реальных'):
                 ga.run(self.cfg, self.output)
             self.assertEqual(verify.call_count, 1)
 
     def test_tampered_minecraft_join_blocks(self):
         save(self.rehearsal / 'proxy-network' / 'post-update-live.json', {'data': {'runId': 'changed'}})
         with patch.object(ga, 'live_certificate_verification') as verify:
-            with self.assertRaisesRegex(ga.Blocked, 'witness changed'):
+            with self.assertRaisesRegex(ga.Blocked, 'Подтверждение игрового запуска изменилось'):
                 ga.run(self.cfg, self.output)
             verify.assert_not_called()
 
     def test_changed_source_archive_blocks(self):
         save(self.rehearsal / 'fileauth-single' / 'source.zip', b'updated Gravit source')
-        with self.assertRaisesRegex(ga.Blocked, 'original Gravit source changed'):
+        with self.assertRaisesRegex(ga.Blocked, 'Исходные данные Gravit изменились'):
             ga.check_migration(self.cfg, ga.doc(self.cohort_file))
 
     def test_different_client_after_update_blocks(self):
         self.cases[0]['installedAfterSha256'] = self.old
         save(self.cohort_file, {'format': ga.rehearsal.FORMAT, 'status': 'isolated-stage-pass-not-production-GA',
                                 'productionGA': False, 'cases': self.cases})
-        with self.assertRaisesRegex(ga.Blocked, 'not updated'):
+        with self.assertRaisesRegex(ga.Blocked, 'Клиент не был обновлён'):
             ga.check_migration(self.cfg, ga.doc(self.cohort_file))
 
     def test_module_evidence_must_be_current(self):
         self.module_checks['M01']['executableSha256'] = 'f' * 64
-        with self.assertRaisesRegex(ga.Blocked, 'pinned file'):
+        with self.assertRaisesRegex(ga.Blocked, 'Несовпадение зафиксированного SHA-256 файла'):
             ga.check_modules(self.cfg, self.refs, self.output)
 
     def test_second_live_check_revoked_blocks_final_report(self):
@@ -161,7 +161,7 @@ class TestLiveAcceptance0500(unittest.TestCase):
         original = self.rehearsal / 'fileauth-single' / 'source.zip'
         symlink = self.root / 'linked.zip'
         symlink.symlink_to(original)
-        with self.assertRaisesRegex(ga.Blocked, 'unsafe checked file'):
+        with self.assertRaisesRegex(ga.Blocked, 'Небезопасный проверяемый файл'):
             ga.sha(symlink)
 
 

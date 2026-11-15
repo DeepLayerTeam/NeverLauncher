@@ -16,6 +16,7 @@ fn item(b: &[u8], offset: usize, max: usize) -> Result<(&[u8], usize), String> {
     Ok((b.get(offset..end).ok_or("Данные TPM2B обрезаны")?, end))
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub fn read_public_command(handle: u32) -> Vec<u8> {
     let mut cmd = Vec::with_capacity(14);
     cmd.extend_from_slice(&0x8001u16.to_be_bytes());
@@ -25,6 +26,7 @@ pub fn read_public_command(handle: u32) -> Vec<u8> {
     cmd
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub fn certify_command(object: u32, ak: u32, extra: &[u8; 32]) -> Vec<u8> {
     let mut cmd = Vec::with_capacity(100);
     cmd.extend_from_slice(&0x8002u16.to_be_bytes()); // TPM_ST_SESSIONS
@@ -261,6 +263,7 @@ pub fn validate_quote_0315(att: &[u8], sig: &[u8], extra: &[u8;32], indices: &[u
     Ok(())
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub fn quote_command_0315(ak_handle:u32,extra:&[u8;32],indices:&[u8])->Vec<u8>{
     let mut command=Vec::new();
     command.extend_from_slice(&0x8002u16.to_be_bytes());
@@ -280,6 +283,7 @@ pub fn quote_command_0315(ak_handle:u32,extra:&[u8;32],indices:&[u8])->Vec<u8>{
     let n=command.len() as u32;command[2..6].copy_from_slice(&n.to_be_bytes());command
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub fn parse_quote_response_0315(reply:&[u8],extra:&[u8;32],indices:&[u8])->Result<(Vec<u8>,Vec<u8>),String>{
     let params=response_parameters(reply,true)?;
     let (att,offset)=item(params,0,4096)?;
@@ -288,6 +292,7 @@ pub fn parse_quote_response_0315(reply:&[u8],extra:&[u8;32],indices:&[u8])->Resu
     Ok((att.to_vec(),sig.to_vec()))
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub fn pcr_read_command_0315(indices:&[u8])->Vec<u8>{
     let mut command=Vec::new();
     command.extend_from_slice(&0x8001u16.to_be_bytes());
@@ -299,6 +304,7 @@ pub fn pcr_read_command_0315(indices:&[u8])->Vec<u8>{
     command.extend_from_slice(&mask);
     let n=command.len() as u32;command[2..6].copy_from_slice(&n.to_be_bytes());command
 }
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub fn parse_pcr_read_response_0315(reply:&[u8],indices:&[u8])->Result<Vec<[u8;32]>,String>{
     let params=response_parameters(reply,false)?;
     if params.len()<4+4+2+1+3+4 {return Err("Ответ PCR_Read обрезан".into());}
@@ -317,6 +323,7 @@ pub fn parse_pcr_read_response_0315(reply:&[u8],indices:&[u8])->Result<Vec<[u8;3
     if pos!=params.len(){return Err("Лишние данные после ответа PCR_Read".into());}
     Ok(out)
 }
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub fn parse_pcr_selection_0315(selection:&str)->Result<Vec<u8>,String>{
     let text=selection.strip_prefix("sha256:").ok_or("Поддерживаются только PCR с SHA-256")?;
     let mut out=Vec::new();
@@ -324,7 +331,7 @@ pub fn parse_pcr_selection_0315(selection:&str)->Result<Vec<u8>,String>{
         if value.is_empty() || value.len()>2 || (value.starts_with('0') && value!="0") ||
            !value.bytes().all(|b|b.is_ascii_digit()) {return Err("Недопустимый индекс PCR".into());}
         let index=value.parse::<u8>().map_err(|_|"Недопустимый индекс PCR")?;
-        if index>23 || out.last().map_or(false,|previous|*previous>=index){return Err("Индексы PCR должны строго возрастать в диапазоне 0–23".into());}
+        if index>23 || out.last().is_some_and(|previous|*previous>=index){return Err("Индексы PCR должны строго возрастать в диапазоне 0–23".into());}
         out.push(index);
     }
     if out.is_empty() || out.len()>24{return Err("Выбран пустой или слишком большой набор PCR".into());}

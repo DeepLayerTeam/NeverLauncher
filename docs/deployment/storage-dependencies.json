@@ -845,47 +845,47 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 52,
+          "line": 64,
           "evidence": "psql \"$LAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 \u003c\u003c'SQL'"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 58,
+          "line": 70,
           "evidence": "('migration-id-a','migration-a','oidc-smoke','https://issuer-a.example.invalid','shared-subject','shared@example.invalid','Migration_A','Migration_A','{}'::jsonb),"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 58,
+          "line": 70,
           "evidence": "('migration-id-a','migration-a','oidc-smoke','https://issuer-a.example.invalid','shared-subject','shared@example.invalid','Migration_A','Migration_A','{}'::jsonb),"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 59,
+          "line": 71,
           "evidence": "('migration-id-b','migration-b','oidc-smoke','https://issuer-b.example.invalid','shared-subject','shared@example.invalid','Migration_B','Migration_B','{}'::jsonb);"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 59,
-          "evidence": "('migration-id-b','migration-b','oidc-smoke','https://issuer-b.example.invalid','shared-subject','shared@example.invalid','Migration_B','Migration_B','{}'::jsonb);"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 65,
-          "evidence": "- name: \"Проверить контрольную точку, применение и верификацию PostgreSQL\""
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 71,
+          "evidence": "('migration-id-b','migration-b','oidc-smoke','https://issuer-b.example.invalid','shared-subject','shared@example.invalid','Migration_B','Migration_B','{}'::jsonb);"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 77,
+          "evidence": "- name: \"Проверить контрольную точку, применение и верификацию PostgreSQL\""
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 83,
           "evidence": "if psql \"$LAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 -c \"UPDATE auth_identities SET issuer='https://malicious.invalid' WHERE id='migration-id-a'\"; then exit 1; fi"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 72,
+          "line": 84,
           "evidence": "if psql \"$LAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 -c \"UPDATE minecraft_profiles SET uuid='7e58de9e-6dde-40ea-bfe6-16c85ae32973' WHERE user_id='migration-a'\"; then exit 1; fi"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 74,
+          "line": 86,
           "evidence": "psql \"$LAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 -c \"UPDATE users SET display_name='Changed' WHERE id='migration-a'\""
         }
       ]
@@ -995,87 +995,87 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 125,
+          "line": 129,
           "evidence": "- name: Проверить Backend — тесты, гонки данных, go vet и сборка с pgx"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 668,
+          "line": 672,
           "evidence": "POSTGRES_PASSWORD: ci-postgres-password"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 741,
+          "line": 745,
           "evidence": "name: PostgreSQL, Redis и реальная сквозная проверка клиента Minecraft"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 765,
+          "line": 769,
           "evidence": "jq maven postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \\"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 769,
+          "line": 773,
           "evidence": "- name: Проверить миграцию PostgreSQL для федерации, перезапуск и несколько экземпляров"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 770,
+          "line": 774,
           "evidence": "run: bash e2e/scripts/run-federation-postgres-e2e.sh"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 771,
+          "line": 775,
           "evidence": "- name: Проверить надёжную инициализацию PostgreSQL и отказ при ошибочных повторных попытках"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 773,
+          "line": 777,
           "evidence": "- name: Проверить перезапуск PostgreSQL с несколькими репликами и разграничением прав 0.21.3"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 975,
+          "line": 979,
           "evidence": "- name: Проверить жизненный цикл Device Trust в PostgreSQL"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 977,
+          "line": 981,
           "evidence": "LAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1297,
+          "line": 1301,
           "evidence": "name: Инвентаризация хранилищ и реальная эквивалентность SQLite/PostgreSQL 0.37.1"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1301,
+          "line": 1305,
           "evidence": "postgres:"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1302,
+          "line": 1306,
           "evidence": "image: postgres:18"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1338,
+          "line": 1342,
           "evidence": "LAUNCHER_PARITY_POSTGRES_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1344,
+          "line": 1348,
           "evidence": "test -z \"$(gofmt -l internal/storageparity internal/repository/postgres.go)\""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1391,
+          "line": 1395,
           "evidence": "- name: Проверить двусторонний перенос Core и полного минимального пакета между SQLite и PostgreSQL (0.37.7)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1395,
+          "line": 1399,
           "evidence": "LAUNCHER_PG_TEST_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
         }
       ]
@@ -1085,12 +1085,12 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 118,
+          "line": 120,
           "evidence": "jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \\"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 344,
+          "line": 346,
           "evidence": "jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \\"
         }
       ]
@@ -1120,7 +1120,7 @@
       "findings": [
         {
           "category": "postgresql-sql-dialect",
-          "line": 88,
+          "line": 92,
           "evidence": "GOOS_ACTUAL=\"$(go env GOOS)\" GOARCH_ACTUAL=\"$(go env GOARCH)\" GOVERSION=\"$(go version | awk '{print $3}')\" python3 - \u003c\u003c'PY'"
         }
       ]
@@ -1615,7 +1615,7 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 39,
+          "line": 41,
           "evidence": "POSTGRES_PASSWORD=ha-ci-only-Postgres"
         }
       ]
@@ -1890,7 +1890,7 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 35,
+          "line": 37,
           "evidence": "- name: \"Проверить неизменность каталога миграций PostgreSQL и версии релиза\""
         }
       ]
@@ -7995,12 +7995,12 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 106,
+          "line": 111,
           "evidence": "b.WriteString(\"SELECT pg_advisory_unlock(718033100100);\\n\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 140,
+          "line": 145,
           "evidence": "return \"\", fmt.Errorf(\"PostgreSQL DSN обязателен: --dsn или LAUNCHER_DATABASE_DSN\")"
         }
       ]
@@ -8062,6 +8062,11 @@
           "category": "postgresql-config-or-literal",
           "line": 2,
           "evidence": "# docker-compose.yml -f docker-compose.network-ha.yml --profile network-ha up -d --build. PostgreSQL, Redis и S3"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 32,
+          "evidence": "postgres:"
         }
       ]
     },
@@ -8315,12 +8320,12 @@
       "findings": [
         {
           "category": "postgresql-sql-dialect",
-          "line": 25,
+          "line": 30,
           "evidence": "local loader=\"$1\" resolved=\"$2\" cli=\"$3\" profile_root=\"$4\""
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 68,
+          "line": 91,
           "evidence": "local loader=\"$1\" resolved=\"$2\" profile=\"$3\""
         }
       ]
@@ -14255,12 +14260,12 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 275,
+          "line": 283,
           "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO schema_migrations(id,version,checksum,description,applied_at) VALUES($1,$1,$2,$3,$4)`, m.Version, m.Checksum, m.Description, time.Now().UT"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 277,
+          "line": 285,
           "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO schema_migrations(version,checksum,description,applied_at) VALUES($1,$2,$3,$4)`, m.Version, m.Checksum, m.Description, time.Now().UTC())"
         }
       ]
@@ -20001,6 +20006,26 @@
       ]
     },
     {
+      "path": "services/api/internal/dbmigrate/sql/0119_bridge_late_receipt.sql",
+      "findings": [
+        {
+          "category": "postgresql-migration-file",
+          "line": 1,
+          "evidence": "-- Resolve a delivery made indeterminate by the repository, never by an agent."
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 9,
+          "evidence": "IF OLD.status='indeterminate' AND OLD.lease_reconciled AND NOT NEW.lease_reconciled AND OLD.result='{}'::jsonb"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 9,
+          "evidence": "IF OLD.status='indeterminate' AND OLD.lease_reconciled AND NOT NEW.lease_reconciled AND OLD.result='{}'::jsonb"
+        }
+      ]
+    },
+    {
       "path": "services/api/internal/deployment/growth.go",
       "findings": [
         {
@@ -23754,6 +23779,11 @@
           "evidence": "return scanGuardBoundSession0507(r.db.QueryRowContext(ctx, `SELECT `+guardBoundColumns0507+` FROM server_bridge_guard_sessions_0507 WHERE correlation_id=$1`, correlation))"
         },
         {
+          "category": "postgresql-config-or-literal",
+          "line": 115,
+          "evidence": "rows, err := r.db.QueryContext(ctx, `SELECT `+qualifiedColumns+`,p.user_id,p.session_id,p.minecraft_session_id,p.trusted_device_id,p.binding_epoch,p.project_id,p.profile_id,p.chann"
+        },
+        {
           "category": "postgresql-sql-dialect",
           "line": 115,
           "evidence": "rows, err := r.db.QueryContext(ctx, `SELECT `+qualifiedColumns+`,p.user_id,p.session_id,p.minecraft_session_id,p.trusted_device_id,p.binding_epoch,p.project_id,p.profile_id,p.chann"
@@ -27460,37 +27490,37 @@
       "findings": [
         {
           "category": "postgres-repository-construction",
-          "line": 23,
+          "line": 28,
           "evidence": "r, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 23,
+          "line": 28,
           "evidence": "r, ok := NewSQLRepository(\"pgx\", dsn, \"http://127.0.0.1\").(*SQLRepository)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 40,
+          "line": 45,
           "evidence": "_, _ = a.db.ExecContext(ctx, `DELETE FROM server_bridge_control_commands_v3 WHERE server_id=$1`, nodeID)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 41,
+          "line": 46,
           "evidence": "_, _ = a.db.ExecContext(ctx, `DELETE FROM server_bridge_nodes_v2 WHERE id=$1`, nodeID)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 47,
+          "line": 57,
           "evidence": "if _, err := a.db.ExecContext(ctx, `UPDATE server_bridge_nodes_v2 SET runtime_id=$2,runtime_epoch=21,runtime_last_seen_at=$3 WHERE id=$1`, nodeID, runtimeID, now); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 166,
+          "line": 176,
           "evidence": "if _, err = a.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1`, first.ID); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 191,
+          "line": 201,
           "evidence": "if _, err = b.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='leased', lease_token='stale' WHERE id=$1`, first.ID); err == nil {"
         }
       ]
@@ -27730,137 +27760,137 @@
         },
         {
           "category": "database-sql-handle",
-          "line": 108,
+          "line": 109,
           "evidence": "func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql.Tx, join model.ServerBridgeJoinTicket, redemption model.ServerBridgeJoinRedemption, now time.Time) "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 121,
+          "line": 122,
           "evidence": "if err := tx.QueryRowContext(ctx, `SELECT kind,runtime_id,runtime_epoch FROM server_bridge_nodes_v2 WHERE id=$1 AND status='active' FOR SHARE`, redemption.NodeID).Scan(\u0026nodeKind, \u0026"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 133,
+          "line": 134,
           "evidence": "if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1970, hashtext($1))`, lockKey); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 136,
+          "line": 137,
           "evidence": "rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE status='active' AND correlation_id\u003c\u003e$1 AND ((session_id=$2 AND player_uuid=$3) "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 168,
+          "line": 169,
           "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,session_id,minecraft_session_id,trusted_d"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 176,
+          "line": 177,
           "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,'serverbridge:player-session:activated',$3,'','Player Session I"
         },
         {
           "category": "database-sql-handle",
-          "line": 180,
+          "line": 181,
           "evidence": "func (r *SQLRepository) issuePlayerTransferTx0197(ctx context.Context, tx *sql.Tx, h *model.ServerBridgeHandoff, expectedCorrelation string, now time.Time) error {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 190,
+          "line": 191,
           "evidence": "err := tx.QueryRowContext(ctx, `SELECT status,COALESCE(proxy_node_id,''),proxy_runtime_id,proxy_runtime_epoch,transfer_sequence FROM server_bridge_player_sessions_v3 WHERE correlat"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 203,
+          "line": 204,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_player_sessions_v3 SET transfer_sequence=$2,recheck_required=TRUE,updated_at=$3 WHERE correlation_id=$1 AND status='active'`, "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 206,
+          "line": 207,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_player_transfers_v3 SET status='superseded' WHERE correlation_id=$1 AND status='issued'`, correlationID); err != nil {"
         },
         {
           "category": "database-sql-handle",
-          "line": 212,
+          "line": 213,
           "evidence": "func (r *SQLRepository) recordPlayerTransferTx0197(ctx context.Context, tx *sql.Tx, h model.ServerBridgeHandoff, now time.Time) error {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 216,
+          "line": 217,
           "evidence": "_, err := tx.ExecContext(ctx, `INSERT INTO server_bridge_player_transfers_v3(correlation_id,sequence,handoff_id,source_node_id,target_node_id,source_runtime_id,source_runtime_epoch"
         },
         {
           "category": "database-sql-handle",
-          "line": 220,
+          "line": 221,
           "evidence": "func (r *SQLRepository) consumePlayerTransferTx0197(ctx context.Context, tx *sql.Tx, h model.ServerBridgeHandoff, redemption model.ServerBridgeJoinRedemption, now time.Time) error "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 230,
+          "line": 231,
           "evidence": "err := tx.QueryRowContext(ctx, `SELECT status,username,COALESCE(proxy_node_id,''),transfer_sequence,COALESCE(backend_node_id,''),backend_runtime_id,backend_runtime_epoch FROM serve"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 239,
+          "line": 240,
           "evidence": "if err = tx.QueryRowContext(ctx, `SELECT status FROM server_bridge_player_transfers_v3 WHERE correlation_id=$1 AND sequence=$2 AND handoff_id=$3 FOR UPDATE`, correlationID, h.Trans"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 249,
+          "line": 250,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_player_sessions_v3 SET backend_node_id=$2,backend_runtime_id=$3,backend_runtime_epoch=$4,recheck_required=FALSE,trust_reason=$"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 252,
+          "line": 253,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_player_transfers_v3 SET status='consumed',consumed_at=$4 WHERE correlation_id=$1 AND sequence=$2 AND handoff_id=$3 AND status="
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 260,
+          "line": 261,
           "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,'serverbridge:player-session:transfer-consumed',$3,'','Player S"
         },
         {
           "category": "database-sql-handle",
-          "line": 264,
+          "line": 265,
           "evidence": "func (r *SQLRepository) invalidatePlayerSessionsBySessionTx0197(ctx context.Context, tx *sql.Tx, sessionID, serverID, reason string, now time.Time) (int, error) {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 265,
+          "line": 266,
           "evidence": "rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE session_id=$1 AND status='active' AND ($2='' OR proxy_node_id=$2 OR backend_nod"
         },
         {
           "category": "database-sql-handle",
-          "line": 294,
+          "line": 295,
           "evidence": "func (r *SQLRepository) invalidatePlayerSessionsByUserTx0197(ctx context.Context, tx *sql.Tx, userID, reason string, now time.Time) (int, error) {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 295,
+          "line": 296,
           "evidence": "rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE user_id=$1 AND status='active' FOR UPDATE`, userID)"
         },
         {
           "category": "database-sql-handle",
-          "line": 324,
+          "line": 325,
           "evidence": "func (r *SQLRepository) applyPlayerLifecycleEventTx0197(ctx context.Context, tx *sql.Tx, serverID string, event model.ServerBridgeEvent, now time.Time) error {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 333,
+          "line": 334,
           "evidence": "err := tx.QueryRowContext(ctx, `SELECT status,COALESCE(proxy_node_id,''),COALESCE(backend_node_id,'') FROM server_bridge_player_sessions_v3 WHERE correlation_id=$1 FOR UPDATE`, cor"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 345,
+          "line": 346,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_player_sessions_v3 SET proxy_node_id=NULL,proxy_runtime_id='',proxy_runtime_epoch=0,updated_at=$2 WHERE correlation_id=$1`, co"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 351,
+          "line": 352,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_player_sessions_v3 SET backend_node_id=NULL,backend_runtime_id='',backend_runtime_epoch=0,updated_at=$2 WHERE correlation_id=$"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 356,
+          "line": 357,
           "evidence": "_, err = tx.ExecContext(ctx, `UPDATE server_bridge_player_sessions_v3 SET status='disconnected',updated_at=$2 WHERE correlation_id=$1 AND status='active'`, correlationID, now.UTC()"
         }
       ]
@@ -28534,58 +28564,63 @@
           "evidence": "current, err := scanServerBridgeControl0195(tx.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1 FOR UPDATE`, commandID))"
         },
         {
+          "category": "postgresql-sql-dialect",
+          "line": 1684,
+          "evidence": "if err = tx.QueryRowContext(ctx, `SELECT lease_reconciled FROM server_bridge_control_commands_v3 WHERE id=$1`, commandID).Scan(\u0026reconciled); err != nil {"
+        },
+        {
           "category": "postgresql-config-or-literal",
-          "line": 1683,
-          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, comma"
+          "line": 1689,
+          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL,lease_reconciled=fa"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1683,
-          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, comma"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 1686,
-          "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,$3,$4,'','ServerBridge Control API',$5) ON CONFLICT(id) DO N"
+          "line": 1689,
+          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL,lease_reconciled=fa"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 1692,
-          "evidence": "return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, commandID))"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 1705,
-          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, comma"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 1705,
-          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, comma"
-        },
-        {
-          "category": "postgresql-sql-dialect",
-          "line": 1708,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,$3,$4,'','ServerBridge Control API',$5) ON CONFLICT(id) DO N"
         },
         {
           "category": "postgresql-sql-dialect",
+          "line": 1698,
+          "evidence": "return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, commandID))"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 1711,
+          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL,lease_reconciled=fa"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 1711,
+          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL,lease_reconciled=fa"
+        },
+        {
+          "category": "postgresql-sql-dialect",
           "line": 1714,
+          "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,$3,$4,'','ServerBridge Control API',$5) ON CONFLICT(id) DO N"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 1720,
           "evidence": "return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, commandID))"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1732,
+          "line": 1738,
           "evidence": "_, err := r.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1750,
+          "line": 1757,
           "evidence": "c, err := scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE server_id=$1 AND id=$2`, serverID, commandID))"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1773,
+          "line": 1780,
           "evidence": "rows, err := r.db.QueryContext(ctx, serverBridgeControlSelect0195+` ORDER BY updated_at DESC,id DESC LIMIT $1`, limit)"
         }
       ]

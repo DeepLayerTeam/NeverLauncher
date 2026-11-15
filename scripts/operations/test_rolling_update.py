@@ -80,7 +80,7 @@ class RollingTest(unittest.TestCase):
                     c["services"]["admin"]["image"] = B
                 return c
             with patch.object(ru, "rendered", side_effect=render_other):
-                with self.assertRaisesRegex(ru.RollingError, "beyond"):
+                with self.assertRaisesRegex(ru.RollingError, "отличается не только закреплённым образом"):
                     ru.validate_stage(self.directory, "launcher")
 
     def test_stage_rejects_unreadable_file_symlink_hardlink_group_write_and_identical(self):

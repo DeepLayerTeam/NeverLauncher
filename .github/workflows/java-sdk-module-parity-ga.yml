@@ -68,6 +68,7 @@ jobs:
         shell: bash
         env:
           SUITE_CASES: ${{ matrix.cases }}
+          LAUNCHER_LAN_E2E: "1"
         run: |
           set -euo pipefail
           ext=''

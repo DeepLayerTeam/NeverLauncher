@@ -152,7 +152,7 @@ func TestRunProcessSanitized(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if r.ExitCode != 0 || strings.Contains(r.Stdout, "production-secret") || !strings.Contains(r.Stdout, "null\n1\nargument") {
+	if r.ExitCode != 0 || strings.Contains(r.Stdout, "production-secret") || !strings.Contains(strings.ReplaceAll(r.Stdout, "\r\n", "\n"), "null\n1\nargument") {
 		t.Fatalf("Тестовый процесс раскрыл данные либо не получил аргументы: %+v", r)
 	}
 }

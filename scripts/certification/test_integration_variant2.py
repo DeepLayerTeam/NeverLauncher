@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from run_integration_variant2 import CASES, run_cases
+from run_integration_variant2 import CASES, run_cases, case_commands
 from review_integration_variant2 import REQUIRED, review
 
 SHA = 'a'*40
@@ -55,7 +55,7 @@ class IntegrationCertificationTests(unittest.TestCase):
                 obj={'schemaVersion':'1.0', 'release':'0.31.0', 'platform':osname,
                      'revision':SHA,'passed':True,'fullyCertified':False,
                      'results':[{'case':name,'status':'passed','steps':[
-                         {'status':'passed','exitCode':0,'outputSha256':'a'*64, 'command':[str(Path(td)/'artifact') if p in {'{cli}','{root}','{parity}','{maven}'} else p for p in cmd]} for cmd in CASES[name]]} for name in sorted(cases)]}
+                         {'status':'passed','exitCode':0,'outputSha256':'a'*64, 'command':[str(Path(td)/'artifact') if p in {'{cli}','{root}','{parity}','{maven}'} else p for p in cmd]} for cmd in case_commands(name, osname)]} for name in sorted(cases)]}
                 path=Path(td)/osname/'integration-0310.json'
                 path.parent.mkdir(parents=True)
                 path.write_text(json.dumps(obj))

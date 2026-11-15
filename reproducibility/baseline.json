@@ -89,8 +89,8 @@
       "size": 3668
     },
     ".github/workflows/ci.yml": {
-      "sha256": "bdb0880d2d82fc738ba5d2a62f97d33517abc335b7b173586bf256c5af628243",
-      "size": 98337
+      "sha256": "b07cf10104a1304accb910d366e7c76a74a4b140520b4130ee70b9d02882b961",
+      "size": 98448
     },
     ".github/workflows/client-factory.yml": {
       "sha256": "247fc31042e1a2bd180e5fdf9a37798924285a5d402b9381f20d0684d5d99635",
@@ -233,8 +233,8 @@
       "size": 2789
     },
     ".github/workflows/gravit-auth-migration.yml": {
-      "sha256": "3bf15d84897593a0a683ed576d0abcbd1c17dafe8dc042afe4b676dbd09917c3",
-      "size": 3141
+      "sha256": "7103f21101770d5792edf8e91465ff486ea6cbf8de048ddbe74166382395d883",
+      "size": 3252
     },
     ".github/workflows/gravit-compat.yml": {
       "sha256": "71d923b1d39a7799870adbc94bd3a014e30ac864c74f2100bc35859c082bd299",
@@ -401,8 +401,8 @@
       "size": 4919
     },
     ".github/workflows/java-sdk-module-parity-ga.yml": {
-      "sha256": "6a6bb59b485d30695a9268101788b8c28899736b044cbee53a5cf4135d2d2e90",
-      "size": 5862
+      "sha256": "c7541c6d631320cf89f2ae4d1e6024d09d2c90ceee2fe75ce44099e43f194dc1",
+      "size": 5894
     },
     ".github/workflows/java-sdk-runtime.yml": {
       "sha256": "d42ec4619e572c94dc835f61347e8ba7c8a17ff37db8711e6ab822f54333f22f",
@@ -677,8 +677,8 @@
       "size": 10173
     },
     ".github/workflows/rolling-update.yml": {
-      "sha256": "e8d313bf0ed4c015293ecd2c4d73cef480eefcc891d4d0a095e3a2de3753623f",
-      "size": 2060
+      "sha256": "10d079884dfd6c1cdfee33edc2d83536ddfd8572361854323385edfc4ca99897",
+      "size": 2203
     },
     ".github/workflows/runtime-acceptance.yml": {
       "sha256": "d52dbe8f08d37664ca8abb720824078a080818e5117c7584e689de6eb7250a9c",

@@ -135,7 +135,7 @@ func TestEndToEndImportAndIdempotency02510(t *testing.T) {
 func TestDryRunAndFailureIsolation02510(t *testing.T) {
 	r, rows, db := createFixture02510(t)
 	r.DryRun = true
-	rows = append(rows, SourceRow{ID: "bad", UserUUID: rows[0].UserUUID, TextureType: "SKIN", FileHash: strings.Repeat("a", 64)})
+	rows = append(rows, SourceRow{ID: "bad", UserUUID: rows[0].UserUUID, TextureType: "CAPE", FileHash: strings.Repeat("a", 64)})
 	rows = append(rows, SourceRow{ID: "unknown", UserUUID: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", TextureType: "CAPE", FileHash: rows[0].FileHash})
 	report, e := r.Run(context.Background(), rows)
 	if e != nil {

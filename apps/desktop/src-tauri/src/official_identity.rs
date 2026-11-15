@@ -83,6 +83,7 @@ struct NativePending0265 {
     interval: u64,
     cancel: watch::Sender<bool>,
 }
+#[allow(dead_code)] // Legacy device-code flow retained for compatibility and regression tests.
 struct PendingFlow {
     ticket: String,
     next: Instant,
@@ -417,6 +418,7 @@ fn remove_account(id: &str, uuid: &str) -> Result<(), String> {
     save_directory(id, &dir)?;
     delete(&account_slot(id, &uuid)?)
 }
+#[allow(dead_code)] // Legacy device-code flow retained for compatibility and regression tests.
 struct Response { status: u16, data: Value, rotation: Option<String>, retry_after: Option<u64> }
 impl Drop for Response {
     fn drop(&mut self) {
@@ -435,6 +437,7 @@ impl IdentityManager {
             .build().map_err(|_| "Не удалось инициализировать защищённый HTTP-клиент".to_string())?;
         Ok(Self { client, provider: NativeProvider::new()?, native_pending: Mutex::new(HashMap::new()), pending: Mutex::new(HashMap::new()), browser: Mutex::new(HashMap::new()), vault_lock: tokio::sync::Mutex::new(()) })
     }
+    #[allow(clippy::too_many_arguments)] // Keep authentication and request fields explicit.
     async fn request(&self, base: &Url, access: &str, route: &str, method: Method, ticket: Option<&str>, body: Option<Value>, skin: Option<(Vec<u8>, String)>) -> Result<Response, String> {
         if access.len() < 16 || access.len() > 8192 { return Err("Необходимо войти в Launcher".into()); }
         let url = base.join(&format!("{PREFIX}{route}")).map_err(|_| "Некорректный URL официального API".to_string())?;
@@ -503,6 +506,7 @@ impl IdentityManager {
     }
     // На каждой асинхронной границе сверяйте nonce процесса. Отмена или новый вход
     // не должны восстанавливать прежний Device Code или сохранять его аккаунт.
+#[allow(dead_code)] // Legacy device-code flow retained for compatibility and regression tests.
     pub async fn begin(&self, backend: &str, access: &str, session: &str) -> Result<DeviceChallenge, String> {
         let (base, id) = self.verified_scope(backend,access, session).await?;
         self.pending_remove(&id)?;
@@ -549,6 +553,7 @@ impl IdentityManager {
             Err(err) => { flows.remove(&id); Err(err) }
         }
     }
+#[allow(dead_code)] // Legacy device-code flow retained for compatibility and regression tests.
     pub async fn poll(&self, backend: &str, access: &str, session: &str) -> Result<PollResult, String> {
         let (base, id) = self.verified_scope(backend,access, session).await?;
         let (mut ticket, nonce) = {
@@ -623,6 +628,7 @@ impl IdentityManager {
     }
     /// Один нативный обработчик отвечает за интервалы опроса, задержку временных повторов
     /// и срок действия. Таймер браузера не может раскрыть билеты или создать частый опрос.
+#[allow(dead_code)] // Legacy device-code flow retained for compatibility and regression tests.
     pub async fn wait_device(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile, String> {
         let (_, id) = scope(backend, session)?;
         {
@@ -664,6 +670,7 @@ impl IdentityManager {
     }
     // Вызывающая сторона ОБЯЗАНА удерживать vault_lock во время сетевой операции и ротации.
     // Выбор аккаунта нельзя менять посреди операции (иначе текстура или запуск чужого аккаунта).
+    #[allow(clippy::too_many_arguments)] // Keep authentication and request fields explicit.
     async fn associated(&self, base: &Url, id: &str, access: &str, path: &str, method: Method, body: Option<Value>, skin: Option<(Vec<u8>, String)>) -> Result<(Response, StoredAccount), String> {
         let (slot, mut record) = selected_record(id)?.ok_or("Официальный Minecraft-аккаунт не подключён")?;
         let result = self.request(base, access, path, method, Some(&record.ticket), body, skin).await?;
@@ -949,8 +956,8 @@ impl IdentityManager {
             microsoft=Some(MicrosoftGrant {access_token:grant.access_token.clone(),refresh_token:grant.refresh_token.clone(),
                 expires_in:grant.expires_in,token_type:grant.token_type.clone()});
         }
-        let completed = if microsoft.is_some() {
-            Some(self.verified_native_grant(&client_id,microsoft.as_ref().unwrap()).await)
+        let completed = if let Some(grant) = &microsoft {
+            Some(self.verified_native_grant(&client_id,grant).await)
         } else {None};
         let _vault=self.vault_lock.lock().await;
         {

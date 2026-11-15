@@ -442,10 +442,10 @@ mod tests {
                 let wire=String::from_utf8_lossy(&req).to_string();
                 assert!(wire.starts_with(expected),"Неожиданный адрес тестового провайдера");
                 collected.push(wire);
-                let (status,body)=if reply.starts_with("403:") {("403 Forbidden",&reply[4..])}
-                    else if reply.starts_with("400:") {("400 Bad Request",&reply[4..])}
-                    else if reply.starts_with("404:") {("404 Not Found",&reply[4..])}
-                    else if reply.starts_with("429:") {("429 Too Many Requests",&reply[4..])}
+                let (status,body)=if let Some(body) = reply.strip_prefix("403:") {("403 Forbidden",body)}
+                    else if let Some(body) = reply.strip_prefix("400:") {("400 Bad Request",body)}
+                    else if let Some(body) = reply.strip_prefix("404:") {("404 Not Found",body)}
+                    else if let Some(body) = reply.strip_prefix("429:") {("429 Too Many Requests",body)}
                     else {("200 OK",reply)};
                 let response=format!("HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
                 conn.write_all(response.as_bytes()).await.unwrap();
@@ -581,7 +581,7 @@ mod tests {
     }
     #[test] fn app_registration_required_before_exchange() {
         assert!(!official_browser_0263::valid_client_id("00000000-0000-0000-0000-000000000000"));
-        assert_eq!(now() > 1700000000,true);
+        assert!(now() > 1700000000);
     }
     #[tokio::test]
     async fn java_identity_requires_token_authenticated_profile_even_with_entitlement() {

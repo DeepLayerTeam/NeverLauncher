@@ -1158,6 +1158,7 @@ pub fn linux_tpm_certify_0314(
 
 /// TPM Quote подписан зарегистрированным AK и проверяется на сервере по закреплённому сертификату AK.
 /// Программный запасной вариант никогда не предлагается.
+#[allow(clippy::too_many_arguments)] // Explicit TPM proof fields are part of the IPC contract.
 pub fn measured_boot_quote_0315(
  backend_url:&str,user_id:&str,device_id:&str,extra:&str,selection:&str,ak_key:&str,
  certificate:&str,intermediates:Vec<String>,
@@ -1172,13 +1173,13 @@ pub fn measured_boot_quote_0315(
  {
   if !record.hardware_provider.to_ascii_lowercase().contains("tpm") {return Err("Требуется: ключ TPM Windows".into());}
   let proof=crate::tpm_windows_0313::quote0315(extra,selection,ak_key,certificate,intermediates)?;
-  return serde_json::to_value(proof).map_err(|e|e.to_string());
+  serde_json::to_value(proof).map_err(|e|e.to_string())
  }
  #[cfg(target_os="linux")]
  {
   if !record.hardware_provider.eq_ignore_ascii_case("LinuxTpm"){return Err("Требуется: ключ TPM Linux".into());}
   let proof=crate::tpm_linux_0314::quote0315(extra,selection,ak_key,certificate,intermediates)?;
-  return serde_json::to_value(proof).map_err(|e|e.to_string());
+  serde_json::to_value(proof).map_err(|e|e.to_string())
  }
  #[cfg(not(any(target_os="windows",target_os="linux")))]
  {
@@ -1234,12 +1235,12 @@ pub fn macos_trust_status_0316(backend_url: &str, user_id: &str) -> Result<MacOS
     #[cfg(not(target_os = "macos"))]
     {
         let _ = (backend_url, user_id);
-        return Ok(MacOSTrustStatus0316 {
+        Ok(MacOSTrustStatus0316 {
             platform: std::env::consts::OS, local_device_key: "unsupported".into(),
             local_secure_enclave: "unsupported".into(), app_attest: "unsupported".into(),
             remote_device_key_provenance: "not-verified", strict_profile: "deny",
             reason_codes: vec!["macos-only-capability-probe"],
-        });
+        })
     }
     #[cfg(target_os = "macos")]
     {
