@@ -61,7 +61,7 @@ jobs:
           (cd services/api && go test ./internal/extensioncontract ./internal/extensionpackage ./internal/extensiontrust ./internal/extensionsecurity ./internal/extensionresolver ./internal/extensionupdates ./internal/extensionlifecycle ./internal/extensionhost ./internal/extensionga ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/launcher-api)
           (cd services/api && go build ./cmd/launcher-api)
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
