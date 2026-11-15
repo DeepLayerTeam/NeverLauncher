@@ -34,12 +34,12 @@ func TestRehearseLocal04910LiveJoinAndFailClosed(t *testing.T) {
 	addr, stop := setupRehearsalRCON0447(t, root, uuid)
 	defer stop()
 	put("rcon-password", []byte("test-pass\n"), 0600)
-	put("bin/client", []byte("#!/bin/sh\ntouch \"$HOME/client-started\"\nexec sleep 60\n"), 0700)
-	config, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: "bin/client", PlayerName: "Steve", PlayerUUID: uuid, RCONAddress: addr, RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
+	writeRehearsalFixture(t, root, rehearsalFixtureClientPath(), rehearsalFixture{Action: "client"})
+	config, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: rehearsalFixtureClientPath(), PlayerName: "Steve", PlayerUUID: uuid, RCONAddress: addr, RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
 	put("live-session.json", config, 0600)
 	for _, name := range rehearsalRequired03310 {
 		put("evidence/"+name, []byte("staging-observation-"+name), 0600)
-		put("probes/"+name, []byte("#!/bin/sh\nprintf '{\"passed\":true,\"uuid\":\""+uuid+"\",\"evidenceFile\":\"evidence/"+name+"\"}'\n"), 0700)
+		writeRehearsalFixture(t, root, rehearsalProbePath(name), rehearsalFixture{Action: "probe", UUID: uuid, Evidence: "evidence/" + name})
 	}
 	out := filepath.Join(root, "after-update.json")
 	args := []string{"--run", run, "--stage", root, "--inventory-sha256", inventory, "--output", out}
@@ -57,7 +57,7 @@ func TestRehearseLocal04910LiveJoinAndFailClosed(t *testing.T) {
 	if report.Ready || report.CutoverAllowed || report.LiveSession == nil || len(report.Probes) != 7 {
 		t.Fatal("Только локальное свидетельство не должно подтверждать общую готовность или переключение")
 	}
-	if st, err := os.Stat(out); err != nil || st.Mode().Perm() != 0600 {
+	if st, err := os.Stat(out); err != nil || !migrationFilePrivateForTest(out, st) {
 		t.Fatalf("Закрытые свидетельства: %v %v", st, err)
 	}
 	if err := handleMigrationRehearsalLocal04910(args); err == nil {
@@ -67,7 +67,7 @@ func TestRehearseLocal04910LiveJoinAndFailClosed(t *testing.T) {
 		t.Fatal("Отчёт нельзя выводить в стандартный поток вывода")
 	}
 	// Успешная нативная сессия не должна отменять отрицательные результаты независимых проверок.
-	put("probes/join", []byte("#!/bin/sh\nexit 1\n"), 0700)
+	writeRehearsalFixture(t, root, rehearsalProbePath("join"), rehearsalFixture{Action: "fail"})
 	args[len(args)-1] = filepath.Join(root, "failed.json")
 	if err := handleMigrationRehearsalLocal04910(args); err == nil {
 		t.Fatal("Неуспешная проверка ошибочно принята")

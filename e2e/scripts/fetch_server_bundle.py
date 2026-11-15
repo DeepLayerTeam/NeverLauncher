@@ -43,7 +43,12 @@ def fetch(repo, tag, manifest_sha, target, directory, *, downloader=download):
     manifest = read_json(pins)
     require(manifest.get('schema') == 'launcher.compatibility-server/0.52.4', 'Invalid server pin schema')
     targets = manifest.get('targets')
-    require(type(targets) is dict and type(targets.get(target)) is dict, 'No approved server bundle for ' + target)
+    require(type(targets) is dict, 'Invalid server pin targets')
+    # Official Mojang metadata remains independently verified by vanilla-server.
+    # Never allow a missing modded or malformed existing entry to fall back.
+    if target.startswith('vanilla-') and target not in targets:
+        return pins, directory
+    require(type(targets.get(target)) is dict, 'No approved server bundle for ' + target)
     entry = targets[target]
     name = entry.get('file')
     require(type(name) is str and NAME.fullmatch(name) and '..' not in name, 'Unsafe server bundle asset name')
@@ -70,7 +75,7 @@ def main():
     if output:
         with open(output, 'a', encoding='utf-8') as stream:
             stream.write(f'pins={pins}\nbundle_dir={directory}\n')
-    print(f'Verified server bundle for {args.target}')
+    print(f'Verified server pin manifest for {args.target}')
 
 
 if __name__ == '__main__':

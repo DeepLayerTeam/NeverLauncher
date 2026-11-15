@@ -26,7 +26,7 @@ func writePrivateIdentityReport0334(path string, data any) error {
 	} else if !info.IsDir() {
 		return fmt.Errorf("Для родительского пути отчёта идентификации требуется каталог")
 	}
-	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	f, e := createMigrationPrivateFile(path)
 	if e != nil {
 		return e
 	}

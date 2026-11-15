@@ -61,7 +61,7 @@ class MatrixToolTests(unittest.TestCase):
                 "java-runtime.json",
                 "result.json",
             ]
-            if not target.get("matchingServer"):
+            if not target.get("matchingServer") or target["minecraft"] != "1.17.1":
                 checks["liveMultiplayerJoin"] = True
                 files.extend(["live-join.json", "live-server-ready.json",
                               "live-server-witness.json", "live-server-stopped.json", "matching-server.log",
@@ -214,7 +214,7 @@ class MatrixToolTests(unittest.TestCase):
                     "detectedArch": target["arch"],
                     "matched": True,
                 },
-                "files": files,
+                "files": list(dict.fromkeys(files)),
             },
         }
 
@@ -301,7 +301,7 @@ class MatrixToolTests(unittest.TestCase):
             )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn(
-                "missing/unsafe evidence artifact: client-package.json", proc.stderr
+                "Артефакт доказательства отсутствует или небезопасен: client-package.json", proc.stderr
             )
 
     def test_04010_rejects_tampered_installer_after_result_emitted(self) -> None:
@@ -334,7 +334,7 @@ class MatrixToolTests(unittest.TestCase):
             )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn(
-                "evidence artifact sha256 mismatch: forge-install.json", proc.stderr
+                "Несовпадение sha256 артефакта доказательства: forge-install.json", proc.stderr
             )
 
     def test_04010_rejects_evidence_symlink(self) -> None:
@@ -369,7 +369,7 @@ class MatrixToolTests(unittest.TestCase):
             )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn(
-                "missing/unsafe evidence artifact: client-package.json", proc.stderr
+                "Артефакт доказательства отсутствует или небезопасен: client-package.json", proc.stderr
             )
 
     def test_upstream_blockers_are_explicit_and_excluded_from_ci_plan(self) -> None:

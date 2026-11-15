@@ -113,7 +113,7 @@ func rehearsalDigest03310(v any) (string, error) {
 }
 func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string) (rehearsalProbe03310, error) {
 	probe := rehearsalProbe03310{Name: name, RunID: run, StageID: stage}
-	program, e := rehearsalPath03310(root, "probes/"+name)
+	program, e := rehearsalPath03310(root, rehearsalProbePath(name))
 	if e != nil {
 		return probe, e
 	}
@@ -121,7 +121,7 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 	if e != nil {
 		return probe, e
 	}
-	if !st.Mode().IsRegular() || st.Mode().Perm()&0111 == 0 {
+	if !rehearsalExecutable(program, st) {
 		return probe, errors.New("Для пробного запуска требуется обычный исполняемый файл")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
@@ -129,7 +129,7 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 	cmd := exec.CommandContext(ctx, program)
 	cmd.Dir = root
 	// Не наследуйте токены, облачные учётные данные и подключение к производственной БД.
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + root, "MIGRATION_RUN_ID=" + run, "MIGRATION_STAGE_ID=" + stage, "MIGRATION_CHECK=" + name}
+	cmd.Env = append(rehearsalProcessEnvironment(root), "MIGRATION_RUN_ID="+run, "MIGRATION_STAGE_ID="+stage, "MIGRATION_CHECK="+name)
 	var stdout, stderr limitedProbeBuffer03310
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

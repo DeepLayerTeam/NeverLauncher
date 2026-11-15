@@ -1300,7 +1300,7 @@ def verify_result(
             "platformMatched",
         ]
     )
-    if target["scope"] == "client" and not target.get("matchingServer") and semver_core(PRODUCT_VERSION) >= (0, 52, 4):
+    if target["scope"] == "client" and (not target.get("matchingServer") or target["minecraft"] != "1.17.1") and semver_core(PRODUCT_VERSION) >= (0, 52, 4):
         mandatory = list(mandatory) + ["liveMultiplayerJoin"]
     if target.get("matchingServer") is True:
         mandatory = list(mandatory) + [
@@ -1420,7 +1420,7 @@ def verify_result(
                 "bridge-diagnostics.json",
                 "platform-runtime.json",
             }
-        if target["scope"] == "client" and not target.get("matchingServer") and semver_core(PRODUCT_VERSION) >= (0, 52, 4):
+        if target["scope"] == "client" and (not target.get("matchingServer") or target["minecraft"] != "1.17.1") and semver_core(PRODUCT_VERSION) >= (0, 52, 4):
             mandatory_files = set(mandatory_files) | {
                 "live-join.json", "live-server-ready.json", "live-server-witness.json", "live-server-stopped.json",
                 "matching-server.log", "live-server-execution.log"

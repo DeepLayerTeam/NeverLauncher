@@ -9,7 +9,7 @@ import (
 
 func TestGenerateLauncherMigrationKeys0336(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.Chmod(dir, 0700); err != nil {
+	if err := hostPrivateRestrictDir(dir); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(dir, "new-launcher.json")
@@ -20,7 +20,7 @@ func TestGenerateLauncherMigrationKeys0336(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0600 {
+	if !migrationFilePrivateForTest(path, info) {
 		t.Fatalf("права файла с секретом отличаются от 0600: %v", info.Mode())
 	}
 	raw, err := os.ReadFile(path)

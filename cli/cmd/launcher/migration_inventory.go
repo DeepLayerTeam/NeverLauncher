@@ -192,22 +192,21 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 		return errors.New("Отсутствует: контрольная сумма манифеста")
 	}
 	dir := filepath.Dir(out)
-	tmp, e := os.CreateTemp(dir, ".gravit-export-*.tmp")
+	tmp, e := createMigrationPrivateTemp(dir)
 	if e != nil {
 		return e
 	}
 	defer func() { tmp.Close(); os.Remove(tmp.Name()) }()
-	_ = tmp.Chmod(0600)
 	if _, e = io.Copy(tmp, response.Body); e != nil {
 		return e
 	}
 	if e = tmp.Sync(); e != nil {
 		return e
 	}
-	if e = verifyGravitExport0333(tmp.Name(), expected); e != nil {
+	if e = tmp.Close(); e != nil {
 		return e
 	}
-	if e = tmp.Close(); e != nil {
+	if e = verifyGravitExport0333(tmp.Name(), expected); e != nil {
 		return e
 	}
 	// Создание ссылки атомарно в пределах файловой системы и завершается ошибкой при существующей цели. Не

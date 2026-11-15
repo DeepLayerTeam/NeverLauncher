@@ -52,7 +52,7 @@ func TestGravitSourceExportCLI0333(t *testing.T) {
 		t.Fatal(e)
 	}
 	info, e := os.Stat(destination)
-	if e != nil || info.Mode().Perm() != 0600 {
+	if e != nil || !migrationFilePrivateForTest(destination, info) {
 		t.Fatalf("Права доступа к экспорту: %v %v", info, e)
 	}
 	if e = postGravitInventory0333(server.URL+"/export", "test-token", sourceFile, destination, true); e == nil {

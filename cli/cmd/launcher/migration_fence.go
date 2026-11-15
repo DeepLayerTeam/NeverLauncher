@@ -72,7 +72,7 @@ func writeExclusiveFence0448(path string, data []byte) error {
 		return errors.New("Необходимо указать абсолютный путь вывода")
 	}
 	// O_EXCL не позволяет повторной попытке перезаписать уже сохранённое свидетельство.
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	f, err := createMigrationPrivateFile(path)
 	if err != nil {
 		return err
 	}

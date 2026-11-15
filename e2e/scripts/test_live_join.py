@@ -84,6 +84,12 @@ class LiveJoinNegativeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'закреплённое имя ZIP-файла'):
             gate.load_pinned_bundle(self.args)
 
+    def test_loader_only_manifest_does_not_block_official_vanilla(self):
+        self.args.loader = 'vanilla'
+        self.args.loader_version = ''
+        self.args.target = 'vanilla-1.20.1-linux-x64'
+        self.assertEqual(gate.load_pinned_bundle(self.args), ('', '', '', ''))
+
     def test_missing_modded_distribution_is_blocked(self):
         self.args.pins = ''
         with self.assertRaisesRegex(RuntimeError, 'нужны закреплённые пакеты'):

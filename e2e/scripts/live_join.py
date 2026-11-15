@@ -74,6 +74,9 @@ def load_pinned_bundle(args):
     targets = manifest.get('targets')
     require(type(targets) is dict, 'Отсутствуют целевые параметры закрепления сервера')
     entry = targets.get(args.target)
+    # A loader-only pin manifest must not block official Mojang downloads.
+    if entry is None and args.loader == 'vanilla':
+        return '', '', '', ''
     require(type(entry) is dict, 'Для целевой платформы нет одобренного дистрибутива выделенного сервера: ' + args.target)
     require(all(entry.get(k) == getattr(args, attribute) for k, attribute in
                 (('loader', 'loader'), ('minecraft', 'minecraft'))), 'Версия или загрузчик серверного пакета не соответствует целевому окружению')

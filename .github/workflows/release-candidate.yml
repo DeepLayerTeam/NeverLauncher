@@ -137,7 +137,7 @@ jobs:
       - name: "Сборка и модульное тестирование нативного Tauri с текущим Runtime"
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-default-features
-          cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml
+          cargo build --release --features custom-protocol --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: "Вычисление хешей исполняемого файла и промышленного интерфейса"
         shell: bash
         run: |

@@ -87,7 +87,7 @@ jobs:
         working-directory: apps/desktop
         run: npm ci && npm run build
       - name: Собрать реальные нативные исполняемые файлы Desktop
-        run: cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml
+        run: cargo build --release --features custom-protocol --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Измерить первый и последующие запуски процесса в Xvfb
         run: xvfb-run -a -s "-screen 0 1920x1080x24" dbus-run-session -- env GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 python scripts/performance/benchmark.py --desktop apps/desktop/src-tauri/target/release/launcher-desktop --download-mib --repetitions 3 --output performance-desktop-linux.json
       - uses: actions/upload-artifact@v4

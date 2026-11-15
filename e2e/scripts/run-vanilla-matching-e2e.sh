@@ -23,6 +23,15 @@ for cmd in go cargo python3 xvfb-run; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "[matching-e2e] отсутствует необходимая команда: $cmd" >&2; exit 1; }
 done
 
+# Use the shared RCON witness protocol for the representative matching targets.
+# 1.17.1 retains its special two-phase void-world and atlas gate below.
+if [[ "$MINECRAFT_VERSION" != "1.17.1" ]]; then
+  bash "$ROOT/e2e/scripts/run-vanilla-certification-case.sh"
+  python3 "$ROOT/e2e/scripts/matching_live_report.py" --runtime "$RUNTIME_DIR" \
+    --minecraft "$MINECRAFT_VERSION" --java-major "$JAVA_MAJOR" --target "$TARGET_ID"
+  exit 0
+fi
+
 rm -rf "$RUNTIME_DIR"
 mkdir -p "$CLIENT_DIR" "$SERVER_DIR"
 NL_BIN="$RUNTIME_DIR/nl"

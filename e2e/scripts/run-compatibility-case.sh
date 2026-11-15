@@ -296,7 +296,7 @@ if scope == "client":
             })
     # Каждая обычная цель клиента версии 0.52.4 требует одновременного серверного
     # подтверждения мультиплеера, а не просто бездействующей JVM, прожившей N секунд.
-    if not matching_server:
+    if not matching_server or minecraft != "1.17.1":
         live = read("live-join.json") or {}
         server_log_path = runtime / "matching-server.log"
         cert_path = runtime / probe_name
@@ -366,7 +366,7 @@ if scope == "client":
         "client-package.json", "materialized-client-verify.json", install_name, "vanilla-server-install.json",
         probe_name, f"{loader}-resolution-lock.json", "loader-platform.json", "loader-hardening.json", "loader-hardening-package.json", "matching-server.json", "matching-server.log", "result.json"
     ] if (runtime / name).is_file()]
-    if not matching_server:
+    if not matching_server or minecraft != "1.17.1":
         evidence_files += [name for name in (
             "live-join.json", "live-server-ready.json", "live-server-witness.json", "live-server-stopped.json",
             "live-server-execution.log", "matching-server.log", "matching-server-install.json"

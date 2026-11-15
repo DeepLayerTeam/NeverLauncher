@@ -47,7 +47,7 @@ func TestBatchCLI0492(t *testing.T) {
 		t.Fatal(e)
 	}
 	st, e := os.Stat(output)
-	if e != nil || st.Mode().Perm() != 0600 {
+	if e != nil || !migrationFilePrivateForTest(output, st) {
 		t.Fatalf("Права доступа к отчёту: %v, %v", st, e)
 	}
 	verify := []string{"verify-dry-run-all", "--backend", server.URL, "--token", "secret", "--run", "r1", "--source", src, "--mapping", mapping, "--report", output}

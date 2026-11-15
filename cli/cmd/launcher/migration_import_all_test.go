@@ -136,7 +136,7 @@ func TestImportAllStagesBothProfiles0493(t *testing.T) {
 		t.Fatalf("при возобновлении повторно применены ранее подготовленные байты: %d", imports)
 	}
 	st, err := os.Stat(output)
-	if err != nil || st.Mode().Perm() != 0600 {
+	if err != nil || !migrationFilePrivateForTest(output, st) {
 		t.Fatalf("отсутствует закрытый результат: %v %v", st, err)
 	}
 	var result struct {

@@ -35,7 +35,7 @@ func TestFenceSourceAndFreshSnapshot0448(t *testing.T) {
 		t.Fatal("Перезаписана квитанция остановки")
 	}
 	st, err := os.Stat(path)
-	if err != nil || st.Mode().Perm() != 0600 {
+	if err != nil || !migrationFilePrivateForTest(path, st) {
 		t.Fatalf("Разрешения свидетельства остановки: %v %v", st, err)
 	}
 	snapshotPath := filepath.Join(dir, "snapshot.json")

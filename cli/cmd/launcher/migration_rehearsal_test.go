@@ -39,13 +39,12 @@ func TestRehearsalExecAndSubmission03310(t *testing.T) {
 	address, closeRCON := setupRehearsalRCON0447(t, dir, player.UUID)
 	defer closeRCON()
 	must("rcon-password", []byte("test-pass\n"), 0600)
-	must("bin/client", []byte("#!/bin/sh\ntouch \"$HOME/client-started\"\nexec sleep 60\n"), 0700)
-	liveConfig, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: "bin/client", PlayerName: "Steve", PlayerUUID: player.UUID, RCONAddress: address, RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
+	writeRehearsalFixture(t, dir, rehearsalFixtureClientPath(), rehearsalFixture{Action: "client"})
+	liveConfig, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: rehearsalFixtureClientPath(), PlayerName: "Steve", PlayerUUID: player.UUID, RCONAddress: address, RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
 	must("live-session.json", liveConfig, 0600)
 	for _, name := range rehearsalRequired03310 {
 		must("evidence/"+name, []byte("real-test-evidence"), 0600)
-		script := "#!/bin/sh\nprintf '{\"passed\":true,\"uuid\":\"" + player.UUID + "\",\"evidenceFile\":\"evidence/" + name + "\"}'\n"
-		must("probes/"+name, []byte(script), 0700)
+		writeRehearsalFixture(t, dir, rehearsalProbePath(name), rehearsalFixture{Action: "probe", UUID: player.UUID, Evidence: "evidence/" + name})
 	}
 	report, e := migrationRehearsalRun03310(context.Background(), dir, run, h)
 	if e != nil || len(report.Probes) != 7 || report.LiveSession == nil || report.Ready || report.CutoverAllowed || report.Probes[0].EvidenceSHA256 == "" {
@@ -73,13 +72,13 @@ func TestRehearsalExecAndSubmission03310(t *testing.T) {
 		t.Fatal("отчёт не был отправлен")
 	}
 	_ = os.Remove(filepath.Join(dir, "client-started"))
-	must("probes/join", []byte("#!/bin/sh\nexit 1\n"), 0700)
+	writeRehearsalFixture(t, dir, rehearsalProbePath("join"), rehearsalFixture{Action: "fail"})
 	if _, e = migrationRehearsalRun03310(context.Background(), dir, run, h); e == nil {
 		t.Fatal("допущена неудачная команда реального подключения")
 	}
 	_ = os.Remove(filepath.Join(dir, "client-started"))
-	must("probes/join", []byte("#!/bin/sh\nprintf '{\"passed\":true,\"uuid\":\""+player.UUID+"\",\"evidenceFile\":\"evidence/join\"}'\n"), 0700)
-	must("probes/skins", []byte("#!/bin/sh\nrm -f \"$HOME/client-started\"\nprintf '{\"passed\":true,\"uuid\":\""+player.UUID+"\",\"evidenceFile\":\"evidence/skins\"}'\n"), 0700)
+	writeRehearsalFixture(t, dir, rehearsalProbePath("join"), rehearsalFixture{Action: "probe", UUID: player.UUID, Evidence: "evidence/join"})
+	writeRehearsalFixture(t, dir, rehearsalProbePath("skins"), rehearsalFixture{Action: "disconnect", UUID: player.UUID, Evidence: "evidence/skins"})
 	if _, e = migrationRehearsalRun03310(context.Background(), dir, run, h); e == nil {
 		t.Fatal("допущено отключение игрока до проверки")
 	}
@@ -157,19 +156,19 @@ func TestRehearsalLiveNoSyntheticSession0447(t *testing.T) {
 		}
 	}
 	write("rcon-password", "test-pass", 0600)
-	write("bin/client", "#!/bin/sh\nexit 0\n", 0700)
-	cfg, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: "bin/client", PlayerName: "Steve", PlayerUUID: uuid, RCONAddress: address, RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
+	writeRehearsalFixture(t, dir, rehearsalFixtureClientPath(), rehearsalFixture{Action: "exit"})
+	cfg, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: rehearsalFixtureClientPath(), PlayerName: "Steve", PlayerUUID: uuid, RCONAddress: address, RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
 	write("live-session.json", string(cfg), 0600)
 	src := rehearsalSnapshot03310{Players: []rehearsalPlayer03310{{UUID: uuid}}}
 	if _, _, _, err := rehearsalLaunchLive0447(context.Background(), dir, src); err == nil {
 		t.Fatal("успешной признана работа клиента без реального подключения")
 	}
-	write("bin/client", "#!/bin/sh\ntouch \"$HOME/client-started\"\nexec sleep 30\n", 0700)
+	writeRehearsalFixture(t, dir, rehearsalFixtureClientPath(), rehearsalFixture{Action: "client"})
 	write("client-started", "", 0600)
 	if _, _, _, err := rehearsalLaunchLive0447(context.Background(), dir, src); err == nil {
 		t.Fatal("допущен игрок, подключённый ещё до запуска")
 	}
-	cfgBytes, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: "bin/client", PlayerName: "Steve", PlayerUUID: uuid, RCONAddress: "example.com:25575", RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
+	cfgBytes, _ := json.Marshal(rehearsalLiveConfig0447{ClientPath: rehearsalFixtureClientPath(), PlayerName: "Steve", PlayerUUID: uuid, RCONAddress: "example.com:25575", RCONPasswordFile: "rcon-password", TimeoutSeconds: 10})
 	write("live-session.json", string(cfgBytes), 0600)
 	if _, _, _, err := rehearsalLaunchLive0447(context.Background(), dir, src); err == nil {
 		t.Fatal("Удалённый доступ через RCON ошибочно разрешён")

@@ -46,14 +46,14 @@ func generateLauncherMigrationKeys0336(path string) (err error) {
 	}
 	// Путь должен существовать и указывать на закрытый каталог; не создавайте каталоги и не следуйте
 	// конечной символьной ссылке. O_EXCL запрещает замену существующего файла ключа.
-	dir, err := os.Stat(filepath.Dir(path))
+	dir, err := os.Lstat(filepath.Dir(path))
 	if err != nil {
 		return err
 	}
-	if !dir.IsDir() || dir.Mode().Perm()&0077 != 0 {
-		return errors.New("Каталог для сохранения ключей должен иметь права 0700 без доступа для группы и остальных пользователей")
+	if !dir.IsDir() || hostPrivateCheck(filepath.Dir(path), dir) != nil {
+		return errors.New("Каталог для сохранения ключей должен иметь закрытые права 0700 или эквивалентный NTFS ACL")
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	f, err := createMigrationPrivateFile(path)
 	if err != nil {
 		return err
 	}

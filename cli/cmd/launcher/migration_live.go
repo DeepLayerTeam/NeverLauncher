@@ -215,7 +215,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 	if err != nil {
 		return proof, noverify, noop, err
 	}
-	if !st.Mode().IsRegular() || st.Mode().Perm()&0111 == 0 {
+	if !rehearsalExecutable(executable, st) {
 		return proof, noverify, noop, errors.New("Клиент не является обычным исполняемым файлом")
 	}
 	hash, err := rehearsalHashFile0447(executable)
@@ -247,7 +247,7 @@ func rehearsalLaunchLive0447(ctx context.Context, root string, snapshot rehearsa
 	clientCtx, stop := context.WithCancel(ctx)
 	cmd := exec.CommandContext(clientCtx, executable, cfg.ClientArgs...)
 	cmd.Dir = root
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + root, "LANG=C.UTF-8"}
+	cmd.Env = append(rehearsalProcessEnvironment(root), "LANG=C.UTF-8")
 	for _, key := range []string{"DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS"} {
 		if v, ok := os.LookupEnv(key); ok {
 			cmd.Env = append(cmd.Env, key+"="+v)

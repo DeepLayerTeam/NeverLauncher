@@ -45,6 +45,19 @@ class FetchServerBundleTests(unittest.TestCase):
         self.assertEqual(self.digest(pins), self.digest(self.source / ASSET))
         self.assertEqual(self.digest(directory / 'server.zip'), self.entry['sha256'])
 
+    def test_official_vanilla_without_entry_downloads_only_manifest(self):
+        digest = self.pins()
+        pins, directory = fetch('DeepLayerTeam/NeverLauncher', 'ci-server-pins', digest,
+                                'vanilla-1.21-linux-x64', self.root / 'output', downloader=self.download)
+        self.assertEqual(self.calls, [ASSET])
+        self.assertEqual(self.digest(pins), digest)
+        self.assertFalse((directory / 'server.zip').exists())
+
+    def test_missing_modded_entry_is_blocked(self):
+        with self.assertRaisesRegex(RuntimeError, 'No approved server bundle'):
+            fetch('DeepLayerTeam/NeverLauncher', 'ci-server-pins', self.pins(),
+                  'quilt-1.21-linux-x64', self.root / 'output', downloader=self.download)
+
     def test_unapproved_manifest_cannot_select_download(self):
         self.pins()
         with self.assertRaisesRegex(RuntimeError, 'manifest SHA-256'):

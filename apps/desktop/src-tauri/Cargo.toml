@@ -6,6 +6,11 @@ authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
 edition = "2021"
 
+# Tauri CLI enables this feature for production builds; direct Cargo CI builds
+# must explicitly request it to embed frontendDist instead of loading devUrl.
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
