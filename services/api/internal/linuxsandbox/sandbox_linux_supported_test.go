@@ -129,16 +129,27 @@ printf 'sandbox-evidence-ok\n'
 }
 
 func TestUnsupportedKernelOrMissingDelegationFailsClosed0319(t *testing.T) {
-	if Available() == nil {
-		t.Skip("Предварительная проверка ядра доступна; соблюдение ограничений проверяется реальным тестом")
-	}
 	opts := validOptions0319(t)
-	h, err := Prepare(opts)
-	if err == nil {
+	// Exercise the actual Prepare gate with an unavailable kernel on every CI
+	// runner, without treating a capable runner as a skipped negative test.
+	missing := errors.New("sandbox-cgroup-delegation-unavailable")
+	h, err := prepareWithAvailability(opts, func() error { return missing })
+	if h != nil || !errors.Is(err, missing) {
 		if h != nil {
 			h.Close()
 		}
-		t.Fatal("Сервер без необходимой поддержки ошибочно принял изолированный пакет")
+		t.Fatalf("sandbox availability gate: %v", err)
+	}
+	// If the current machine is really unsupported, confirm the unmodified
+	// public entry point also refuses. Live isolation is tested separately.
+	if Available() != nil {
+		h, err = Prepare(opts)
+		if h != nil || err == nil {
+			if h != nil {
+				h.Close()
+			}
+			t.Fatal("unsupported host accepted isolation")
+		}
 	}
 }
 

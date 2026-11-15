@@ -260,10 +260,16 @@ func requireCgroupKill03120(path string) error {
 }
 
 func Prepare(o Options) (*Handle, error) {
+	return prepareWithAvailability(o, Available)
+}
+
+// Keep the production availability gate injectable only inside the package so
+// the refusal path can be tested even on a fully capable build runner.
+func prepareWithAvailability(o Options, available func() error) (*Handle, error) {
 	if err := validate(o); err != nil {
 		return nil, err
 	}
-	if err := Available(); err != nil {
+	if err := available(); err != nil {
 		return nil, err
 	}
 	cgroup, cfd, err := makeCgroup(o.Policy)

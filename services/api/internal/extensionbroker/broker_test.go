@@ -2,14 +2,28 @@ package extensionbroker
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestScopedFilesystemBrokers03110(t *testing.T) {
 	root := t.TempDir()
+	if runtime.GOOS != "linux" {
+		if err := Write(root, "report.txt", base64.StdEncoding.EncodeToString([]byte("report"))); err == nil {
+			t.Fatal("unsupported platform allowed write")
+		}
+		if _, err := Read(root, "report.txt"); err == nil {
+			t.Fatal("unsupported platform allowed read")
+		}
+		if _, err := os.Stat(filepath.Join(root, "report.txt")); !os.IsNotExist(err) {
+			t.Fatal("unexpected write", err)
+		}
+		return
+	}
 	if err := os.Mkdir(filepath.Join(root, "nested"), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +109,20 @@ func mustDecode03110(t *testing.T, s string) []byte {
 
 func TestScopedRootPolicy03110(t *testing.T) {
 	root := t.TempDir()
-	good := "{\"reports\":\"" + root + "\"}"
+	raw, err := json.Marshal(map[string]string{"reports": root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	good := string(raw)
+	if runtime.GOOS != "linux" {
+		if _, err := ParseRoots(good); err == nil {
+			t.Fatal("unsupported platform accepted shared root")
+		}
+		if _, err := ParseRoots("{}"); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
 	roots, e := ParseRoots(good)
 	if e != nil || roots["reports"] != root {
 		t.Fatalf("корректный корневой каталог: %v", e)

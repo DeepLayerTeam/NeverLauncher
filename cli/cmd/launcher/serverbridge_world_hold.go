@@ -67,7 +67,7 @@ func worldBackupReleaseCohortHold0518(root, holdID string) error {
 	if err != nil {
 		return err
 	}
-	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0077 != 0 {
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || hostPrivateCheck(gate, info) != nil {
 		return errors.New("Небезопасное значение: каталог контрольной блокировки группы")
 	}
 	var owner worldHostGate04110
@@ -93,7 +93,7 @@ func worldBackupReleaseCohortHold0518(root, holdID string) error {
 		return err
 	}
 	if !holdInfo.Mode().IsRegular() || !os.SameFile(holdInfo, linkInfo) ||
-		holdInfo.Mode().Perm()&0077 != 0 || holdInfo.Size() != 66 {
+		hostPrivateCheck(holdPath, holdInfo) != nil || holdInfo.Size() != 66 {
 		fd.Close()
 		return errors.New("Небезопасное значение: токен блокировки группы")
 	}

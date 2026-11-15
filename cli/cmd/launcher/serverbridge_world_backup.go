@@ -181,6 +181,13 @@ func worldBackupLocation02810(root, requested string) (string, error) {
 	return abs, nil
 }
 func worldBackupDisjoint02810(a, b string) error {
+	var err error
+	if a, err = worldBackupSystemPath02810(a); err != nil {
+		return err
+	}
+	if b, err = worldBackupSystemPath02810(b); err != nil {
+		return err
+	}
 	for _, pair := range [][2]string{{a, b}, {b, a}} {
 		rel, err := filepath.Rel(pair[0], pair[1])
 		if err != nil {
@@ -192,8 +199,28 @@ func worldBackupDisjoint02810(a, b string) error {
 	}
 	return nil
 }
-func worldBackupNoSymlinkAncestors02810(path string) error {
+func worldBackupSystemPath02810(path string) (string, error) {
 	path = filepath.Clean(path)
+	if runtime.GOOS == "darwin" {
+		for _, alias := range []string{"/var", "/tmp"} {
+			if path == alias || strings.HasPrefix(path, alias+"/") {
+				// Only accept the standard system alias, never an arbitrary symlink.
+				target, err := os.Readlink(alias)
+				if err != nil || (target != "private"+alias && target != "/private"+alias) {
+					return "", fmt.Errorf("Небезопасная системная ссылка: %s", alias)
+				}
+				path = "/private" + path
+				break
+			}
+		}
+	}
+	return path, nil
+}
+func worldBackupNoSymlinkAncestors02810(path string) error {
+	path, err := worldBackupSystemPath02810(path)
+	if err != nil {
+		return err
+	}
 	for {
 		fi, err := os.Lstat(path)
 		if err == nil {
@@ -216,7 +243,17 @@ func worldBackupNoSymlinkAncestors02810(path string) error {
 	return nil
 }
 func worldBackupPrivateDir02810(path string) error {
-	if err := os.MkdirAll(path, 0700); err != nil {
+	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			return err
+		}
+		if err := os.Mkdir(path, 0700); err != nil {
+			return err
+		}
+		if err := hostPrivateRestrictDir(path); err != nil {
+			return err
+		}
+	} else if err != nil {
 		return err
 	}
 	fi, err := os.Lstat(path)

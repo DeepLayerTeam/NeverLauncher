@@ -48,6 +48,10 @@ func worldBackupHostGateAcquire04110(root, purpose string) (func(), error) {
 		}
 		return nil, err
 	}
+	if err := hostPrivateRestrictDir(path); err != nil {
+		_ = os.Remove(path)
+		return nil, err
+	}
 	owner := worldHostGate04110{PID: os.Getpid(), ProcessIdentity: identity, Purpose: purpose, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}
 	raw, err := json.Marshal(owner)
 	if err == nil {

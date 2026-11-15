@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 test('Проверки очистки ошибок и отправки отчётов в Sentry по согласию пользователя выполняются',()=>{
- const args=['src/sentry_diagnostics.ts','--module','es2020','--target','es2020','--strict','--skipLibCheck','--lib','es2020,dom','--outDir','build-tests'];
- const compile=spawnSync('tsc',args,{cwd:'apps/desktop',encoding:'utf8',timeout:30000});
+ const args=['--ignoreConfig','src/sentry_diagnostics.ts','--module','es2020','--moduleResolution','bundler','--target','es2020','--strict','--skipLibCheck','--lib','es2020,dom','--outDir','build-tests'];
+ const compile=spawnSync(process.execPath,['node_modules/typescript/bin/tsc',...args],{cwd:'apps/desktop',encoding:'utf8',timeout:30000});
  assert.equal(compile.status,0,compile.stderr+compile.stdout);
  const env={...process.env}; delete env.NODE_TEST_CONTEXT;
  const result=spawnSync('node',['--test','tests/sentry_diagnostics.test.mjs'],{cwd:'apps/desktop',encoding:'utf8',timeout:30000,env});

@@ -16,11 +16,11 @@ spec.loader.exec_module(reader)
 class CrossLanguage0529(unittest.TestCase):
     def test_production_go_writer_python_verifier_and_tampering(self):
         with tempfile.TemporaryDirectory() as tmp:
-            env = dict(os.environ, GO111MODULE='off', GOTOOLCHAIN='local', NL0529_SHADOW_TEST_OUTPUT=tmp, NL0529_SHADOW_TEST_VERSION=reader.VERSION)
-            result = subprocess.run(['go','test','guard_shadow.go','guard_shadow_test.go',
+            env = dict(os.environ, GO111MODULE='on', NL0529_SHADOW_TEST_OUTPUT=tmp, NL0529_SHADOW_TEST_VERSION=reader.VERSION)
+            result = subprocess.run(['go','test','-tags','launcher_nopgx','.',
                                      '-run','TestGuardShadow0529WireFixture','-count=1'],
                                     cwd=ROOT/'services/api/internal/httpapi',env=env,
-                                    stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=35)
+                                    stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=240)
             self.assertEqual(result.returncode, 0, result.stdout.decode(errors='replace'))
             folder=Path(tmp)/'journals';key=Path(tmp)/'key.hex'
             report=reader.analyze_shadow(folder,key)

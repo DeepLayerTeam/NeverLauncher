@@ -60,6 +60,7 @@ jobs:
         run: |
           python3 scripts/version/manage.py check
           python3 scripts/certification/test_integration.py
+      - run: npm ci --ignore-scripts --prefix apps/desktop
       - name: Запуск интеграционных тестов реальных подпроцессов, JAR, Go и платформ
         shell: bash
         env:

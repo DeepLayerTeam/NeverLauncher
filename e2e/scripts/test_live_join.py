@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Только отрицательные сценарии безопасности; это НЕ реальный запуск игры и НЕ приёмка GA."""
 import hashlib
+import gzip
+import struct
 import json
 from pathlib import Path
 import sys
@@ -11,7 +13,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).parent))
 import live_join as gate
-from staged_matching import MatchingServer
+from staged_matching import MatchingServer, read_legacy_world_time, BOOT_READY, JOIN, player_online
 
 
 def put(path, doc):
@@ -40,6 +42,28 @@ class LiveJoinNegativeTests(unittest.TestCase):
     def persist_pins(self):
         put(self.pins, {'schema': 'launcher.compatibility-server/0.52.4',
                         'targets': {self.args.target: self.entry}})
+
+    def test_legacy_server_log_and_rcon(self):
+        self.assertTrue(BOOT_READY.search('Done (3276500000ns)! For help, type "help" or "?"'))
+        self.assertTrue(BOOT_READY.search('Done (3276ms)! For help, type "help" or "?"'))
+        self.assertEqual(JOIN.findall('NL_Cert_Client[/127.0.0.1:1234] logged in with entity id 5'), ['NL_Cert_Client'])
+        self.assertTrue(player_online('There are 1/20 players online: NL_Cert_Client', 'NL_Cert_Client'))
+        self.assertFalse(player_online('There are 0/20 players online: NL_Cert_Client', 'NL_Cert_Client'))
+        self.assertFalse(player_online('There are 1/20 players online: NL_Cert_Client2', 'NL_Cert_Client'))
+
+    def test_legacy_world_ticks_from_nbt(self):
+        path = self.root / 'level.dat'
+        def data(ticks):
+            return b'\x0a\x00\x00\x0a\x00\x04Data\x04\x00\x04Time' + struct.pack('>q', ticks) + b'\x00\x00'
+        for tick in (120, 155):
+            path.write_bytes(gzip.compress(data(tick)))
+            self.assertEqual(read_legacy_world_time(path), tick)
+        path.write_bytes(gzip.compress(data(-1)))
+        with self.assertRaises(ValueError):
+            read_legacy_world_time(path)
+        path.write_bytes(gzip.compress(data(99)[:-1]))
+        with self.assertRaises(ValueError):
+            read_legacy_world_time(path)
 
     def test_exact_server_bundle_pin_is_enforced(self):
         self.assertEqual(gate.load_pinned_bundle(self.args)[1], self.sha)

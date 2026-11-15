@@ -20,6 +20,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 )
 
 const tpmQuote uint16 = 0x8018
@@ -49,7 +51,7 @@ func LoadPCRPolicy0315(path string, now time.Time) (PCRPolicyFile0315, string, e
 	if err != nil {
 		return out, "", err
 	}
-	if !st.Mode().IsRegular() || st.Mode().Perm()&0022 != 0 || st.Size() <= 0 || st.Size() > 1<<20 {
+	if !st.Mode().IsRegular() || !privatefile.Check(path, st, 0022) || st.Size() <= 0 || st.Size() > 1<<20 {
 		return out, "", errors.New("файл политики PCR: требуется обычный файл без права записи для группы и остальных пользователей")
 	}
 	data, err := os.ReadFile(path)

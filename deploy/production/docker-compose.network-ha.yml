@@ -27,13 +27,15 @@ services:
     security_opt: ['no-new-privileges:true']
     networks: [launcher]
 
-  api:
+  api: &ha-api
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       ha-volume-init:
         condition: service_completed_successfully
-    environment:
+    environment: &ha-environment
       LAUNCHER_DEPLOYMENT_MODE: network-ha
       LAUNCHER_PROCESS_ROLE: api
       LAUNCHER_REPLICA_ID: api-a
@@ -56,9 +58,12 @@ services:
       - ha_a_coordinator:/var/lib/launcher/coordinator
 
   api-b:
+    <<: *ha-api
     extends:
+      file: docker-compose.yml
       service: api
     environment:
+      <<: *ha-environment
       LAUNCHER_REPLICA_ID: api-b
     volumes:
       - ha_b_storage:/var/lib/launcher/storage
@@ -67,9 +72,12 @@ services:
       - ha_b_coordinator:/var/lib/launcher/coordinator
 
   worker-a:
+    <<: *ha-api
     extends:
+      file: docker-compose.yml
       service: api
     environment:
+      <<: *ha-environment
       LAUNCHER_PROCESS_ROLE: worker
       LAUNCHER_REPLICA_ID: worker-a
     volumes:
@@ -79,9 +87,12 @@ services:
       - ha_c_coordinator:/var/lib/launcher/coordinator
 
   worker-b:
+    <<: *ha-api
     extends:
+      file: docker-compose.yml
       service: api
     environment:
+      <<: *ha-environment
       LAUNCHER_PROCESS_ROLE: worker
       LAUNCHER_REPLICA_ID: worker-b
     volumes:

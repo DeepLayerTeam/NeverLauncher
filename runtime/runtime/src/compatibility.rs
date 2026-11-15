@@ -1686,7 +1686,7 @@ mod tests {
         assert_eq!(result.main_class, "net.minecraft.launchwrapper.Launch");
         assert!(result.game_args.windows(2).any(|pair| pair[0] == "LegacyPlayer" && pair[1] == "token:offline-session:00000000-0000-0000-0000-000000000000"));
         let expected_assets = root.join("assets/virtual/pre-1.6").to_string_lossy().to_string();
-        assert!(result.game_args.windows(2).any(|pair| pair[0] == "--assetsDir" && pair[1] == expected_assets));
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "--assetsDir" && Path::new(&pair[1]) == Path::new(&expected_assets)));
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Dorg.lwjgl.librarypath=")));
         let _ = stdfs::remove_dir_all(root);

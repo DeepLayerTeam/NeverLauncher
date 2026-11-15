@@ -10,9 +10,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 	"math/big"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -166,6 +169,9 @@ func TestPCRPolicy0315FailClosed(t *testing.T) {
 		if err := os.WriteFile(path, raw, 0600); err != nil {
 			t.Fatal(err)
 		}
+		if err := privatefile.Restrict(path, false); err != nil {
+			t.Fatal(err)
+		}
 	}
 	write()
 	policy, hash, err := LoadPCRPolicy0315(path, now)
@@ -183,7 +189,11 @@ func TestPCRPolicy0315FailClosed(t *testing.T) {
 	}
 	file.Policies[0].PCRs = map[string]string{"0": strings.Repeat("11", 32)}
 	write()
-	if err = os.Chmod(path, 0666); err != nil {
+	if runtime.GOOS == "windows" {
+		if out, err := exec.Command("icacls.exe", path, "/grant", "*S-1-1-0:(W)").CombinedOutput(); err != nil {
+			t.Fatalf("grant fixture: %v %s", err, out)
+		}
+	} else if err = os.Chmod(path, 0666); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := LoadPCRPolicy0315(path, now); err == nil {

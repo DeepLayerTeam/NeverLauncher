@@ -180,7 +180,7 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
             command_preview:String::new(),deterministic_sha256:String::new()};
         let active=cat.components[1].files.iter().cloned().collect();
         apply_selected_actions(cat,&active,Path::new("/client"),&mut plan).unwrap();
-        assert!(plan.classpath_entries.iter().any(|s|s.ends_with("/mods/sodium.jar")));
+        assert!(plan.classpath_entries.iter().any(|s|Path::new(s).ends_with(Path::new("mods/sodium.jar"))));
         assert!(plan.jvm_args.iter().any(|s|s=="-Dfabric.log.level=debug"));
         assert!(plan.game_args.iter().any(|s|s=="--optional-feature=1"));
         let mut baseline=plan.clone();baseline.classpath_entries.clear();baseline.jvm_args.clear();baseline.game_args.clear();

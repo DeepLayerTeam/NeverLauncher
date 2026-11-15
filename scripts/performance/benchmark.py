@@ -569,7 +569,9 @@ def benchmark_startup(
                             )
                         time.sleep(0.015)
                     else:
-                        raise RuntimeError("Desktop не показал маркер готовности интерфейса")
+                        stdout.seek(0)
+                        stderr.seek(0)
+                        raise RuntimeError("Desktop не показал маркер готовности интерфейса: " + stdout.read()[-2000:] + " / " + stderr.read()[-2000:])
                 value = json.loads(marker.read_text(encoding="utf8"))
                 end_mono = time.perf_counter_ns()
                 elapsed_ms = (value["wallClockUnixNs"] - start_wall) / 1e6

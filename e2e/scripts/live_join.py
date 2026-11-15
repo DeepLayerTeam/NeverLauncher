@@ -143,9 +143,9 @@ def serve(args):
             if PLAYER in JOIN.findall(log):
                 try:
                     if player_online(server.rcon.query('list'), PLAYER):
-                        before = parse_gametime(server.rcon.query('time query gametime'))
+                        before = server.game_time()
                         time.sleep(1.2)
-                        after = parse_gametime(server.rcon.query('time query gametime'))
+                        after = server.game_time()
                         if after > before and player_online(server.rcon.query('list'), PLAYER):
                             print('[live-join] реальный игрок обнаружен в сети, игровые такты продолжаются', flush=True)
                             atomically_write(runtime / 'live-server-witness.json', {

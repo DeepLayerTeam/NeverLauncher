@@ -44,6 +44,7 @@ jobs:
         run: |
           mkdir -p parity-reports
           "$RUNNER_TEMP/nl" module-parity audit --report parity-reports/03011.json
+      - run: npm ci --ignore-scripts --prefix apps/desktop
       - name: Выполнить новые equivalents независимо (не просто успешная сборка пакета)
         run: |
           "$RUNNER_TEMP/nl" module-parity audit --module M02,M04,M13,M14,M15,M17,M18,M19 --run-tests --require-tests --timeout 120s --report parity-reports/new-equivalents.json

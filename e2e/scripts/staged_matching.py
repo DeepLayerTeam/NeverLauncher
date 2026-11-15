@@ -8,6 +8,8 @@
 from __future__ import annotations
 
 import hashlib
+import gzip
+import io
 import json
 import math
 import os
@@ -27,9 +29,9 @@ import zipfile
 from staged_readiness import command, find_window, log_health
 
 BOOT_VERSION = re.compile(r"(?im)Starting minecraft server version\s+([^\s]+)")
-BOOT_READY = re.compile(r'(?im)\bDone \([\d.,]+s\)! For help, type ["\x27]?help')
+BOOT_READY = re.compile(r'(?im)\bDone \([\d.,]+(?:ns|ms|s)\)! For help, type ["\x27]?help')
 JOIN = re.compile(
-    r"(?im)\b([A-Za-z0-9_]{1,16})\s+(?:joined the game|logged in with entity id)"
+    r"(?im)\b([A-Za-z0-9_]{1,16})(?:\[[^\]\r\n]{1,128}\])?\s+(?:joined the game|logged in with entity id)"
 )
 LOADER_MARKER = {
     "fabric": re.compile(r"(?i)Fabric Loader[^\n]{0,130}"),
@@ -207,9 +209,13 @@ class Rcon:
 
 def player_online(response, username):
     # Ответ RCON `list` содержит перечисление игроков после двоеточия.
-    if ":" not in response or not re.search(r"(?i)\bThere are\s+\d+\s+of\b", response):
+    # Older versions use "There are N/M players online" rather than "N of ...".
+    match = re.search(r"(?im)\bThere are\s+(\d+)\s*(?:/\s*\d+|of\b[^:\r\n]*):", response)
+    if not match:
+        match = re.search(r"(?im)\bThere are\s+(\d+)\s*/\s*\d+\s+players online:", response)
+    if not match or int(match.group(1)) < 1:
         return False
-    return username in [part.strip() for part in response.split(":", 1)[1].split(",")]
+    return username in [part.strip() for part in response[match.end():].strip().split(",")]
 
 
 def parse_position(response):
@@ -227,6 +233,78 @@ def parse_gametime(response):
     if not found:
         raise RuntimeError("Сервер не подтвердил продвижение игровых тиков")
     return int(found.group(1))
+
+
+def read_legacy_world_time(path):
+    """Read only the server's persisted Data.Time long from bounded gzip NBT.
+
+    Vanilla before 1.8 does not implement `time query gametime`. Its world
+    metadata records actual total ticks (not wall-clock time or DayTime).
+    """
+    limit = 8 * 1024 * 1024
+    if not path.is_file() or path.is_symlink():
+        raise RuntimeError("Отсутствует реальное состояние мира level.dat")
+    with gzip.open(path, "rb") as stream:
+        raw = stream.read(limit + 1)
+    if len(raw) > limit:
+        raise ValueError("NBT exceeds limit")
+    source = io.BytesIO(raw)
+    def read(n):
+        if n < 0 or n > limit:
+            raise ValueError("Invalid NBT size")
+        value = source.read(n)
+        if len(value) != n:
+            raise ValueError("Truncated NBT")
+        return value
+    def num(fmt):
+        return struct.unpack(fmt, read(struct.calcsize(fmt)))[0]
+    def string():
+        return read(num(">H"))
+    ticks = []
+    def value(tag, path, depth):
+        if depth > 32:
+            raise ValueError("NBT nesting exceeds limit")
+        if tag in (1, 2, 3, 4, 5, 6):
+            sizes = {1: 1, 2: 2, 3: 4, 4: 8, 5: 4, 6: 8}
+            data = read(sizes[tag])
+            if path == (b"Data", b"Time"):
+                if tag != 4:
+                    raise ValueError("Invalid world Time type")
+                ticks.append(struct.unpack(">q", data)[0])
+        elif tag in (7, 11, 12):
+            count = num(">i")
+            if count < 0:
+                raise ValueError("Invalid NBT array")
+            read(count * {7: 1, 11: 4, 12: 8}[tag])
+        elif tag == 8:
+            string()
+        elif tag == 9:
+            item = num(">B")
+            count = num(">i")
+            if count < 0 or count > 100000 or (item == 0 and count):
+                raise ValueError("Invalid NBT list")
+            for _ in range(count):
+                value(item, path + (b"[]",), depth + 1)
+        elif tag == 10:
+            names = set()
+            while True:
+                kind = num(">B")
+                if not kind:
+                    break
+                name = string()
+                if name in names:
+                    raise ValueError("Duplicate NBT tag")
+                names.add(name)
+                value(kind, path + (name,), depth + 1)
+        else:
+            raise ValueError("Invalid NBT tag")
+    if num(">B") != 10:
+        raise ValueError("NBT root is not a compound")
+    string()
+    value(10, (), 0)
+    if source.read(1) or len(ticks) != 1 or ticks[0] < 0:
+        raise ValueError("Missing or invalid world Time")
+    return ticks[0]
 
 
 def changed_position(a, b):
@@ -318,7 +396,7 @@ class MatchingServer:
                 check=False,
             )
             if proc.returncode:
-                raise RuntimeError("Не удалось установить совместимый сервер Mojang")
+                raise RuntimeError("Не удалось установить совместимый сервер Mojang: " + proc.stderr.decode("utf-8", "replace")[-1500:])
             installed = json.loads(evidence.read_text())
             if (
                 installed.get("status") != "installed-and-verified"
@@ -393,6 +471,18 @@ class MatchingServer:
         )
         return self
 
+    def game_time(self):
+        # Do not fall back for current versions; a missing modern RCON command
+        # is a real failure. Legacy worlds use the authenticated save command
+        # and the real server's persisted NBT total tick count.
+        match = re.fullmatch(r"1\.(\d+)(?:\.\d+)?", self.minecraft)
+        if match and int(match.group(1)) < 8:
+            reply = self.rcon.query("save-all")
+            if not re.search(r"(?i)\b(?:saved|saving)\b", reply):
+                raise RuntimeError("Сервер не подтвердил сохранение мира через RCON")
+            return read_legacy_world_time(self.root / "world" / "level.dat")
+        return parse_gametime(self.rcon.query("time query gametime"))
+
     def start(self, timeout=180):
         if sys.platform == "win32" and self.entry.endswith(".sh"):
             raise RuntimeError(
@@ -437,7 +527,7 @@ class MatchingServer:
                 # Одна доступность TCP-сокета не доказывает запуск: подтвердите
                 # выполнение команды сервера после полной загрузки и запуска моста.
                 try:
-                    if parse_gametime(self.rcon.query("time query gametime")) >= 0:
+                    if self.game_time() >= 0:
                         return self
                 except (
                     OSError,
@@ -594,9 +684,7 @@ class GameplayObserver:
                 self.position_before = parse_position(
                     self.server.rcon.query(f"data get entity {self.username} Pos")
                 )
-                self.ticks_before = parse_gametime(
-                    self.server.rcon.query("time query gametime")
-                )
+                self.ticks_before = parse_gametime(self.server.rcon.query("time query gametime"))
                 self.first_frame = self.screenshot(wid, "world-before.png")
                 if sys.platform in ("win32", "darwin"):
                     from native_window import move_forward
@@ -618,9 +706,7 @@ class GameplayObserver:
             self.position_after = parse_position(
                 self.server.rcon.query(f"data get entity {self.username} Pos")
             )
-            self.ticks_after = parse_gametime(
-                self.server.rcon.query("time query gametime")
-            )
+            self.ticks_after = parse_gametime(self.server.rcon.query("time query gametime"))
             self.last_frame = self.screenshot(wid, "world-after.png")
             if self.ticks_after <= self.ticks_before:
                 self.failure = "Игровые тики соответствующего сервера не продвигались"

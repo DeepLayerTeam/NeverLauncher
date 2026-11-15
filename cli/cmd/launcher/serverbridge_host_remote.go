@@ -190,14 +190,24 @@ func remoteAcquireLease0284(dir, nodeID string) (func(), error) {
 }
 
 func remoteSecureDir0284(dir string) error {
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if _, err := os.Lstat(dir); errors.Is(err, os.ErrNotExist) {
+		if err := os.MkdirAll(filepath.Dir(dir), 0700); err != nil {
+			return err
+		}
+		if err := os.Mkdir(dir, 0700); err != nil {
+			return err
+		}
+		if err := hostPrivateRestrictDir(dir); err != nil {
+			return err
+		}
+	} else if err != nil {
 		return err
 	}
 	fi, err := os.Lstat(dir)
 	if err != nil {
 		return err
 	}
-	if !fi.IsDir() || fi.Mode().Perm()&0077 != 0 {
+	if !fi.IsDir() || hostPrivateCheck(dir, fi) != nil {
 		return fmt.Errorf("Для состояния удалённого сервиса требуется существующий защищённый каталог: %s", dir)
 	}
 	return nil
@@ -207,21 +217,13 @@ func remoteCheckFile0284(path string) error {
 	if err != nil {
 		return err
 	}
-	if !fi.Mode().IsRegular() || fi.Mode().Perm()&0077 != 0 {
+	if !fi.Mode().IsRegular() || hostPrivateCheck(path, fi) != nil {
 		return fmt.Errorf("Секреты и состояние удалённого сервиса должны храниться в защищённом обычном файле: %s", path)
 	}
 	return nil
 }
 func remoteSyncDir0284(dir string) error {
-	f, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	if err := f.Sync(); err != nil && !errors.Is(err, os.ErrInvalid) {
-		return err
-	}
-	return nil
+	return worldBackupSyncDir02810(dir)
 }
 func remoteSave0284(path string, v any) error {
 	if _, err := os.Lstat(path); err == nil {
@@ -599,9 +601,6 @@ func remoteNewAgent0284(root string, identity remoteIdentity0284, sourceCIDRs []
 	}
 	dir := remoteDir0284(root)
 	if err = remoteSecureDir0284(dir); err != nil {
-		return nil, err
-	}
-	if err = os.MkdirAll(filepath.Join(dir, "commands"), 0700); err != nil {
 		return nil, err
 	}
 	if err = remoteSecureDir0284(filepath.Join(dir, "commands")); err != nil {

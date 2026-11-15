@@ -63,6 +63,7 @@ jobs:
           python3 scripts/certification/test_integration_variant2.py
           python3 scripts/ga/test_verify_java_ga.py
           python3 scripts/ga/test_java_ga.py
+      - run: npm ci --ignore-scripts --prefix apps/desktop
       - name: Запуск интеграционных тестов реальных подпроцессов, JAR, Go и платформ
         shell: bash
         env:
