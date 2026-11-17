@@ -27,6 +27,9 @@ CASES = {
         (sys.executable, "scripts/ga/java_sdk_ga.py", "--output", "{maven}"),
     ),
     "java-signed-fixtures": (
+        # A signed-package check needs a real executable.  This case is first in
+        # the matrix, before devtools-e2e/module-parity build the same CLI path.
+        ("go", "build", "-o", "{cli}", "./cmd/launcher"),
         (sys.executable, "scripts/ga/test_signed_java.py", "--cli", "{cli}"),
     ),
     "java-sdk": (("sh", "sdk/java/core/build.sh", "test"),),
@@ -134,6 +137,7 @@ def case_commands(name, osname):
     return tuple(tuple(MODULE_SCOPES[osname] if arg == "{modules}" else arg for arg in command) for command in CASES[name])
 
 CLI_CASES = {
+    "java-signed-fixtures",
     "trusted-agent-e2e",
     "devtools-e2e",
     "lan-security",

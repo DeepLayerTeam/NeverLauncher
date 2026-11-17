@@ -724,43 +724,59 @@ func runServerBridgeHost01910(root string, console bool) error {
 			_ = atomicWriteJSON01910(paths["runtime"], state, 0o600)
 			return fmt.Errorf("Не удалось запустить процесс Minecraft: %w", startErr)
 		}
+		// Read the kernel birth identity before reaping the child. While it is
+		// unreaped, its PID cannot be reused for a different process.
 		state.Status = "running"
 		state.ProcessPID = cmd.Process.Pid
 		state.ProcessIdentity = hostOwnProcessIdentity0282(cmd.Process.Pid)
-		if state.ProcessIdentity == "" {
-			// При неопределённости отказывайте: нельзя показывать неуправляемую JVM как живую.
-			_ = hostKillProcess01910(cmd.Process.Pid)
-			_ = cmd.Wait()
-			_ = stdin.Close()
-			_ = stdoutFile.Close()
-			_ = stderrFile.Close()
-			_ = combinedFile.Close()
-			state.Status, state.LastError = "failed", "Не удалось проверить идентификатор только что запущенной JVM"
-			state.ProcessPID = 0
-			if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
-				return err
-			}
-			return errors.New(state.LastError)
-		}
-		state.ProcessAt = time.Now().UTC().Format(time.RFC3339Nano)
-		state.ExitCode = nil
-		state.Crashed = false
-		state.LastError = ""
-		if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
-			_ = hostKillProcess01910(cmd.Process.Pid)
-			_ = stdin.Close()
-			stdoutFile.Close()
-			stderrFile.Close()
-			combinedFile.Close()
-			return err
-		}
-
-		hostServiceReady02811(state)
-
-		// Только супервизор управляет stdin и сигналами ОС. CLI отправляет запрос с ограниченной областью действия и
-		// привязкой к сеансу; он не посылает сигналы потенциально повторно использованному PID.
+		// A short-lived process may already be a zombie here. Preserve its exit
+		// status instead of classifying it as an unverified *running* JVM.
 		waitCh := make(chan error, 1)
 		go func() { waitCh <- cmd.Wait() }()
+		if state.ProcessIdentity == "" {
+			select {
+			case completed := <-waitCh:
+				// Keep the actual exit status for the ordinary restart/crash logic
+				// below; never publish a running state without a verified identity.
+				waitCh <- completed
+			case <-time.After(100 * time.Millisecond):
+				// Identity is still unavailable; fail closed.  A concurrent
+				// Wait may have reaped the child, so never signal its numeric PID.
+				// Kill only through the owned OS process handle.
+				_ = cmd.Process.Kill()
+				<-waitCh
+				_ = stdin.Close()
+				_ = stdoutFile.Close()
+				_ = stderrFile.Close()
+				_ = combinedFile.Close()
+				state.Status, state.LastError = "failed", "Не удалось проверить идентификатор только что запущенной JVM"
+				state.ProcessPID = 0
+				if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
+					return err
+				}
+				return errors.New(state.LastError)
+			}
+		} else {
+			state.ProcessAt = time.Now().UTC().Format(time.RFC3339Nano)
+			state.ExitCode = nil
+			state.Crashed = false
+			state.LastError = ""
+			if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
+				if hostIdentityMatches0282(cmd.Process.Pid, state.ProcessIdentity) {
+					_ = hostKillProcess01910(cmd.Process.Pid)
+				}
+				<-waitCh
+				_ = stdin.Close()
+				stdoutFile.Close()
+				stderrFile.Close()
+				combinedFile.Close()
+				return err
+			}
+			hostServiceReady02811(state)
+		}
+
+		// Только супервизор управляет stdin и сигналами ОС. CLI отправляет запрос с ограниченной областью действия и
+		// привязкой к сеансу; он не посылает сигналы потенциально повторно использованный PID.
 		started := time.Now()
 		waitErr, stopped, stopMethod := hostWaitForChild0282(cmd.Process.Pid, stdin, waitCh, paths["stop"], state.SessionID, config.StopTimeoutSeconds, stopSignals)
 		_ = stdin.Close()

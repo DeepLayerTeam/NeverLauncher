@@ -38,13 +38,30 @@ LAUNCHER_SHA="$(printf 'b%.0s' {1..64})"
 BRIDGE_SHA="$(printf 'c%.0s' {1..64})"
 BRIDGE_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg sha "$BRIDGE_SHA" '{($version):{velocitySha256:[$sha],bungeeCordSha256:[$sha],waterfallSha256:[$sha],bukkitSha256:[$sha],spigotSha256:[$sha],paperSha256:[$sha],purpurSha256:[$sha],foliaSha256:[$sha],fabricSha256:[$sha],quiltSha256:[$sha],forgeSha256:[$sha],neoforgeSha256:[$sha],spongeSha256:[$sha],vanillaSha256:[$sha]}}')"
 GUARD_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg guard "$GUARD_SHA" --arg launcher "$LAUNCHER_SHA" '{schemaVersion:"2.0",releases:{($version):{protocolVersion:4,platforms:{windows:{signingMode:"authenticode",artifacts:[{guardSha256:$guard,launcherSha256:$launcher,requireAuthenticode:true}],runtimeProfiles:[{javaMajor:21,moduleSetSha256:("d" * 64)}]},linux:{signingMode:"integrity-only",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]},macos:{signingMode:"developer-id-notarized",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]}}}}}')"
+# The production-mode authlib/Yggdrasil endpoint MUST have its own stable RSA
+# signing key.  Generate a distinct, ephemeral key for this real E2E run; do not
+# fall back to the development signer or reuse release/Guard Ed25519 credentials.
+YGGDRASIL_RSA_KEY="$RUNTIME_DIR/keys/yggdrasil-e2e.pem"
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$YGGDRASIL_RSA_KEY" >/dev/null 2>&1
+# The production image runs as UID 10001; keep the key owner-readable only.
+# Hosted CI runners permit sudo for this isolated test fixture.
+if [[ "$(id -u)" -eq 0 ]]; then
+  chown 10001:10001 "$YGGDRASIL_RSA_KEY"
+else
+  need sudo
+  sudo chown 10001:10001 "$YGGDRASIL_RSA_KEY"
+fi
+chmod 0400 "$YGGDRASIL_RSA_KEY" 2>/dev/null || sudo chmod 0400 "$YGGDRASIL_RSA_KEY"
 GUARD_POLICY_OVERRIDE="$RUNTIME_DIR/guard-policy.override.yml"
 cat > "$GUARD_POLICY_OVERRIDE" <<YAML
 services:
   api-a:
+    volumes:
+      - '$YGGDRASIL_RSA_KEY:/run/launcher-e2e/yggdrasil-signing.pem:ro'
     environment:
       LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '$GUARD_RELEASE_ALLOWLIST_JSON'
       LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: '$BRIDGE_RELEASE_ALLOWLIST_JSON'
+      LAUNCHER_YGGDRASIL_RSA_KEY_FILE: '/run/launcher-e2e/yggdrasil-signing.pem'
 YAML
 cat > "$ENV_FILE" <<ENV
 LAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET

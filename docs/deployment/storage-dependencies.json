@@ -8495,87 +8495,87 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 76,
+          "line": 93,
           "evidence": "local out=\"$1\" tmp=\"${1}.tmp\" code=\"\""
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 91,
+          "line": 108,
           "evidence": "local url=\"$1\" token=\"$2\" body=\"$3\" tmp code"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 98,
+          "line": 115,
           "evidence": "# стадию PostgreSQL, чтобы можно было диагностировать строго отклонённую транзакцию."
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 107,
+          "line": 124,
           "evidence": "local method=\"$1\" url=\"$2\" token=\"$3\" body=\"$4\" out=\"$5\" user_agent=\"${6:-}\""
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 115,
+          "line": 132,
           "evidence": "local expected=\"$1\" actual=\"$2\" context=\"$3\""
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 119,
+          "line": 136,
           "evidence": "local label=\"$1\""
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 123,
+          "line": 140,
           "evidence": "local algorithm=\"$1\" key=\"$2\" payload=\"$3\" file=\"$RUNTIME_DIR/payload-$RANDOM-$RANDOM.txt\""
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 132,
+          "line": 149,
           "evidence": "local user=\"$1\" session=\"$2\" device=\"$3\" epoch=\"$4\" refresh=\"$5\" hash"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 133,
+          "line": 150,
           "evidence": "hash=\"$(printf '%s' \"$refresh\" | sha256sum | awk '{print $1}')\""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 139,
+          "line": 156,
           "evidence": "printf '[device-trust-e2e] сборка CLI, запуск PostgreSQL/Redis и применение закреплённых миграций\\n'"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 141,
+          "line": 158,
           "evidence": "compose up -d postgres redis volume-init"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 152,
+          "line": 169,
           "evidence": "printf '[device-trust-e2e] запуск промышленного PostgreSQL Backend и создание начальной учётной записи\\n'"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 171,
+          "line": 188,
           "evidence": "jq -e --arg migration \"$EXPECTED_CURRENT_MIGRATION\" '.status==\"ready\" and .checks.migrations==$migration and .repository==\"postgres\" and .checks.repository==\"ok\"' \"$RESULT_DIR/rele"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 399,
+          "line": 416,
           "evidence": "printf '[device-trust-e2e] проверка фактического использования PostgreSQL и неизменности закреплённых миграций\\n'"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 412,
+          "line": 429,
           "evidence": ")::text\" | jq -c . \u003e \"$RESULT_DIR/migration-stabilization.json\""
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 426,
+          "line": 443,
           "evidence": "evidence_sha=\"$(sha256sum \"$RESULT_DIR/$evidence_name\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 436,
+          "line": 453,
           "evidence": "claims:{repository:\"postgresql\",vendorHardwareProvenance:\"not-verified\",privateKeyServerExposed:false,deviceTrustRelease:$version}}' \u003e \"$RESULT_DIR/device-trust-result.json\""
         }
       ]

@@ -178,6 +178,20 @@ func runCommon(t *testing.T, open func() storage, scope string) {
 	if u.ProjectRoles[id] != "owner" {
 		t.Fatalf("Отсутствует привязка роли: %+v", u.ProjectRoles)
 	}
+	// В БД действует запрет на отключение последнего активного владельца.
+	// Сначала докажите его, затем добавьте отдельного действующего владельца;
+	// не ослабляйте производственное ограничение ради контракта хранения.
+	if _, err := s.SetUserDisabled(u.ID, true); err == nil {
+		t.Fatal("SQLite разрешила отключить последнего активного владельца проекта")
+	}
+	backup, err := s.SaveUser(model.User{
+		ID: id + "-backup-owner", Email: id + "-backup@example.invalid",
+		DisplayName: "Parity Backup Owner", RoleID: "owner", Status: "active",
+		ProjectRoles: map[string]string{id: "owner"},
+	})
+	if err != nil || backup.ProjectRoles[id] != "owner" {
+		t.Fatalf("Не удалось создать резервного активного владельца: %+v / %v", backup, err)
+	}
 	// Отключение аккаунта критично для безопасности: оно должно сохраняться и не должно
 	// стирать привязки ролей проекта или случайно включать пользователя при чтении устаревших данных.
 	disabled, err := s.SetUserDisabled(u.ID, true)

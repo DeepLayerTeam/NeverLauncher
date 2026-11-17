@@ -142,6 +142,25 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 				args = append(args, "--ro-bind", d, d)
 			}
 		}
+		// GitHub-hosted JDKs live outside /usr, e.g. /opt/hostedtoolcache/Java_.../x64.
+		// Bind only the selected JDK, read-only, never the whole host /opt tree.
+		// Resolve symlinks before binding to avoid executing through an unmounted alias.
+		javaResolved, resolveErr := filepath.EvalSymlinks(java)
+		if resolveErr != nil {
+			return res, fmt.Errorf("Не удалось проверить выбранную JVM: %w", resolveErr)
+		}
+		javaInfo, statErr := os.Stat(javaResolved)
+		if statErr != nil || !javaInfo.Mode().IsRegular() {
+			return res, errors.New("Выбранный исполняемый файл JVM недоступен")
+		}
+		if !strings.HasPrefix(javaResolved, "/usr/") && !strings.HasPrefix(javaResolved, "/bin/") {
+			jdkRoot := filepath.Dir(filepath.Dir(javaResolved)) // .../<JDK>/bin/java -> .../<JDK>
+			if filepath.Base(filepath.Dir(javaResolved)) != "bin" || jdkRoot == "/" {
+				return res, errors.New("Невозможно безопасно смонтировать каталог выбранной JVM")
+			}
+			args = append(args, "--ro-bind", jdkRoot, jdkRoot)
+		}
+		java = javaResolved
 		args = append(args, "--ro-bind", jar, "/app/component.jar", "--chdir", "/work", "--setenv", "HOME", "/work", "--setenv", "TMPDIR", "/tmp", "--setenv", "LAUNCHER_DEVTOOLS_TEST_MODE", "1", "--", java)
 		args = append(args, javaCommandArgs("/app/component.jar", "/tmp", opt.HeapMB, opt.Args)...)
 		cmd = exec.CommandContext(ctx, bwrap, args...)
