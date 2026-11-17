@@ -63,7 +63,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: Собрать и проверить исполняемый пакет Java
@@ -90,7 +90,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.27.3'
       - name: Собрать запускаемые подписанные пакеты .nlext и проверить Ed25519

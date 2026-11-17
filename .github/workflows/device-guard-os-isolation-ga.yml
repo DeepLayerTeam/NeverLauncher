@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
@@ -79,7 +79,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: Проверить привязку сеанса Runtime, отзыв политик и подключения ServerBridge
@@ -95,7 +95,7 @@ jobs:
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: Собрать и проверить наследование дескрипторов и пути заданий Windows
@@ -108,7 +108,7 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: Проверить синтаксис помощника macOS и политики песочницы без подмены реальной аттестации изоляции
@@ -126,7 +126,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: Обеспечить изоляцию потомков посредством namespaces, mounts, seccomp и cgroup.kill
@@ -146,7 +146,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: Проверить ограничения токена AppContainer, списка разрешённых дескрипторов, ACL, брокера и Job

@@ -61,7 +61,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.27.3'
       - name: "Собрать и проверить реальные дочерние процессы Java Backend и CLI"
@@ -82,7 +82,7 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: "Проверить реальный HTTP-брокер Go, постоянное хранение, разрешения, отзыв и безопасность"

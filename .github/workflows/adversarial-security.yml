@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
@@ -57,7 +57,7 @@ jobs:
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: Собрать песочницу Windows и протокол взаимодействия с хостом
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: Собрать для macOS (без подтверждения изоляции средствами ОС)
@@ -84,7 +84,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: "Проверить пространства имён, cgroup и изоляцию дочерних процессов; пропуск считается сбоем"
@@ -102,7 +102,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: "Проверить настоящие AppContainer, ACL, задания и дочерние процессы; пропуск проверки считается сбоем"

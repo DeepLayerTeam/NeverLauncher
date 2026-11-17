@@ -30,7 +30,7 @@ jobs:
       LAUNCHER_DATABASE_DSN: postgres://launcher:integration-only@localhost:5432/launcher?sslmode=disable
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.27.3'
       - name: "Проверить встроенный каталог и тесты обновления"

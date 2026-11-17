@@ -40,7 +40,7 @@ jobs:
           python3 scripts/version/manage.py check
           python3 -m unittest discover -s scripts/acceptance -p 'test_modpacks_textures_publication.py' -v
           python3 -m py_compile scripts/acceptance/modpacks_textures_publication.py
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum

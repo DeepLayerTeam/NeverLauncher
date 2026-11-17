@@ -36,7 +36,7 @@ jobs:
       LAUNCHER_SERVERBRIDGE_HA_DSN: ${{ secrets.LAUNCHER_SERVERBRIDGE_HA_DSN }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
       - name: Проверить хост ServerBridge, разрешения, отзыв доступа и гонки
