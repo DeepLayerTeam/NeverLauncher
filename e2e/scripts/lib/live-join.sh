@@ -61,10 +61,16 @@ PY
   # Its endpoint is bound to the original server by live_join.verify; RCON still observes that server.
   if [[ "$loader" == vanilla && "${TARGET_OS:-}" == linux && "$MINECRAFT_VERSION" =~ ^1\.(14|15|16|17|18)(\.[0-9]+)?$ ]]; then
     [[ ! -e "$root/resource-ready-proxy.port" && ! -e "$root/resource-ready-proxy.json" ]] || return 3
+    # The game runtime may spend the full certification interval loading assets
+    # on a CPU-only GitHub runner. Keep the proxy alive through that interval;
+    # it still forwards only a *real* client connection after a real atlas marker.
+    local client_runtime="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-120}"
+    [[ "$client_runtime" =~ ^[0-9]{1,3}$ ]] && (( client_runtime >= 1 && client_runtime <= 240 )) || return 3
+    local proxy_timeout=$((10#$client_runtime + 30))
     python3 "$ROOT/e2e/scripts/vanilla-1171-resource-ready-proxy.py" \
       --minecraft "$MINECRAFT_VERSION" --backend-port "$LIVE_JOIN_SERVER_PORT" \
       --logs "$profile_root/logs" --port-file "$root/resource-ready-proxy.port" \
-      --evidence "$root/resource-ready-proxy.json" --timeout 90 > "$root/resource-ready-proxy.log" 2>&1 &
+      --evidence "$root/resource-ready-proxy.json" --timeout "$proxy_timeout" > "$root/resource-ready-proxy.log" 2>&1 &
     LIVE_JOIN_PROXY_PID=$!
     for ((attempt=0;attempt<80;attempt++)); do
       [[ -s "$root/resource-ready-proxy.port" ]] && break

@@ -108,7 +108,35 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 		if e != nil {
 			return res, errors.New("Песочница недоступна: установите bubblewrap. Изоляция процесса НЕ является песочницей безопасности")
 		}
+		// Prefer a private network namespace. Some hosted Linux kernels allow
+		// user namespaces but reject bringing up loopback inside them (RTM_NEWADDR).
+		// Only that precise failure allows a fallback; never use the host network
+		// without a kernel-enforced seccomp filter blocking socket/connect.
+		probe := exec.CommandContext(ctx, bwrap, "--die-with-parent", "--unshare-all", "--ro-bind", "/", "/", "--", "/bin/true")
+		probe.Env = []string{"PATH=/usr/bin:/bin", "LANG=C"}
+		probeOutput, probeErr := probe.CombinedOutput()
+		fallback := false
+		if probeErr != nil {
+			if strings.Contains(string(probeOutput), "loopback: Failed RTM_NEWADDR: Operation not permitted") {
+				fallback = true
+			} else {
+				return res, fmt.Errorf("Песочница bubblewrap не может изолировать систему: %s: %w", strings.TrimSpace(string(probeOutput)), probeErr)
+			}
+		}
 		args := []string{"--die-with-parent", "--new-session", "--unshare-all", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--dir", "/work", "--dir", "/app", "--dir", "/etc", "--dir", "/etc/ssl"}
+		var filter *os.File
+		if fallback {
+			var filterErr error
+			filter, filterErr = sandboxNoNetworkFilter()
+			if filterErr != nil {
+				return res, fmt.Errorf("Песочница не может безопасно заблокировать сетевые вызовы: %w", filterErr)
+			}
+			defer filter.Close()
+			// bubblewrap receives the BPF program as descriptor 3; the filter
+			// is installed in the jailed process before exec of the untrusted JVM.
+			args = append(args, "--share-net", "--seccomp", "3")
+			defer func() { _ = os.Remove(filter.Name()) }()
+		}
 		for _, d := range []string{"/usr", "/lib", "/lib64", "/bin", "/etc/alternatives", "/etc/ssl/certs", "/etc/java"} {
 			if st, e := os.Stat(d); e == nil && st.IsDir() {
 				args = append(args, "--ro-bind", d, d)
@@ -117,6 +145,9 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 		args = append(args, "--ro-bind", jar, "/app/component.jar", "--chdir", "/work", "--setenv", "HOME", "/work", "--setenv", "TMPDIR", "/tmp", "--setenv", "LAUNCHER_DEVTOOLS_TEST_MODE", "1", "--", java)
 		args = append(args, javaCommandArgs("/app/component.jar", "/tmp", opt.HeapMB, opt.Args)...)
 		cmd = exec.CommandContext(ctx, bwrap, args...)
+		if filter != nil {
+			cmd.ExtraFiles = []*os.File{filter}
+		}
 	} else {
 		cmd = exec.CommandContext(ctx, java, javaCommandArgs(jar, work, opt.HeapMB, opt.Args)...)
 		cmd.Dir = work

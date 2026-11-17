@@ -33,10 +33,21 @@ jobs:
           printf '%s\n' 'ci-health-only-password-no-access' > "$d/redis-health"
           chmod 600 "$d/redis-health"
           python - "$d" <<'PY'
+          import re
+          import subprocess
           import sys
           from pathlib import Path
           d = Path(sys.argv[1])
+          # Production intentionally uses eth1. A hosted runner has a different
+          # interface, and keepalived --config-test verifies that it exists.
+          routes = subprocess.check_output(['ip', '-o', '-4', 'route', 'show', 'default'], text=True)
+          found = re.search(r'\bdev ([a-zA-Z][a-zA-Z0-9_.:-]{0,20})\b', routes)
+          if not found:
+              raise SystemExit('No usable default IPv4 interface for keepalived config test')
+          iface = found.group(1)
           text = Path('deploy/production/dependency-ha.example.env').read_text()
+          assert 'HA_INTERFACE=eth1\n' in text
+          text = text.replace('HA_INTERFACE=eth1\n', f'HA_INTERFACE={iface}\n', 1)
           text = text.replace('/etc/launcher/secrets/redis-ha-health-password', str(d / 'redis-health'))
           (d / 'ha.env').write_text(text)
           (d / 'ha.env').chmod(0o600)
