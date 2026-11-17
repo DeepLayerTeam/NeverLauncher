@@ -1000,82 +1000,82 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 672,
+          "line": 689,
           "evidence": "POSTGRES_PASSWORD: ci-postgres-password"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 745,
+          "line": 762,
           "evidence": "name: PostgreSQL, Redis и реальная сквозная проверка клиента Minecraft"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 769,
+          "line": 786,
           "evidence": "jq maven postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \\"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 773,
+          "line": 790,
           "evidence": "- name: Проверить миграцию PostgreSQL для федерации, перезапуск и несколько экземпляров"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 774,
+          "line": 791,
           "evidence": "run: bash e2e/scripts/run-federation-postgres-e2e.sh"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 775,
+          "line": 792,
           "evidence": "- name: Проверить надёжную инициализацию PostgreSQL и отказ при ошибочных повторных попытках"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 777,
+          "line": 794,
           "evidence": "- name: Проверить перезапуск PostgreSQL с несколькими репликами и разграничением прав 0.21.3"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 979,
+          "line": 996,
           "evidence": "- name: Проверить жизненный цикл Device Trust в PostgreSQL"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 981,
+          "line": 998,
           "evidence": "LAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1301,
+          "line": 1318,
           "evidence": "name: Инвентаризация хранилищ и реальная эквивалентность SQLite/PostgreSQL 0.37.1"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1305,
+          "line": 1322,
           "evidence": "postgres:"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1306,
+          "line": 1323,
           "evidence": "image: postgres:18"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1342,
+          "line": 1359,
           "evidence": "LAUNCHER_PARITY_POSTGRES_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1348,
+          "line": 1365,
           "evidence": "test -z \"$(gofmt -l internal/storageparity internal/repository/postgres.go)\""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1395,
+          "line": 1412,
           "evidence": "- name: Проверить двусторонний перенос Core и полного минимального пакета между SQLite и PostgreSQL (0.37.7)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1399,
+          "line": 1416,
           "evidence": "LAUNCHER_PG_TEST_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
         }
       ]
@@ -8325,7 +8325,7 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 91,
+          "line": 97,
           "evidence": "local loader=\"$1\" resolved=\"$2\" profile=\"$3\""
         }
       ]

@@ -9,7 +9,7 @@ from verify_java_ga import verify
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'certification'))
 from review_integration_variant2 import REQUIRED, review
-from run_integration_variant2 import CASES
+from run_integration_variant2 import case_commands
 
 SHA='d'*40
 
@@ -25,7 +25,7 @@ class ReleaseApprovalTests(unittest.TestCase):
                         'revision':SHA,'passed':True,'fullyCertified':False,'results':[]}
                 for name in sorted(cases):
                     steps=[]
-                    for cmd in CASES[name]:
+                    for cmd in case_commands(name, platform):
                         parts=[str(base/'binary') if a in ('{root}','{cli}','{parity}','{maven}') else a for a in cmd]
                         steps.append({'command':parts,'exitCode':0,'status':'passed','outputSha256':'f'*64})
                     record['results'].append({'case':name,'status':'passed','steps':steps})

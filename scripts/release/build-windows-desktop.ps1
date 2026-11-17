@@ -198,7 +198,12 @@ try {
     $SignedProduction = $null -ne $SigningContext
     $UnsignedOnly = ([Environment]::GetEnvironmentVariable("LAUNCHER_UNSIGNED_ONLY") -eq "1")
     if ($UnsignedOnly -and $RequireCodeSigning) { throw "Режим только неподписанных сборок несовместим с обязательной платформенной подписью" }
-    $SigningRequired = (-not $UnsignedOnly) -and ($RequireCodeSigning -or (-not $AllowUnsignedDevelopmentPackage))
+    # LAUNCHER_UNSIGNED_ONLY is not an authorization to bypass production signing.
+    # A caller must explicitly request a development-only unsigned package.
+    if ($UnsignedOnly -and -not $AllowUnsignedDevelopmentPackage) {
+        throw "LAUNCHER_UNSIGNED_ONLY разрешён только с -AllowUnsignedDevelopmentPackage"
+    }
+    $SigningRequired = $RequireCodeSigning -or (-not $AllowUnsignedDevelopmentPackage)
     if ($SigningRequired -and -not $SignedProduction) {
         throw "Для поставки Windows x64+ARM64 в производство нужны учётные данные Authenticode. Передайте -CodeSigningCertificateThumbprint либо -CodeSigningCertificatePath. Используйте -AllowUnsignedDevelopmentPackage только для CI и тестовых сборок."
     }

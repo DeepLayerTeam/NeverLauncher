@@ -62,4 +62,16 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y bubblewrap
       - run: go build -o /tmp/nl-devtools ./cmd/launcher
         working-directory: cli
+      - name: Включить unprivileged user namespaces для изолированного одноразового CI runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Ubuntu 24.04 AppArmor blocks bwrap's uid mapping by default. Only the
+          # disposable test runner is affected; the application still requires bwrap
+          # and fails closed when namespace creation is unavailable.
+          if [[ -f /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]] &&
+             [[ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" == "1" ]]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          bwrap --die-with-parent --unshare-all --ro-bind / / -- /bin/true
       - run: bash scripts/devtools/sandbox_smoke.sh /tmp/nl-devtools

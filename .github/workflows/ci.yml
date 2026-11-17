@@ -213,6 +213,23 @@ jobs:
           cargo test --manifest-path src-tauri/Cargo.toml
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
           cargo build --release --manifest-path src-tauri/Cargo.toml
+      - name: Подготовить временную пару Ed25519 для тестовой поставки Linux Guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install 'cryptography>=43,<47'
+          python3 - <<'PY_SIGN'
+          import os
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+          key = Ed25519PrivateKey.generate()
+          seed = key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption()).hex()
+          pub = key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env:
+              env.write('LAUNCHER_COMPONENT_SET_ED25519_SEED=' + seed + '\n')
+              env.write('LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY=' + pub + '\n')
+          PY_SIGN
+          # Ключ одноразовый для CI; его нельзя использовать как производственный корень доверия.
       - name: Собрать промышленный пакет Desktop и Guard для Linux
         run: bash scripts/release/build-linux-desktop.sh
       - name: Сформировать свидетельства CI для Guard Linux

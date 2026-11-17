@@ -89,8 +89,8 @@
       "size": 3668
     },
     ".github/workflows/ci.yml": {
-      "sha256": "b07cf10104a1304accb910d366e7c76a74a4b140520b4130ee70b9d02882b961",
-      "size": 98448
+      "sha256": "d10b433effedea21e348c67d4b176996361c1123e6f85aff48355b8e7465da61",
+      "size": 99616
     },
     ".github/workflows/client-factory.yml": {
       "sha256": "247fc31042e1a2bd180e5fdf9a37798924285a5d402b9381f20d0684d5d99635",
@@ -133,8 +133,8 @@
       "size": 9976
     },
     ".github/workflows/dependency-ha.yml": {
-      "sha256": "53529634752b3569da28b99cf8307e1f81030389e4bc5a001f675ac02f752e04",
-      "size": 2137
+      "sha256": "8905590f8a656608a7967f5a04710455065826ee0b6e26fd14f72b0fee22bc24",
+      "size": 2805
     },
     ".github/workflows/dependency-review.yml": {
       "sha256": "690bfd8c5b748a6f48895952222f70a423367e34e5eefa323aa65ce25c18eca4",
@@ -177,8 +177,8 @@
       "size": 7588
     },
     ".github/workflows/devtools-test-isolation.yml": {
-      "sha256": "0828e73209fd1b4766eda7cde1b3d210d1cb39314a2a85d3fd4e1ffd5caad9b4",
-      "size": 2615
+      "sha256": "279c5a168d3fa7fafffd10b49fa92d3c1ae8662cfd80c6ae4927b1a27f4ec608",
+      "size": 3383
     },
     ".github/workflows/diagnostics-sentry.yml": {
       "sha256": "651b7cb8ce5caec85865f03ec45e23a6fb992861b07c8fafc2bec247e5dd7d51",
@@ -1065,8 +1065,8 @@
       "size": 63506
     },
     "scripts/release/build-windows-desktop.ps1": {
-      "sha256": "299b9c357b8c345d5c945e4aa1d46cd1c16f03285e453d783fd439c5daf0f2f1",
-      "size": 33440
+      "sha256": "eb7007fa045100a436eff3904af79b02fceb4a0e313856fe103bfb40b42af289",
+      "size": 33750
     },
     "scripts/release/canonical_zip.py": {
       "sha256": "10de882670055f2062db94fbc50c6677ef8a8033a31502427d6c96c32e9c4c06",

@@ -37,7 +37,7 @@ GUARD_SHA="$(printf 'a%.0s' {1..64})"
 LAUNCHER_SHA="$(printf 'b%.0s' {1..64})"
 BRIDGE_SHA="$(printf 'c%.0s' {1..64})"
 BRIDGE_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg sha "$BRIDGE_SHA" '{($version):{velocitySha256:[$sha],bungeeCordSha256:[$sha],waterfallSha256:[$sha],bukkitSha256:[$sha],spigotSha256:[$sha],paperSha256:[$sha],purpurSha256:[$sha],foliaSha256:[$sha],fabricSha256:[$sha],quiltSha256:[$sha],forgeSha256:[$sha],neoforgeSha256:[$sha],spongeSha256:[$sha],vanillaSha256:[$sha]}}')"
-GUARD_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg guard "$GUARD_SHA" --arg launcher "$LAUNCHER_SHA" '{schemaVersion:"2.0",releases:{($version):{protocolVersion:4,platforms:{windows:{signingMode:"authenticode",artifacts:[{guardSha256:$guard,launcherSha256:$launcher,requireAuthenticode:true}]},linux:{signingMode:"integrity-only",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]},macos:{signingMode:"developer-id-notarized",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]}}}}}')"
+GUARD_RELEASE_ALLOWLIST_JSON="$(jq -cn --arg version "$VERSION" --arg guard "$GUARD_SHA" --arg launcher "$LAUNCHER_SHA" '{schemaVersion:"2.0",releases:{($version):{protocolVersion:4,platforms:{windows:{signingMode:"authenticode",artifacts:[{guardSha256:$guard,launcherSha256:$launcher,requireAuthenticode:true}],runtimeProfiles:[{javaMajor:21,moduleSetSha256:("d" * 64)}]},linux:{signingMode:"integrity-only",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]},macos:{signingMode:"developer-id-notarized",artifacts:[{guardSha256:$guard,launcherSha256:$launcher}]}}}}}')"
 GUARD_POLICY_OVERRIDE="$RUNTIME_DIR/guard-policy.override.yml"
 cat > "$GUARD_POLICY_OVERRIDE" <<YAML
 services:
