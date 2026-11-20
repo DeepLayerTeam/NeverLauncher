@@ -725,7 +725,7 @@ func validateGuardAttestation0134(a guardRemoteAttestation0134, challengeID, cha
 	} else if macos {
 		if p.MacOS == nil || !p.MacOS.CoreDumpsDisabled || !p.MacOS.DebuggerAttachDenied || !p.MacOS.CodeSignatureValid ||
 			!p.MacOS.HardenedRuntime || !p.MacOS.LibraryValidation || !p.MacOS.DyldEnvironmentSanitized || !p.MacOS.ParentExitWatch || !p.MacOS.PrivateUmask {
-			return errors.New("Проверка политики процесса Guard в macOS не пройдена")
+			return errors.New("Guard macOS process policy verification failed: Проверка политики процесса Guard в macOS не пройдена")
 		}
 		if a.Evidence.Guard.MacOS == nil || a.Evidence.Launcher.MacOS == nil ||
 			!a.Evidence.Guard.MacOS.CodeSignatureValid || !a.Evidence.Guard.MacOS.HardenedRuntime || !a.Evidence.Guard.MacOS.LibraryValidation ||

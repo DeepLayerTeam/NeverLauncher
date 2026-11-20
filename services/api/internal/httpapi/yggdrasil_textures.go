@@ -75,7 +75,13 @@ func (s Server) textureDomains0256() ([]string, error) {
 	if u.Path != "" && u.Path != "/" {
 		return nil, errors.New("Публичный URL: требуется «адрес начала API без пути»")
 	}
-	if u.Scheme != "https" && (config.IsProductionEnvironment(s.Config.Environment) || u.Scheme != "http") {
+	// Согласуйте правило с ValidateProduction: только изолированный
+	// e2e-production контур может использовать HTTP на локальном интерфейсе.
+	// Это не разрешает HTTP на реальном production и удалённых адресах.
+	loopbackE2E := strings.EqualFold(strings.TrimSpace(s.Config.Environment), "e2e-production") &&
+		u.Scheme == "http" && (strings.EqualFold(u.Hostname(), "localhost") ||
+		u.Hostname() == "127.0.0.1" || u.Hostname() == "::1")
+	if u.Scheme != "https" && (u.Scheme != "http" || (config.IsProductionEnvironment(s.Config.Environment) && !loopbackE2E)) {
 		return nil, errors.New("Источник текстур должен использовать HTTPS")
 	}
 	domains := []string{host}
@@ -140,7 +146,13 @@ func (s Server) textureProperty0256(texture bridgeTextureRecord, signed bool) (m
 	if err != nil {
 		return nil, err
 	}
-	production := config.IsProductionEnvironment(s.Config.Environment)
+	// Только подписанная локальная E2E-среда использует HTTP loopback:
+	// в настоящем production запрет сохраняется без исключений.
+	publicURL, _ := url.Parse(s.Config.PublicURL)
+	localE2E := strings.EqualFold(strings.TrimSpace(s.Config.Environment), "e2e-production") &&
+		publicURL != nil && publicURL.Scheme == "http" && (strings.EqualFold(publicURL.Hostname(), "localhost") ||
+		publicURL.Hostname() == "127.0.0.1" || publicURL.Hostname() == "::1")
+	production := config.IsProductionEnvironment(s.Config.Environment) && !localE2E
 	// Никогда не подтверждайте доверие к произвольным внешним URL, не прошедшим
 	// импорт PNG.
 	if !textureURLAllowed0256(texture.SkinURL, domains, production) {

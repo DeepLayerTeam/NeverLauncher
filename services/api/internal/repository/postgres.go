@@ -547,6 +547,26 @@ func (r *SQLRepository) SaveUser(user model.User) (model.User, error) {
 		return model.User{}, err
 	}
 	defer tx.Rollback()
+	// SaveUser также может изменить роль и статус существующего владельца.
+	// Сериализуйте эту ветку с SetUserDisabled, иначе обновление через upsert
+	// могло бы обходить защиту последнего активного владельца PostgreSQL.
+	if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(18462, 3701)`); err != nil {
+		return model.User{}, err
+	}
+	var oldRole, oldStatus string
+	err = tx.QueryRow(`SELECT role_id, status FROM users WHERE id=$1 FOR UPDATE`, user.ID).Scan(&oldRole, &oldStatus)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return model.User{}, err
+	}
+	if err == nil && oldRole == "owner" && oldStatus == "active" && (user.RoleID != "owner" || user.Status != "active") {
+		var otherOwners int
+		if err := tx.QueryRow(`SELECT count(*) FROM users WHERE role_id='owner' AND status='active' AND id<>$1`, user.ID).Scan(&otherOwners); err != nil {
+			return model.User{}, err
+		}
+		if otherOwners == 0 {
+			return model.User{}, ErrConflict
+		}
+	}
 	_, err = tx.Exec(`INSERT INTO users (id, email, display_name, role_id, status, project_roles, password_hash, password_updated_at, last_login_at, disabled_at, created_at, updated_at)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.display_name, role_id = EXCLUDED.role_id, status = EXCLUDED.status, project_roles = EXCLUDED.project_roles, password_hash = EXCLUDED.password_hash, password_updated_at = EXCLUDED.password_updated_at, last_login_at = EXCLUDED.last_login_at, disabled_at = EXCLUDED.disabled_at, updated_at = EXCLUDED.updated_at`,
@@ -583,17 +603,57 @@ WHERE auth_identities.subject=EXCLUDED.subject`, identityID, user.ID, user.Email
 	return r.GetUser(user.ID)
 }
 
+// SetUserDisabled сериализует изменения статусов владельцев в PostgreSQL.
+// Проверка и обновление выполняются в одной транзакции: два одновременных
+// отключения разных владельцев не могут оба пройти проверку остатка.
 func (r *SQLRepository) SetUserDisabled(id string, disabled bool) (model.User, error) {
 	if err := r.check(); err != nil {
 		return model.User{}, err
 	}
+	tx, err := r.db.Begin()
+	if err != nil {
+		return model.User{}, err
+	}
+	defer tx.Rollback()
+	if disabled {
+		// Общая блокировка — не на конкретную строку: транзакции двух
+		// владельцев обязаны увидеть результат друг друга.
+		if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(18462, 3701)`); err != nil {
+			return model.User{}, err
+		}
+		var currentRole, currentStatus string
+		if err := tx.QueryRow(`SELECT role_id, status FROM users WHERE id=$1 FOR UPDATE`, id).Scan(&currentRole, &currentStatus); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return model.User{}, ErrNotFound
+			}
+			return model.User{}, err
+		}
+		if currentRole == "owner" && currentStatus == "active" {
+			var otherOwners int
+			if err := tx.QueryRow(`SELECT count(*) FROM users WHERE role_id='owner' AND status='active' AND id<>$1`, id).Scan(&otherOwners); err != nil {
+				return model.User{}, err
+			}
+			if otherOwners == 0 {
+				return model.User{}, ErrConflict
+			}
+		}
+	}
 	status := "active"
-	var disabledAt any = nil
+	var disabledAt any
 	if disabled {
 		status = "disabled"
 		disabledAt = time.Now().UTC()
 	}
-	if _, err := r.db.Exec(`UPDATE users SET status = $2, disabled_at = $3, updated_at = now() WHERE id = $1`, id, status, disabledAt); err != nil {
+	res, err := tx.Exec(`UPDATE users SET status=$2, disabled_at=$3, updated_at=now() WHERE id=$1`, id, status, disabledAt)
+	if err != nil {
+		return model.User{}, err
+	}
+	if rows, err := res.RowsAffected(); err != nil {
+		return model.User{}, err
+	} else if rows != 1 {
+		return model.User{}, ErrNotFound
+	}
+	if err := tx.Commit(); err != nil {
 		return model.User{}, err
 	}
 	return r.GetUser(id)

@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"crypto"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
@@ -10,6 +11,8 @@ import (
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -116,6 +119,64 @@ func TestYggdrasilPolicyFailsClosed0256(t *testing.T) {
 	}
 	if !domainAllowed0256("cdn.example.test", []string{".example.test"}) || domainAllowed0256("example.test", []string{".example.test"}) {
 		t.Fatal("сопоставление по суффиксу нарушено")
+	}
+}
+
+// Для production подписанные HTTP URL запрещены; отдельный loopback E2E
+// должен уметь подписывать настоящий профиль, как требует ValidateProduction.
+func TestYggdrasilLoopbackE2EPolicy0256(t *testing.T) {
+	for _, addr := range []string{"127.0.0.1", "localhost", "[::1]"} {
+		s := Server{Config: config.Config{Environment: "e2e-production", PublicURL: "http://" + addr + ":18081"}}
+		if _, err := s.textureDomains0256(); err != nil {
+			t.Errorf("E2E loopback %s: %v", addr, err)
+		}
+	}
+	for _, tc := range []struct{ environment, publicURL string }{
+		{"production", "http://127.0.0.1:18081"},
+		{"prod", "http://localhost:18081"},
+		{"e2e-production", "http://example.test:18081"},
+	} {
+		s := Server{Config: config.Config{Environment: tc.environment, PublicURL: tc.publicURL}}
+		if _, err := s.textureDomains0256(); err == nil {
+			t.Errorf("небезопасный URL %s в %s принят", tc.publicURL, tc.environment)
+		}
+	}
+}
+
+func TestYggdrasilLoopbackE2ERealRSASigning0256(t *testing.T) {
+	private, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyFile := filepath.Join(t.TempDir(), "yggdrasil.pem")
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(private)})
+	if err := os.WriteFile(keyFile, pemBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	s := Server{Config: config.Config{
+		Environment: "e2e-production", PublicURL: "http://127.0.0.1:18081", YggdrasilSigningKeyFile: keyFile,
+	}}
+	skin := "http://127.0.0.1:18081/api/v1/textures/blob/" + strings.Repeat("a", 64)
+	property, err := s.textureProperty0256(bridgeTextureRecord{
+		UUID: "12345678-1234-4234-9234-0123456789ab", Username: "LocalPlayer", SkinURL: skin,
+	}, true)
+	if err != nil {
+		t.Fatalf("В производственном E2E-профиле не удалось подписать текстуру: %v", err)
+	}
+	signature, err := base64.StdEncoding.DecodeString(property["signature"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha1.Sum([]byte(property["value"]))
+	if err := rsa.VerifyPKCS1v15(&private.PublicKey, crypto.SHA1, digest[:], signature); err != nil {
+		t.Fatalf("Подпись RSA не прошла проверку: %v", err)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(property["value"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(decoded), skin) {
+		t.Fatalf("Локальная текстура E2E потеряна: %s", decoded)
 	}
 }
 

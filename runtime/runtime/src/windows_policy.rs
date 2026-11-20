@@ -174,7 +174,7 @@ mod windows_impl {
     };
     use tokio::process::{Child, Command};
     use windows_sys::Win32::{
-        Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE},
+        Foundation::{CloseHandle, FILETIME, HANDLE, INVALID_HANDLE_VALUE},
         System::{
             Diagnostics::ToolHelp::{
                 CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, Thread32First,
@@ -194,7 +194,7 @@ mod windows_impl {
             },
             Memory::{HeapSetInformation, HeapEnableTerminationOnCorruption},
             Threading::{
-                GetExitCodeProcess, GetProcessMitigationPolicy, OpenProcess, OpenThread, ResumeThread,
+                GetExitCodeProcess, GetProcessMitigationPolicy, GetProcessTimes, OpenProcess, OpenThread, ResumeThread,
                 SetProcessMitigationPolicy, ProcessChildProcessPolicy, ProcessDynamicCodePolicy,
                 ProcessExtensionPointDisablePolicy, ProcessImageLoadPolicy,
                 ProcessStrictHandleCheckPolicy, CREATE_SUSPENDED, PROCESS_MITIGATION_POLICY,
@@ -658,6 +658,21 @@ mod windows_impl {
         Ok(result)
     }
 
+    // ToolHelp stores only parent PIDs, not parent process creation identities.
+    // Windows can recycle the PID after the former process exits; without a
+    // creation-time check, an unrelated process inherited from that former
+    // PID is reported as an escaped descendant of the new JVM.
+    fn process_created_at_filetime(process: HANDLE) -> Result<u64, String> {
+        let mut created = FILETIME { dwLowDateTime: 0, dwHighDateTime: 0 };
+        let mut exited = FILETIME { dwLowDateTime: 0, dwHighDateTime: 0 };
+        let mut kernel = FILETIME { dwLowDateTime: 0, dwHighDateTime: 0 };
+        let mut user = FILETIME { dwLowDateTime: 0, dwHighDateTime: 0 };
+        if unsafe { GetProcessTimes(process, &mut created, &mut exited, &mut kernel, &mut user) } == 0 {
+            return Err(format!("Guard: не удалось получить время создания процесса: {}", std::io::Error::last_os_error()));
+        }
+        Ok((u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime))
+    }
+
     fn verify_process_tree_for_job(job: HANDLE, root_pid: u32) -> Result<RuntimeProcessTreeSnapshot, String> {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
@@ -694,6 +709,14 @@ mod windows_impl {
                 "Guard: нарушена целостность дерева процессов — корневой процесс Runtime с PID {root_pid} отсутствует в объекте задания"
             ));
         }
+
+        let root_process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, root_pid) };
+        if root_process.is_null() {
+            return Err(format!("Guard: невозможно проверить время создания корневого Runtime PID {root_pid}: {}", std::io::Error::last_os_error()));
+        }
+        let root_created = process_created_at_filetime(root_process);
+        unsafe { let _ = CloseHandle(root_process); }
+        let root_created = root_created?;
 
         let mut descendants = HashSet::new();
         let mut queue = VecDeque::from([root_pid]);
@@ -744,6 +767,21 @@ mod windows_impl {
                     return Err(format!("Корневой процесс Runtime с PID {pid} завершился во время проверки объекта задания Guard"));
                 }
                 continue;
+            }
+            if pid != root_pid {
+                let created = match process_created_at_filetime(process) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        unsafe { let _ = CloseHandle(process); }
+                        return Err(err);
+                    }
+                };
+                if created < root_created {
+                    // Процесс родился раньше JVM: ToolHelp связал его с
+                    // повторно использованным PID, это не потомок Runtime.
+                    unsafe { let _ = CloseHandle(process); }
+                    continue;
+                }
             }
             let mut in_job = 0i32;
             let ok = unsafe { IsProcessInJob(process, job, &mut in_job) };

@@ -115,11 +115,25 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
-            libvulkan1 mesa-vulkan-drivers \
-            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64
+          # Внешние репозитории Ubuntu иногда возвращают HTTP 503 во время
+          # установки Mesa. Повторите именно реальную установку: отсутствие
+          # системной библиотеки по-прежнему завершает задание с ошибкой.
+          installed=false
+          for attempt in 1 2 3; do
+            if sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y \
+              -o Acquire::Retries=3 --no-install-recommends \
+              jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
+              libvulkan1 mesa-vulkan-drivers \
+              libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64; then
+              installed=true
+              break
+            fi
+            if [[ "$attempt" != "3" ]]; then sleep $((attempt * 15)); fi
+          done
+          if [[ "$installed" != "true" ]]; then
+            echo 'Не удалось установить обязательные зависимости Minecraft/Mesa после 3 попыток' >&2
+            exit 1
+          fi
           # Minecraft 26.x может требовать Vulkan WSI наряду с OpenGL. Выбирайте настоящий
           # программный ICD Mesa вместо отсутствующего GPU на размещённом агенте.
           for icd in /usr/share/vulkan/icd.d/lvp_icd.*.json; do
@@ -341,11 +355,25 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
-            libvulkan1 mesa-vulkan-drivers \
-            libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64
+          # Внешние репозитории Ubuntu иногда возвращают HTTP 503 во время
+          # установки Mesa. Повторите именно реальную установку: отсутствие
+          # системной библиотеки по-прежнему завершает задание с ошибкой.
+          installed=false
+          for attempt in 1 2 3; do
+            if sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y \
+              -o Acquire::Retries=3 --no-install-recommends \
+              jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \
+              libvulkan1 mesa-vulkan-drivers \
+              libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 x11-xserver-utils libxcursor1 libxinerama1 libasound2t64; then
+              installed=true
+              break
+            fi
+            if [[ "$attempt" != "3" ]]; then sleep $((attempt * 15)); fi
+          done
+          if [[ "$installed" != "true" ]]; then
+            echo 'Не удалось установить обязательные зависимости Minecraft/Mesa после 3 попыток' >&2
+            exit 1
+          fi
           # Minecraft 26.x может требовать Vulkan WSI наряду с OpenGL. Выбирайте настоящий
           # программный ICD Mesa вместо отсутствующего GPU на размещённом агенте.
           for icd in /usr/share/vulkan/icd.d/lvp_icd.*.json; do
