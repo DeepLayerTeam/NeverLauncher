@@ -8560,22 +8560,22 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 416,
+          "line": 423,
           "evidence": "printf '[device-trust-e2e] проверка фактического использования PostgreSQL и неизменности закреплённых миграций\\n'"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 429,
+          "line": 436,
           "evidence": ")::text\" | jq -c . \u003e \"$RESULT_DIR/migration-stabilization.json\""
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 443,
+          "line": 450,
           "evidence": "evidence_sha=\"$(sha256sum \"$RESULT_DIR/$evidence_name\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 453,
+          "line": 460,
           "evidence": "claims:{repository:\"postgresql\",vendorHardwareProvenance:\"not-verified\",privateKeyServerExposed:false,deviceTrustRelease:$version}}' \u003e \"$RESULT_DIR/device-trust-result.json\""
         }
       ]

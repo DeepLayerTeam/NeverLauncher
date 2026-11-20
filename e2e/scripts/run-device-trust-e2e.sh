@@ -378,6 +378,13 @@ HW_STEPPED_ACCESS="$(jq -er '.data.accessToken' <<<"$STEP_OK")"
 jq -e '.data.status=="stepped-up" and .data.session.authStrength=="phishing-resistant"' <<<"$STEP_OK" >/dev/null
 # Оставьте один вход, привязанный к целостности, в ожидании, чтобы восстановление ключа обязательно аннулировало его до погашения на сервере.
 json_post "$API/api/v1/session/join" "$HW_STEPPED_ACCESS" "$GUARD_JOIN_BODY" > "$RUNTIME_DIR/guard-bound-join-pending-recovery.json"
+# До начала восстановления исходное устройство должно всё ещё принадлежать
+# владельцу и оставаться активным. Нельзя считать отозванную идентичность
+# допустимым источником восстановления, даже при наличии живого сеанса.
+if [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM trusted_devices WHERE id='$HW_DEVICE' AND user_id='$USER_ID' AND status='active' AND replaced_by_device_id IS NULL")" != "1" ]]; then
+  echo '[device-trust-e2e] активное исходное устройство не найдено' >&2
+  exit 1
+fi
 RECOVERY_KEY="$RUNTIME_DIR/keys/device-recovered-ed25519.pem"
 openssl genpkey -algorithm Ed25519 -out "$RECOVERY_KEY" >/dev/null 2>&1
 RECOVERY_PUB="$(python3 "$CRYPTO" public --algorithm ed25519 --key "$RECOVERY_KEY")"
