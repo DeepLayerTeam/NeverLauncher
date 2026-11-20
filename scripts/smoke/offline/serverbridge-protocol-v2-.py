@@ -118,14 +118,14 @@ require(
     "Регрессионные тесты последовательного обновления ServerBridge v2",
 )
 
-tests = read("services/api/internal/httpapi/server_bridge_test.go") + read(
+tests = (read("services/api/internal/httpapi/server_bridge_test.go") + read(
     "services/api/internal/httpapi/bridge_plugins_test.go"
-)
+) + contract_tests)
 require(
     tests,
     [
-        "replayed has-joined must be denied",
-        "legacy bridge protocol accepted",
+        "Повторная проверка has-joined должна отклоняться",
+        "Контракт поэтапного обновления v2 ошибочно отклонён",
         "http.StatusUpgradeRequired",
     ],
     "Регрессионные тесты ServerBridge v2",

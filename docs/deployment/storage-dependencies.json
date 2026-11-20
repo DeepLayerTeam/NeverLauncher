@@ -1085,12 +1085,12 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 120,
+          "line": 125,
           "evidence": "jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \\"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 346,
+          "line": 365,
           "evidence": "jq postgresql-client xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 \\"
         }
       ]
@@ -26825,362 +26825,392 @@
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 550,
+          "line": 553,
+          "evidence": "if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(18462, 3701)`); err != nil {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 557,
+          "evidence": "err = tx.QueryRow(`SELECT role_id, status FROM users WHERE id=$1 FOR UPDATE`, user.ID).Scan(\u0026oldRole, \u0026oldStatus)"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 563,
+          "evidence": "if err := tx.QueryRow(`SELECT count(*) FROM users WHERE role_id='owner' AND status='active' AND id\u003c\u003e$1`, user.ID).Scan(\u0026otherOwners); err != nil {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 570,
           "evidence": "_, err = tx.Exec(`INSERT INTO users (id, email, display_name, role_id, status, project_roles, password_hash, password_updated_at, last_login_at, disabled_at, created_at, updated_at"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 560,
+          "line": 580,
           "evidence": "if _, err = tx.Exec(`DELETE FROM project_user_roles WHERE user_id=$1 AND NOT (project_id = ANY(SELECT jsonb_object_keys($2::jsonb)))`, user.ID, string(projectRoles)); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 560,
+          "line": 580,
           "evidence": "if _, err = tx.Exec(`DELETE FROM project_user_roles WHERE user_id=$1 AND NOT (project_id = ANY(SELECT jsonb_object_keys($2::jsonb)))`, user.ID, string(projectRoles)); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 564,
+          "line": 584,
           "evidence": "if _, err = tx.Exec(`INSERT INTO project_user_roles(project_id,user_id,role_id,created_at,updated_at) VALUES($1,$2,$3,now(),now())"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 572,
+          "line": 592,
           "evidence": "_, err = tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 572,
+          "line": 592,
           "evidence": "_, err = tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 596,
-          "evidence": "if _, err := r.db.Exec(`UPDATE users SET status = $2, disabled_at = $3, updated_at = now() WHERE id = $1`, id, status, disabledAt); err != nil {"
+          "line": 621,
+          "evidence": "if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(18462, 3701)`); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 612,
+          "line": 625,
+          "evidence": "if err := tx.QueryRow(`SELECT role_id, status FROM users WHERE id=$1 FOR UPDATE`, id).Scan(\u0026currentRole, \u0026currentStatus); err != nil {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 633,
+          "evidence": "if err := tx.QueryRow(`SELECT count(*) FROM users WHERE role_id='owner' AND status='active' AND id\u003c\u003e$1`, id).Scan(\u0026otherOwners); err != nil {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 647,
+          "evidence": "res, err := tx.Exec(`UPDATE users SET status=$2, disabled_at=$3, updated_at=now() WHERE id=$1`, id, status, disabledAt)"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 672,
           "evidence": "if err := tx.QueryRow(`UPDATE users SET password_hash = $2, password_updated_at = now(), updated_at = now() WHERE id = $1 RETURNING email,display_name`, id, passwordHash).Scan(\u0026ema"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 619,
+          "line": 679,
           "evidence": "if _, err := tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 619,
+          "line": 679,
           "evidence": "if _, err := tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 636,
+          "line": 696,
           "evidence": "if _, err := r.db.Exec(`UPDATE users SET last_login_at = now(), updated_at = now() WHERE id = $1`, id); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 648,
+          "line": 708,
           "evidence": "if err := r.db.QueryRow(`SELECT count(*) FROM auth_identities WHERE provider=$1 AND subject=$2`, strings.ToLower(strings.TrimSpace(provider)), strings.TrimSpace(subject)).Scan(\u0026cou"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 656,
+          "line": 716,
           "evidence": "err := r.db.QueryRow(`SELECT id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at FROM auth_identities WHERE provider=$"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 684,
+          "line": 744,
           "evidence": "err = r.db.QueryRow(`SELECT id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at FROM auth_identities WHERE provider=$1"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 710,
+          "line": 770,
           "evidence": "rows, err = r.db.Query(query+` WHERE user_id=$1 ORDER BY provider,subject`, userID)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 761,
+          "line": 821,
           "evidence": "err := r.db.QueryRow(`SELECT subject FROM auth_identities WHERE user_id=$1 AND provider=$2 AND issuer=$3`, identity.UserID, identity.Provider, identity.Issuer).Scan(\u0026currentSubject"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 778,
+          "line": 838,
           "evidence": "result, err := r.db.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 778,
+          "line": 838,
           "evidence": "result, err := r.db.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 858,
+          "line": 918,
           "evidence": "if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(lower($1), 0))`, user.Email); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 862,
+          "line": 922,
           "evidence": "err = tx.QueryRowContext(ctx, `SELECT id FROM users WHERE lower(email)=lower($1) LIMIT 1`, user.Email).Scan(\u0026emailOwner)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 872,
+          "line": 932,
           "evidence": "result, err := tx.ExecContext(ctx, `INSERT INTO users (id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,last_login_at,disabled_at,created_at,upd"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 884,
+          "line": 944,
           "evidence": "if err := tx.QueryRowContext(ctx, `SELECT email FROM users WHERE id=$1`, user.ID).Scan(\u0026existingEmail); err != nil {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 895,
+          "line": 955,
           "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 895,
+          "line": 955,
           "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 902,
+          "line": 962,
           "evidence": "if err := tx.QueryRowContext(ctx, `SELECT user_id FROM auth_identities WHERE provider=$1 AND issuer=$2 AND subject=$3`, identity.Provider, identity.Issuer, identity.Subject).Scan(\u0026"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 924,
+          "line": 984,
           "evidence": "if err := r.db.QueryRow(`UPDATE auth_identities SET last_authenticated_at=now(),updated_at=now() WHERE id=$1 RETURNING provider,issuer,subject`, id).Scan(\u0026provider, \u0026issuer, \u0026subje"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 988,
+          "line": 1048,
           "evidence": "if _, err := r.db.Exec(`INSERT INTO audit_events (id, actor, action, target, ip, user_agent, created_at, correlation_id, reason_code, job_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1009,
+          "line": 1069,
           "evidence": "row := r.db.QueryRow(`SELECT rv.manifest FROM channel_heads h JOIN release_versions rv ON rv.id=h.release_id AND rv.project_id=h.project_id AND rv.profile_id=h.profile_id AND rv.ch"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1078,
+          "line": 1138,
           "evidence": "err := r.db.QueryRow(`SELECT manifest,status FROM release_versions WHERE project_id=$1 AND profile_id=$2 AND channel=$3 AND version=$4`, projectID, profileID, channel, version).Sca"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1140,
+          "line": 1200,
           "evidence": "if err := tx.QueryRow(`SELECT status,manifest FROM release_versions WHERE id = $1 AND project_id = $2 AND profile_id = $3 AND channel = $4 AND version = $5 FOR UPDATE`, releaseID, "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1151,
+          "line": 1211,
           "evidence": "if err := tx.QueryRow(`SELECT id FROM projects WHERE id=$1 FOR UPDATE`, projectID).Scan(\u0026projectLock); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1155,
+          "line": 1215,
           "evidence": "scanErr := tx.QueryRow(`SELECT revision FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3 FOR UPDATE`, projectID, profileID, channel).Scan(\u0026currentRevision)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1169,
+          "line": 1229,
           "evidence": "if _, err := tx.Exec(`UPDATE release_versions"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1174,
+          "line": 1234,
           "evidence": "if _, err := tx.Exec(`INSERT INTO release_channels (id, project_id, name, description, protected)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1182,
+          "line": 1242,
           "evidence": "_, err = tx.Exec(`INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest,updated_at) VALUES($1,$2,$3,1,$4,$5,$6,$7)`, projectID, profil"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1185,
+          "line": 1245,
           "evidence": "res, err = tx.Exec(`UPDATE channel_heads SET revision=revision+1,release_id=$4,version=$5,manifest_digest=$6,updated_at=$7 WHERE project_id=$1 AND profile_id=$2 AND channel=$3 AND "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1196,
+          "line": 1256,
           "evidence": "if _, err := tx.Exec(`INSERT INTO audit_events (id, actor, action, target, created_at) VALUES ($1,$2,$3,$4,$5)`, fmt.Sprintf(\"audit-%d\", now.UnixNano()), \"system\", \"version:publish"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1216,
+          "line": 1276,
           "evidence": "err := r.db.QueryRow(`SELECT channel FROM release_versions WHERE project_id=$1 AND id=$2`, projectID, versionID).Scan(\u0026channel)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1228,
+          "line": 1288,
           "evidence": "res, err := r.db.Exec(`UPDATE release_versions SET status=$1, updated_at=now() WHERE project_id=$2 AND id=$3 AND status \u003c\u003e 'published'`, status, projectID, versionID)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1234,
+          "line": 1294,
           "evidence": "if scanErr := r.db.QueryRow(`SELECT status FROM release_versions WHERE project_id=$1 AND id=$2`, projectID, versionID).Scan(\u0026current); scanErr == nil \u0026\u0026 current == \"published\" {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1262,
+          "line": 1322,
           "evidence": "if err := tx.QueryRow(`SELECT id, project_id, profile_id, channel, version, status, manifest, published_at"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1290,
+          "line": 1350,
           "evidence": "res, err := tx.Exec(`UPDATE release_versions SET manifest=$1 WHERE id=$2 AND project_id=$3 AND status \u003c\u003e 'published'`, string(next), versionID, projectID)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1316,
+          "line": 1376,
           "evidence": "if err := tx.QueryRow(`SELECT status, manifest FROM release_versions WHERE project_id=$1 AND id=$2 FOR UPDATE`, file.ProjectID, file.VersionID).Scan(\u0026releaseStatus, \u0026manifestRaw); "
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 1344,
+          "line": 1404,
           "evidence": "if _, err := tx.Exec(`INSERT INTO files (id, project_id, version_id, path, size, sha256, url, required, executable, target_os, ownership, mirrors)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1344,
+          "line": 1404,
           "evidence": "if _, err := tx.Exec(`INSERT INTO files (id, project_id, version_id, path, size, sha256, url, required, executable, target_os, ownership, mirrors)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1367,
+          "line": 1427,
           "evidence": "res, err := tx.Exec(`UPDATE release_versions SET manifest=$1 WHERE id=$2 AND project_id=$3 AND status \u003c\u003e 'published'`, string(next), file.VersionID, file.ProjectID)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1406,
+          "line": 1466,
           "evidence": "_, err := r.db.Exec(`INSERT INTO projects (id, name, description, homepage, repository, default_channel, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) D"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1420,
+          "line": 1480,
           "evidence": "_, _ = r.db.Exec(`INSERT INTO telemetry_events (id, project_id, profile_id, launcher_version, profile_version, event, status, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, event.I"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1433,
+          "line": 1493,
           "evidence": "_, _ = r.db.Exec(`INSERT INTO crash_reports (id, project_id, profile_id, launcher_version, profile_version, message, log, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, report.ID, "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1482,
+          "line": 1542,
           "evidence": "result, err := r.db.Exec(`INSERT INTO release_versions (id, project_id, profile_id, channel, version, status, manifest, published_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1565,
+          "line": 1625,
           "evidence": "err := r.db.QueryRow(`SELECT id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at FROM provider_credentials WHERE user_id=$1 AND "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1568,
+          "line": 1628,
           "evidence": "if countErr := r.db.QueryRow(`SELECT count(*) FROM provider_credentials WHERE user_id=$1 AND provider=$2`, userID, provider).Scan(\u0026n); countErr != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1591,
+          "line": 1651,
           "evidence": "err := r.db.QueryRow(`SELECT id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at FROM provider_credentials WHERE user_id=$1 AND "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1617,
+          "line": 1677,
           "evidence": "if err := r.db.QueryRow(`SELECT user_id FROM auth_identities WHERE id=$1 AND provider=$2 AND subject=$3`, item.IdentityID, item.Provider, item.Subject).Scan(\u0026linkedUserID); err != "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1632,
+          "line": 1692,
           "evidence": "result, err := r.db.Exec(`INSERT INTO provider_credentials(id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1656,
+          "line": 1716,
           "evidence": "result, err := r.db.Exec(`DELETE FROM provider_credentials WHERE user_id=$1 AND provider=$2 AND (SELECT count(*) FROM provider_credentials WHERE user_id=$1 AND provider=$2)=1`, str"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1662,
+          "line": 1722,
           "evidence": "if err := r.db.QueryRow(`SELECT count(*) FROM provider_credentials WHERE user_id=$1 AND provider=$2`, strings.TrimSpace(userID), strings.ToLower(strings.TrimSpace(provider))).Scan("
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1677,
+          "line": 1737,
           "evidence": "result, err := r.db.Exec(`DELETE FROM provider_credentials WHERE user_id=$1 AND identity_id=$2`, strings.TrimSpace(userID), strings.TrimSpace(identityID))"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1692,
+          "line": 1752,
           "evidence": "err := r.db.QueryRow(`SELECT user_id, uuid, name, issuer, realm, subject, identity_version, created_at, updated_at FROM minecraft_profiles WHERE user_id=$1`, strings.TrimSpace(user"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1703,
+          "line": 1763,
           "evidence": "err := r.db.QueryRow(`SELECT user_id, uuid, name, issuer, realm, subject, identity_version, created_at, updated_at FROM minecraft_profiles WHERE lower(uuid)=lower($1)`, strings.Tri"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1714,
+          "line": 1774,
           "evidence": "err := r.db.QueryRow(`SELECT user_id, uuid, name, issuer, realm, subject, identity_version, created_at, updated_at FROM minecraft_profiles WHERE lower(name)=lower($1)`, strings.Tri"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1751,
+          "line": 1811,
           "evidence": "result, err := r.db.Exec(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1786,
+          "line": 1846,
           "evidence": "result, err := r.db.Exec(`INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1815,
+          "line": 1875,
           "evidence": "err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evi"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1837,
+          "line": 1897,
           "evidence": "err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evi"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1856,
+          "line": 1916,
           "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET last_seen_at=now() WHERE id=$1 AND status='active'`, strings.TrimSpace(id))"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1870,
+          "line": 1930,
           "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,now()),revoked_reason=CASE WHEN revoked_reason='' THEN $2 ELSE revoked_reason E"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1887,
+          "line": 1947,
           "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE session_id=$1 AND status='active'`, strings.TrimSpace(launcherSession"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1898,
+          "line": 1958,
           "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE user_id=$1 AND status='active'`, strings.TrimSpace(userID), strings.T"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1932,
+          "line": 1992,
           "evidence": "_, err := r.db.Exec(`INSERT INTO minecraft_joins(username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,ticket_version,status,created_at,expires_at,con"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1942,
+          "line": 2002,
           "evidence": "err := r.db.QueryRow(`SELECT username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,ip,ticket_version,status,created_at,expires_at,consumed_at FROM minecr"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 1957,
+          "line": 2017,
           "evidence": "err := r.db.QueryRow(`UPDATE minecraft_joins SET status='consumed',consumed_at=$4 WHERE username_normalized=lower($1) AND server_id=$2 AND minecraft_session_id=$3 AND ticket_versio"
         }
       ]
@@ -29327,6 +29357,11 @@
           "category": "postgresql-sql-dialect",
           "line": 71,
           "evidence": "if err = db.QueryRowContext(ctx, `SELECT status FROM texture_blobs WHERE digest=$1`, a.Digest).Scan(\u0026stagedStatus); err != nil || stagedStatus != \"staging\" {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 127,
+          "evidence": "if _, err = db.ExecContext(ctx, `DELETE FROM texture_saved_items WHERE digest=$1`, a.Digest); err != nil {"
         }
       ]
     },

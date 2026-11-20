@@ -15,6 +15,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 )
 
 // Signer неизменяем; создавайте его при запуске и перезапускайте API для ротации ключа.
@@ -76,7 +78,7 @@ func LoadFile(path string) (*Signer, error) {
 	if info.Size() > 32*1024 {
 		return nil, errors.New("Превышен допустимый размер: RSA ключ подписи файл")
 	}
-	if info.Mode().Perm()&0077 != 0 {
+	if !privatefile.Check(path, info, 0077) {
 		return nil, errors.New("«файл ключа подписи RSA»: запрещено «быть доступным группе или посторонним пользователям (chmod 600)»")
 	}
 	content, err := os.ReadFile(path)

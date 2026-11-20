@@ -396,7 +396,7 @@ jq -e '.data.allowed==false and (.data.reason=="launcher_session_or_handoff_miss
 code="$(request_code GET "$API/api/v1/auth/device-trust" "$HW_STEPPED_ACCESS" '' "$RUNTIME_DIR/pre-recovery-access.json")"; expect_code 401 "$code" 'Доступ до восстановления остался действительным после изменения эпохи привязки'
 [[ "$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM device_challenges WHERE id='$REC_CHALLENGE_ID' AND user_id='$USER_ID' AND device_id='$HW_DEVICE' AND purpose='key-recover' AND consumed_at IS NOT NULL")" == "1" ]]
 code="$(request_code POST "$API/api/v1/auth/devices/$HW_DEVICE/key-recovery/complete" "$(jq -er '.data.accessToken' <<<"$REC_OK")" "$REC_BODY" "$RESULT_DIR/recovery-replay.json")"; expect_code 404 "$code" 'Повторное использование запроса восстановления после блокировки исходного устройства'
-jq -e '.error.code==404 and .error.message=="активное исходное устройство не найдено"' "$RESULT_DIR/recovery-replay.json" >/dev/null
+jq -e '.error.code==404 and .error.reasonCode=="not_found"' "$RESULT_DIR/recovery-replay.json" >/dev/null
 
 printf '[device-trust-e2e] постоянный отзыв устройства распространяется на токены доступа и обновления\n'
 REVOKE="$(json_post "$API/api/v1/auth/devices/$DEVICE2/revoke" "$ACCESS2R" '{"reason":"device-trust-e2e-revoke"}')"

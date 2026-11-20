@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 )
 
 func TestSignedTextureProtocol0256(t *testing.T) {
@@ -151,6 +152,9 @@ func TestYggdrasilLoopbackE2ERealRSASigning0256(t *testing.T) {
 	keyFile := filepath.Join(t.TempDir(), "yggdrasil.pem")
 	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(private)})
 	if err := os.WriteFile(keyFile, pemBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := privatefile.Restrict(keyFile, false); err != nil {
 		t.Fatal(err)
 	}
 	s := Server{Config: config.Config{

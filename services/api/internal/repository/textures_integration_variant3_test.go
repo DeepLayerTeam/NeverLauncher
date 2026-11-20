@@ -118,6 +118,15 @@ func TestTextureStorageQuota0253(t *testing.T) {
 	if _, err = db.ExecContext(ctx, `UPDATE texture_assignment_revisions SET created_at=now()-interval '30 days'`); err != nil {
 		t.Fatal(err)
 	}
+	// The content is still in both players' saved libraries.  Clearing the
+	// active assignment alone MUST NOT turn a retained blob into GC garbage.
+	candidates, err = repo.ClaimTextureGarbage0253(ctx, "local", 50)
+	if err != nil || len(candidates) != 0 {
+		t.Fatalf("Сборщик мусора удалил сохранённый объект: %+v %v", candidates, err)
+	}
+	if _, err = db.ExecContext(ctx, `DELETE FROM texture_saved_items WHERE digest=$1`, a.Digest); err != nil {
+		t.Fatal(err)
+	}
 	candidates, err = repo.ClaimTextureGarbage0253(ctx, "local", 50)
 	if err != nil || len(candidates) != 1 {
 		t.Fatalf("Ожидался объект без владельца для сборки мусора: %+v %v", candidates, err)

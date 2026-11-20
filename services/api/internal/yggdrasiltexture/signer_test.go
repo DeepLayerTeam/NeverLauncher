@@ -10,8 +10,11 @@ import (
 	"encoding/pem"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"gitflic.ru/skif4er/launcher/services/api/internal/privatefile"
 )
 
 func TestSHA1WithRSASignatureAndPEM0256(t *testing.T) {
@@ -23,6 +26,9 @@ func TestSHA1WithRSASignatureAndPEM0256(t *testing.T) {
 	dir := t.TempDir()
 	filename := filepath.Join(dir, "yggdrasil.pem")
 	if err := os.WriteFile(filename, p, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := privatefile.Restrict(filename, false); err != nil {
 		t.Fatal(err)
 	}
 	signer, err := LoadFile(filename)
@@ -52,6 +58,12 @@ func TestSHA1WithRSASignatureAndPEM0256(t *testing.T) {
 	sig, _ := base64.StdEncoding.DecodeString(signed)
 	if err := rsa.VerifyPKCS1v15(pub.(*rsa.PublicKey), crypto.SHA1, digest[:], sig); err != nil {
 		t.Fatal(err)
+	}
+	// On Windows os.Chmod changes only the read-only attribute, not NTFS ACLs.
+	// The access-control test below is Unix-only; the Windows ACL is enforced
+	// through privatefile.Check and exercised by the production loading test.
+	if runtime.GOOS == "windows" {
+		return
 	}
 	if err := os.Chmod(filename, 0644); err != nil {
 		t.Fatal(err)

@@ -42,6 +42,7 @@ func TestTextureRealS3Lifecycle02512(t *testing.T) {
 		}
 	}
 	obj := textureFixture0253(content)
+	obj.Driver = store.Driver()
 	if got := VerifyTexture02511(ctx, store, obj); got.Result != "ok" {
 		t.Fatalf("Проверка настоящего S3: %+v", got)
 	}

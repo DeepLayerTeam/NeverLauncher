@@ -101,8 +101,8 @@
       "size": 1185
     },
     ".github/workflows/compatibility.yml": {
-      "sha256": "d00555c9d8e5418c862a84ffe2a8484f93dfeb1c84b4251d485d3564f4ed5171",
-      "size": 34093
+      "sha256": "7db22e2289c783e826b115fce6c6c54882eb3cb0bfb3c0c43646f90a04943470",
+      "size": 35869
     },
     ".github/workflows/component-upgrade.yml": {
       "sha256": "f477271c3384a28a0148cbdfd2bc59627c9453efe622fc607fb44d0de5d41ef6",
