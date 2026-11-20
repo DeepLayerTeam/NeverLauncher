@@ -130,13 +130,13 @@ require(
     "apps/desktop/src/main.tsx",
     [
         "createContinuousGuardTicket",
-        "'guard_guard_attestation_v2'",
+        "guard_guard_attestation_v2",
         "/guard-attest-v2/begin",
         "/guard-attest-v2/complete",
         "stop_runtime_process",
         "createServerJoinAfterLaunch",
         "continuousGuardTicket",
-        "ServerBridge join после Attestation v2 не подтверждён",
+        "подключение ServerBridge после аттестации версии 2 не подтверждено",
     ],
 )
 
@@ -167,7 +167,7 @@ require(
         "TestGuardAttestationV2ValidatesFreshContinuousEvidence01810",
         "TestGuardAttestationV2RejectsStaleAndDivergedContinuousEvidence01810",
         "TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810",
-        "replayed Continuous Guard ticket was accepted",
+        "Принят повторно использованный билет Continuous Guard",
     ],
 )
 

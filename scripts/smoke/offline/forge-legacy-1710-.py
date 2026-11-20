@@ -75,7 +75,7 @@ require(
     [
         '"forge-legacy-1.7.10"',
         '"forge-legacy-pre-1.7.10"',
-        "legacy V1 universal installer",
+        "forge-legacy-1.12.2",
     ],
     "Состояние возможностей Runtime",
 )
@@ -84,7 +84,7 @@ runtime = read("runtime/runtime/src/compatibility.rs")
 require(
     runtime,
     [
-        "metadata predates downloads.classifiers",
+        "Метаданные Minecraft/Forge 1.7.x появились раньше появления поля downloads.classifiers.",
         "maven_path_with_classifier",
         "library.downloads.classifiers.is_empty()",
         '#[serde(default, alias = "clientreq")]',

@@ -27,7 +27,8 @@ for token in (
 repo = read("services/api/internal/repository/extensions.go")
 for token in (
     "Для дополнений Admin требуется разрешение ui:contribute",
-    "standalone .html entrypoint",
+    '!strings.HasSuffix(strings.ToLower(target.Entrypoint), ".html")',
+    "Для дополнений Admin требуется самостоятельная точка входа .html",
     "normalizeAdminContributions0208",
 ):
     require(token in repo, f"В репозитории отсутствует проверка Admin: {token}")
@@ -65,12 +66,16 @@ for token in (
     "rpc.response",
     "dashboardWidgets",
     "extensionManagerGrid",
-    "Host Restart",
+    'lifecycleOperation(item, "restart")',
 ):
     require(token in ui, f"В среде выполнения расширений Admin отсутствует: {token}")
 main = read("apps/admin/src/main.tsx")
+admin_app = read("apps/admin/src/admin/AdminApp.tsx")
 require(
-    "extensions-manager" in main and "<AdminExtensions" in main,
+    "<AdminApp" in main
+    and 'from "./admin/AdminApp"' in main
+    and "extensions-manager" in admin_app
+    and "<AdminExtensions" in admin_app,
     "В интерфейсе Admin не подключены менеджер расширений или виджеты",
 )
 cli_scaffold = read("cli/cmd/launcher/project_commands.go") + read(

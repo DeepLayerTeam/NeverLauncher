@@ -89,7 +89,7 @@ require(
     [
         'defaultQuiltMetaBase  = "https://meta.quiltmc.org/v3"',
         "isStableQuiltLoaderVersion",
-        "стабильную версию загрузчика %s",
+        "quiltStableVersionLess",
         "profile/json",
         "materializeLoaderLibraries",
         "installed-and-verified",
@@ -111,7 +111,7 @@ require(
         "libraryCount",
         "certify-vanilla",
         "resolvedLoaderVersion",
-        "mutable loader selector leaked",
+        'case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended)',
         "actual-mojang-client",
     ],
     "Сертификация на настоящем клиенте Quilt",
@@ -138,7 +138,7 @@ require(
     [
         "QUILT_COMPATIBILITY_II_0172",
         "quilt_compatibility_ii_0172_required",
-        "Quilt Compatibility II 0.17.2",
+        "Совместимость Quilt II 0.17.2",
         'target["loader"] in {"fabric", "quilt", "forge", "neoforge"}',
         "install_file = f\"{target['loader']}-install.json\"",
         "certification_file = f\"{target['loader']}-certification.json\"",
@@ -154,7 +154,8 @@ require(
         "compatibilityQuiltII0172Required",
         "QuiltVersions",
         "quilt-compatibility-II-0.17.2-stable-1.14-through-current-actual-client",
-        "immutable version",
+        "ResolvedLoaderVersion",
+        "ResolutionLockSHA256",
     ],
     "Сертификация релиза Quilt",
 )

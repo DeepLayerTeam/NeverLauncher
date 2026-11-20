@@ -105,12 +105,16 @@ func TestMinecraftAuth119LauncherSessionExchangeJoinAndParentRevoke(t *testing.T
 	if allowed != 1 || denied != concurrentJoins-1 {
 		t.Fatalf("Только первый параллельный запрос /hasJoined может завершиться успешно: разрешено=%d отказано=%d", allowed, denied)
 	}
-	replay := httptest.NewRequest(http.MethodGet, "/sessionserver/session/minecraft/hasJoined?username="+username+"&serverId=server-hash-119", nil)
-	replayV := httptest.NewRecorder()
-	handler.ServeHTTP(replayV, replay)
-	if replayV.Code != http.StatusNoContent {
-		t.Fatalf("Повтор одноразового присоединения Yggdrasil должен отклоняться: %d %s", replayV.Code, replayV.Body.String())
-	}
+	// Именованный регрессионный сценарий должен оставаться исполняемым тестом:
+	// повтор уже погашенного подключения отвергается после конкурентной проверки.
+	t.Run("one-time Yggdrasil join replay", func(t *testing.T) {
+		replay := httptest.NewRequest(http.MethodGet, "/sessionserver/session/minecraft/hasJoined?username="+username+"&serverId=server-hash-119", nil)
+		replayV := httptest.NewRecorder()
+		handler.ServeHTTP(replayV, replay)
+		if replayV.Code != http.StatusNoContent {
+			t.Fatalf("Повтор одноразового присоединения Yggdrasil должен отклоняться: %d %s", replayV.Code, replayV.Body.String())
+		}
+	})
 
 	logout := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
 	logout.Header.Set("Authorization", "Bearer "+launcherToken)

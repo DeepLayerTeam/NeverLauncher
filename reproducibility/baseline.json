@@ -1013,8 +1013,8 @@
       "size": 1473
     },
     "schemas/openapi.yaml": {
-      "sha256": "c1979b92b2f9e6b93ac65c81bd850231bed03809d66d87fe6c088253f257bd62",
-      "size": 702963
+      "sha256": "5fe89014418bcda4e7f37841fb53344cde6179e7707761e1303bd24919726906",
+      "size": 703071
     },
     "scripts/build/bridge-plugins.sh": {
       "sha256": "12ca55ca36c83f0247d01f76dc62b1ad756333040637e67f65780460c0e8ef89",

@@ -121,7 +121,8 @@ require(
     [
         "CROSS_PLATFORM_LOADERS_0179",
         "cross_platform_loaders_0179_required",
-        "Cross-platform Loaders 0.17.9",
+        "CROSS_PLATFORM_LOADER_PLATFORMS_0179",
+        "len(rows) != len(expected_platforms)",
         "loaderPlatformMaterialized",
         "loaderNativesResolved",
         "loaderPlatformLaunch",

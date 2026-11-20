@@ -123,7 +123,7 @@ require(
         "libraryCount",
         "certify-vanilla",
         "resolvedLoaderVersion",
-        "mutable loader selector leaked",
+        'case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended)',
         "actual-mojang-client",
     ],
     "Сертификация на настоящем клиенте Fabric",
@@ -166,7 +166,8 @@ require(
         "compatibilityFabricII0171Required",
         "FabricVersions",
         "fabric-compatibility-II-0.17.1-stable-1.14-through-current-actual-client",
-        "immutable version",
+        "ResolvedLoaderVersion",
+        "ResolutionLockSHA256",
     ],
     "Сертификация релиза Fabric",
 )

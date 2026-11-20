@@ -79,7 +79,7 @@ require(
     commands,
     [
         '"forge-legacy-1.12.2"',
-        "legacy V1 universal installer",
+        "forge-legacy-1.7.10",
     ],
     "Состояние возможностей Runtime",
 )
@@ -130,7 +130,8 @@ require(
         "forgeLegacy1122_0174",
         "compatibilityForgeLegacy1122_0174Required",
         "forge-legacy-0.17.4-real-1.12.2-universal-fmltweaker-actual-client",
-        "immutable version",
+        "ResolvedLoaderVersion",
+        "ResolutionLockSHA256",
     ],
     "Сертификация релиза старых версий Forge",
 )

@@ -134,7 +134,7 @@ require(
         "installerSha256",
         "profileSha256",
         "certify-vanilla",
-        "mutable loader selector leaked",
+        'case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended)',
         "'loader': 'neoforge'",
         "'actualClient': True",
     ],
@@ -158,7 +158,7 @@ require(
     [
         "NEOFORGE_COMPATIBILITY_II_0176",
         "neoforge_compatibility_ii_0176_required",
-        "NeoForge Compatibility II 0.17.6",
+        "Совместимость NeoForge II 0.17.6",
     ],
     "Обязательные проверки матрицы NeoForge",
 )
