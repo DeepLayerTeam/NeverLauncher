@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import ast
 
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text().strip()
@@ -24,7 +25,7 @@ cert = read("serverbridge/certify_release.py")
 require(
     cert,
     [
-        "EXPECTED = ['velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia','fabric','quilt','forge','neoforge','sponge','vanilla']",
+        "EXPECTED = [",
         "BRIDGE_RELEASE_ALLOWLIST.json",
         "PLUGIN_MANIFEST.json",
         "SHA256SUMS",
@@ -34,7 +35,7 @@ require(
         "BridgeRuntimeDescriptor.class",
         "BridgeRuntimeIdentity.class",
         "BridgeRuntimeProbe.class",
-        "platform-matched release required",
+        "необходим выпуск для соответствующей платформы",
         "folia-supported: true",
         "clientModRequired",
     ],
@@ -43,7 +44,7 @@ require(
 build = read("scripts/build/bridge-plugins.sh")
 require(
     build,
-    ["serverbridge/certify_release.py", "Production ServerBridge 3 artifacts"],
+    ["serverbridge/certify_release.py", "Промышленные артефакты ServerBridge 3"],
     "Сборка ServerBridge",
 )
 release = read("scripts/release/build-release.sh")
@@ -94,6 +95,16 @@ if ids != [
     "vanilla",
 ]:
     raise SystemExit(f"Несовпадение: «набор целевых платформ ServerBridge 3»: {ids}")
+# Проверяйте фактический набор платформ в сертификаторе, а не форматирование списка в Python.
+cert_ast = ast.parse(cert)
+cert_targets = [
+    ast.literal_eval(node.value)
+    for node in cert_ast.body
+    if isinstance(node, ast.Assign)
+    and any(isinstance(target, ast.Name) and target.id == "EXPECTED" for target in node.targets)
+]
+if len(cert_targets) != 1 or cert_targets[0] != ids:
+    raise SystemExit("Перечень платформ сертификатора не совпадает с канонической матрицей")
 print(
     f"Launcher {version}: проверка релиза ServerBridge 3 — OK (сертифицированы 14 платформ)"
 )

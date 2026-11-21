@@ -62,7 +62,7 @@ for token in (
     "Uninstall(",
     "Update(",
     "Rollback(",
-    "Для области project требуется scopeId",
+    "Для области проекта требуется scopeId",
     "PackageIdentity",
 ):
     require(token in manager, f"Отсутствует менеджер жизненного цикла расширений {token}")
@@ -95,9 +95,9 @@ for token in (
 ):
     require(token in cli, f"Отсутствует команда CLI для жизненного цикла расширений {token}")
 
-admin = read("apps/admin/src/main.tsx")
+admin = read("apps/admin/src/admin/RegistryWorkspace.tsx")
 for token in (
-    "Install Lifecycle",
+    "Жизненный цикл установки",
     "extensionInstalls",
     "lifecycleScopePayload",
     "lifecycleAction",

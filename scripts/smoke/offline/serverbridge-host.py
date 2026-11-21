@@ -20,7 +20,10 @@ if parts < (0, 19, 10):
     raise SystemExit(f"Хост ServerBridge: требуется версия не ниже 0.19.10, получено {version}")
 
 provision = read("cli/cmd/launcher/serverbridge_provisioning.go")
-host = read("cli/cmd/launcher/serverbridge_host.go")
+host = (read("cli/cmd/launcher/serverbridge_host.go")
+        + read("cli/cmd/launcher/serverbridge_host_process_unix.go")
+        + read("cli/cmd/launcher/serverbridge_host_process_windows.go")
+        + read("cli/cmd/launcher/serverbridge_host_recovery.go"))
 unix = read("cli/cmd/launcher/serverbridge_host_process_unix.go")
 windows = read("cli/cmd/launcher/serverbridge_host_process_windows.go")
 tests = read("cli/cmd/launcher/serverbridge_host_test.go")
@@ -33,12 +36,12 @@ require(
     ['case "host":', "handleServerBridgeHost01910(args[1:])"],
     "Подключение команд хоста ServerBridge к CLI",
 )
-require(main, ["Zero-Patch provisioning + host supervisor"], "Основная справка")
+require(main, ["server-bridge host remote init"], "Основная справка")
 require(
     host,
     [
         'case "configure":',
-        'case "start":',
+        'case "start", "recover":',
         'case "run":',
         'case "stop":',
         'case "restart":',

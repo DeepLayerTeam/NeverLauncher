@@ -53,7 +53,7 @@ require(
         "PROCESS_DEBUG_FLAGS",
         "STATUS_PORT_NOT_SET",
         "reconcile_and_verify",
-        "detected debugger boundary",
+        "обнаружена граница отладчика",
         "Debug & Instrumentation Guard state v1",
     ],
 )
@@ -106,7 +106,7 @@ require(
         "debug_instrumentation: crate::WindowsDebugInstrumentationReport",
         "четвёртым событием ожидалось DEBUG_INSTRUMENTATION_READY",
         "debug_instrumentation_report_from_event",
-        "unwanted debug/instrumentation boundary detected",
+        "обнаружено нежелательное вмешательство отладки или инструментирования",
         "fail_closed",
     ],
 )

@@ -67,7 +67,7 @@ def main() -> int:
             "MODULE_STREAM_TIMEOUT",
             "module_snapshot(pid)",
             "reconcile_snapshot",
-            "external snapshot drift",
+            "число модулей во внешнем снимке не совпадает",
             "validate_loaded_module",
             "verify_windows_authenticode_trust",
             "sha256_file",

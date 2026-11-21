@@ -31,9 +31,9 @@ for token in (
     "handleCapability",
     "project.get",
     "storage.read",
-    "heartbeat timeout",
-    "memory limit exceeded",
-    "process limit exceeded",
+    "Превышено время ожидания сигнала активности",
+    "Превышен предел памяти",
+    "Превышен предел числа процессов",
     "crashloop",
     "captureStream",
     "MaxLogBytes",
@@ -68,7 +68,7 @@ for token in (
     "stopExtensionHostForLifecycle0205",
     "startEnabledExtensionHost0205",
     "restoreExtensionHostAfterLifecycleFailure0205",
-    "enable was compensated to disabled",
+    "включение отменено, расширение отключено",
 ):
     require(token in lifecycle, f"Отсутствует интеграция жизненного цикла и хоста {token}")
 updates = (
@@ -108,13 +108,13 @@ for token in (
 ):
     require(token in cli, f"Отсутствует интерфейс CLI для Host: {token}")
 
-admin = read("apps/admin/src/main.tsx")
+admin = read("apps/admin/src/admin/RegistryWorkspace.tsx")
 for token in (
     "ExtensionHostView",
     "loadExtensionHosts",
-    "Host Start",
-    "Host Stop",
-    "Host Restart",
+    "Запустить хост",
+    "Остановить хост",
+    "Перезапустить хост",
     "memoryBytes",
     "processCount",
 ):

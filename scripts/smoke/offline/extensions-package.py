@@ -30,7 +30,7 @@ for token in (
     "SOURCE_DATE_EPOCH",
     "validateExtensionArchivePath0202",
     "os.ModeSymlink",
-    "case-insensitive duplicate",
+    "совпадающие без учёта регистра",
     "ensureExtensionEntrypointsPresent0202",
 ):
     require(token in source, f"Отсутствует реализация пакета расширения: {token}")

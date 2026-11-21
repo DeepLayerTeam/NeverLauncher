@@ -122,7 +122,7 @@ backend = read("services/api/internal/httpapi/server_bridge.go")
 integrity = read("services/api/internal/httpapi/serverbridge_integrity.go")
 manifest = read("services/api/internal/httpapi/bridge_plugins.go")
 config = read("services/api/internal/config/config.go")
-require(backend, ['"folia", "fabric"'], "Проверка типа Fabric на Backend")
+require(backend, ['"folia",', '"fabric",'], "Проверка типа Fabric на Backend")
 require(
     integrity,
     ["FabricSHA256", 'case "fabric":', "policy.FabricSHA256"],
@@ -196,7 +196,7 @@ require(
 )
 
 openapi_gen = read("scripts/contracts/generate_openapi.py")
-require(openapi_gen, ['"folia","fabric"'], "Тип Fabric в OpenAPI")
+require(openapi_gen, ['"folia",', '"fabric",'], "Тип Fabric в OpenAPI")
 
 tests = read("services/api/internal/httpapi/serverbridge_fabric_test.go")
 require(
@@ -219,7 +219,7 @@ require(
         'wait_bridge_heartbeat "$service"',
         'capture_health_evidence "$service"',
         "launcher-fabric-bridge.jar",
-        "fabricServerBridge:true",
+        'fabricServerBridge:($mode == "full")',
         "health-fabric.json",
     ],
     "Сквозная проверка настоящего Runtime Fabric",
@@ -243,7 +243,7 @@ require(
         "0025_proxy_family_0145",
         "0026_fabric_server_bridge_0146",
         "'fabric-0146','Fabric 0146','fabric'",
-        "invalid Fabric kind bypassed PostgreSQL constraint",
+        "недопустимый тип Fabric обошёл ограничение PostgreSQL",
     ],
     "Сквозная проверка миграции с 0.14.5 на 0.14.6",
 )

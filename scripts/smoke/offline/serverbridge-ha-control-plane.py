@@ -84,7 +84,7 @@ require(
         "deliverySequence",
         "leaseToken",
         "executionDigest",
-        "deliberately excludes lease attempt/timestamps",
+        "намеренно исключает номер попытки аренды",
     ],
     "устойчивый идентификатор однократной обработки",
 )
@@ -105,8 +105,8 @@ require(
         "FOR UPDATE SKIP LOCKED",
         "lease_owner=$4",
         "delivery_sequence>$6",
-        "invalid control lease identity",
-        "idempotent fenced commit",
+        "некорректный идентификатор аренды управления",
+        "идемпотентное завершение с ограничением аренды",
     ],
     "владение в PostgreSQL",
 )
@@ -127,7 +127,7 @@ require(
     [
         "ServerBridgeCoordinator",
         "coordinator.Health",
-        "ServerBridge HA coordinator is required but unavailable",
+        "координатор Redis для отказоустойчивого ServerBridge обязателен",
     ],
     "запрет работы Runtime при ошибке",
 )
@@ -165,7 +165,7 @@ require(
     redis_tests,
     [
         "TestRedisCoordinatorFencesCommandOwnership01911",
-        "competing acquire must be fenced",
+        "Конкурирующий захват должен блокироваться",
     ],
     "тесты Runtime с Redis",
 )
@@ -173,8 +173,8 @@ require(
     pg_tests,
     [
         "TestServerBridgeHAControlPlane01911MultiReplica",
-        "expected one distributed owner",
-        "cross-replica idempotent ACK",
+        "ожидался один распределённый владелец",
+        "идемпотентное подтверждение через другую реплику",
     ],
     "тесты нескольких реплик PostgreSQL",
 )

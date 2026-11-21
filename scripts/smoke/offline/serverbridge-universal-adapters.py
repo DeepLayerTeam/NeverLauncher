@@ -134,7 +134,7 @@ require(
         "Minecraft Source-RCON",
         "socket.connect",
         "writeLEInt",
-        "RCON authentication failed",
+        "Ошибка аутентификации Minecraft RCON",
     ],
     "Клиент сетевого протокола RCON для Vanilla",
 )
@@ -168,9 +168,9 @@ cert = read("serverbridge/certify_release.py")
 require(
     cert,
     [
-        "'quilt':'quiltSha256'",
-        "'sponge':'spongeSha256'",
-        "'vanilla':'vanillaSha256'",
+        '"quilt": "quiltSha256"',
+        '"sponge": "spongeSha256"',
+        '"vanilla": "vanillaSha256"',
         "universalServerAdapters",
         "hybridCertificationPolicy",
     ],
@@ -192,7 +192,7 @@ require(
 openapi = read("scripts/contracts/generate_openapi.py")
 require(
     openapi,
-    ['"fabric","quilt","forge","neoforge","sponge","vanilla"'],
+    ['"fabric",', '"quilt",', '"forge",', '"neoforge",', '"sponge",', '"vanilla",'],
     "Перечень платформ в OpenAPI",
 )
 print(

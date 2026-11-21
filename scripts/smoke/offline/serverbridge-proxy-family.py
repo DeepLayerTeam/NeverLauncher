@@ -277,7 +277,7 @@ require(
         "0024_bukkit_family_0144",
         "0025_proxy_family_0145",
         "for kind in velocity bungeecord waterfall",
-        "invalid proxy kind bypassed PostgreSQL constraint",
+        "некорректный тип прокси обошёл ограничение PostgreSQL",
     ],
     "Сквозная проверка миграции с 0.14.4 на 0.14.5",
 )

@@ -77,7 +77,7 @@ def main() -> int:
             "with_executable_and_profile",
             'send_command(&mut handle, "process-policy")',
             "validate_windows_guard_policy_report(policy, handle.protection_profile)",
-            "remote attestation requires aggressive Windows protection profile",
+            "для удалённой аттестации требуется усиленный профиль защиты Windows",
             "windows_protection_core_version",
             "windows_capability_model_version",
             "validate_status_profile",

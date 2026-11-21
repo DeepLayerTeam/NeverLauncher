@@ -45,7 +45,7 @@ for token in (
     "YankExtensionRegistryVersion",
     "sql.LevelSerializable",
     "compatibilityMatches0203",
-    "registry version already exists with different immutable publication metadata",
+    "версия реестра уже существует с другими неизменяемыми метаданными публикации",
 ):
     require(token in repo, f"Отсутствует репозиторий реестра расширений {token}")
 
@@ -57,8 +57,8 @@ for token in (
     "checksums.sha256",
     "SBOM.spdx.json",
     "signature.ed25519",
-    "case-colliding",
-    "symlink/special",
+    "конфликт регистра",
+    "Символические ссылки и специальные элементы",
     "PackageIdentity",
 ):
     require(token in verifier, f"Отсутствует серверная проверка пакетов {token}")
@@ -72,8 +72,8 @@ for token in (
     "extensionRegistryChannelSet0203",
     "extensionRegistryArtifact0203",
     "extensionRegistryInstall0203",
-    "artifact signature verification failed",
-    "registry artifact verification failed",
+    "Не удалось проверить подпись артефакта",
+    "Некорректный подписанный .nlext",
 ):
     require(token in http, f"Отсутствует HTTP-реализация реестра расширений {token}")
 for route in (
@@ -104,13 +104,13 @@ for token in (
 ):
     require(token in cli, f"Отсутствует команда CLI для реестра расширений {token}")
 
-admin = read("apps/admin/src/main.tsx")
+admin = read("apps/admin/src/admin/RegistryWorkspace.tsx")
 for token in (
-    "Extensions Registry",
-    "Publisher trust",
-    "Publish signed .nlext",
-    "Установить проверенный артефакт",
-    "Registry yank",
+    "Реестр расширений",
+    "Доверие к издателю",
+    "Опубликовать подписанный .nlext",
+    "Подготовить и установить проверенный пакет",
+    "Отозвать версию",
 ):
     require(token in admin, f"Отсутствует интерфейс реестра расширений в Admin {token}")
 

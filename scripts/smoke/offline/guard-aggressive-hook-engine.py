@@ -49,7 +49,7 @@ def main() -> int:
             "hook_load_library_ex_w",
             "hook_virtual_alloc",
             "hook_virtual_protect",
-            "pre-existing IAT target drift",
+            "обнаружено ранее возникшее изменение цели IAT",
             "verify_locked",
             "shutdown_restore",
             "AtomicUsize::from_ptr",

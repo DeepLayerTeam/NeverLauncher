@@ -49,7 +49,7 @@ for token in (
     "Revoke(",
     "Allowed(",
     "Effective(",
-    "extension secrets broker is not configured",
+    "Брокер секретов расширений не настроен",
 ):
     require(token in security, f"В менеджере безопасности отсутствует: {token}")
 
@@ -60,7 +60,7 @@ for token in (
     'case "secret.get"',
     'case "telemetry.emit"',
     'case "http.fetch"',
-    "capability policy unavailable",
+    "Политика разрешённых возможностей недоступна",
     "validateEventPermission0206",
 ):
     require(token in host, f"В защите разрешений Extension Host отсутствует: {token}")

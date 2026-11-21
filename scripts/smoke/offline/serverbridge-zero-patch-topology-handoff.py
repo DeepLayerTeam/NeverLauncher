@@ -116,7 +116,7 @@ require(
         "preparedHandoffs",
         "createHandoffAsync",
         "event.setCancelled(true)",
-        "event.getPlayer().connect",
+        "player.connect(serverInfo",
     ],
     "Проверка передачи управления Bungee/Waterfall",
 )

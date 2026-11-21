@@ -47,8 +47,8 @@ def main() -> int:
             "THREAD_QUERY_SET_WIN32_START_ADDRESS",
             "VirtualQuery",
             "MEM_IMAGE",
-            "suspicious runtime transition",
-            "non-image executable memory",
+            "подозрительный переход Runtime",
+            "исполняемой памяти, не принадлежащей образу",
             "thread-set v1",
             "origin-set v1",
             "reconcile_and_verify",
@@ -90,7 +90,7 @@ def main() -> int:
             "Process32FirstW",
             "Process32NextW",
             "IsProcessInJob",
-            "escaped runtime Job Object",
+            "для проверки дерева процессов необходим Job Object",
             "process-tree v1",
             "breakaway_allowed: false",
         ],
@@ -101,7 +101,7 @@ def main() -> int:
         [
             "runtime_policy: Option<crate::RuntimeProcessPolicyGuard>",
             "bind_runtime_policy",
-            "requires runtime Job Object policy binding",
+            "требует привязки политики Runtime Job Object",
         ],
         "привязка политики датчика к Runtime",
     )

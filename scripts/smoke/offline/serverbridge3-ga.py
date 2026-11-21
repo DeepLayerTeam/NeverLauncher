@@ -54,11 +54,11 @@ require(
 require(
     "serverbridge/certify_release.py",
     [
-        "'schemaVersion': '1.1'",
-        "'ga': True",
-        "'protocolV3Frozen': True",
-        "'installerUpgradePath': True",
-        "'/api/v1/server-bridge/overview'",
+        '"schemaVersion": "1.1"',
+        '"ga": True',
+        '"protocolV3Frozen": True',
+        '"installerUpgradePath": True',
+        '"/api/v1/server-bridge/overview"',
     ],
 )
 require(
@@ -70,21 +70,32 @@ require(
     ],
 )
 require(
-    "apps/admin/src/main.tsx",
+    "apps/admin/src/components/ServerBridgeOverview.tsx",
     [
-        "/api/v1/server-bridge/overview",
-        "ServerBridgeOverview",
+        "export function ServerBridgeOverview",
         "protocolMigrationRequired",
-        "Topology",
-        "Control",
-        "Audit",
+        "protocolMigrationsRequired",
+        "topology",
+        "control",
+        "audit",
+        "v3 зафиксирован",
     ],
 )
+require(
+    "apps/admin/src/api/serverbridge.ts",
+    ["protocolMigrationRequired", "BridgeOverview", "/api/v1/server-bridge/projects/", "/overview"],
+)
+require(
+    "apps/admin/src/admin/ServerBridgeWorkspace.tsx",
+    ["api.overview(projectId)", "protocolMigrationRequired", "<MetricCard"],
+)
+require("apps/admin/src/admin/AdminApp.tsx", ["<ServerBridgeWorkspace"])
+
 require(
     "services/api/internal/dbmigrate/sql/0041_serverbridge3_ga.sql",
     ["protocol_version=2", "compatibility/deprecation-only", "migrate-v3"],
 )
 require(
-    "scripts/serverbridge/matrix.py", ["3 GA (frozen)", "deprecated; migrate to v3"]
+    "scripts/serverbridge/matrix.py", ["3 GA (зафиксирован)", "устарел; переходите на v3"]
 )
 print("ServerBridge 3 GA 0.20.0: проверка готовности к эксплуатации: OK")

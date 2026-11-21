@@ -49,7 +49,7 @@ require(
         "bridgeRuntimeID0192",
         "ed25519.Verify",
         "runtime_id_binding_invalid",
-        "runtime identity mutated for existing runtime id",
+        "Идентификатор среды выполнения изменён для существующей записи",
         'transition = "replacement"',
         'transition = "restart"',
     ],

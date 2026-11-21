@@ -53,7 +53,7 @@ require(
         "MEM_PRIVATE",
         "capture_transition_provenance",
         "observe_memory_transition",
-        "outside jvm.dll provenance",
+        "вне проверенного происхождения jvm.dll",
         "count_private_executable_regions",
         "reconcile_and_verify",
     ],
@@ -89,7 +89,7 @@ require(
         "пятым событием ожидалось JVM_AWARE_READY",
         "jvm_aware_report_from_event",
         "GUARD_CERTIFIED_JAVA_MAJORS",
-        "non-JVM executable-memory transition",
+        "отклонён переход памяти в исполняемое состояние вне JVM",
     ],
 )
 require(
