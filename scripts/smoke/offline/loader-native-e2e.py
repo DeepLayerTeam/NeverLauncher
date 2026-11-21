@@ -44,7 +44,7 @@ require(
     native,
     [
         "RESOLVED_LOADER_VERSION",
-        "mutable loader selector is forbidden",
+        "изменяемый селектор загрузчика запрещён",
         "fabric-loader",
         "quilt-loader",
         "minecraftforge/forge",
@@ -54,7 +54,7 @@ require(
         "--server-port",
         "NL_Cert_Client joined the game",
         "loader-native-server-artifacts.txt",
-        "exact loader version",
+        "Точная версия загрузчика",
         "nativeHandshake",
         "actual-client-joined-dedicated-loader-server",
     ],
@@ -97,7 +97,7 @@ require(
     matrix,
     [
         "loader_native_e2e_0178_required",
-        "Loader-native E2E 0.17.8 requires exactly one",
+        "Для Loader-native E2E 0.17.8 требуется ровно одна",
         "loaderNativeServer",
         "loaderVersionMatched",
         "loaderServerHealthy",

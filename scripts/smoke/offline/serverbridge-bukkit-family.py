@@ -395,7 +395,7 @@ require(
         "0023_one_time_join_tickets_0143",
         "0024_bukkit_family_0144",
         "for kind in bukkit spigot paper purpur folia",
-        "invalid ServerBridge kind bypassed PostgreSQL constraint",
+        "недопустимый тип ServerBridge обошёл ограничение PostgreSQL",
     ],
     "Сквозная проверка миграции с 0.14.3 на 0.14.4",
 )

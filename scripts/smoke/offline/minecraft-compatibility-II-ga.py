@@ -226,12 +226,12 @@ require(
 require(
     read("runtime/runtime/src/compatibility.rs"),
     [
-        "Legacy Vanilla requires Java 8",
+        "для Legacy Vanilla требуется Java 8",
         "expected_java_major_for_vanilla_0170v2",
         "0.17.0v2 требуется точная версия Java",
         "expected_java_major_for_vanilla_0170v3",
         "0.17.0v3 требуется точная версия Java",
-        "metadata does not contain executable arguments.game or minecraftArguments",
+        "не содержат аргументов запуска arguments.game или minecraftArguments",
     ],
     "Выполнение Runtime GA 0.17.0v3",
 )

@@ -39,7 +39,7 @@ require(
         "forgeLegacy1710_0175",
         "neoForgeCompatibilityII0176",
         "не входит в сертифицированный набор GA",
-        "requires Java",
+        "требуется Java",
     ],
     "Политика поддержки Runtime для GA",
 )
@@ -82,7 +82,7 @@ require(
     [
         "loaderCompatibilityGA",
         "loaderCompatibilityGASupportSha256",
-        "Loader Compatibility GA 0.18.0",
+        "Ошибка совместимости загрузчиков GA 0.18.0",
         "loaderGASupportSHA2560180",
         "ga-certified",
     ],

@@ -54,7 +54,7 @@ class FinalExtensionReleaseTests(unittest.TestCase):
                 zf.writestr('payload/' + jar, 'compiled fixture JAR')
 
     def check(self):
-        with patch('extension_release_0430.subprocess.run') as mock:
+        with patch('extension_release.subprocess.run') as mock:
             mock.return_value.returncode = 0
             return certify(evidence=self.evidence, bundle=self.bundle, cli=self.cli,
                            publisher_key=self.key, version=self.version, commit=self.commit,
@@ -69,33 +69,33 @@ class FinalExtensionReleaseTests(unittest.TestCase):
 
     def test_missing_target_fails_closed(self):
         (self.evidence / 'macos-arm64.json').unlink()
-        with self.assertRaisesRegex(ValueError, 'missing'):
+        with self.assertRaisesRegex(ValueError, 'Отсутствующие'):
             self.check()
 
     def test_replayed_run_fails_closed(self):
         report = json.loads((self.evidence / 'linux-x64.json').read_text())
         report['runAttempt'] = '9'
         (self.evidence / 'linux-x64.json').write_text(json.dumps(report))
-        with self.assertRaisesRegex(ValueError, 'run identity'):
+        with self.assertRaisesRegex(ValueError, 'идентификатор запуска CI'):
             self.check()
 
     def test_tampered_certificate_fails(self):
         doc = json.loads(self.certificate.read_text())
         doc['platforms']['linux-x64']['evidenceSha256'] = '0'*64
         self.certificate.write_text(json.dumps(doc))
-        with self.assertRaisesRegex(ValueError, 'does not match'):
+        with self.assertRaisesRegex(ValueError, 'не соответствует'):
             self.check()
 
     def test_missing_signed_package_fails(self):
         (self.bundle / PACKAGES['java-host'][0]).unlink()
-        with self.assertRaisesRegex(ValueError, 'missing'):
+        with self.assertRaisesRegex(ValueError, 'Файл отсутствует'):
             self.check()
 
     def test_bad_publisher_signature_fails(self):
-        with patch('extension_release_0430.subprocess.run') as mock:
+        with patch('extension_release.subprocess.run') as mock:
             mock.return_value.returncode = 1
             mock.return_value.stderr = 'signature mismatch'
-            with self.assertRaisesRegex(ValueError, 'signing check failed'):
+            with self.assertRaisesRegex(ValueError, 'проверка подписи пакета завершилась ошибкой'):
                 certify(evidence=self.evidence, bundle=self.bundle, cli=self.cli,
                         publisher_key=self.key, version=self.version, commit=self.commit,
                         run_id=self.run, attempt=self.attempt,

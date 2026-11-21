@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from datetime import datetime,timezone,timedelta
+from contextlib import contextmanager
 import operations_ga as ga
 
 class OperationsGATests(unittest.TestCase):
@@ -47,8 +48,24 @@ class OperationsGATests(unittest.TestCase):
         p=self.evidence/(name+'.json');p.write_text(json.dumps(data));p.chmod(0o600)
         self.reports[name]=p
 
+    @contextmanager
+    def historical_release(self):
+        # These fixtures certify the historical 0.46.3 signing format. The
+        # checked-out repository may be newer; do not relax the production
+        # version allowlist in operations_ga.build_attestation.
+        original_read_text = Path.read_text
+        version_path = ga.ROOT / 'VERSION'
+
+        def read_text(path, *args, **kwargs):
+            if path == version_path:
+                return '0.46.3'
+            return original_read_text(path, *args, **kwargs)
+
+        with patch.object(Path, 'read_text', read_text), patch.object(ga.operational, 'VERSION', '0.46.3'):
+            yield
+
     def attest(self):
-        with patch.object(ga,'ROOT',Path(__file__).resolve().parents[2]):
+        with self.historical_release():
             return ga.build_attestation(self.bundle,self.reports,'a'*40)
 
     def test_binds_four_real_receipt_structures_six_actual_package_digests(self):
@@ -62,24 +79,24 @@ class OperationsGATests(unittest.TestCase):
     def test_rejects_missing_package_and_symlink(self):
         target=self.bundle/'launcher-desktop-0.46.3-windows-x64.zip'
         target.unlink()
-        with self.assertRaisesRegex(ValueError,'missing or unsafe'):self.attest()
+        with self.assertRaisesRegex(ValueError,'отсутствует или небезопасен'):self.attest()
         target.symlink_to(self.bundle/'launcher-desktop-0.46.3-windows-arm64.zip')
-        with self.assertRaisesRegex(ValueError,'missing or unsafe'):self.attest()
+        with self.assertRaisesRegex(ValueError,'отсутствует или небезопасен'):self.attest()
 
     def test_rejects_partial_failover(self):
         path=self.reports['failover-network-ha'];doc=json.loads(path.read_text());doc['rpoSecondsObservedCanaries']=5
         path.write_text(json.dumps(doc))
-        with self.assertRaisesRegex(ValueError,'canaries'):self.attest()
+        with self.assertRaisesRegex(ValueError,'контрольные операции должны сохраниться'):self.attest()
 
     def test_rejects_missing_restored_account(self):
         path=self.reports['restore-standard'];doc=json.loads(path.read_text());doc['identity']['oldAdminLogin']='unverified'
         path.write_text(json.dumps(doc))
-        with self.assertRaisesRegex(ValueError,'real account'):self.attest()
+        with self.assertRaisesRegex(ValueError,'реальная учётная запись'):self.attest()
 
     def test_rejects_expired_operational_receipt(self):
         path=self.reports['install-standard'];doc=json.loads(path.read_text());doc['completedUtc']=(datetime.now(timezone.utc)-timedelta(days=15)).isoformat()
         path.write_text(json.dumps(doc))
-        with self.assertRaisesRegex(ValueError,'expired'):self.attest()
+        with self.assertRaisesRegex(ValueError,'Время эксплуатационной приёмки истекло'):self.attest()
 
     def test_detects_same_host_forgery(self):
         path=self.reports['restore-standard'];doc=json.loads(path.read_text());doc['machineFingerprint']='a'*64
@@ -103,7 +120,7 @@ class OperationsGATests(unittest.TestCase):
         for stage,filename in [('install','install-standard'),('upgrade','upgrade-standard'),
                                ('restore','restore-standard'),('failover','failover-network-ha')]:
             args.extend(['--'+stage+'-receipt',str(self.reports[filename])])
-        with patch.object(sys,'argv',args),patch.object(ga.operational,'actor',return_value='operator2'):
+        with patch.object(sys,'argv',args), patch.object(ga.operational,'actor',return_value='operator2'), self.historical_release():
             self.assertEqual(ga.main(),0)
         raw=(self.evidence/'OPERATIONS_GA_0460.json').read_bytes()
         sig=base64.b64decode((self.evidence/'OPERATIONS_GA_0460.sig').read_text().strip())
@@ -131,13 +148,13 @@ class OperationsGATests(unittest.TestCase):
         # Подмена окончательных байтов установщика должна безусловно отклоняться.
         pkg=self.bundle/'launcher-desktop-0.46.3-windows-x64.zip'
         pkg.write_bytes(b'different')
-        with self.assertRaisesRegex(ValueError,'not independently approved'):
+        with self.assertRaisesRegex(ValueError,'не получил независимого одобрения'):
             ga.verify_public(self.bundle,operator_pub,release_pub)
         pkg.write_bytes(b'windowsx64')
         self.assertEqual(json.loads(raw)['operator'],'operator2')
         # Подписанные байты нельзя подменять; при изменении платформенных пакетов
         # оператор обязан оформить отдельное новое одобрение.
-        with patch.object(sys,'argv',args),patch.object(ga.operational,'actor',return_value='operator2'):
+        with patch.object(sys,'argv',args), patch.object(ga.operational,'actor',return_value='operator2'), self.historical_release():
             self.assertNotEqual(ga.main(),0)
 
     def test_rejects_receipts_from_previous_version(self):

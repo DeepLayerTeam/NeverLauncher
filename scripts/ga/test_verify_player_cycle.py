@@ -46,7 +46,7 @@ class PlayerCycle0398Test(unittest.TestCase):
             (self.root/f'player-0398-http-{case}.txt').write_text('403\n','ascii')
         # Имитируйте только уже независимо проверенный верификатор 0.36.4. Реальный CLI не использует
         # имитацию и отклоняет отсутствующие или недействительные свидетельства JVM.
-        patcher = patch('verify_player_cycle_0398.verify_game_cycle',
+        patcher = patch('verify_player_cycle.verify_game_cycle',
                     return_value={'artifactsVerified':23,'realJoinsAfterUpdateAndRollback':True})
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -82,7 +82,7 @@ class PlayerCycle0398Test(unittest.TestCase):
 
     def test_actual_http_denial_status_is_required(self):
         (self.root/'player-0398-http-uuid-mismatch.txt').write_text('200\n','ascii')
-        with self.assertRaisesRegex(ValueError,'status'):self.pass_test()
+        with self.assertRaisesRegex(ValueError,'статус'):self.pass_test()
 
     def test_tampered_authorized_uuid_is_not_accepted(self):
         self.edit('join-paper-real-client.json',lambda d:d['data']['join'].update({'uuid':BAD_UUID}))
@@ -108,7 +108,7 @@ class PlayerCycle0398Test(unittest.TestCase):
         with self.assertRaises(ValueError):verify(self.root,VERSION,'not-a-commit')
 
     def test_no_game_cycle_cannot_be_certified(self):
-        with patch('verify_player_cycle_0398.verify_game_cycle',side_effect=ValueError('Не найдена виртуальная машина Java (JVM)')):
+        with patch('verify_player_cycle.verify_game_cycle',side_effect=ValueError('Не найдена виртуальная машина Java (JVM)')):
             with self.assertRaisesRegex(ValueError,'Не найдена виртуальная машина Java'):self.pass_test()
 
     def test_wrong_realm_and_client_are_not_accepted(self):

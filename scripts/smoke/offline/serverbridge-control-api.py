@@ -33,10 +33,11 @@ checks = {
         "GET /api/v1/server-bridge/servers/{serverId}/control/{commandId}",
         "GET /api/v1/server-bridge/servers/{serverId}/control/poll",
         "POST /api/v1/server-bridge/servers/{serverId}/control/ack",
-        "serverbridge:control",
+        'requireFreshSession117("mfa", 5*time.Minute, s.serverBridgeControlCreate0195)',
     ],
     "services/api/internal/httpapi/server_bridge_control.go": [
-        "serverbridge:console",
+        "authorization.GameCommandPermission(kind)",
+        's.authorizeClaims(r, claims, permission, node.ProjectID, "server", serverID)',
         "Idempotency-Key",
         "ed25519.Sign",
         "serverBridgeControlCanonical0195",
@@ -50,6 +51,12 @@ checks = {
         "server.shutdown",
         "server.console",
         "serverBridgeConsoleAllowlist0195",
+    ],
+    "services/api/internal/authorization/control_domains.go": [
+        'func GameCommandPermission(kind string) (string, bool)',
+        'case "server.console":',
+        'return GameConsole, true',
+        'case GameBroadcast, GameModerate, GameSave, GameTraffic, GameShutdown, GameConsole:',
     ],
     "services/api/internal/repository/server_bridge_v2.go": [
         "CreateServerBridgeControlCommand",
@@ -152,7 +159,8 @@ control_sources = [
     / "plugins/neoforge-bridge/src/main/java/ru/launcher/bridge/neoforge/LauncherNeoForgeBridge.java",
 ]
 for path in control_sources:
-    text = resource_read_text(ROOT, rel)
+    # Scan the current Java file, not the final path from the checks dict.
+    text = path.read_text(encoding="utf-8")
     for forbidden in (
         "ProcessBuilder",
         "Runtime.getRuntime().exec",

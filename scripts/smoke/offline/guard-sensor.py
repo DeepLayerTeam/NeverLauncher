@@ -77,7 +77,13 @@ def main() -> int:
         ("прямые способы запуска Runtime", runtime, 2),
         ("запуск Runtime под управлением супервизора", supervisor, 1),
     ]:
-        if body.count("prepare_sensor_command(&mut command)") < count:
+        # Both the ordinary certification path and protected game launches
+        # must install the sensor. Game launches use a manifest-aware helper.
+        sensor_preparations = (
+            body.count("prepare_sensor_command(&mut command)")
+            + body.count("prepare_sensor_command_for_game(&mut command, root, manifest)")
+        )
+        if sensor_preparations < count:
             raise SystemExit(
                 f"[Launcher] Проверка сенсора Guard 0.18.2: {label} не подготавливает сенсор"
             )
