@@ -39,6 +39,74 @@ class PublishGateTests(unittest.TestCase):
                     self.index_pin,self.bundle,COMMIT,PROJECT)
  def test_exact_signed_final_bytes_replay(self):
     self.assertEqual(self.verify()['authorizedPackages'],8)
+ def test_stage_imports_real_exact_final_packages_for_root_signature(self):
+    target=self.root/'unsigned-release';target.mkdir()
+    report=m.stage(approval=self.approval,signature=self.sig,
+      verifier_public=self.public,verifier_pin=self.pin,
+      packages=self.packages,index=self.index,index_pin=self.index_pin,
+      bundle=target,source_commit=COMMIT,project=PROJECT)
+    self.assertEqual(report['version'],'1.0.0')
+    self.assertEqual(len(report['packages']),8)
+    self.assertEqual(len(list(target.iterdir())),9)
+    authorized=m.ga.rehearsal.package_set(self.packages,self.index,self.index_pin,COMMIT,PROJECT)
+    m.verify_staged_receipt(target,self.verify(),authorized,COMMIT,PROJECT,self.index_pin)
+    for name in authorized:
+        self.assertEqual((target/name).read_bytes(),(self.packages/name).read_bytes())
+    # Repeating staging is forbidden even with an otherwise valid approval.
+    with self.assertRaises(m.Blocked):
+        m.stage(approval=self.approval,signature=self.sig,
+          verifier_public=self.public,verifier_pin=self.pin,
+          packages=self.packages,index=self.index,index_pin=self.index_pin,
+          bundle=target,source_commit=COMMIT,project=PROJECT)
+ def test_mid_copy_failure_cleans_every_partial_file(self):
+    from unittest import mock
+    import shutil
+    target=self.root/'half-staged';target.mkdir()
+    original=shutil.copyfileobj
+    called=[0]
+    def failing_copy(src,dst,*args,**kwargs):
+        called[0]+=1
+        if called[0]==2:
+            dst.write(b'partial bytes')
+            raise OSError('simulated disk full')
+        return original(src,dst,*args,**kwargs)
+    with mock.patch.object(shutil,'copyfileobj',side_effect=failing_copy):
+        with self.assertRaisesRegex(OSError,'simulated disk full'):
+            m.stage(approval=self.approval,signature=self.sig,
+              verifier_public=self.public,verifier_pin=self.pin,
+              packages=self.packages,index=self.index,index_pin=self.index_pin,
+              bundle=target,source_commit=COMMIT,project=PROJECT)
+    self.assertEqual(list(target.iterdir()),[])
+ def test_stage_refuses_invalid_independent_signature_without_partial_output(self):
+    target=self.root/'not-staged';target.mkdir()
+    self.sig.write_bytes(b'x'*64)
+    with self.assertRaises(m.ga.rehearsal.Blocked):
+        m.stage(approval=self.approval,signature=self.sig,
+          verifier_public=self.public,verifier_pin=self.pin,
+          packages=self.packages,index=self.index,index_pin=self.index_pin,
+          bundle=target,source_commit=COMMIT,project=PROJECT)
+    self.assertEqual(list(target.iterdir()),[])
+ def test_stage_stops_mismatched_final_bundle_before_signing(self):
+    target=self.root/'wrong-bundle';target.mkdir()
+    bad=self.packages/m.ga.rehearsal.native.expected_filename(m.ga.VERSION,PROJECT,'macos','x64')
+    bad.write_bytes(bad.read_bytes()+b'tamper')
+    with self.assertRaises(m.ga.rehearsal.Blocked):
+        m.stage(approval=self.approval,signature=self.sig,
+          verifier_public=self.public,verifier_pin=self.pin,
+          packages=self.packages,index=self.index,index_pin=self.index_pin,
+          bundle=target,source_commit=COMMIT,project=PROJECT)
+    self.assertEqual(list(target.iterdir()),[])
+ def test_staged_receipt_cannot_be_replaced_by_report_without_approval(self):
+    target=self.root/'unsigned-release';target.mkdir()
+    m.stage(approval=self.approval,signature=self.sig,
+      verifier_public=self.public,verifier_pin=self.pin,
+      packages=self.packages,index=self.index,index_pin=self.index_pin,
+      bundle=target,source_commit=COMMIT,project=PROJECT)
+    path=target/m.RECEIPT
+    path.write_bytes(path.read_bytes().replace(b'independently-approved-exact-native-packages',b'self-reported'))
+    authorized=m.ga.rehearsal.package_set(self.packages,self.index,self.index_pin,COMMIT,PROJECT)
+    with self.assertRaises(m.Blocked):
+        m.verify_staged_receipt(target,self.verify(),authorized,COMMIT,PROJECT,self.index_pin)
  def test_unsigned_wrong_project_blocks(self):
     with self.assertRaises(m.Blocked):
         m.verify(self.approval,self.sig,self.public,self.pin,self.packages,self.index,

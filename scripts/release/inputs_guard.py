@@ -29,6 +29,8 @@ SOURCES = (
     'scripts/release/publish.py',
     'scripts/operations/operations_ga.py',
     'cli/cmd/launcher/release_commands.go',
+    'cli/cmd/launcher/release_supported_platform_1000.go',
+    'cli/cmd/launcher/release_supported_platform_1000_test.go',
     'reproducibility/primary-payload.json',
     'scripts/build/bridge-plugins.sh',
     'sdk/api/go/client.go', 'sdk/api/go/stream_test.go',

@@ -1,6 +1,6 @@
 [package]
 name = "guard-debug-probe"
-version = "0.53.0"
+version = "1.0.0"
 description = "Интеграционный тест Guard для Windows: попытка подключения отладчика"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

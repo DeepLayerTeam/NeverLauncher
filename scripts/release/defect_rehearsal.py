@@ -97,8 +97,8 @@ def git(*args):
     return p.stdout.strip()
 
 def source_identity(expected: str):
-    require(VERSION == '0.53.0' and COMMIT.fullmatch(expected or '') is not None,
-            'Требуются точная версия 0.53.0 и утверждённый коммит из 40 шестнадцатеричных символов')
+    require(VERSION == '1.0.0' and COMMIT.fullmatch(expected or '') is not None,
+            'Требуются точная версия 1.0.0 и утверждённый коммит из 40 шестнадцатеричных символов')
     require(git('rev-parse', 'HEAD') == expected, 'Коммит проверяемой рабочей копии изменился')
     require(git('status','--porcelain','--untracked-files=all') == '',
             'В рабочей копии есть незакоммиченные изменения или неотслеживаемые исходные файлы')

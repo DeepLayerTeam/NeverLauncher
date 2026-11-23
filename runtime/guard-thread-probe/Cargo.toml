@@ -1,6 +1,6 @@
 [package]
 name = "guard-thread-probe"
-version = "0.53.0"
+version = "1.0.0"
 description = "Тестовый модуль для атакующих проверок целостности потоков Guard в Windows"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

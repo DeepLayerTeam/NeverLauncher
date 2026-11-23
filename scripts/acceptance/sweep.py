@@ -80,7 +80,7 @@ def raw_soak(root: Path, commit: str, run_id: str, attempt: int, kind: str):
     summary = read_json(root / 'soak.json', 8*1024*1024)
     require(summary.get('schema') == 'launcher.real-soak/' + inventory.VERSION and
             summary.get('status') == 'OBSERVED_NOT_GA' and
-            summary.get('version') == inventory.VERSION == '0.53.0' and
+            summary.get('version') == inventory.VERSION == '1.0.0' and
             summary.get('commit') == commit and summary.get('runId') == run_id and
             summary.get('attempt') == attempt and summary.get('mode') == kind and
             type(summary.get('seconds')) in (float,int) and summary['seconds'] >= 3600,
@@ -155,8 +155,8 @@ def verify_repro(a):
             'builders':report['builders']}
 
 def verify_full(a):
-    require(COMMIT.fullmatch(a.commit or '') is not None and inventory.VERSION == '0.53.0',
-            'Требуются точный актуальный коммит исходников и версия 0.53.0')
+    require(COMMIT.fullmatch(a.commit or '') is not None and inventory.VERSION == '1.0.0',
+            'Требуются точный актуальный коммит исходников и версия 1.0.0')
     report = {'schema':'launcher.full-compatibility-sweep/' + inventory.VERSION,
               'version':inventory.VERSION,'commit':a.commit,'status':'BLOCKED'}
     report['minecraft'] = verify_minecraft(a.compat_results,a.commit,a.compat_run_id,a.compat_attempt)

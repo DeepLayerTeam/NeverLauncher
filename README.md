@@ -23,7 +23,7 @@
 
 ## Быстрый старт для разработчиков
 
-Установите Go 1.23 (как в CI), Node.js/npm, Python 3, Rust/Cargo; для мостов также JDK и Gradle. Для реального API необходимы PostgreSQL и, в предусмотренных сценариях, Redis. **Не используйте пример `.env` для промышленной эксплуатации.**
+Установите Go 1.27.3 для Backend (см. `services/api/go.mod`; CLI допускает Go 1.22+), Node.js/npm, Python 3, Rust/Cargo; для мостов также JDK и Gradle. Для реального API необходимы PostgreSQL и, в предусмотренных сценариях, Redis. **Не используйте пример `.env` для промышленной эксплуатации.**
 
 ```bash
 # Из корня репозитория: проверка версии и OpenAPI
@@ -46,6 +46,10 @@ python3 scripts/contracts/validate-openapi.py
 ## Документация
 
 Начните с [индекса документации](docs/README.md). Полезные разделы: [архитектура](ARCHITECTURE.md), [авторизация](docs/authentication/providers.md), [клиенты](docs/clients/profiles-and-launch.md), [ServerBridge](docs/servers/serverbridge.md), [Extensions](docs/extensions/overview.md), [безопасность](docs/security/trust-model.md), [CLI](docs/reference/cli.md), [API](docs/reference/api.md) и [диагностика](docs/troubleshooting/common.md).
+
+## GA-релиз 1.0.0
+
+Код исходного выпуска 1.0.0 включает рабочую проверку шести финальных нативных инсталляторов и независимую приёмку E2E-01–18, но **не заявляет о завершённой GA-сертификации без настоящих подтверждений**. См. [процедуру Supported Platform GA](docs/acceptance/supported-platform-ga-1.0.0.md).
 
 ## Проверки и ограничения
 

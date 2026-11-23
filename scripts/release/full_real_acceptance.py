@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""0.53.0: выполнить и независимо проверить настоящую пользовательскую приёмку GA.
+"""1.0.0: выполнить и независимо проверить настоящую пользовательскую приёмку GA.
 
 Утверждающий выпуск должен предоставить реальные независимо полученные финальные пакеты, рабочую
 копию исходников, входы настоящих раннеров, независимо подписанный экспорт дефектов и исходные
@@ -93,7 +93,7 @@ def digest(path):
 
 def strict_plan(doc, commit, pin):
     need(type(doc) is dict and set(doc)=={'version','sourceCommit','sourceIndexSha256','scenarios'}
-         and doc['version']==VERSION=='0.53.0' and doc['sourceCommit']==commit and
+         and doc['version']==VERSION=='1.0.0' and doc['sourceCommit']==commit and
          doc['sourceIndexSha256']==pin and type(doc['scenarios']) is dict and
          set(doc['scenarios'])==set(SCENARIOS), 'Неполный план реального выполнения для точной версии')
     for name, args in doc['scenarios'].items():
@@ -286,7 +286,7 @@ def group_coverage(sweep_result, original):
 
 def inputs(p):
     # Повторно используйте независимо проверенный парсер заморозки/репетиции
-    # 0.52.12 и глубокий повторный прогон с привязкой к версии 0.53.0 и точным
+    # 0.52.12 и глубокий повторный прогон с привязкой к версии 1.0.0 и точным
     # финальным байтам.
     return dict(freeze_path=p.freeze,freeze_sig=p.freeze_sig,release_key=p.release_key,
       release_pin=p.release_pin,commit=p.commit,project=p.project,
@@ -338,7 +338,7 @@ def verify_signed(path,sig,key,pin,domain):
     return report
 
 def approval(p):
-    need(VERSION=='0.53.0','Финальная приёмка GA допускается только для версии продукта 0.53.0')
+    need(VERSION=='1.0.0','Финальная приёмка GA допускается только для версии продукта 1.0.0')
     need(p.commit and rehearsal.COMMIT.fullmatch(p.commit),'Требуется утверждённый реальный коммит Git')
     need(len({p.release_pin,p.issues_pin,p.qa_pin,p.verifier_pin})==4,
          'Четырём проверяющим сторонам запрещено повторно использовать ключи')
@@ -397,7 +397,7 @@ def main(argv=None):
         return 0
     except (Blocked,rehearsal.Blocked,inventory.Blocked,OSError,ValueError,TypeError,
             KeyError,subprocess.TimeoutExpired,subprocess.CalledProcessError,InvalidSignature) as exc:
-        print('Полная пользовательская приёмка 0.53.0 заблокирована: '+type(exc).__name__+': '+str(exc),file=sys.stderr)
+        print('Полная пользовательская приёмка 1.0.0 заблокирована: '+type(exc).__name__+': '+str(exc),file=sys.stderr)
         return 3
 
 if __name__=='__main__':

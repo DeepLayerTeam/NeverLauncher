@@ -365,25 +365,32 @@ def validate(
             verify_public(bundle, Path(operator_key), release_key)
         except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
             raise Blocked('GA 0.46.0 заблокирована: независимая проверка свидетельств эксплуатации не пройдена') from exc
-    if version == '0.53.0':
-        # Явно подтвердите допуск ещё до попытки публикации на GitHub. Защищённая среда выпуска предоставляет
-        # одобренные исходные пакеты только для чтения и отдельный закреплённый ключ независимого проверяющего.
-        from publication_ga import verify as verify_0530
-        base = os.environ.get('NL_GA0530_INBOX','')
-        key = os.environ.get('NL_GA0530_VERIFIER_KEY','')
-        pin = os.environ.get('NL_GA0530_VERIFIER_PIN','')
-        index_pin = os.environ.get('NL_GA0530_INDEX_SHA256','')
-        project = os.environ.get('NL_GA0530_PROJECT','')
-        require(all((base,key,pin,index_pin,project)),
-                'Выпуск 0.53.0 ЗАБЛОКИРОВАН: отсутствуют независимые входные данные полной пользовательской приёмки GA')
-        root=Path(base)
-        require(root.is_absolute() and root.is_dir(), 'Недоступен каталог входящих подтверждений финального выпуска 0.53.0')
+    if parsed(version)[0] >= (0, 53, 0):
+        # Never let a 1.x release bypass the independently signed full 18-group
+        # E2E and six native final-package gate, even if its version changes.
+        # Future versions fail closed until their signed policy is reviewed.
+        from publication_ga import (verify as verify_independent,
+                                    verify_staged_receipt)
+        base = os.environ.get('NL_GA1000_INBOX', '')
+        key = os.environ.get('NL_GA1000_VERIFIER_KEY', '')
+        pin = os.environ.get('NL_GA1000_VERIFIER_PIN', '')
+        index_pin = os.environ.get('NL_GA1000_INDEX_SHA256', '')
+        project = os.environ.get('NL_GA1000_PROJECT', '')
+        require(all((base, key, pin, index_pin, project)),
+                'Выпуск 1.0.0+ ЗАБЛОКИРОВАН: нет независимо подписанных E2E-01..18 и финальных нативных пакетов')
+        root = Path(base)
+        require(root.is_absolute() and root.is_dir() and not root.is_symlink(),
+                'Недоступен независимый каталог свидетельств GA 1.0.0')
         try:
-            verify_0530(root/'approval.json',root/'approval.sig',Path(key),pin,
-                        root/'packages',root/'source-index.json',index_pin,
-                        bundle.absolute(),commit,project)
+            approved = verify_independent(root/'approval.json', root/'approval.sig',
+                    Path(key), pin, root/'packages', root/'source-index.json',
+                    index_pin, bundle.absolute(), commit, project)
+            from full_real_acceptance import rehearsal as rehearsal_1000
+            authorized = rehearsal_1000.package_set(root/'packages',
+                    root/'source-index.json', index_pin, commit, project)
+            verify_staged_receipt(bundle, approved, authorized, commit, project, index_pin)
         except (OSError, ValueError, KeyError, TypeError) as exc:
-            raise Blocked('Полная реальная пользовательская приёмка GA 0.53.0 заблокирована: '+str(exc)) from exc
+            raise Blocked('Проверка Supported Platform GA 1.0.0 заблокирована: '+str(exc)) from exc
     verify_ci(json_object(ci), version, commit, run_id, attempt)
     approval = verify_ga(bundle, ga_key, version, commit, run_id, attempt)
     dry = json_object(dryrun)

@@ -39,10 +39,10 @@ on:
         type: string
         required: false
         description: 'ID защищённого и независимо подписанного реального запуска приёмки 0.48.0: миграция в промежуточной среде, прежние версии, игра и точный подписанный пакет (обязателен для публикации)'
-      ga0530_evidence_run_id:
+      ga1000_evidence_run_id:
         type: string
-        required: false
-        description: 'ID защищённого независимого запуска GA-верификатора E2E-01..18 для 0.53.0 (обязателен для публикации)'
+        required: true
+        description: 'ID защищённого независимого запуска GA-верификатора E2E-01..18 для 1.0.0 (обязателен для публикации)'
       publish_release:
         type: boolean
         required: true
@@ -410,6 +410,33 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Проверить защищённый независимый GA-запуск 1.0.0 для точного SHA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GA_RUN: ${{ inputs.ga1000_evidence_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$GA_RUN" =~ ^[1-9][0-9]*$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GA_RUN" > "$RUNNER_TEMP/ga1000-run.json"
+          python3 scripts/release/check_protected_run.py \
+            --json "$RUNNER_TEMP/ga1000-run.json" --version "$(cat VERSION)" --commit "$GITHUB_SHA"
+      - name: Скачать утверждённые независимым аудитором нативные установщики
+        uses: actions/download-artifact@v4
+        with:
+          name: ga1000-final-${{ github.sha }}
+          path: ${{ runner.temp }}/ga1000-final
+          run-id: ${{ inputs.ga1000_evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Закрепить открытый ключ независимого аудитора для сборки
+        shell: bash
+        env:
+          GA1000_VERIFIER_PUBLIC_PEM: ${{ vars.NL_GA1000_VERIFIER_PUBLIC_KEY_PEM }}
+        run: |
+          set -euo pipefail
+          test -n "$GA1000_VERIFIER_PUBLIC_PEM"
+          umask 077
+          printf '%s\n' "$GA1000_VERIFIER_PUBLIC_PEM" > "$RUNNER_TEMP/ga1000-verifier.pub"
       - name: Скачать отчёты и сертификаты расширений для шести реальных платформ
         uses: actions/download-artifact@v4
         with:
@@ -813,6 +840,11 @@ jobs:
           LAUNCHER_COMPONENT_GA_PUBLIC_KEY: ${{ vars.LAUNCHER_COMPONENT_GA_PUBLIC_KEY }}
           LAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270
           LAUNCHER_OFFICIAL_GA_PUBLIC_KEY: ${{ vars.LAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
+          NL_GA1000_INBOX: ${{ runner.temp }}/ga1000-final
+          NL_GA1000_VERIFIER_KEY: ${{ runner.temp }}/ga1000-verifier.pub
+          NL_GA1000_VERIFIER_PIN: ${{ vars.NL_GA1000_VERIFIER_KEY_SHA256 }}
+          NL_GA1000_INDEX_SHA256: ${{ vars.NL_GA1000_INDEX_SHA256 }}
+          NL_GA1000_PROJECT: ${{ vars.NL_GA1000_PROJECT }}
         run: bash scripts/release/build-release.sh
       - name: Проверить исполняемые файлы шести платформ и подписанный манифест релиза
         shell: bash
@@ -1169,24 +1201,22 @@ jobs:
           path: guard-0510-independent
           run-id: ${{ inputs.guard_0510_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Скачать защищённое подписанное утверждение всех пользовательских E2E 0.53.0 и шесть окончательных установщиков
-        if: ${{ inputs.ga0530_evidence_run_id != '' }}
+      - name: Скачать защищённое подписанное утверждение всех пользовательских E2E 1.0.0 и шесть окончательных установщиков
         uses: actions/download-artifact@v4
         with:
-          name: ga0530-final-${{ github.sha }}
-          path: ga0530-final
-          run-id: ${{ inputs.ga0530_evidence_run_id }}
+          name: ga1000-final-${{ github.sha }}
+          path: ${{ runner.temp }}/ga1000-final
+          run-id: ${{ inputs.ga1000_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Закрепить независимый ключ итогового GA-верификатора 0.53.0 без закрытого ключа подписи
-        if: ${{ inputs.ga0530_evidence_run_id != '' }}
+      - name: Закрепить независимый ключ итогового GA-верификатора 1.0.0 без закрытого ключа подписи
         shell: bash
         env:
-          GA0530_VERIFIER_PUBLIC_PEM: ${{ vars.NL_GA0530_VERIFIER_PUBLIC_KEY_PEM }}
+          GA1000_VERIFIER_PUBLIC_PEM: ${{ vars.NL_GA1000_VERIFIER_PUBLIC_KEY_PEM }}
         run: |
           set -euo pipefail
-          test -n "$GA0530_VERIFIER_PUBLIC_PEM"
+          test -n "$GA1000_VERIFIER_PUBLIC_PEM"
           umask 077
-          printf '%s\n' "$GA0530_VERIFIER_PUBLIC_PEM" > "$RUNNER_TEMP/ga0530-verifier.pub"
+          printf '%s\n' "$GA1000_VERIFIER_PUBLIC_PEM" > "$RUNNER_TEMP/ga1000-verifier.pub"
       - name: Обязательная независимая проверка допуска Guard 0.51.0 по точным итоговым байтам
         shell: bash
         env:
@@ -1223,11 +1253,11 @@ jobs:
           LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ops-ga.pub
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NL0480_TRUSTED_KEY_HEX: ${{ vars.NL_GA0480_OPERATOR_ED25519_PUBLIC_KEY_HEX }}
-          NL_GA0530_INBOX: ${{ github.workspace }}/ga0530-final
-          NL_GA0530_VERIFIER_KEY: ${{ runner.temp }}/ga0530-verifier.pub
-          NL_GA0530_VERIFIER_PIN: ${{ vars.NL_GA0530_VERIFIER_KEY_SHA256 }}
-          NL_GA0530_INDEX_SHA256: ${{ vars.NL_GA0530_INDEX_SHA256 }}
-          NL_GA0530_PROJECT: ${{ vars.NL_GA0530_PROJECT }}
+          NL_GA1000_INBOX: ${{ runner.temp }}/ga1000-final
+          NL_GA1000_VERIFIER_KEY: ${{ runner.temp }}/ga1000-verifier.pub
+          NL_GA1000_VERIFIER_PIN: ${{ vars.NL_GA1000_VERIFIER_KEY_SHA256 }}
+          NL_GA1000_INDEX_SHA256: ${{ vars.NL_GA1000_INDEX_SHA256 }}
+          NL_GA1000_PROJECT: ${{ vars.NL_GA1000_PROJECT }}
         shell: bash
         run: |
           set -euo pipefail

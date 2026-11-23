@@ -1,4 +1,4 @@
-name: 0.53.0 — реальные часовые испытания Minecraft и HTTPS
+name: 1.0.0 — реальные часовые испытания Minecraft и HTTPS
 on:
   push:
     paths:

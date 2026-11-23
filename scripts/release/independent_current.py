@@ -70,7 +70,7 @@ def scan(directory: Path):
     return output
 
 def capture(directory: Path, builder: str, runner: str, commit: str, run_id: str, attempt: int):
-    require(VERSION == '0.53.0', 'Требуется версия выпуска 0.53.0')
+    require(VERSION == '1.0.0', 'Требуется версия выпуска 1.0.0')
     require(SHA.fullmatch(commit) and source_sha() == commit, 'Коммит рабочей копии не совпадает с исходным коммитом')
     require(all(ID.fullmatch(x or '') for x in (builder, runner, run_id)) and
             type(attempt) is int and attempt > 0, 'Недопустимый идентификатор независимого сборщика')
@@ -91,7 +91,7 @@ def pinned_key(path: Path, pin: str):
 
 def compare(a: dict, b: dict, dir_a: Path, dir_b: Path, commit: str, run_id: str, attempt: int):
     require(a.get('schema') == b.get('schema') == SCHEMA, 'Неподдерживаемая схема независимой сборки')
-    require(a.get('version') == b.get('version') == VERSION == '0.53.0' and
+    require(a.get('version') == b.get('version') == VERSION == '1.0.0' and
             a.get('commit') == b.get('commit') == commit and
             a.get('runId') == b.get('runId') == run_id and
             a.get('attempt') == b.get('attempt') == attempt,

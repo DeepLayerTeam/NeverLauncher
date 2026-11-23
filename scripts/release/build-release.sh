@@ -241,6 +241,29 @@ mkdir -p "${OUT_DIR}" "${WORK_DIR}"
 if [[ -n "${GA_RUNTIME_PREFLIGHT_FILE}" ]]; then
   cp -- "${GA_RUNTIME_PREFLIGHT_FILE}" "${OUT_DIR}/GA_RUNTIME_PREFLIGHT_0350.json"
 fi
+# 1.0.0: import the independently approved *final* native installers BEFORE
+# the release root manifest and Ed25519 SHA256SUMS are generated. The imported
+# bytes are never rebuilt, overwritten, or substituted by the release builder.
+# Absence of externally pinned approval/indices fails the production build.
+if [[ "${VERSION}" == "1.0.0" ]]; then
+  for name in NL_GA1000_INBOX NL_GA1000_VERIFIER_KEY NL_GA1000_VERIFIER_PIN \
+              NL_GA1000_INDEX_SHA256 NL_GA1000_PROJECT; do
+    [[ -n "${!name:-}" ]] || {
+      echo "Supported Platform GA 1.0.0 ЗАБЛОКИРОВАНА: отсутствует ${name}" >&2
+      exit 2
+    }
+  done
+  python3 "${ROOT_DIR}/scripts/release/publication_ga.py" stage \
+    --approval "${NL_GA1000_INBOX}/approval.json" \
+    --signature "${NL_GA1000_INBOX}/approval.sig" \
+    --verifier-public "${NL_GA1000_VERIFIER_KEY}" \
+    --verifier-pin "${NL_GA1000_VERIFIER_PIN}" \
+    --packages "${NL_GA1000_INBOX}/packages" \
+    --index "${NL_GA1000_INBOX}/source-index.json" \
+    --index-pin "${NL_GA1000_INDEX_SHA256}" \
+    --bundle "${OUT_DIR}" --source-commit "${SOURCE_COMMIT}" \
+    --project "${NL_GA1000_PROJECT}"
+fi
 if [[ "${VERSION}" == "0.33.0" ]]; then
   for name in SINGLE_NODE_GA_ATTESTATION.json SINGLE_NODE_GA_ATTESTATION.sig SINGLE_NODE_GA_RC.json SINGLE_NODE_GA_CERTIFICATION.json; do
     if [[ "${name}" == "SINGLE_NODE_GA_CERTIFICATION.json" ]]; then

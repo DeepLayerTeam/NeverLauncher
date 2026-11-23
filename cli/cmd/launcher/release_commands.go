@@ -712,6 +712,23 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	entries := releaseBundleEntries(ver, out)
 	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
 	checks := []string{"required-artifacts", "sha256", "ed25519-external-trust", "sbom", "provenance", "release-notes", "source-secret-scan"}
+	// Independently approved 1.0.0 final installers are not optional extras:
+	// bind every installer, Linux signature and the receipt into REQUIRED artifacts.
+	gaFiles1000, err := verifySupportedPlatformGA1000(out, ver, expectedCommit)
+	if err != nil {
+		return fmt.Errorf("Supported Platform GA: %w", err)
+	}
+	if len(gaFiles1000) != 0 {
+		requiredFiles = append(requiredFiles, gaFiles1000...)
+		checks = append(checks, "independent-full-e2e-18-six-signed-native-platforms-exact-bytes")
+		for _, entry := range entries {
+			for _, name := range gaFiles1000 {
+				if entry["name"] == name {
+					entry["required"] = true
+				}
+			}
+		}
+	}
 	if releaseBOMRequired03214(ver) {
 		requiredFiles = append(requiredFiles, releaseBOMFile03214)
 		checks = append(checks, "pinned-release-bom-exact-byte-cohort")
@@ -1039,6 +1056,31 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	}
 	if strings.TrimSpace(manifest.Version) == "" {
 		return errors.New("RELEASE_MANIFEST.json не содержит поле version")
+	}
+	if supportedPlatformGARequired1000(manifest.Version) {
+		gaFiles1000, err := verifySupportedPlatformGA1000(dir, manifest.Version, manifest.SourceCommit)
+		if err != nil {
+			return fmt.Errorf("Supported Platform GA: %w", err)
+		}
+		for _, name := range gaFiles1000 {
+			required := false
+			for _, entry := range manifest.Artifacts {
+				if entry.Name == name && entry.Required && entry.Status == "present" {
+					required = true
+					break
+				}
+			}
+			listed := false
+			for _, candidate := range manifest.RequiredFiles {
+				if candidate == name {
+					listed = true
+					break
+				}
+			}
+			if !required || !listed {
+				return fmt.Errorf("Supported Platform GA: файл %s не обязателен в подписанном релизе", name)
+			}
+		}
 	}
 	if err := verifySingleNodeGABundle0330(dir, manifest.Version, manifest.SourceCommit, ""); err != nil {
 		return fmt.Errorf("Ошибка GA на одном узле для 0.33.0: %w", err)

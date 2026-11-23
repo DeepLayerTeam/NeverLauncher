@@ -92,7 +92,7 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     a=p.parse_args()
     try:
-        need(VERSION=='0.53.0','Требуется опубликованный SDK точно версии 0.53.0')
+        need(VERSION=='1.0.0','Требуется опубликованный SDK точно версии 1.0.0')
         need(a.output.is_absolute() and not a.output.exists() and a.output.parent.is_dir(),
              'Требуется новый абсолютный путь для сохранения свидетельства SDK')
         result=probe(a)

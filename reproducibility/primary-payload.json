@@ -1,13 +1,13 @@
 {
   "schema": "launcher.primary-payload.v1",
-  "version": "0.53.0",
+  "version": "1.0.0",
   "scope": "шесть реальных неподписанных артефактов для сочетаний ОС/ЦП; требуются независимое нативное сравнение и отдельная приёмка подписанного окончательного содержимого",
   "targets": {
-    "windows-x64": "launcher-desktop-0.53.0-windows-x64.zip",
-    "windows-arm64": "launcher-desktop-0.53.0-windows-arm64.zip",
-    "linux-x64": "launcher-linux-x64-0.53.0.tar.gz",
-    "linux-arm64": "launcher-linux-arm64-0.53.0.tar.gz",
-    "darwin-x64": "launcher-desktop-0.53.0-macos-x64.zip",
-    "darwin-arm64": "launcher-desktop-0.53.0-macos-arm64.zip"
+    "windows-x64": "launcher-desktop-1.0.0-windows-x64.zip",
+    "windows-arm64": "launcher-desktop-1.0.0-windows-arm64.zip",
+    "linux-x64": "launcher-linux-x64-1.0.0.tar.gz",
+    "linux-arm64": "launcher-linux-arm64-1.0.0.tar.gz",
+    "darwin-x64": "launcher-desktop-1.0.0-macos-x64.zip",
+    "darwin-arm64": "launcher-desktop-1.0.0-macos-arm64.zip"
   }
 }

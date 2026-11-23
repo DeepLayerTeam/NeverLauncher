@@ -137,7 +137,7 @@ class FullRealGATests(unittest.TestCase):
     row=valid_report('sdk');row['version']='0.52.12'
     with self.assertRaises(m.Blocked):m.assert_observed('sdk',row,COMMIT)
  def test_signed_receipt_from_old_version_never_promotes(self):
-    self.assertIn('0.53.0',m.DOMAIN.decode())
+    self.assertIn('1.0.0',m.DOMAIN.decode())
     self.assertNotEqual(m.DOMAIN,m.rehearsal.REHEARSAL_DOMAIN)
 
 if __name__=='__main__':unittest.main()

@@ -13,6 +13,7 @@ class InputsGuardTests(unittest.TestCase):
         baseline=json.loads(guard.BASELINE.read_text())
         self.assertEqual(baseline['release'], (guard.ROOT/'VERSION').read_text().strip())
         self.assertIn('reproducibility/primary-payload.json',baseline['files'])
+        self.assertIn('cli/cmd/launcher/release_supported_platform_1000.go',baseline['files'])
         self.assertIn('cli/cmd/launcher/templates/production.zip',baseline['files'])
         self.assertIn('cli/internal/dbmigrate/catalog.zip',baseline['files'])
         self.assertIn('services/api/internal/dbmigrate/sql/0115_imported_file_mirrors.sql',baseline['files'])

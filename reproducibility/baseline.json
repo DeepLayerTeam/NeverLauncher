@@ -221,8 +221,8 @@
       "size": 3887
     },
     ".github/workflows/full-real-ga.yml": {
-      "sha256": "c60497f34a864228ea8acbea2ee5a7deac82910666b958fbc7b4ff4baeb646cf",
-      "size": 11259
+      "sha256": "3f5427dda4232e18b195f0c5d8f5087ddf43b78c999f1aacb96bd340970703f9",
+      "size": 11257
     },
     ".github/workflows/game-world-backup.yml": {
       "sha256": "af6ea41f6e02bdfc339d1c59463e1af7aa18c7f6f9fbf194b4d2c211402e5a11",
@@ -617,8 +617,8 @@
       "size": 4403
     },
     ".github/workflows/physical-ha-dr.yml": {
-      "sha256": "9ab30dcdaf0a7e8130919a9bf0612a18bc14a25daec7c06387258c05b03de617",
-      "size": 8667
+      "sha256": "f56f963effdd60252bd23336a97f2a97e09537d975a2cf5845bbfb6f5e53200c",
+      "size": 8666
     },
     ".github/workflows/player-migration.yml": {
       "sha256": "eb242a536bf9f42a285d1477025bc94fb2d99ae693c28aeedb3b47d7e0c87a17",
@@ -637,8 +637,8 @@
       "size": 6242
     },
     ".github/workflows/production-release-candidate.yml": {
-      "sha256": "0ffa47b305b8a1f15b82ce9f07c43695eca1b5452e3a48a40d700ebdce403883",
-      "size": 77564
+      "sha256": "97dac48981c9f8afcb375349a011aeb029973a2c148e6792fe9c65e5679d770c",
+      "size": 79239
     },
     ".github/workflows/production-single-node-ga.yml": {
       "sha256": "d075f771b1a04dec296ea867631a6710bb748cd1e5458a1a4ed4977058a1a17f",
@@ -661,8 +661,8 @@
       "size": 5625
     },
     ".github/workflows/real-soak.yml": {
-      "sha256": "c60cc740b333853155d6befe9c6d3da577d15fb632f2f38ab9d98487ada4ae0e",
-      "size": 7602
+      "sha256": "cce326e1e10f7938cbfbf62711bb3264abc2e99937ea35527247ee6b5bdc99a5",
+      "size": 7601
     },
     ".github/workflows/release-bom.yml": {
       "sha256": "e1fb626ce2866aa01b0daeed482b9dd1023029dfeb18983d6f1e53e3b6511e05",
@@ -673,8 +673,8 @@
       "size": 10278
     },
     ".github/workflows/reproducibility-current.yml": {
-      "sha256": "29608e4fb42c2126b9b2f931116128edddd017221d8c519d4fadfd30d6142f31",
-      "size": 10173
+      "sha256": "3f8e7d5a91a7f768e54d485aafb5ab9c7808f38ce451d02168410aeb32878ee3",
+      "size": 10167
     },
     ".github/workflows/rolling-update.yml": {
       "sha256": "10d079884dfd6c1cdfee33edc2d83536ddfd8572361854323385edfc4ca99897",
@@ -841,36 +841,44 @@
       "size": 1237
     },
     "VERSION": {
-      "sha256": "3bf3dbbffb0d918489509bc31b7cfb01df33a820bd1f20759c63b3f746798141",
-      "size": 7
+      "sha256": "59854984853104df5c353e2f681a15fc7924742f9a2e468c29af248dce45ce03",
+      "size": 6
     },
     "apps/admin/package-lock.json": {
-      "sha256": "b8a56e59a12123ddf6ad24044c9d48bfdcc2d399818140f4fa907e4e64e2d405",
-      "size": 30181
+      "sha256": "2d107066e11069c85959ba0c4ea54f9da6b0ca8b0b0367c62a312aad7517ffee",
+      "size": 30179
     },
     "apps/admin/package.json": {
-      "sha256": "9c4a8c4a06a4c9f6b839dbfb941b10e34a36985e9a94521cb77d3bcd7e22cef8",
-      "size": 488
+      "sha256": "164e824d3e3244d4cad05edff1a132d39c9328c0cd01387ce18a053867d21dd7",
+      "size": 487
     },
     "apps/desktop/package-lock.json": {
-      "sha256": "f9c8440709d0398285008ebaf80ac3113ea4fe16de7988ef2ff605311b3688cd",
-      "size": 30711
+      "sha256": "3c4c39092f13a2f0bdd5d85389a3545e8e579fcc7d0d73c4dae899dbd12889a2",
+      "size": 30709
     },
     "apps/desktop/package.json": {
-      "sha256": "8e610ecccd22dc3880ef912108989e6d4272d3114309fa9068476d5af74cc7f0",
-      "size": 4040
+      "sha256": "a9946db0cb8a01fbf1c26dbc2d905627267a66dc05a2884ee6cf9d72b0620e0a",
+      "size": 4039
     },
     "apps/desktop/src-tauri/Cargo.toml": {
-      "sha256": "2fdb623812e269f72b0a5be2e0feae565c8b5ec90d85f8aaee4479e3d0a5380b",
-      "size": 1734
+      "sha256": "a20d5585b4056fab0e979c9e1e0dcf7d43061534517d76b916ff2de613bbad30",
+      "size": 1733
     },
     "cli/cmd/launcher/release_commands.go": {
-      "sha256": "1033dc2ebc82289059cc80cfec993ad4158f4f5b62cdb067ad5ba52f1ea52c82",
-      "size": 84134
+      "sha256": "aa778af633040bc550ad2a16da126b4b3ea2f40728b61eabcb74c157e00ff2ff",
+      "size": 85537
+    },
+    "cli/cmd/launcher/release_supported_platform_1000.go": {
+      "sha256": "bd346d8e87c4dbb72649dc9a54132b0d71feac93176c42b44750e4d23a9c3d27",
+      "size": 5837
+    },
+    "cli/cmd/launcher/release_supported_platform_1000_test.go": {
+      "sha256": "efb27049112ab2d4c3a4747e1253d46c2bc4ee66d77ea9d27d42212aef4243a7",
+      "size": 3528
     },
     "cli/cmd/launcher/templates/production.zip": {
-      "sha256": "57667996316a0be052afa368308e37210633991f27b5064d263c24f76ffc6528",
-      "size": 19212
+      "sha256": "a437d83a99cac799abf4cc8b3cdf59e0ca02f7cd5249e8e952e7f21642d54c94",
+      "size": 19211
     },
     "cli/go.mod": {
       "sha256": "b424cc4ce08130d52788bda84a843b32801676069e7aadea6b8d571bc8f110b2",
@@ -885,8 +893,8 @@
       "size": 8043
     },
     "deploy/production/env.production.example": {
-      "sha256": "426e9b4622ab3ad5910a3f2f0385528b1e3926addbdea559629e70de27dc461e",
-      "size": 7768
+      "sha256": "b20a2d79af704b82af8af9efd1c9d8a409ecbea0c2f5298256085eddb0d395d0",
+      "size": 7767
     },
     "deploy/production/nginx.conf": {
       "sha256": "a17ee0bc7ac098bb6bedac48c25d9150c1f5e2c3d667ee2201f279fbaa980021",
@@ -985,36 +993,36 @@
       "size": 61
     },
     "reproducibility/primary-payload.json": {
-      "sha256": "2f6f3ee9f8b200732ec03c84236d971eb1b1bab8c0cc846729841398cff35757",
-      "size": 767
+      "sha256": "a5f0abf52b7a8573d0fb9ddcf6b58e62ac04cdbecaf6969cfb09c66885347583",
+      "size": 760
     },
     "runtime/guard-debug-probe/Cargo.toml": {
-      "sha256": "d73c7daf3b9f1ebee68b21da626d19fbbc3d3a755a281afc5a95346cf32083ca",
-      "size": 508
+      "sha256": "ec8eda668c666bee01a647959c7824d73165d1cb26b229b6c504de3a4253dfcd",
+      "size": 507
     },
     "runtime/guard-jvm-probe/Cargo.toml": {
-      "sha256": "f52333ec5651ac69a29ea1722475354f4f3d8bd782ba4e21c15da7c18cdf82ba",
-      "size": 446
+      "sha256": "5ff31137847806a2adbdf41c2ff09b6513b986cfab61875cfdc3236049dfbb7d",
+      "size": 445
     },
     "runtime/guard-memory-probe/Cargo.toml": {
-      "sha256": "d52c641abb6a9f22c6edc3a44aa28f28410d20b06b53a3e91d8346d3ac7e42a7",
-      "size": 465
+      "sha256": "1f4e5c0c0e258c29c8bf33dec9a4e4da7b377046a00daae968da91af4d8658b1",
+      "size": 464
     },
     "runtime/guard-sensor/Cargo.toml": {
-      "sha256": "026d64114c1d7a59c5b1891a2563c4710c1e4421c2c22e3185164cf0d286f785",
-      "size": 459
+      "sha256": "b060e7969c2eec2756018ef5f93ee28e1d24f58af68dc66663dcc4021879c07a",
+      "size": 458
     },
     "runtime/guard-thread-probe/Cargo.toml": {
-      "sha256": "6bbab003f93f88f935abcc7d28734c9a9183d22542bd2378603f4e0ad4289ca7",
-      "size": 474
+      "sha256": "83f1e41f29cac91e3c4d012b31c8753cf4fa80cad6185b443e97d63c66c2057b",
+      "size": 473
     },
     "runtime/runtime/Cargo.toml": {
-      "sha256": "09dfa0481123e2117ccf4254fc32c8f382399a84b9542758e15e43f1be5ffb60",
-      "size": 1473
+      "sha256": "8b5a508705b503fc04537f7060a9225f3c70789265fdc4d59f1167a2b07e03c4",
+      "size": 1472
     },
     "schemas/openapi.yaml": {
-      "sha256": "5fe89014418bcda4e7f37841fb53344cde6179e7707761e1303bd24919726906",
-      "size": 703071
+      "sha256": "53a7d47d7103323bcc99378eb28814c343bb3ab78b38141ef85e0a695ef55080",
+      "size": 703070
     },
     "scripts/build/bridge-plugins.sh": {
       "sha256": "12ca55ca36c83f0247d01f76dc62b1ad756333040637e67f65780460c0e8ef89",
@@ -1061,8 +1069,8 @@
       "size": 1901
     },
     "scripts/release/build-release.sh": {
-      "sha256": "c9326457ce182aedecef5ce6da21ef2b8720df48f0f65a6519924da2c3a70aca",
-      "size": 63506
+      "sha256": "4f0a08096cad39ccb46baa897afb02eec26b1b8e66d362a454c90ef9bd92ab26",
+      "size": 64673
     },
     "scripts/release/build-windows-desktop.ps1": {
       "sha256": "eb7007fa045100a436eff3904af79b02fceb4a0e313856fe103bfb40b42af289",
@@ -1105,8 +1113,8 @@
       "size": 12124
     },
     "scripts/release/defect_rehearsal.py": {
-      "sha256": "2a6b348372127c734ef6f092a87aa98673d68804d353293f8402f164949a84d1",
-      "size": 22445
+      "sha256": "815e6db82703428a8e49a7805cef195becd5b49e185d02a15149bab16ca99297",
+      "size": 22443
     },
     "scripts/release/delivery_verify.py": {
       "sha256": "75bcc79393d03a67ecc5f50aac198da52365ef44a8a821d613f75f1ca0626ab1",
@@ -1117,8 +1125,8 @@
       "size": 16820
     },
     "scripts/release/full_real_acceptance.py": {
-      "sha256": "3625e6dae960e65ef7cf07690c25d1bb2463cc4eaa86cd5b9d89775266656970",
-      "size": 27776
+      "sha256": "280b4b6cf55195c4aa39fa29dbaa5bd66e82abe78a076d49695a9d54a10f214b",
+      "size": 27770
     },
     "scripts/release/ga_gate.py": {
       "sha256": "c1a5f250acf35d37951f7ab0dba2a6831900311b7501cac19bb421d733c8c4eb",
@@ -1133,12 +1141,12 @@
       "size": 2304
     },
     "scripts/release/independent_current.py": {
-      "sha256": "ffdd9415196bd92ff774d820bc328e65990fd1b830ef588701449a89eead9a79",
-      "size": 9884
+      "sha256": "5bbb9034188030554c231045e6021109ff4b3d607486c1a74400bc1fd9381ca4",
+      "size": 9881
     },
     "scripts/release/inputs_guard.py": {
-      "sha256": "ff47ef7342bf404fa22d3c62432e6ff2ef0ef64ba6d75667448285ca89169b87",
-      "size": 7511
+      "sha256": "50ee9ccb690388fecc0401d7cd59aa7e41218866a2652abf3b463e208226ba89",
+      "size": 7634
     },
     "scripts/release/linux-package.py": {
       "sha256": "0e49eadfbff96d9c3e44335e27d77b9c43349886fd1e68371788de79bd8806b6",
@@ -1165,12 +1173,12 @@
       "size": 16212
     },
     "scripts/release/publication_ga.py": {
-      "sha256": "ca6c7efc3bf6c81eb35a102d2def2fa714d04cb73c0a20a68aa80077b9fb4dda",
-      "size": 4423
+      "sha256": "058d9a1fb0db5d796791116366e2283206f993017bdd3398647c8f3a3aafcfd2",
+      "size": 11702
     },
     "scripts/release/publish.py": {
-      "sha256": "17f3d4158cbc14b98347e1f083ebec5f770dc86968a2f1676ab4343122788f19",
-      "size": 34253
+      "sha256": "fe5ccec3769c214a87f5fc7694292214edcbcacacb559805934c89a88e8969cb",
+      "size": 34461
     },
     "scripts/release/rehearsal.py": {
       "sha256": "e011570ad23c140f45a3013eec393a96388fae89c1f1b144d66989b0a51f6bf4",
@@ -1229,8 +1237,8 @@
       "size": 5217
     },
     "scripts/release/test_defect_rehearsal.py": {
-      "sha256": "db3dbe53a8034ea1fca21a023d3c58087afc173f07232f382510eb3d56ecc8dd",
-      "size": 10349
+      "sha256": "1e862c7b867522be347b163640532d61c98ee93017feec541518e23100194d9d",
+      "size": 10347
     },
     "scripts/release/test_delivery_verify.py": {
       "sha256": "d084e4f0198b1dc49d4c5abc149885d9eb41b2f9b41af0bb1c5191d1287609ad",
@@ -1245,8 +1253,8 @@
       "size": 15472
     },
     "scripts/release/test_full_real_acceptance.py": {
-      "sha256": "2a3a92dcf110cdbda5104a780657c58f3d40d69258959b141eed0e17ca6df9a4",
-      "size": 8827
+      "sha256": "15b2f76fb0fe828ec04fb0d9715a87ec03e1fcc138095c4ca937d0b37c0a0e0c",
+      "size": 8826
     },
     "scripts/release/test_ga_gate.py": {
       "sha256": "82cc3ee4496d5683056e7d1e7758c2b07220300b890a074b5a473e54ec604115",
@@ -1265,12 +1273,12 @@
       "size": 4305
     },
     "scripts/release/test_independent_current.py": {
-      "sha256": "edf32fbe402a8c3058171ab50de35b26564c4d53da00ff0b4ddfb9955996e98f",
-      "size": 2513
+      "sha256": "debee7af393115d54fcdc825f46d3cd25a913a11fd9c50a41189672f0dfde8ee",
+      "size": 2512
     },
     "scripts/release/test_inputs_guard.py": {
-      "sha256": "70ab53da05b76c2ad4d81481b903d1e30f5d01df2236ede5b95d559490507398",
-      "size": 2093
+      "sha256": "8ea2682f228b71c224471a58b0e423e9f0bcfde373d7b893ff75a9fd992260ba",
+      "size": 2188
     },
     "scripts/release/test_native_verify.py": {
       "sha256": "cbb51839636b6dd2e3888778b37c8665c71b1ae5b3516be4fba20c2787e2b29f",
@@ -1281,8 +1289,8 @@
       "size": 3293
     },
     "scripts/release/test_publication_ga.py": {
-      "sha256": "b988bb2872b183e503e746b2a88290131b03003ea8f3a9f20b0847c975ac7dd8",
-      "size": 3919
+      "sha256": "530f19d5c136dcd73c805a8d43ffc4cf800018e8b173a29c4819af0cb8173786",
+      "size": 7918
     },
     "scripts/release/test_publish.py": {
       "sha256": "ec06d5920cfff1766d6af615b5237b7bd54552baec2f075087cdba78841e1aa3",
@@ -1897,6 +1905,6 @@
       "size": 65
     }
   },
-  "release": "0.53.0",
+  "release": "1.0.0",
   "schema": "launcher.input-baseline.v1"
 }
