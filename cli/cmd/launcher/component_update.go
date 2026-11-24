@@ -1060,6 +1060,121 @@ func applyMacOSComponentUpdate0157(manifest componentUpdateManifest0157, manifes
 	return report, nil
 }
 
+// Preflight performs the same immutable package checks before Desktop exits.
+// Do not accept a new trust policy or mutate installed component state here.
+func preflightComponentPackage0114(packagePath, expectedSHA, currentDesktop string) error {
+	if err := hashPackagePin0157(packagePath, expectedSHA, false); err != nil {
+		return err
+	}
+	probe, err := os.MkdirTemp("", "launcher-component-preflight-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(probe)
+	if err := extractComponentPackage0157(packagePath, probe); err != nil {
+		return err
+	}
+	path, err := findComponentManifest0157(probe)
+	if err != nil {
+		return err
+	}
+	m, err := readComponentUpdateManifest0157(path)
+	if err != nil {
+		return err
+	}
+	if err := validateComponentUpdateManifest0157(m, filepath.Dir(path), false); err != nil {
+		return err
+	}
+	if err := verifySignedComponentSet02310(path, m, false); err != nil {
+		return err
+	}
+	root, bundle, err := componentUpdateInstallRoot0157(currentDesktop, "", m)
+	if err != nil {
+		return err
+	}
+	if err := checkComponentGeneration02311(root, m); err != nil {
+		return err
+	}
+	if componentTrustRequired02312(m.ProductVersion) {
+		policy, digest, _, err := loadComponentPolicy02312(path)
+		if err != nil {
+			return err
+		}
+		previous, err := readPolicyState02312(filepath.Join(root, ".launcher", "component-trust", "trust-state.json"))
+		if err != nil {
+			return err
+		}
+		key, err := hex.DecodeString(componentSetRootKey02312)
+		if err != nil {
+			return err
+		}
+		fingerprint := sha256.Sum256(key)
+		if previous.Epoch > policy.Epoch || (previous.Epoch == policy.Epoch && previous.Epoch > 0 && previous.Digest != digest) || (previous.Epoch > 0 && previous.RootSHA256 != hex.EncodeToString(fingerprint[:])) {
+			return errors.New("Предлагаемая политика доверия конфликтует с установленной")
+		}
+	}
+	if m.Layout == "macos-app-bundle" {
+		app := filepath.Dir(filepath.Dir(filepath.Dir(path)))
+		if filepath.Base(app) != bundle {
+			return errors.New("Несовместимое имя пакета macOS")
+		}
+		return verifyMacOSInstalledBundle0157(m, app, false)
+	}
+	return verifyComponentBinaries0157(m, filepath.Dir(path), false, false)
+}
+
+// Only restart an installation whose transaction journal and complete active
+// component set have been verified. Never force a live updater lock.
+func recoverFailedComponentUpdate0114(currentDesktop string) error {
+	if currentDesktop == "" {
+		return errors.New("Нет пути Desktop для восстановления")
+	}
+	desktop, err := filepath.Abs(currentDesktop)
+	if err != nil {
+		return err
+	}
+	root := filepath.Dir(desktop)
+	if runtime.GOOS == "darwin" {
+		root = filepath.Dir(filepath.Dir(filepath.Dir(root)))
+	}
+	u, err := newTransactionalUpdater0156(root)
+	if err != nil {
+		return err
+	}
+	if _, err := u.recover(false); err != nil {
+		return err
+	}
+	if err := verifyRestartedComponentSet02310(root, desktop); err != nil {
+		return err
+	}
+	state, present, err := readComponentUpdateStateOptional01510(filepath.Join(root, filepath.FromSlash(componentUpdateStateFile0157)))
+	if err != nil {
+		return err
+	}
+	if !present {
+		return errors.New("Нет проверенного состояния Desktop")
+	}
+	base := root
+	if runtime.GOOS == "darwin" {
+		base = filepath.Dir(filepath.Dir(filepath.Dir(desktop)))
+	}
+	matched := false
+	for _, item := range state.Components {
+		if item.Component == "desktop" && filepath.Clean(filepath.Join(base, filepath.FromSlash(item.TargetPath))) == filepath.Clean(desktop) {
+			matched = true
+		}
+	}
+	if !matched {
+		return errors.New("Исполняемый файл для перезапуска не входит в проверенный набор Desktop")
+	}
+	cmd := exec.Command(desktop)
+	cmd.Dir = filepath.Dir(desktop)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	return cmd.Process.Release()
+}
+
 func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitRoot, currentDesktop string, waitPID int, restart, allowDevelopment bool) (map[string]any, error) {
 	if strings.TrimSpace(packagePath) == "" {
 		return nil, errors.New("Для обновления компонентов необходим параметр --package")

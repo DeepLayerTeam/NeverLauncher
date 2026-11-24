@@ -496,9 +496,27 @@ func handleUpdate(args []string) error {
 		return nil
 	case "components":
 		pkg := flagValue(args, "--package", "")
+		if flagBool(args, "--preflight", false) {
+			if err := preflightComponentPackage0114(pkg, flagValue(args, "--expected-sha256", ""), flagValue(args, "--current-desktop", "")); err != nil {
+				return err
+			}
+			printJSON(map[string]any{"status": "verified"})
+			return nil
+		}
 		waitPID, err := parseWaitPID0157(flagValue(args, "--wait-pid", ""))
 		if err != nil {
 			return err
+		}
+		recoverOnFailure := flagBool(args, "--recover-on-failure", false)
+		if recoverOnFailure {
+			if waitPID <= 0 || !flagBool(args, "--restart", false) || flagValue(args, "--root", "") != "" || flagBool(args, "--allow-unpinned-development", false) {
+				return errors.New("Некорректный режим восстановления Desktop")
+			}
+			// Wait before any failure can trigger a restart; never start a second Desktop.
+			if err := waitForComponentParent0157(waitPID, 2*time.Minute); err != nil {
+				return err
+			}
+			waitPID = 0
 		}
 		report, err := applyComponentPackage0157(
 			pkg, flagValue(args, "--expected-sha256", ""), flagValue(args, "--delivery-manifest", ""),
@@ -506,6 +524,12 @@ func handleUpdate(args []string) error {
 			flagBool(args, "--restart", false), flagBool(args, "--allow-unpinned-development", false),
 		)
 		if err != nil {
+			if recoverOnFailure {
+				if recovery := recoverFailedComponentUpdate0114(flagValue(args, "--current-desktop", "")); recovery != nil {
+					return fmt.Errorf("Обновление: %v; безопасное восстановление не выполнено: %w", err, recovery)
+				}
+				return fmt.Errorf("Обновление не завершено; проверенный установленный Desktop перезапущен: %w", err)
+			}
 			return err
 		}
 		out := flagValue(args, "--output", "")

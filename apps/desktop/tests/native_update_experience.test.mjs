@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { automaticCheckDue, DEFAULT_UPDATE_PREFERENCES as defaults, isUpdateBusy, progressPercent, readUpdatePreferences } from '../build-tests/native_update_experience.js';
+import { automaticCheckDue, DEFAULT_UPDATE_PREFERENCES as defaults, isUpdateBusy, progressPercent, readUpdatePreferences, updateFailure, previousInstallFailed } from '../build-tests/native_update_experience.js';
 const hour = 3600000;
 test('missing or malformed preferences use safe defaults; no automatic install/download', () => {
   for (const input of [null, 'bad json', 'null', '42', '{}']) assert.deepEqual(readUpdatePreferences(input), defaults);
@@ -35,4 +35,20 @@ test('known, unknown and malformed download sizes', () => {
   assert.equal(p(0,10),0); assert.equal(p(1,3),33); assert.equal(p(10,10),100); assert.equal(p(11,10),100);
   for (const total of [null,0,-1,Infinity,NaN]) assert.equal(p(1,total),null);
   assert.equal(p(-1,10),null); assert.equal(p(Infinity,10),null);
+});
+
+test('recoverable interruptions and rejected packages have distinct states and backoff', () => {
+  assert.deepEqual(updateFailure('retry: interrupted'), {phase:'retry',message:'interrupted'});
+  assert.deepEqual(updateFailure('rejected: invalid signature'), {phase:'rejected',message:'invalid signature'});
+  assert.deepEqual(updateFailure('expired: recheck'), {phase:'error',message:'recheck'});
+  assert.equal(automaticCheckDue(defaults,'retry',0,900000),true);
+  assert.equal(automaticCheckDue(defaults,'rejected',0,900000),false);
+  assert.equal(automaticCheckDue(defaults,'rejected',0,24*hour),true);
+});
+test('unconfirmed install suppresses automatic download of the same release', () => {
+  const offer={status:'available',currentVersion:'1.1.3',version:'1.1.4',notes:null};
+  assert.equal(previousInstallFailed('1.1.4',offer),true);
+  assert.equal(previousInstallFailed('1.1.2',offer),false);
+  assert.equal(previousInstallFailed(null,offer),false);
+  assert.equal(previousInstallFailed('1.1.4',{...offer,status:'current',currentVersion:'1.1.4',version:null}),false);
 });

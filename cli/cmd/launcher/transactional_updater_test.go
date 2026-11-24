@@ -232,3 +232,54 @@ func TestTransactionalUpdaterRejectsTraversal0156(t *testing.T) {
 		t.Fatal("Разрешён выход за пределы каталога через путь")
 	}
 }
+
+func TestUpdaterTreeOnlyRecoveryStatus0114(t *testing.T) {
+	u, err := newTransactionalUpdater0156(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	journal := &componentTreeJournal0157{SchemaVersion: componentTreeSchema0157, ID: "tree-test", Root: u.root, Phase: "committing"}
+	if err := writeComponentTreeJournal0157(u, journal); err != nil {
+		t.Fatal(err)
+	}
+	report, err := u.status()
+	if err != nil || report["status"] != "recovery-required" {
+		t.Fatalf("status=%v err=%v", report, err)
+	}
+}
+
+func TestUpdaterPreflightRejectsTamperedArchive0114(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "update.zip")
+	if err := os.WriteFile(path, []byte("not a package"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := preflightComponentPackage0114(path, strings.Repeat("0", 64), filepath.Join(t.TempDir(), "desktop")); err == nil {
+		t.Fatal("tampered package accepted")
+	}
+	sum, _, err := hashFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := preflightComponentPackage0114(path, sum, filepath.Join(t.TempDir(), "desktop")); err == nil {
+		t.Fatal("invalid package accepted")
+	}
+}
+
+func TestUpdaterStatusRefusesLiveLock0114(t *testing.T) {
+	u, err := newTransactionalUpdater0156(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := u.acquireLock(false); err != nil {
+		t.Fatal(err)
+	}
+	defer u.releaseLock()
+	if _, err := u.status(); err == nil {
+		t.Fatal("status allowed startup during active update")
+	}
+}
+func TestUpdaterRecoveryRefusesUnverifiedDesktop0114(t *testing.T) {
+	if err := recoverFailedComponentUpdate0114(filepath.Join(t.TempDir(), "desktop")); err == nil {
+		t.Fatal("unverified Desktop restart accepted")
+	}
+}

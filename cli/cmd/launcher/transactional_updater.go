@@ -696,12 +696,20 @@ func (u *transactionalUpdater0156) recover(force bool) (map[string]any, error) {
 }
 
 func (u *transactionalUpdater0156) status() (map[string]any, error) {
+	if raw, err := os.ReadFile(u.lockPath); err == nil {
+		var lock updaterLock0156
+		if json.Unmarshal(raw, &lock) != nil || lock.PID <= 0 {
+			return nil, errors.New("Повреждена блокировка обновления; требуется ручное восстановление")
+		}
+		if updaterProcessAlive0156(lock.PID) {
+			return nil, fmt.Errorf("Обновление уже выполняется процессом %d", lock.PID)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
 	root := filepath.Join(u.controlDir, "transactions")
 	entries, err := os.ReadDir(root)
-	if errors.Is(err, os.ErrNotExist) {
-		return map[string]any{"schemaVersion": updaterCoreSchema0156, "toolVersion": version, "engine": "unified-transactional-updater", "root": u.root, "transactions": []any{}, "status": "idle"}, nil
-	}
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 	journals := []updaterJournal0156{}

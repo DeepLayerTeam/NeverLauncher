@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Channel, invoke, isTauri } from "@tauri-apps/api/core";
-import { automaticCheckDue, DEFAULT_UPDATE_PREFERENCES, isUpdateBusy, progressPercent, readUpdatePreferences, UPDATE_PREFERENCES_KEY, type Offer, type Phase, type Progress, type UpdatePreferences } from "./native_update_experience";
+import { automaticCheckDue, DEFAULT_UPDATE_PREFERENCES, isUpdateBusy, progressPercent, readUpdatePreferences, UPDATE_PREFERENCES_KEY, UPDATE_ATTEMPT_KEY, updateFailure, previousInstallFailed, type Offer, type Phase, type Progress, type UpdatePreferences } from "./native_update_experience";
 
 function initialPreferences(): UpdatePreferences {
   try { return readUpdatePreferences(localStorage.getItem(UPDATE_PREFERENCES_KEY)); }
@@ -54,11 +54,17 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
       if (!mounted.current) return;
       setOffer(result); setLastChecked(Date.now());
       if (result.status === 'available' && result.version) {
-        transition('available', 'Доступна новая версия. Подпись будет проверена после скачивания.');
-        if (automatic && prefs.current.autoCheck && prefs.current.autoDownload) await download(result.version);
+        let failed = false;
+        try {
+          const attempt = localStorage.getItem(UPDATE_ATTEMPT_KEY);
+          failed = previousInstallFailed(attempt, result);
+          if (attempt && !failed) localStorage.removeItem(UPDATE_ATTEMPT_KEY);
+        } catch { /* preference storage is not a trust boundary */ }
+        transition('available', failed ? 'Предыдущая установка не подтверждена: используется прежняя версия. Проверьте журнал update.log в updater-helpers; повторите загрузку вручную.' : 'Доступна новая версия. Подпись будет проверена после скачивания.');
+        if (!failed && automatic && prefs.current.autoCheck && prefs.current.autoDownload) await download(result.version);
       } else if (result.status === 'disabled') transition('disabled', 'В этой сборке не настроен доверенный источник обновлений.');
-      else transition('current', 'Установлена актуальная версия.');
-    } catch (error) { lastAttempt.current = Date.now(); transition('error', String(error)); }
+      else { try { if (localStorage.getItem(UPDATE_ATTEMPT_KEY) === result.currentVersion) localStorage.removeItem(UPDATE_ATTEMPT_KEY); } catch {} transition('current', 'Установлена актуальная версия.'); }
+    } catch (error) { lastAttempt.current = Date.now(); const failure = updateFailure(error); transition(failure.phase, failure.message); }
     finally { lock.current = false; }
   }, [download, enabled, transition]);
   useEffect(() => {
@@ -73,26 +79,30 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
     return () => { window.clearTimeout(startup); window.clearInterval(timer); window.removeEventListener('online', tick); window.removeEventListener('focus', tick); };
   }, [enabled, preferences.autoCheck, preferences.intervalHours, check]);
   async function downloadSelected() {
-    if (!enabled || lock.current || phaseRef.current !== 'available' || !offer?.version) return;
+    if (!enabled || lock.current || !['available', 'retry'].includes(phaseRef.current) || !offer?.version) return;
     lock.current = true;
     try { await download(offer.version); }
-    catch (error) { lastAttempt.current = Date.now(); transition('error', String(error) + ' Повторите проверку обновлений.'); }
+    catch (error) { lastAttempt.current = Date.now(); const failure = updateFailure(error); transition(failure.phase, failure.message); }
     finally { lock.current = false; }
   }
   async function install() {
     if (!enabled || lock.current || phaseRef.current !== 'ready' || !offer?.version) return;
-    lock.current = true; transition('installing', 'Передаём проверенный пакет установщику…');
+    lock.current = true;
+    try { localStorage.setItem(UPDATE_ATTEMPT_KEY, offer.version); } catch {}
+    transition('installing', 'Передаём проверенный пакет установщику…');
     try {
       await invoke('native_update_install', { version: offer.version });
       transition('scheduled', 'Установка запланирована. Launcher будет закрыт и перезапущен установщиком.');
     } catch (error) {
       const ready = await invoke<boolean>('native_update_ready', { version: offer.version }).catch(() => false);
       lastAttempt.current = Date.now();
-      transition(ready ? 'ready' : 'error', String(error) + (ready ? ' Пакет сохранён, повторите установку.' : ' Повторите проверку обновлений.'));
+      try { localStorage.removeItem(UPDATE_ATTEMPT_KEY); } catch {}
+      const failure = updateFailure(error);
+      transition(ready ? 'ready' : failure.phase, failure.message + (ready ? ' Пакет сохранён, повторите установку.' : ' Повторите проверку обновлений.'));
     } finally { lock.current = false; }
   }
   const busy = isUpdateBusy(phase);
-  const visible = settingsVisible || ['available', 'downloading', 'verifying', 'ready', 'installing', 'scheduled'].includes(phase);
+  const visible = settingsVisible || ['available', 'downloading', 'verifying', 'ready', 'installing', 'scheduled', 'retry', 'rejected', 'error'].includes(phase);
   if (!visible) return null;
   const percent = progress ? progressPercent(progress) : null;
   return <section className="panel nativeUpdatePanel" aria-label="Обновления Launcher">
@@ -110,7 +120,7 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
     {!isTauri() && <p>Обновление доступно только в нативном приложении.</p>}
     <div className="actions">
       <button type="button" disabled={busy || !enabled || !isTauri()} onClick={() => void check()}>{phase === 'ready' ? 'Проверить заново (сбросить скачанный пакет)' : 'Проверить обновления'}</button>
-      {phase === 'available' && <button type="button" disabled={!enabled} onClick={() => void downloadSelected()}>Скачать {offer?.version}</button>}
+      {(phase === 'available' || phase === 'retry') && offer?.version && <button type="button" disabled={!enabled} onClick={() => void downloadSelected()}>{phase === 'retry' ? 'Повторить скачивание' : 'Скачать'} {offer?.version}</button>}
       {phase === 'ready' && <button type="button" className="primary" disabled={!enabled} onClick={() => void install()}>Установить {offer?.version} и перезапустить</button>}
     </div>
     <p role="status" aria-live="polite">{message}</p>
@@ -123,6 +133,6 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
       <div className="nativeUpdateNotes">{offer.notes || 'Описание изменений не опубликовано.'}</div>
       <small>Описание из ленты обновлений, не является криптографически проверенной частью пакета.</small>
     </details>}
-    <p>Перед установкой закройте Minecraft и завершите другие операции Launcher. Скачанный пакет хранится в памяти до установки, новой проверки или закрытия приложения.</p>
+    <p>Перед установкой закройте Minecraft и завершите другие операции Launcher. Неполная загрузка сохраняется в памяти до повторной попытки или закрытия приложения; при отсутствии безопасного HTTP-валидатора загрузка начнётся заново. Проверенный пакет хранится до установки, новой проверки или закрытия приложения.</p>
   </section>;
 }

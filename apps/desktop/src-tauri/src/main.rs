@@ -1876,6 +1876,24 @@ async fn install_launcher_update(
         file.sync_all().map_err(|e| e.to_string())?;
     }
     drop(bytes);
+    // Validate with the existing component verifier while Desktop and Guard are still running.
+    let mut preflight = Command::new(&staged_helper);
+    preflight.args(["update", "components", "--preflight=true", "--package"])
+        .arg(&package).args(["--expected-sha256", &expected_sha256, "--current-desktop"]).arg(&current_exe)
+        .kill_on_drop(true);
+    let verified = tokio::time::timeout(Duration::from_secs(180), preflight.output()).await;
+    match verified {
+        Ok(Ok(output)) if output.status.success() => {},
+        Ok(Ok(output)) => {
+            let _ = std::fs::write(staged_helper.parent().unwrap().join("update.log"), &output.stderr);
+            let _ = std::fs::remove_file(&package);
+            return Err("rejected: Пакет несовместим с установленным набором компонентов или не прошёл предварительную проверку. Подробности в update.log каталога updater-helpers.".into());
+        },
+        _ => { let _ = std::fs::remove_file(&package); return Err("retry: Не удалось завершить предварительную проверку обновления".into()); }
+    }
+    let log_path = staged_helper.parent().ok_or("Нет каталога обновления")?.join("update.log");
+    let log = std::fs::OpenOptions::new().create_new(true).write(true).open(&log_path).map_err(|e| e.to_string())?;
+    let stderr_log = log.try_clone().map_err(|e| e.to_string())?;
     // Guard удерживает дескрипторы и IPC, из-за которых Windows может считать исполняемый файл занятым.
     // Остановите его до того, как внешний помощник начнёт ожидание Desktop и выполнение транзакции.
     guard.shutdown().await.map_err(|e| format!("не удалось остановить Guard перед обновлением: {e}"))?;
@@ -1893,10 +1911,11 @@ async fn install_launcher_update(
         .arg(&current_exe)
         .arg("--wait-pid")
         .arg(&parent_pid)
-        .arg("--restart")
+        .arg("--restart=true")
+        .arg("--recover-on-failure=true")
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stdout(Stdio::from(log))
+        .stderr(Stdio::from(stderr_log));
     let child = command.spawn().map_err(|e| format!("Не удалось запустить вспомогательную программу транзакционного обновления: {e}"))?;
     let updater_pid = child.id().ok_or_else(|| "Вспомогательная программа обновления запущена без идентификатора процесса".to_string())?;
     drop(child);

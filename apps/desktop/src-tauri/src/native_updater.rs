@@ -17,6 +17,29 @@ static OFFER: Mutex<Option<(Instant, Update)>> = Mutex::new(None);
 static UPDATER: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 struct Prepared { version: String, bytes: Vec<u8>, suffix: &'static str }
 static PREPARED: Mutex<Option<Prepared>> = Mutex::new(None);
+// Only one bounded partial package; never trusted until Tauri verifies all bytes.
+static PARTIAL: Mutex<Option<Partial>> = Mutex::new(None);
+static REJECTED: Mutex<Option<String>> = Mutex::new(None);
+struct Partial { identity: String, etag: String, total: u64, bytes: Vec<u8> }
+fn identity(update: &Update) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(format!("{}\n{}\n{}", update.version, update.download_url, update.signature).as_bytes()))
+}
+fn strong_etag(value: &str) -> bool {
+    value.len() >= 2 && value.starts_with('"') && value.ends_with('"') &&
+        value.as_bytes()[1..value.len()-1].iter().all(|b| *b >= 0x21 && *b != b'"' && *b != 0x7f)
+}
+fn valid_range(value: &str, start: u64, total: u64) -> bool {
+    if total == 0 || start >= total { return false; }
+    value == format!("bytes {start}-{}/{total}", total - 1)
+}
+fn discard_partial() -> Result<(), String> {
+    *PARTIAL.lock().map_err(|_| "Ошибка состояния загрузки")? = None;
+    Ok(())
+}
+fn retry_error(message: &str) -> String { format!("retry: {message}") }
+fn reject_error(message: &str) -> String { format!("rejected: {message}") }
+
 fn prepared_matches(prepared: &Option<Prepared>, version: &str) -> bool {
     prepared.as_ref().is_some_and(|p| p.version == version && newer(CURRENT, &p.version))
 }
@@ -71,7 +94,7 @@ pub(super) async fn native_update_check(app: AppHandle) -> Result<Offer, String>
     *OFFER.lock().map_err(|_| "Ошибка состояния обновления")? = None;
     let key = option_env!("NL_UPDATER_PUBLIC_KEY").unwrap_or("").trim();
     let endpoint = option_env!("NL_UPDATER_ENDPOINT").unwrap_or("").trim();
-    if key.is_empty() || endpoint.is_empty() { return Ok(response("disabled", None)); }
+    if key.is_empty() || endpoint.is_empty() { discard_partial()?; return Ok(response("disabled", None)); }
     https_url(endpoint)?;
     let (_, tauri_os, _) = target()?;
     let updater = app.updater_builder()
@@ -83,9 +106,15 @@ pub(super) async fn native_update_check(app: AppHandle) -> Result<Offer, String>
         .configure_client(|builder| builder.https_only(true))
         .version_comparator(|current, release| newer(&current.to_string(), &release.version.to_string()))
         .build().map_err(|_| "Не удалось инициализировать Tauri Updater")?;
-    let Some(update) = updater.check().await.map_err(|_| "Не удалось проверить обновления. Проверьте сеть и настройки публикации")? else { return Ok(response("current", None)); };
+    let Some(update) = updater.check().await.map_err(|_| "Не удалось проверить обновления. Проверьте сеть и настройки публикации")? else { discard_partial()?; return Ok(response("current", None)); };
     https_url(update.download_url.as_str())?;
     if !newer(CURRENT, &update.version) || update.signature.trim().is_empty() { return Err("Некорректная версия или отсутствует подпись".into()); }
+    let id = identity(&update);
+    { let mut partial = PARTIAL.lock().map_err(|_| "Ошибка состояния загрузки")?;
+      if partial.as_ref().is_some_and(|p| p.identity != id) { *partial = None; } }
+    if REJECTED.lock().map_err(|_| "Ошибка состояния обновления")?.as_ref() == Some(&id) {
+        return Err(reject_error("Этот пакет уже отклонён проверкой. Дождитесь исправленного подписанного выпуска."));
+    }
     let version = update.version.clone();
     // Remote notes are informational only; never render as HTML or trust as a signature.
     let notes = update.body.as_deref().map(|body| body.chars().take(16000).collect::<String>());
@@ -141,29 +170,78 @@ fn validate_package(bytes: &[u8], version: &str, os: &str, arch: &str) -> Result
 }
 
 async fn download(update: &Update, progress: &Channel<Progress>) -> Result<Vec<u8>, String> {
-    // Stream with a strict byte limit. Tauri's Update::verify checks both
-    // minisign authenticity and the authenticated version comment.
+    use reqwest::{header, StatusCode};
+    let id = identity(update);
     let client = reqwest::Client::builder().https_only(true).connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(600)).redirect(reqwest::redirect::Policy::limited(5))
         .build().map_err(|_| "Не удалось создать HTTPS-клиент")?;
-    let mut response = client.get(https_url(update.download_url.as_str())?).send().await
-        .map_err(|_| "Не удалось скачать обновление")?.error_for_status().map_err(|_| "Сервер отклонил скачивание обновления")?;
-    let total = response.content_length();
-    if total.is_some_and(|n| n == 0 || n > MAX_PACKAGE as u64) { return Err("Недопустимый размер обновления".into()); }
-    let _ = progress.send(Progress { stage: "download", downloaded: 0, total });
-    let mut bytes = Vec::new();
-    let mut last = Instant::now();
-    while let Some(chunk) = response.chunk().await.map_err(|_| "Соединение при скачивании прервано")? {
-        if chunk.len() > MAX_PACKAGE - bytes.len() { return Err("Превышен предел размера обновления".into()); }
-        bytes.extend_from_slice(&chunk);
-        if last.elapsed() >= Duration::from_millis(150) {
-            let _ = progress.send(Progress { stage: "download", downloaded: bytes.len() as u64, total });
-            last = Instant::now();
+    let url = https_url(update.download_url.as_str())?;
+    let mut partial = PARTIAL.lock().map_err(|_| "Ошибка состояния загрузки")?.take()
+        .filter(|p| p.identity == id && !p.bytes.is_empty() && (p.bytes.len() as u64) < p.total);
+    // Retry from zero once if the CDN no longer accepts the saved range.
+    for _ in 0..2 {
+        let mut request = client.get(url.clone()).header(header::ACCEPT_ENCODING, "identity");
+        if let Some(p) = &partial {
+            request = request.header(header::RANGE, format!("bytes={}-", p.bytes.len()))
+                .header(header::IF_RANGE, p.etag.as_str());
         }
+        let mut response = match request.send().await {
+            Ok(r) => r,
+            Err(_) => { *PARTIAL.lock().map_err(|_| "Ошибка состояния загрузки")? = partial;
+                return Err(retry_error("Не удалось подключиться к серверу обновлений")); }
+        };
+        let status = response.status();
+        if status == StatusCode::RANGE_NOT_SATISFIABLE && partial.is_some() { partial = None; continue; }
+        if status.is_server_error() || status == StatusCode::TOO_MANY_REQUESTS {
+            *PARTIAL.lock().map_err(|_| "Ошибка состояния загрузки")? = partial;
+            return Err(retry_error("Сервер обновлений временно недоступен"));
+        }
+        let etag = response.headers().get(header::ETAG).and_then(|v| v.to_str().ok()).filter(|v| strong_etag(v)).map(str::to_owned);
+        if response.headers().get(header::CONTENT_ENCODING).is_some_and(|v| !v.as_bytes().eq_ignore_ascii_case(b"identity")) {
+            return Err(reject_error("Недопустимое кодирование пакета"));
+        }
+        let (mut bytes, total, validator) = if status == StatusCode::PARTIAL_CONTENT {
+            let Some(p) = partial.take() else { return Err(retry_error("Сервер вернул неожиданный частичный ответ")); };
+            let offset = p.bytes.len() as u64;
+            let range = response.headers().get(header::CONTENT_RANGE).and_then(|v| v.to_str().ok());
+            if etag.as_ref() != Some(&p.etag) || !range.is_some_and(|v| valid_range(v, offset, p.total)) ||
+                response.content_length().is_some_and(|n| n != p.total - offset) { continue; }
+            (p.bytes, Some(p.total), Some(p.etag))
+        } else if status == StatusCode::OK && !response.headers().contains_key(header::CONTENT_RANGE) {
+            partial = None; // HTTP 200 replaces, never appends, saved bytes.
+            (Vec::new(), response.content_length(), etag)
+        } else { return Err(retry_error("Сервер отклонил скачивание обновления")); };
+        if total.is_some_and(|n| n == 0 || n > MAX_PACKAGE as u64) { return Err(reject_error("Недопустимый размер обновления")); }
+        let _ = progress.send(Progress { stage: "download", downloaded: bytes.len() as u64, total });
+        let mut last = Instant::now();
+        let interrupted = loop {
+            match response.chunk().await {
+                Ok(Some(chunk)) => {
+                    if chunk.len() > MAX_PACKAGE - bytes.len() || total.is_some_and(|n| bytes.len() as u64 + chunk.len() as u64 > n) {
+                        return Err(reject_error("Превышен объявленный размер обновления"));
+                    }
+                    bytes.extend_from_slice(&chunk);
+                    if last.elapsed() >= Duration::from_millis(150) {
+                        let _ = progress.send(Progress { stage: "download", downloaded: bytes.len() as u64, total });
+                        last = Instant::now();
+                    }
+                }
+                Ok(None) => break false,
+                Err(_) => break true,
+            }
+        };
+        if interrupted || bytes.is_empty() || total.is_some_and(|n| n != bytes.len() as u64) {
+            if let (Some(etag), Some(total)) = (validator, total) {
+                if !bytes.is_empty() && (bytes.len() as u64) < total {
+                    *PARTIAL.lock().map_err(|_| "Ошибка состояния загрузки")? = Some(Partial { identity: id, etag, total, bytes });
+                }
+            }
+            return Err(retry_error("Загрузка прервана. Повторите скачивание; безопасный диапазон будет продолжен, если сервер его поддерживает."));
+        }
+        let _ = progress.send(Progress { stage: "verify", downloaded: bytes.len() as u64, total });
+        return Ok(bytes);
     }
-    if bytes.is_empty() || total.is_some_and(|n| n != bytes.len() as u64) { return Err("Пакет скачан не полностью".into()); }
-    let _ = progress.send(Progress { stage: "verify", downloaded: bytes.len() as u64, total });
-    Ok(bytes)
+    Err(retry_error("Сервер изменил пакет. Повторите скачивание с начала."))
 }
 
 #[tauri::command]
@@ -173,16 +251,27 @@ pub(super) async fn native_update_download(version: String, progress: Channel<Pr
     let update = {
         let mut offer = OFFER.lock().map_err(|_| "Ошибка состояния обновления")?;
         let (when, update) = offer.as_ref().ok_or("Сначала проверьте обновления")?;
-        if when.elapsed() > OFFER_TTL || update.version != version || !newer(CURRENT, &version) { *offer = None; return Err("Предложение устарело. Повторите проверку".into()); }
+        if when.elapsed() > OFFER_TTL || update.version != version || !newer(CURRENT, &version) { *offer = None; return Err("expired: Предложение устарело. Повторите проверку".into()); }
         update.clone()
     };
-    let bytes = download(&update, &progress).await?;
+    let id = identity(&update);
+    if REJECTED.lock().map_err(|_| "Ошибка состояния обновления")?.as_ref() == Some(&id) {
+        return Err(reject_error("Этот пакет уже отклонён проверкой"));
+    }
+    let bytes = match download(&update, &progress).await {
+        Ok(bytes) => bytes,
+        Err(e) => { if e.starts_with("rejected:") { *REJECTED.lock().map_err(|_| "Ошибка состояния обновления")? = Some(id); } return Err(e); }
+    };
     let (os, _, arch) = target()?;
-    let prepared = tokio::task::spawn_blocking(move || -> Result<Prepared, String> {
+    let checked = tokio::task::spawn_blocking(move || -> Result<Prepared, String> {
         update.verify(&bytes).map_err(|_| "Подпись пакета или подписанная версия не прошла проверку")?;
         let suffix = validate_package(&bytes, &version, os, arch)?;
         Ok(Prepared { version, bytes, suffix })
-    }).await.map_err(|_| "Ошибка проверки пакета")??;
+    }).await.map_err(|_| "Ошибка проверки пакета")?;
+    let prepared = match checked {
+        Ok(p) => p,
+        Err(e) => { *REJECTED.lock().map_err(|_| "Ошибка состояния обновления")? = Some(id); return Err(reject_error(&e)); }
+    };
     *PREPARED.lock().map_err(|_| "Ошибка состояния обновления")? = Some(prepared);
     Ok(())
 }
@@ -197,6 +286,13 @@ pub(super) async fn native_update_install(app: AppHandle, version: String, super
         take_prepared(&mut *slot, &version)?
     };
     let result = super::install_launcher_update(prepared.bytes, prepared.suffix, guard, app).await;
+    if result.as_ref().err().is_some_and(|e| e.starts_with("rejected:")) {
+        if let Ok(offer) = OFFER.lock() {
+            if let Some((_, update)) = offer.as_ref() {
+                if let Ok(mut rejected) = REJECTED.lock() { *rejected = Some(identity(update)); }
+            }
+        }
+    }
     if result.is_ok() {
         if let Ok(mut offer) = OFFER.lock() { *offer = None; }
         // No game or file mutations may begin before this process terminates.
@@ -226,6 +322,13 @@ mod tests {
         assert!(take_prepared(&mut slot, version).is_err());
         let mut stale = Some(Prepared { version: CURRENT.into(), bytes: vec![1], suffix: "zip" });
         assert!(take_prepared(&mut stale, CURRENT).is_err());
+    }
+    #[test] fn resume_requires_strong_etag_and_exact_complete_range() {
+        assert!(strong_etag("\"abc\""));
+        for value in ["W/\"abc\"", "abc", "\"a b\"", "\"a\r\nb\""] { assert!(!strong_etag(value)); }
+        assert!(valid_range("bytes 20-99/100", 20, 100));
+        for value in ["bytes 0-99/100", "bytes 20-98/100", "bytes 20-99/101", "bytes 20-99/*"] { assert!(!valid_range(value, 20, 100)); }
+        assert!(!valid_range("bytes 0-0/0", 0, 0));
     }
     #[test] fn stable_upgrade_only() {
         assert!(newer("1.1.1", "1.10.0"));

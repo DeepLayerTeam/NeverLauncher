@@ -1,9 +1,9 @@
 name: Native Updater and GitHub Delivery checks
 on:
   pull_request:
-    paths: ['apps/desktop/**', 'scripts/release/*native_updater*', 'scripts/release/*github_release_delivery*', '.github/workflows/github-release-delivery.yml', 'VERSION', '.github/workflows/native-updater.yml']
+    paths: ['apps/desktop/**', 'cli/cmd/launcher/component_update.go', 'cli/cmd/launcher/transactional_updater*.go', 'cli/cmd/launcher/main.go', 'scripts/release/*native_updater*', 'scripts/release/*github_release_delivery*', '.github/workflows/github-release-delivery.yml', 'VERSION', '.github/workflows/native-updater.yml']
   push:
-    paths: ['apps/desktop/**', 'scripts/release/*native_updater*', 'scripts/release/*github_release_delivery*', '.github/workflows/github-release-delivery.yml', 'VERSION', '.github/workflows/native-updater.yml']
+    paths: ['apps/desktop/**', 'cli/cmd/launcher/component_update.go', 'cli/cmd/launcher/transactional_updater*.go', 'cli/cmd/launcher/main.go', 'scripts/release/*native_updater*', 'scripts/release/*github_release_delivery*', '.github/workflows/github-release-delivery.yml', 'VERSION', '.github/workflows/native-updater.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,6 +20,17 @@ jobs:
       - run: python -m unittest discover -s scripts/release -p test_native_updater_feed.py -v
       - run: python -m unittest discover -s scripts/release -p test_github_release_delivery.py -v
       - run: python scripts/version/manage.py check
+  recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache: false
+      - run: go test ./cmd/launcher -run 'TestTransactionalUpdater|TestUpdater.*0527|TestUpdater.*0114|TestComponentUpdate|TestComponentTree' -count=1 -v
+        working-directory: cli
   native:
     strategy:
       fail-fast: false
