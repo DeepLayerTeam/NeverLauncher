@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"gitflic.ru/skif4er/launcher/services/api/internal/aigateway"
 	"gitflic.ru/skif4er/launcher/services/api/internal/capacity"
 	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 	"gitflic.ru/skif4er/launcher/services/api/internal/dbmigrate"
@@ -411,7 +412,30 @@ func main() {
 		log.Printf("Шина событий расширений: protocol=%s", eventbus.ProtocolVersion)
 	}
 
+	var ai *aigateway.Gateway
+	if role.api {
+		aiConfig, enabled, aiErr := aigateway.FromEnv(os.Getenv)
+		if aiErr != nil {
+			log.Fatal(aiErr)
+		}
+		if enabled {
+			durable, ok := repo.(interface {
+				AILedger(context.Context) (*aigateway.Ledger, error)
+			})
+			if !ok {
+				log.Fatal("AI gateway requires durable PostgreSQL or SQLite repository")
+			}
+			aiCtx, aiCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ledger, aiErr := durable.AILedger(aiCtx)
+			aiCancel()
+			if aiErr != nil {
+				log.Fatal("AI gateway accounting storage unavailable")
+			}
+			ai = aigateway.New(aiConfig, ledger)
+		}
+	}
 	server := httpapi.Server{
+		AI:                ai,
 		Capacity:          capacityCollector,
 		Version:           version,
 		SourceCommit:      commit,

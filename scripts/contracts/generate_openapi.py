@@ -3221,5 +3221,16 @@ migration_extension = json.loads(
 )
 spec["paths"].update(migration_extension["paths"])
 spec["components"]["schemas"].update(migration_extension["schemas"])
+# AI uses a typed admission request and SSE, not the default JSON response.
+spec["tags"].append({"name": "ai"})
+ai_errors = {str(code): {"description": desc, "content": {"application/json": {"schema": ref("Error")}}} for code, desc in [(400, "Invalid prompt"), (401, "Authentication required"), (403, "Access denied"), (429, "Budget, request rate or concurrency limit"), (503, "AI disabled or accounting unavailable")]}
+ai_op = spec["paths"]["/api/v1/ai/responses"]["post"]
+ai_op.update(tags=["ai"], security=[{"BearerAuth": []}], summary="Stream a text response using the configured OpenAI model", description="Requires an allowlisted current account role. Reserves budget before dispatch. SSE events: start, delta, done or error. Only done confirms durable settlement. EOF without done is not success.", requestBody={"required": True, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": False, "required": ["prompt"], "properties": {"prompt": {"type": "string", "minLength": 1, "maxLength": 16384, "description": "UTF-8 byte limit 16384; lower configured ceiling may apply"}}}}}}, responses={"200": {"description": "SSE; JSON data fields requestId, delta, code, state, inputTokens, outputTokens, chargedMicroUsd depending on event", "content": {"text/event-stream": {"schema": {"type": "string"}}}}, **ai_errors})
+ai_number = {"type": "integer", "minimum": 0}
+ai_counters = ["requests", "chargedMicroUsd", "uncertainRequests", "inputTokens", "outputTokens"]
+schemas["AIUsage121"] = {"type": "object", "required": ["model", "month", "budgetMicroUsd", "usage"], "properties": {"model": {"type": "string"}, "month": {"type": "string", "pattern": r"^\d{4}-\d{2}$"}, "budgetMicroUsd": ai_number, "usage": {"type": "object", "required": ai_counters, "properties": {k: ai_number for k in ai_counters}}}}
+for ai_path, ai_summary in [("/api/v1/ai/usage", "Current account monthly usage and reservations; requires allowed role"), ("/api/v1/admin/ai/usage", "Global monthly usage; requires users:manage")]:
+    spec["paths"][ai_path]["get"].update(tags=["ai"], security=[{"BearerAuth": []}], summary=ai_summary, responses={"200": {"description": "Estimated usage in USD micro-units, including unresolved reservations", "content": {"application/json": {"schema": ref("AIUsage121")}}}, **{k: ai_errors[k] for k in ["401", "403", "503"]}})
+
 OUT.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\n")
 print(f"Создан файл {OUT}: {len(routes)} операций")

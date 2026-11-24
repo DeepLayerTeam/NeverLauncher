@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"gitflic.ru/skif4er/launcher/services/api/internal/aigateway"
 	"gitflic.ru/skif4er/launcher/services/api/internal/authorization"
 	"gitflic.ru/skif4er/launcher/services/api/internal/capacity"
 	"gitflic.ru/skif4er/launcher/services/api/internal/config"
@@ -22,6 +23,7 @@ import (
 )
 
 type Server struct {
+	AI                *aigateway.Gateway
 	Capacity          *capacity.Collector
 	Protection        *protection.Engine
 	Version           string

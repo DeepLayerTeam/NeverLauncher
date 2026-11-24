@@ -135,6 +135,10 @@ func (s Server) operationsBackupRestore(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "Для восстановления требуется database=true и/или storage=true")
 		return
 	}
+	if req.Database && s.AI != nil {
+		writeError(w, http.StatusConflict, "Отключите AI на всех репликах и сверите расходы перед восстановлением базы данных")
+		return
+	}
 	unlock := s.beginMaintenanceExclusive()
 	defer unlock()
 

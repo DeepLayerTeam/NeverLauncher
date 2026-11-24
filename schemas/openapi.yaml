@@ -3,7 +3,7 @@
   "info": {
     "title": "Launcher API",
     "version": "1.0.0",
-    "description": "Канонический production API Launcher 1.2.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API Launcher 1.2.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -38,6 +38,9 @@
     },
     {
       "name": "operations"
+    },
+    {
+      "name": "ai"
     }
   ],
   "paths": {
@@ -273,6 +276,62 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/admin/ai/usage": {
+      "get": {
+        "operationId": "get_admin_ai_usage",
+        "tags": [
+          "ai"
+        ],
+        "summary": "Global monthly usage; requires users:manage",
+        "responses": {
+          "200": {
+            "description": "Estimated usage in USD micro-units, including unresolved reservations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIUsage121"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "AI disabled or accounting unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/admin/audit": {
@@ -9603,6 +9662,161 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/ai/responses": {
+      "post": {
+        "operationId": "post_ai_responses",
+        "tags": [
+          "ai"
+        ],
+        "summary": "Stream a text response using the configured OpenAI model",
+        "responses": {
+          "200": {
+            "description": "SSE; JSON data fields requestId, delta, code, state, inputTokens, outputTokens, chargedMicroUsd depending on event",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid prompt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Budget, request rate or concurrency limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "AI disabled or accounting unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16384,
+                    "description": "UTF-8 byte limit 16384; lower configured ceiling may apply"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Requires an allowlisted current account role. Reserves budget before dispatch. SSE events: start, delta, done or error. Only done confirms durable settlement. EOF without done is not success."
+      }
+    },
+    "/api/v1/ai/usage": {
+      "get": {
+        "operationId": "get_ai_usage",
+        "tags": [
+          "ai"
+        ],
+        "summary": "Current account monthly usage and reservations; requires allowed role",
+        "responses": {
+          "200": {
+            "description": "Estimated usage in USD micro-units, including unresolved reservations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIUsage121"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "AI disabled or accounting unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/auth/accounts": {
@@ -26485,6 +26699,60 @@
                 "admin": {
                   "type": "boolean"
                 }
+              }
+            }
+          }
+        }
+      },
+      "AIUsage121": {
+        "type": "object",
+        "required": [
+          "model",
+          "month",
+          "budgetMicroUsd",
+          "usage"
+        ],
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "month": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}$"
+          },
+          "budgetMicroUsd": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "usage": {
+            "type": "object",
+            "required": [
+              "requests",
+              "chargedMicroUsd",
+              "uncertainRequests",
+              "inputTokens",
+              "outputTokens"
+            ],
+            "properties": {
+              "requests": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "chargedMicroUsd": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "uncertainRequests": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outputTokens": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }

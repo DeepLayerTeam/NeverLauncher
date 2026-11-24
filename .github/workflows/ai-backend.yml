@@ -1,0 +1,45 @@
+name: AI Backend Integration
+on:
+  pull_request:
+    paths: ['services/api/**', 'schemas/openapi.yaml', 'deploy/production/**', '.github/workflows/ai-backend.yml']
+  push:
+    branches: [main]
+    paths: ['services/api/**', 'schemas/openapi.yaml', 'deploy/production/**', '.github/workflows/ai-backend.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: launcher_ai
+          POSTGRES_PASSWORD: disposable-ai-ci-only
+          POSTGRES_DB: launcher_ai
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U launcher_ai -d launcher_ai'
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_ai:disposable-ai-ci-only@127.0.0.1:5432/launcher_ai?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - run: python3 scripts/contracts/validate-openapi.py
+      - name: Provider stream and cost control (no paid provider calls)
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/aigateway
+      - name: Durable budgets and access enforcement
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/repository ./internal/httpapi ./internal/dbmigrate -run 'TestAIGateway|TestEvaluateAppliedSealedCatalog'
+      - name: Build Backend
+        working-directory: services/api
+        run: go build ./cmd/launcher-api

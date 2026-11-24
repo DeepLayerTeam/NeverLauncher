@@ -38,6 +38,7 @@ func (s Server) Handler() http.Handler {
 	mux.HandleFunc("GET /metrics", s.metrics)
 	s.registerPublicRoutesV1(mux)
 	s.registerAuthRoutesV1(mux)
+	s.registerAIRoutes121(mux)
 	s.registerProjectRoutesV1(mux)
 	s.registerPackageRoutesV1(mux)
 	s.registerBridgeRoutesV1(mux)

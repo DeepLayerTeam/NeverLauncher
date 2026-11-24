@@ -30,7 +30,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("Неожиданный статус: %+v", st)
 	}
-	if st.Current != "0119_bridge_late_receipt" {
+	if st.Current != "0120_ai_gateway" {
 		t.Fatalf("Неожиданная текущая миграция %q", st.Current)
 	}
 }
