@@ -827,6 +827,13 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	}
 	if identity.ID == "" {
 		identity.ID = scopedAuthIdentityID0291(identity.Provider, identity.Issuer, identity.UserID)
+		if identity.Provider == "skif4er-id" {
+			var idErr error
+			identity.ID, idErr = newSkif4erIdentityID102()
+			if idErr != nil {
+				return model.AuthIdentity{}, idErr
+			}
+		}
 	}
 	if identity.CreatedAt.IsZero() {
 		identity.CreatedAt = time.Now().UTC()
@@ -888,6 +895,13 @@ func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, 
 	identity.UserID = user.ID
 	if identity.ID == "" {
 		identity.ID = scopedAuthIdentityID0291(identity.Provider, identity.Issuer, user.ID)
+		if identity.Provider == "skif4er-id" {
+			var idErr error
+			identity.ID, idErr = newSkif4erIdentityID102()
+			if idErr != nil {
+				return model.User{}, model.AuthIdentity{}, idErr
+			}
+		}
 	}
 	if identity.CreatedAt.IsZero() {
 		identity.CreatedAt = now
@@ -980,14 +994,23 @@ func (r *SQLRepository) TouchAuthIdentity(id string) (model.AuthIdentity, error)
 	if err := r.check(); err != nil {
 		return model.AuthIdentity{}, err
 	}
-	var provider, issuer, subject string
-	if err := r.db.QueryRow(`UPDATE auth_identities SET last_authenticated_at=now(),updated_at=now() WHERE id=$1 RETURNING provider,issuer,subject`, id).Scan(&provider, &issuer, &subject); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return model.AuthIdentity{}, ErrNotFound
-		}
+	var item model.AuthIdentity
+	var claimsRaw []byte
+	var lastAuth sql.NullTime
+	err := r.db.QueryRow(`UPDATE auth_identities SET last_authenticated_at=now(),updated_at=now() WHERE id=$1 RETURNING id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at`, id).Scan(&item.ID, &item.UserID, &item.Provider, &item.Issuer, &item.Subject, &item.Email, &item.Username, &item.DisplayName, &claimsRaw, &item.CreatedAt, &item.UpdatedAt, &lastAuth)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.AuthIdentity{}, ErrNotFound
+	}
+	if err != nil {
 		return model.AuthIdentity{}, err
 	}
-	return r.GetAuthIdentityByIssuer(provider, issuer, subject)
+	if err := json.Unmarshal(claimsRaw, &item.Claims); err != nil {
+		return model.AuthIdentity{}, err
+	}
+	if lastAuth.Valid {
+		item.LastAuthenticatedAt = lastAuth.Time
+	}
+	return item, nil
 }
 
 func (r *SQLRepository) ListRoles() []model.Role {

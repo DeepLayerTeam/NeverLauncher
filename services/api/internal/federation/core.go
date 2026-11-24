@@ -341,7 +341,13 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 	linked.DisplayName = auth.Identity.DisplayName
 	linked.Claims = cloneClaims(auth.Identity.Claims)
 	linked.LastAuthenticatedAt = time.Now().UTC()
-	updated, err := c.repo.SaveAuthIdentity(linked)
+	var updated model.AuthIdentity
+	if meta.ID == "skif4er-id" {
+		// Updating an existing proof must never INSERT after an unlink.
+		updated, err = c.repo.TouchAuthIdentity(linked.ID)
+	} else {
+		updated, err = c.repo.SaveAuthIdentity(linked)
+	}
 	if err != nil {
 		return Result{}, err
 	}

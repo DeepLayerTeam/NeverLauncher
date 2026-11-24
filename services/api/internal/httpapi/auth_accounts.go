@@ -208,6 +208,11 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "Токен обновления недействителен или отозван")
 		return
 	}
+	if !s.skif4erSessionLinked102(preview) {
+		s.State.AuthSessions.revoke(preview.ID, "identity-unlinked")
+		writeError(w, http.StatusUnauthorized, "Идентичность отвязана")
+		return
+	}
 	if !s.enforceProtection0298(w, r, protection.BeforeAuth, preview.UserID, preview.ID, preview.TrustedDeviceID, preview.RoleID) {
 		s.State.AuthSessions.revoke(preview.ID, "protection-refresh")
 		return
@@ -258,7 +263,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	// с устаревшими полномочиями устройства. При следующем использовании такой токен
 	// всё равно отклонится; лучше отклонить сам refresh, а не сообщать об успехе.
 	currentBinding, live := s.State.AuthSessions.get(session.ID, session.UserID)
-	if !live || !sameDeviceBinding0432(currentBinding, session) {
+	if !live || !s.skif4erSessionLinked102(currentBinding) || !sameDeviceBinding0432(currentBinding, session) {
 		writeError(w, http.StatusUnauthorized, "Привязка устройства изменилась во время обновления")
 		return
 	}

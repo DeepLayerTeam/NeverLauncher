@@ -3,7 +3,7 @@
   "info": {
     "title": "Launcher API",
     "version": "1.0.0",
-    "description": "Канонический production API Launcher 1.0.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API Launcher 1.0.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -11222,6 +11222,47 @@
             "$ref": "#/components/responses/Unauthorized"
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/identities/{identityId}": {
+      "delete": {
+        "operationId": "delete_auth_identities_by_identityId",
+        "tags": [
+          "auth"
+        ],
+        "summary": "DELETE /api/v1/auth/identities/{identityId}",
+        "responses": {
+          "200": {
+            "description": "Успешно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "identityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
         "security": [
           {
             "BearerAuth": []

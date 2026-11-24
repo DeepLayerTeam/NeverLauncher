@@ -34,14 +34,15 @@ type oidcCompleteRequest115 struct {
 	RecoveryCode string `json:"recoveryCode,omitempty"`
 }
 type oidcTransaction115 struct {
-	ProviderID   string `json:"providerId"`
-	RedirectURI  string `json:"redirectUri"`
-	State        string `json:"state"`
-	Nonce        string `json:"nonce"`
-	PKCEVerifier string `json:"pkceVerifier"`
-	DeviceID     string `json:"deviceId"`
-	LinkUserID   string `json:"linkUserId,omitempty"`
-	ExpiresAt    int64  `json:"exp"`
+	ProviderID    string `json:"providerId"`
+	RedirectURI   string `json:"redirectUri"`
+	State         string `json:"state"`
+	Nonce         string `json:"nonce"`
+	PKCEVerifier  string `json:"pkceVerifier"`
+	DeviceID      string `json:"deviceId"`
+	LinkUserID    string `json:"linkUserId,omitempty"`
+	LinkSessionID string `json:"linkSessionId,omitempty"`
+	ExpiresAt     int64  `json:"exp"`
 }
 
 func (s Server) authOIDCBegin115(w http.ResponseWriter, r *http.Request) {

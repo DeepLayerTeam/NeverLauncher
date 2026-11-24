@@ -1,3 +1,4 @@
+import Skif4erIdentities from "./Skif4erIdentities";
 import { browserErrorRu, statusRuDesktop, httpStatusRu } from "./status-ru";
 import { serverKindRu } from "./desktop_experience";
 import {
@@ -5321,6 +5322,9 @@ function App() {
                 setLinkFeedback0293={setLinkFeedback0293}
                 linkPasswordProvider0293={linkPasswordProvider0293}
               />
+            )}
+            {screen === "auth" && authSession?.accessToken && (
+              <Skif4erIdentities key={`${settings.backendUrl}|${authSession.sessionId}`} backendUrl={settings.backendUrl} sessionId={authSession.sessionId} available={authProviders0293.some(p => p.id === "skif4er-id" && p.healthy && p.capabilities.includes("browser-auth"))} />
             )}
             {screen === "auth" && /(Win|Linux)/i.test(navigator.platform) && (
               <section className="panel">

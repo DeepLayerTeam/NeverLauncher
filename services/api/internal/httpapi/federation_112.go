@@ -143,6 +143,7 @@ func (s Server) authProviders112(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authIdentities112(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")

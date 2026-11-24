@@ -67,6 +67,68 @@ pub async fn skif4er_login(backend_url: String) -> Result<SecureAuthSession, Str
     Ok(session)
 }
 
+#[tauri::command]
+pub async fn skif4er_link(backend_url: String, expected_session_id: String) -> Result<(), String> {
+    let base = backend(&backend_url)?;
+    let session = super::load_auth_session(backend_url.clone()).await?.ok_or("Сначала войдите в Launcher")?;
+    if session.session_id != expected_session_id { return Err("Сессия Launcher изменилась".into()); }
+    let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 8765)).await.map_err(|_| "Порт 8765 занят")?;
+    let client = Client::builder().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(30)).build().map_err(|_| "Не удалось создать HTTP-клиент")?;
+    let begin = client.post(base.join("/api/v1/auth/providers/skif4er-id/link/begin").map_err(|_| "Некорректный Backend")?).bearer_auth(&session.access_token).json(&json!({"redirectUri": REDIRECT, "deviceId":"desktop-client"})).send().await.map_err(|_| "Backend недоступен")?;
+    if !begin.status().is_success() { return Err(format!("Привязка недоступна (HTTP {}); при 403 войдите заново", begin.status().as_u16())); }
+    let tx = begin.json::<Envelope<Begin>>().await.map_err(|_| "Некорректная транзакция Backend")?.data;
+    let url = authorization_url(&tx.authorization_url, &tx.state)?;
+    if !url.query_pairs().any(|(k,v)| k == "prompt" && v == "login") { return Err("Backend не потребовал повторный вход SkiF4er ID".into()); }
+    super::open_external_https_0356(url.to_string()).await?;
+    let (_cancel, rx) = watch::channel(false);
+    let code = official_browser_0263::receive_callback_for(listener, &tx.state, rx, "127.0.0.1", "/callback").await?;
+    let current = super::load_auth_session(backend_url).await?.ok_or("Сессия Launcher завершена")?;
+    if current.session_id != expected_session_id || current.user_id != session.user_id { return Err("Сессия Launcher изменилась".into()); }
+    let result = client.post(base.join("/api/v1/auth/providers/skif4er-id/link/complete").map_err(|_| "Некорректный Backend")?).bearer_auth(&current.access_token).json(&json!({"code":code.as_str(),"state":tx.state,"transaction":tx.transaction})).send().await.map_err(|_| "Не удалось завершить привязку")?;
+    if result.status().as_u16() == 409 { return Err("SkiF4er ID уже связан с аккаунтом или этот аккаунт имеет другую связь".into()); }
+    if !result.status().is_success() { return Err(format!("Привязка отклонена (HTTP {})",result.status().as_u16())); }
+    let body = result.json::<Envelope<serde_json::Value>>().await.map_err(|_| "Некорректный ответ привязки")?.data;
+    if body["status"] != "linked" || body["provider"] != "skif4er-id" || body["identity"]["id"].as_str().unwrap_or("").is_empty() { return Err("Backend не подтвердил привязку".into()); }
+    Ok(())
+}
+
+async fn management_session(backend_url: &str, expected: &str) -> Result<(Url, Client, SecureAuthSession), String> {
+    let base = backend(backend_url)?;
+    let session = super::load_auth_session(backend_url.to_string()).await?.ok_or("Сначала войдите в Launcher")?;
+    if session.session_id != expected { return Err("Сессия Launcher изменилась".into()); }
+    let client = Client::builder().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(30)).build().map_err(|_| "Не удалось создать HTTP-клиент")?;
+    Ok((base, client, session))
+}
+
+#[tauri::command]
+pub async fn skif4er_identities(backend_url: String, expected_session_id: String) -> Result<Vec<serde_json::Value>, String> {
+    let (base, client, session) = management_session(&backend_url, &expected_session_id).await?;
+    let response = client.get(base.join("/api/v1/auth/identities").map_err(|_| "Некорректный Backend")?).bearer_auth(&session.access_token).send().await.map_err(|_| "Backend недоступен")?;
+    if !response.status().is_success() { return Err(format!("Не удалось загрузить идентичности (HTTP {})", response.status().as_u16())); }
+    let data = response.json::<Envelope<serde_json::Value>>().await.map_err(|_| "Некорректный ответ Backend")?.data;
+    let items = data["items"].as_array().ok_or("Некорректный список идентичностей")?;
+    if items.iter().any(|i| i["id"].as_str().unwrap_or("").is_empty() || i["provider"].as_str().unwrap_or("").is_empty()) { return Err("Некорректная идентичность".into()); }
+    Ok(items.clone())
+}
+
+#[tauri::command]
+pub async fn skif4er_unlink(backend_url: String, expected_session_id: String, identity_id: String) -> Result<(), String> {
+    if identity_id.is_empty() || identity_id.len() > 200 || !identity_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_') { return Err("Некорректный идентификатор".into()); }
+    let (base, client, session) = management_session(&backend_url, &expected_session_id).await?;
+    let url = base.join(&format!("/api/v1/auth/identities/{identity_id}")).map_err(|_| "Некорректный Backend")?;
+    let response = client.delete(url).bearer_auth(&session.access_token).send().await.map_err(|_| "Backend недоступен")?;
+    match response.status().as_u16() {
+        403 => return Err("Для отвязки заново войдите с локальным паролем Launcher".into()),
+        409 => return Err("Необходим резервный локальный способ входа".into()),
+        404 => return Err("Связь не найдена; обновите список".into()),
+        _ if !response.status().is_success() => return Err(format!("Отвязка отклонена (HTTP {})", response.status().as_u16())),
+        _ => {}
+    }
+    let data = response.json::<Envelope<serde_json::Value>>().await.map_err(|_| "Некорректный ответ Backend")?.data;
+    if data["status"] != "unlinked" || data["identityId"].as_str() != Some(identity_id.as_str()) { return Err("Backend не подтвердил отвязку".into()); }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

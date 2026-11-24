@@ -226,7 +226,7 @@ func (s Server) issueLoginSessionWithAuth(user model.User, r *http.Request, devi
 	// Повторно проверяйте после создания сессии: отзыв мог совпасть по времени с
 	// блокировкой.
 	decision = s.evaluateProtection0298(r.Context(), protection.Request{Stage: protection.AfterAuth, UserID: user.ID, SessionID: session.ID, DeviceID: deviceID, RoleID: user.RoleID})
-	if !decision.Allowed() {
+	if !decision.Allowed() || !s.skif4erSessionLinked102(session) {
 		s.State.AuthSessions.revoke(session.ID, "protection:"+decision.Reason)
 		return "", "", authSessionRecord{}, errAuthRequired
 	}
@@ -343,7 +343,7 @@ func (s Server) verifyAdminToken(token string) (authClaims, error) {
 		claims.AuthTime = claims.Iat
 	}
 	session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub)
-	if !ok || normalizeRiskState118(session.RiskState) == "compromised" || firstNonEmpty(session.RiskAction, "allow") == "revoke" {
+	if !ok || !s.skif4erSessionLinked102(session) || normalizeRiskState118(session.RiskState) == "compromised" || firstNonEmpty(session.RiskAction, "allow") == "revoke" {
 		return authClaims{}, errAuthRequired
 	}
 	if !sessionBindingClaimsMatch0126(claims, session) {

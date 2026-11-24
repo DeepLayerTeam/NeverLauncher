@@ -160,6 +160,8 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
+	identityMu                     sync.Mutex
+	userMu                         sync.RWMutex
 	managedProviderMu              sync.Mutex
 	managedProviders               map[string]ManagedProviderHead02910
 	hwidMu                         sync.Mutex
@@ -568,12 +570,16 @@ func (r *MemoryRepository) ListFiles(projectID, versionID string) ([]model.FileO
 }
 
 func (r *MemoryRepository) ListUsers() []model.User {
+	r.userMu.RLock()
+	defer r.userMu.RUnlock()
 	items := append([]model.User(nil), r.users...)
 	sort.Slice(items, func(i, j int) bool { return items[i].Email < items[j].Email })
 	return items
 }
 
 func (r *MemoryRepository) GetUser(id string) (model.User, error) {
+	r.userMu.RLock()
+	defer r.userMu.RUnlock()
 	for _, item := range r.users {
 		if item.ID == id {
 			return item, nil
@@ -583,6 +589,8 @@ func (r *MemoryRepository) GetUser(id string) (model.User, error) {
 }
 
 func (r *MemoryRepository) GetUserByEmail(email string) (model.User, error) {
+	r.userMu.RLock()
+	defer r.userMu.RUnlock()
 	for _, item := range r.users {
 		if strings.EqualFold(item.Email, email) {
 			return item, nil
@@ -635,8 +643,10 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 		canonicalProjectRoles[projectID] = roleID
 	}
 	user.ProjectRoles = canonicalProjectRoles
+	r.userMu.Lock()
 	for _, existing := range r.users {
 		if existing.ID != user.ID && strings.EqualFold(existing.Email, user.Email) {
+			r.userMu.Unlock()
 			return model.User{}, fmt.Errorf("пользователь с таким email уже существует")
 		}
 	}
@@ -661,6 +671,7 @@ func (r *MemoryRepository) SaveUser(user model.User) (model.User, error) {
 		}
 		r.users = append(r.users, user)
 	}
+	r.userMu.Unlock()
 	if strings.TrimSpace(user.PasswordHash) != "" {
 		if _, err := r.SaveAuthIdentity(model.AuthIdentity{
 			UserID: user.ID, Provider: "local", Subject: user.ID,
@@ -707,6 +718,8 @@ func (r *MemoryRepository) TouchUserLogin(id string) (model.User, error) {
 }
 
 func (r *MemoryRepository) GetAuthIdentity(provider, subject string) (model.AuthIdentity, error) {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	subject = strings.TrimSpace(subject)
 	var found model.AuthIdentity
@@ -725,6 +738,8 @@ func (r *MemoryRepository) GetAuthIdentity(provider, subject string) (model.Auth
 }
 
 func (r *MemoryRepository) GetAuthIdentityByIssuer(provider, issuer, subject string) (model.AuthIdentity, error) {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	normalized, err := model.CanonicalAuthIssuer(provider, issuer)
 	if err != nil {
@@ -740,6 +755,8 @@ func (r *MemoryRepository) GetAuthIdentityByIssuer(provider, issuer, subject str
 }
 
 func (r *MemoryRepository) ListAuthIdentities(userID string) []model.AuthIdentity {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
 	items := make([]model.AuthIdentity, 0)
 	for _, item := range r.identities {
 		if userID == "" || item.UserID == userID {
@@ -763,6 +780,8 @@ func (r *MemoryRepository) ListAuthIdentities(userID string) []model.AuthIdentit
 }
 
 func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.AuthIdentity, error) {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
 	now := time.Now().UTC()
 	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
 	var issuerErr error
@@ -787,7 +806,7 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 			if item.Subject != identity.Subject {
 				return model.AuthIdentity{}, fmt.Errorf("%w: поставщик %s уже связан с другим идентификатором субъекта этого пользователя", ErrConflict, identity.Provider)
 			}
-			if identity.ID == "" {
+			if identity.ID == "" || identity.Provider == "skif4er-id" {
 				identity.ID = item.ID
 			}
 			if identity.CreatedAt.IsZero() {
@@ -800,6 +819,13 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 	}
 	if identity.ID == "" {
 		identity.ID = scopedAuthIdentityID0291(identity.Provider, identity.Issuer, identity.UserID)
+		if identity.Provider == "skif4er-id" {
+			var idErr error
+			identity.ID, idErr = newSkif4erIdentityID102()
+			if idErr != nil {
+				return model.AuthIdentity{}, idErr
+			}
+		}
 	}
 	identity.CreatedAt = now
 	identity.UpdatedAt = now
@@ -808,6 +834,10 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 }
 
 func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User, identity model.AuthIdentity) (model.User, model.AuthIdentity, error) {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
+	r.userMu.Lock()
+	defer r.userMu.Unlock()
 	now := time.Now().UTC()
 	user.ID = strings.TrimSpace(user.ID)
 	user.Email = strings.TrimSpace(user.Email)
@@ -841,8 +871,12 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 			if existing.UserID != user.ID {
 				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: внешняя учётная запись уже привязана", ErrConflict)
 			}
-			canonical, err := r.GetUser(existing.UserID)
-			return canonical, existing, err
+			for _, canonical := range r.users {
+				if canonical.ID == existing.UserID {
+					return canonical, existing, nil
+				}
+			}
+			return model.User{}, model.AuthIdentity{}, ErrNotFound
 		}
 	}
 	if user.Status == "" {
@@ -866,6 +900,13 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 	identity.UserID = user.ID
 	if identity.ID == "" {
 		identity.ID = scopedAuthIdentityID0291(identity.Provider, identity.Issuer, user.ID)
+		if identity.Provider == "skif4er-id" {
+			var idErr error
+			identity.ID, idErr = newSkif4erIdentityID102()
+			if idErr != nil {
+				return model.User{}, model.AuthIdentity{}, idErr
+			}
+		}
 	}
 	identity.CreatedAt = now
 	identity.UpdatedAt = now
@@ -877,6 +918,8 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 }
 
 func (r *MemoryRepository) TouchAuthIdentity(id string) (model.AuthIdentity, error) {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
 	for i := range r.identities {
 		if r.identities[i].ID == id {
 			r.identities[i].LastAuthenticatedAt = time.Now().UTC()
@@ -1230,6 +1273,8 @@ func (r *MemoryRepository) ListCrashReports() []model.CrashReport {
 }
 
 func (r *MemoryRepository) GetProviderCredential(userID, provider string) (model.ProviderCredential, error) {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
 	userID = strings.TrimSpace(userID)
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	var found model.ProviderCredential
@@ -1248,6 +1293,8 @@ func (r *MemoryRepository) GetProviderCredential(userID, provider string) (model
 }
 
 func (r *MemoryRepository) GetProviderCredentialByIdentity(userID, identityID string) (model.ProviderCredential, error) {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
 	for _, item := range r.providerCredentials {
 		if item.UserID == strings.TrimSpace(userID) && item.IdentityID == strings.TrimSpace(identityID) {
 			return item, nil
@@ -1257,6 +1304,8 @@ func (r *MemoryRepository) GetProviderCredentialByIdentity(userID, identityID st
 }
 
 func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential) (model.ProviderCredential, error) {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
 	item.UserID = strings.TrimSpace(item.UserID)
 	item.IdentityID = strings.TrimSpace(item.IdentityID)
 	item.Provider = strings.ToLower(strings.TrimSpace(item.Provider))
@@ -1310,6 +1359,8 @@ func (r *MemoryRepository) DeleteProviderCredential(userID, provider string) err
 }
 
 func (r *MemoryRepository) DeleteProviderCredentialByIdentity(userID, identityID string) error {
+	r.identityMu.Lock()
+	defer r.identityMu.Unlock()
 	for i, item := range r.providerCredentials {
 		if item.UserID == strings.TrimSpace(userID) && item.IdentityID == strings.TrimSpace(identityID) {
 			r.providerCredentials = append(r.providerCredentials[:i], r.providerCredentials[i+1:]...)

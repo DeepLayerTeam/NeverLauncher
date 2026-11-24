@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 // к уже аутентифицированному каноническому пользователю Launcher. Адреса электронной почты намеренно
 // не проверяются и не сравниваются: доказательство — владение идентичностью провайдера.
 func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
@@ -59,6 +61,18 @@ func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request
 		return
 	}
 	tx.LinkUserID = claims.Sub
+	tx.LinkSessionID = claims.SessionID
+	if providerID == "skif4er-id" {
+		u, err := url.Parse(start.AuthorizationURL)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Некорректный адрес провайдера")
+			return
+		}
+		q := u.Query()
+		q.Set("prompt", "login")
+		u.RawQuery = q.Encode()
+		start.AuthorizationURL = u.String()
+	}
 	sealed, err = s.sealOIDCTransaction115(tx)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Не удалось защитить транзакцию привязки")
@@ -72,6 +86,7 @@ func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request
 }
 
 func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
@@ -101,7 +116,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	tx, err := s.openOIDCTransaction115(req.Transaction)
-	if err != nil || tx.LinkUserID == "" || tx.LinkUserID != claims.Sub || tx.ProviderID != providerID || req.State == "" || req.State != tx.State || strings.TrimSpace(req.Code) == "" {
+	if err != nil || tx.LinkUserID == "" || tx.LinkUserID != claims.Sub || tx.LinkSessionID != claims.SessionID || tx.ProviderID != providerID || req.State == "" || req.State != tx.State || strings.TrimSpace(req.Code) == "" {
 		writeError(w, http.StatusUnauthorized, "Транзакция привязки поставщика недействительна или истекла")
 		return
 	}
@@ -113,6 +128,12 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 	})
 	if err != nil {
 		s.writeOIDCError115(w, err)
+		return
+	}
+	// The browser exchange can outlive logout or revocation of the initiating session.
+	current, err := s.verifyAdminTokenFromRequest(r)
+	if err != nil || current.SessionID != claims.SessionID || !freshLauncherIdentity0268(current, time.Now()) {
+		writeError(w, http.StatusUnauthorized, "Сессия привязки больше недействительна")
 		return
 	}
 	identity, err := s.Federation.LinkAuthenticatedIdentity(claims.Sub, providerID, proof)
@@ -129,7 +150,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusUnauthorized, "учётная запись больше недоступна")
 		return
 	}
-	if strings.TrimSpace(proof.ProviderToken) != "" {
+	if providerID != "skif4er-id" && strings.TrimSpace(proof.ProviderToken) != "" {
 		if err := s.saveProviderCredential116(user, identity, proof.ProviderToken, false); err != nil {
 			writeError(w, http.StatusInternalServerError, "Не удалось безопасно сохранить учётные данные провайдера")
 			return
