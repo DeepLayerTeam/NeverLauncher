@@ -1,6 +1,6 @@
 [package]
 name = "guard-memory-probe"
-version = "1.1.4"
+version = "1.2.0"
 description = "Тестовый модуль атакующих проверок целостности памяти Guard в Windows"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

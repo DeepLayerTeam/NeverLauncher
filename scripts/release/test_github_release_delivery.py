@@ -203,6 +203,81 @@ class ReleaseDelivery(unittest.TestCase):
         execute(True)
         execute(False)
 
+    def test_beta_metadata_isolated_from_stable_on_all_six_targets(self):
+        names = delivery.metadata(self.directory, VERSION, REPO, COMMIT, self.public, write=True, channel='beta')
+        self.assertEqual(len(names), 31)
+        self.assertIn('latest-beta.json', names)
+        self.assertNotIn('latest.json', names)
+        self.assertEqual(json.loads((self.directory/'RELEASE_DELIVERY.json').read_text())['channel'], 'beta')
+        self.assertEqual(set(json.loads((self.directory/'latest-beta.json').read_text())['platforms']), set(TARGETS.values()))
+        self.assertEqual(names, delivery.metadata(self.directory, VERSION, REPO, COMMIT, self.public, channel='beta'))
+        with self.assertRaises(ValueError): self.verify()
+        other = Ed25519PrivateKey.generate()
+        other_key = b64(('untrusted comment: other\n' + b64(b'Ed' + self.key_id + other.public_key().public_bytes_raw())).encode())
+        with self.assertRaises(InvalidSignature): delivery.metadata(self.directory, VERSION, REPO, COMMIT, other_key, channel='beta')
+        with patch.dict(os.environ, {'NL_UPDATER_PUBLIC_KEY': other_key, 'NL_UPDATER_BETA_PUBLIC_KEY': self.public}):
+            self.assertEqual(delivery.channel_key('stable'), other_key)
+            self.assertEqual(delivery.channel_key('beta'), self.public)
+        renamed = b64(('untrusted comment: renamed\n' + b64(b'Ed'+b'87654321'+self.key.public_key().public_bytes_raw())).encode())
+        with patch.dict(os.environ, {'NL_UPDATER_PUBLIC_KEY': self.public, 'NL_UPDATER_BETA_PUBLIC_KEY': renamed}):
+            with self.assertRaisesRegex(ValueError, 'distinct'): delivery.channel_key('beta')
+        with patch.dict(os.environ, {'NL_UPDATER_PUBLIC_KEY': self.public, 'NL_UPDATER_BETA_PUBLIC_KEY': ''}):
+            with self.assertRaisesRegex(ValueError, 'required'): delivery.channel_key('beta')
+
+    def test_beta_publication_never_changes_latest(self):
+        names = delivery.metadata(self.directory, VERSION, REPO, COMMIT, self.public, write=True, channel='beta')
+        remote = [{'name':n,'state':'uploaded','size':(self.directory/n).stat().st_size,'digest':'sha256:'+delivery.digest(self.directory/n)} for n in names]
+        draft = {'tag_name':'v'+VERSION,'draft':True,'prerelease':True,'id':42}
+        for prerelease in (True, False):
+            row = dict(draft, prerelease=prerelease)
+            responses = [{'visibility':'public'}, [[]], [], {'sha':COMMIT}, [[row]], [remote], {'sha':COMMIT}, [[row]]]
+            with patch.dict(os.environ, {'GITHUB_REF':'refs/heads/main','GITHUB_SHA':COMMIT}), patch.object(delivery,'channel_key',return_value=self.public), patch.object(delivery,'gh_json',side_effect=responses), patch.object(delivery,'run') as command:
+                if prerelease: delivery.publish(self.directory, VERSION, REPO, COMMIT, 'beta')
+                else:
+                    with self.assertRaises(ValueError): delivery.publish(self.directory, VERSION, REPO, COMMIT, 'beta')
+                calls = [c.args for c in command.call_args_list]
+                create = next(c for c in calls if c[:3] == ('gh','release','create'))
+                self.assertIn('--prerelease', create)
+                edits = [c for c in calls if c[:3] == ('gh','release','edit')]
+                self.assertEqual(len(edits), int(prerelease))
+                if edits:
+                    self.assertIn('--latest=false', edits[0])
+                    self.assertIn('--prerelease=true', edits[0])
+                    self.assertNotIn('--latest', edits[0])
+
+    def test_global_release_sequence_prevents_cross_channel_downgrade(self):
+        row = {'tag_name':'v1.2.0','draft':False,'prerelease':True}
+        for channel in ('stable','beta'):
+            with self.assertRaises(ValueError): delivery.check_release_order([row], VERSION, channel=channel)
+            delivery.check_release_order([row], '1.2.1', channel=channel)
+
+    def test_public_delivery_verifies_all_six_downloads_and_rejects_tampering(self):
+        names = delivery.metadata(self.directory, VERSION, REPO, COMMIT, self.public, write=True, channel='beta')
+        assets = [{'name':n,'state':'uploaded','size':(self.directory/n).stat().st_size,'digest':'sha256:'+delivery.digest(self.directory/n)} for n in names]
+        release = {'tag_name':'v'+VERSION,'draft':False,'prerelease':True,'assets':assets}
+        downloaded = []
+        def read(url, limit, *, missing_ok=False, hash_only=False):
+            if '/tags/' in url: return json.dumps(release).encode()
+            if url.endswith('/latest'): return json.dumps({'tag_name':'v1.1.1','prerelease':False}).encode()
+            path = self.directory/url.rsplit('/',1)[1]
+            if hash_only:
+                downloaded.append(path.name)
+                return path.stat().st_size, delivery.digest(path)
+            return path.read_bytes()
+        with patch.object(delivery, 'channel_key', return_value=self.public), patch.object(delivery, 'public_read', side_effect=read):
+            delivery.verify_public(self.directory, VERSION, REPO, COMMIT, 'beta')
+        self.assertEqual(set(downloaded), set(self.packages))
+        def tamper(url, limit, **kwargs):
+            value = read(url, limit, **kwargs)
+            return (value[0], '0'*64) if kwargs.get('hash_only') else value
+        with patch.object(delivery, 'channel_key', return_value=self.public), patch.object(delivery, 'public_read', side_effect=tamper):
+            with self.assertRaisesRegex(ValueError, 'Public package bytes'): delivery.verify_public(self.directory, VERSION, REPO, COMMIT, 'beta')
+        def leaked(url, limit, **kwargs):
+            if url.endswith('/latest'): return json.dumps(release).encode()
+            return read(url, limit, **kwargs)
+        with patch.object(delivery, 'channel_key', return_value=self.public), patch.object(delivery, 'public_read', side_effect=leaked):
+            with self.assertRaisesRegex(ValueError, 'leaked'): delivery.verify_public(self.directory, VERSION, REPO, COMMIT, 'beta')
+
     def test_msi_source_stable_component_identity(self):
         payload=self.root/'payload';payload.mkdir()
         (payload/'launcher-desktop.exe').write_bytes(b'desktop')

@@ -6,9 +6,9 @@ test('missing or malformed preferences use safe defaults; no automatic install/d
   for (const input of [null, 'bad json', 'null', '42', '{}']) assert.deepEqual(readUpdatePreferences(input), defaults);
 });
 test('valid preferences roundtrip and reject unsupported intervals or types', () => {
-  const prefs = {autoCheck:true,autoDownload:true,intervalHours:6};
+  const prefs = {channel:'beta',autoCheck:true,autoDownload:true,intervalHours:6};
   assert.deepEqual(readUpdatePreferences(JSON.stringify(prefs)), prefs);
-  assert.deepEqual(readUpdatePreferences('{"autoCheck":false,"autoDownload":true,"intervalHours":1}'), {autoCheck:false,autoDownload:false,intervalHours:24});
+  assert.deepEqual(readUpdatePreferences('{"autoCheck":false,"autoDownload":true,"intervalHours":1}'), {channel:'stable',autoCheck:false,autoDownload:false,intervalHours:24});
   assert.deepEqual(readUpdatePreferences('{"autoCheck":"false","autoDownload":"true","intervalHours":"6"}'), defaults);
 });
 test('startup and every configured interval, including weekly', () => {
@@ -51,4 +51,10 @@ test('unconfirmed install suppresses automatic download of the same release', ()
   assert.equal(previousInstallFailed('1.1.2',offer),false);
   assert.equal(previousInstallFailed(null,offer),false);
   assert.equal(previousInstallFailed('1.1.4',{...offer,status:'current',currentVersion:'1.1.4',version:null}),false);
+});
+
+test('channel migration defaults to Stable and Beta must be explicit', () => {
+  assert.equal(readUpdatePreferences('{"autoCheck":true}').channel, 'stable');
+  for (const channel of ['Beta', 'nightly', true, null, 'https://example.com']) assert.equal(readUpdatePreferences(JSON.stringify({channel})).channel, 'stable');
+  assert.equal(readUpdatePreferences('{"channel":"beta"}').channel, 'beta');
 });

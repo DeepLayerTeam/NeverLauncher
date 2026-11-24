@@ -1,7 +1,8 @@
-export type UpdatePreferences = { autoCheck: boolean; autoDownload: boolean; intervalHours: 6 | 24 | 168 };
+export type UpdateTrack = 'stable' | 'beta';
+export type UpdatePreferences = { channel: UpdateTrack; autoCheck: boolean; autoDownload: boolean; intervalHours: 6 | 24 | 168 };
 export const UPDATE_PREFERENCES_KEY = 'launcher.native-updates.v1';
-export const DEFAULT_UPDATE_PREFERENCES: UpdatePreferences = { autoCheck: true, autoDownload: false, intervalHours: 24 };
-export type Offer = { currentVersion: string; status: 'disabled' | 'current' | 'available'; version: string | null; notes: string | null };
+export const DEFAULT_UPDATE_PREFERENCES: UpdatePreferences = { channel: 'stable', autoCheck: true, autoDownload: false, intervalHours: 24 };
+export type Offer = { channel: UpdateTrack; currentVersion: string; status: 'disabled' | 'current' | 'available'; version: string | null; notes: string | null };
 export type Progress = { stage: 'download' | 'verify'; downloaded: number; total: number | null };
 export type Phase = 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'ready' | 'installing' | 'scheduled' | 'retry' | 'rejected' | 'error' | 'current' | 'disabled';
 export function readUpdatePreferences(raw: string | null): UpdatePreferences {
@@ -9,7 +10,7 @@ export function readUpdatePreferences(raw: string | null): UpdatePreferences {
     const value = JSON.parse(raw ?? 'null');
     if (!value || typeof value !== 'object') return { ...DEFAULT_UPDATE_PREFERENCES };
     const autoCheck = typeof value.autoCheck === 'boolean' ? value.autoCheck : true;
-    return { autoCheck, autoDownload: autoCheck && value.autoDownload === true,
+    return { channel: value.channel === 'beta' ? 'beta' : 'stable', autoCheck, autoDownload: autoCheck && value.autoDownload === true,
       intervalHours: [6, 24, 168].includes(value.intervalHours) ? value.intervalHours : 24 };
   } catch { return { ...DEFAULT_UPDATE_PREFERENCES }; }
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Channel, invoke, isTauri } from "@tauri-apps/api/core";
-import { automaticCheckDue, DEFAULT_UPDATE_PREFERENCES, isUpdateBusy, progressPercent, readUpdatePreferences, UPDATE_PREFERENCES_KEY, UPDATE_ATTEMPT_KEY, updateFailure, previousInstallFailed, type Offer, type Phase, type Progress, type UpdatePreferences } from "./native_update_experience";
+import { automaticCheckDue, DEFAULT_UPDATE_PREFERENCES, isUpdateBusy, progressPercent, readUpdatePreferences, UPDATE_PREFERENCES_KEY, UPDATE_ATTEMPT_KEY, updateFailure, previousInstallFailed, type Offer, type Phase, type Progress, type UpdatePreferences, type UpdateTrack } from "./native_update_experience";
 
 function initialPreferences(): UpdatePreferences {
   try { return readUpdatePreferences(localStorage.getItem(UPDATE_PREFERENCES_KEY)); }
@@ -32,7 +32,7 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
     catch { setStorageError(true); }
   }
   // Called under the operation lock; no installation is ever triggered automatically.
-  const download = useCallback(async (version: string) => {
+  const download = useCallback(async (version: string, track: UpdateTrack) => {
     setProgress(null); transition('downloading', 'Скачиваем обновление…');
     const channel = new Channel<Progress>();
     channel.onmessage = (event) => {
@@ -41,7 +41,7 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
       if (event.stage === 'verify') transition('verifying', 'Проверяем подпись, версию и платформу…');
     };
     try {
-      await invoke('native_update_download', { version, progress: channel });
+      await invoke('native_update_download', { version, channel: track, progress: channel });
       transition('ready', 'Пакет скачан и проверен. Установите его, когда будете готовы.');
     } finally { channel.onmessage = () => {}; }
   }, [transition]);
@@ -50,7 +50,8 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
     lock.current = true; lastAttempt.current = Date.now();
     setOffer(null); setProgress(null); transition('checking', 'Проверяем обновления…');
     try {
-      const result = await invoke<Offer>('native_update_check');
+      const track = prefs.current.channel;
+      const result = await invoke<Offer>('native_update_check', { channel: track });
       if (!mounted.current) return;
       setOffer(result); setLastChecked(Date.now());
       if (result.status === 'available' && result.version) {
@@ -61,9 +62,9 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
           if (attempt && !failed) localStorage.removeItem(UPDATE_ATTEMPT_KEY);
         } catch { /* preference storage is not a trust boundary */ }
         transition('available', failed ? 'Предыдущая установка не подтверждена: используется прежняя версия. Проверьте журнал update.log в updater-helpers; повторите загрузку вручную.' : 'Доступна новая версия. Подпись будет проверена после скачивания.');
-        if (!failed && automatic && prefs.current.autoCheck && prefs.current.autoDownload) await download(result.version);
+        if (!failed && automatic && prefs.current.autoCheck && prefs.current.autoDownload) await download(result.version, track);
       } else if (result.status === 'disabled') transition('disabled', 'В этой сборке не настроен доверенный источник обновлений.');
-      else { try { if (localStorage.getItem(UPDATE_ATTEMPT_KEY) === result.currentVersion) localStorage.removeItem(UPDATE_ATTEMPT_KEY); } catch {} transition('current', 'Установлена актуальная версия.'); }
+      else { try { if (localStorage.getItem(UPDATE_ATTEMPT_KEY) === result.currentVersion) localStorage.removeItem(UPDATE_ATTEMPT_KEY); } catch {} transition('current', 'В выбранном канале нет более новой версии. Автоматическое понижение версии запрещено.'); }
     } catch (error) { lastAttempt.current = Date.now(); const failure = updateFailure(error); transition(failure.phase, failure.message); }
     finally { lock.current = false; }
   }, [download, enabled, transition]);
@@ -78,10 +79,19 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
     window.addEventListener('focus', tick);
     return () => { window.clearTimeout(startup); window.clearInterval(timer); window.removeEventListener('online', tick); window.removeEventListener('focus', tick); };
   }, [enabled, preferences.autoCheck, preferences.intervalHours, check]);
+  function changeChannel(track: UpdateTrack) {
+    if (lock.current || isUpdateBusy(phaseRef.current) || track === prefs.current.channel) return;
+    if (track === 'beta' && !window.confirm('Beta может содержать ошибки. Перейти в тестовый канал?')) return;
+    savePreferences({ ...prefs.current, channel: track });
+    setOffer(null); setProgress(null); setLastChecked(null); lastAttempt.current = null;
+    transition('idle', 'Канал изменён. Предыдущий пакет больше не используется.');
+    // This explicit user action checks the newly selected channel even when automatic checks are off.
+    void check(false);
+  }
   async function downloadSelected() {
     if (!enabled || lock.current || !['available', 'retry'].includes(phaseRef.current) || !offer?.version) return;
     lock.current = true;
-    try { await download(offer.version); }
+    try { await download(offer.version, prefs.current.channel); }
     catch (error) { lastAttempt.current = Date.now(); const failure = updateFailure(error); transition(failure.phase, failure.message); }
     finally { lock.current = false; }
   }
@@ -91,10 +101,10 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
     try { localStorage.setItem(UPDATE_ATTEMPT_KEY, offer.version); } catch {}
     transition('installing', 'Передаём проверенный пакет установщику…');
     try {
-      await invoke('native_update_install', { version: offer.version });
+      await invoke('native_update_install', { version: offer.version, channel: prefs.current.channel });
       transition('scheduled', 'Установка запланирована. Launcher будет закрыт и перезапущен установщиком.');
     } catch (error) {
-      const ready = await invoke<boolean>('native_update_ready', { version: offer.version }).catch(() => false);
+      const ready = await invoke<boolean>('native_update_ready', { version: offer.version, channel: prefs.current.channel }).catch(() => false);
       lastAttempt.current = Date.now();
       try { localStorage.removeItem(UPDATE_ATTEMPT_KEY); } catch {}
       const failure = updateFailure(error);
@@ -107,8 +117,12 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
   const percent = progress ? progressPercent(progress) : null;
   return <section className="panel nativeUpdatePanel" aria-label="Обновления Launcher">
     <h3>Обновление Launcher</h3>
-    {offer && <p>Текущая версия: {offer.currentVersion}{offer.version && ` · Новая версия: ${offer.version}`}</p>}
+    {offer && <p>Текущая версия: {offer.currentVersion}{offer.version && ` · Новая версия: ${offer.version} (${offer.channel === 'beta' ? 'Beta' : 'Stable'})`}</p>}
     {settingsVisible && <div className="nativeUpdatePreferences">
+      <label>Канал обновлений <select disabled={busy || !enabled || !isTauri()} value={preferences.channel} onChange={e => changeChannel(e.target.value as UpdateTrack)}>
+        <option value="stable">Stable — стабильные выпуски</option><option value="beta">Beta — тестовые и стабильные выпуски</option>
+      </select></label>
+      <p>Beta включается добровольно. Возврат в Stable не понижает установленную версию; потребуется дождаться более нового стабильного выпуска.</p>
       <label><input type="checkbox" checked={preferences.autoCheck} onChange={e => savePreferences({ ...preferences, autoCheck: e.target.checked, autoDownload: e.target.checked && preferences.autoDownload })}/> Проверять обновления автоматически</label>
       <label>Период проверки <select disabled={!preferences.autoCheck} value={preferences.intervalHours} onChange={e => savePreferences({ ...preferences, intervalHours: Number(e.target.value) as UpdatePreferences['intervalHours'] })}>
         <option value={6}>Каждые 6 часов</option><option value={24}>Каждые 24 часа</option><option value={168}>Раз в неделю</option>

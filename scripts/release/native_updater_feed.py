@@ -75,7 +75,7 @@ def release_notes(version, changelog):
 
 def build_feed(version, base_url, packages, public_key, notes=None):
     if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version):
-        raise ValueError('Only stable SemVer is publishable')
+        raise ValueError('Only numeric X.Y.Z release versions are publishable')
     u = urlsplit(base_url)
     if u.scheme != 'https' or not u.hostname or u.username is not None or u.password is not None or u.query or u.fragment:
         raise ValueError('Asset base URL must be HTTPS without credentials/query/fragment')

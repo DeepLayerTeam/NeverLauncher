@@ -16,6 +16,10 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
+from urllib.request import Request, HTTPRedirectHandler, build_opener
 import uuid
 import xml.etree.ElementTree as ET
 
@@ -30,7 +34,7 @@ ARCHES = ('x64', 'arm64')
 
 def version_tuple(version):
     if not STABLE.fullmatch(version):
-        raise ValueError('Expected stable SemVer')
+        raise ValueError('Expected numeric release version X.Y.Z')
     return tuple(map(int, version.split('.')))
 
 
@@ -241,14 +245,21 @@ def asset_url(repo, version):
     return f'https://github.com/{repo}/releases/download/v{version}'
 
 
-def metadata(directory, version, repo, commit, key, write=False):
+def feed_name(channel):
+    if channel not in ('stable', 'beta'):
+        raise ValueError('Unknown release channel')
+    return 'latest.json' if channel == 'stable' else 'latest-beta.json'
+
+
+def metadata(directory, version, repo, commit, key, write=False, channel='stable'):
     """Verify exact filenames, all updater/installer signatures and complete target set."""
     if not COMMIT.fullmatch(commit):
         raise ValueError('Invalid source commit')
+    feed_file = feed_name(channel)
     packages, installers, asc = expected_names(version)
     signed = packages + installers + asc
     asset_names = sorted(signed + [name + '.sig' for name in signed])
-    expected = set(asset_names) | (set() if write else {'latest.json', 'SHA256SUMS', 'RELEASE_DELIVERY.json'})
+    expected = set(asset_names) | (set() if write else {feed_file, 'SHA256SUMS', 'RELEASE_DELIVERY.json'})
     if {p.name for p in directory.iterdir()} != expected:
         raise ValueError('Incomplete or unexpected release asset inventory')
     for platform, arch in TARGETS:
@@ -271,8 +282,8 @@ def metadata(directory, version, repo, commit, key, write=False):
             raise ValueError(f'Signed filename does not match asset: {name}')
     feed_text = json.dumps(feed, indent=2, sort_keys=True) + '\n'
     rows = [{'name': n, 'sha256': digest(directory / n), 'size': (directory / n).stat().st_size} for n in asset_names]
-    receipt = {'version': version, 'tag': 'v'+version, 'sourceCommit': commit, 'repository': repo, 'assets': rows}
-    texts = {'latest.json': feed_text, 'RELEASE_DELIVERY.json': json.dumps(receipt, indent=2, sort_keys=True)+'\n'}
+    receipt = {'channel': channel, 'version': version, 'tag': 'v'+version, 'sourceCommit': commit, 'repository': repo, 'assets': rows}
+    texts = {feed_file: feed_text, 'RELEASE_DELIVERY.json': json.dumps(receipt, indent=2, sort_keys=True)+'\n'}
     sums = {r['name']:r['sha256'] for r in rows}
     sums.update({n: hashlib.sha256(t.encode()).hexdigest() for n,t in texts.items()})
     texts['SHA256SUMS'] = ''.join(f'{v}  {n}\n' for n,v in sorted(sums.items()))
@@ -284,8 +295,9 @@ def metadata(directory, version, repo, commit, key, write=False):
     return sorted(expected | set(texts))
 
 
-def sign(directory, version, repo, commit):
+def sign(directory, version, repo, commit, channel='stable'):
     packages, installers, asc = expected_names(version)
+    key = channel_key(channel)
     private = required_env('NL_UPDATER_PRIVATE_KEY_BASE64')
     env = dict(os.environ)
     env.pop('TAURI_SIGNING_PRIVATE_KEY', None)
@@ -300,7 +312,7 @@ def sign(directory, version, repo, commit):
             digest(directory / name)
             subprocess.run(['cargo', 'tauri', 'signer', 'sign', '--app-version', version,
                             str(directory / name)], env=env, check=True)
-    metadata(directory, version, repo, commit, required_env('NL_UPDATER_PUBLIC_KEY'), write=True)
+    metadata(directory, version, repo, commit, key, write=True, channel=channel)
 
 
 def gh_json(*args):
@@ -311,15 +323,16 @@ def releases(repo):
     return [row for page in gh_json('api', '--paginate', '--slurp', f'repos/{repo}/releases?per_page=100') for row in page]
 
 
-def check_release_order(rows, version, allow_draft=False):
+def check_release_order(rows, version, allow_draft=False, channel='stable'):
+    feed_name(channel)
     target = version_tuple(version)
     for row in rows:
         tag = row['tag_name']
         if tag == 'v'+version and not (allow_draft and row['draft']):
             raise ValueError('Release already exists; never replace it')
-        if not row['draft'] and not row['prerelease'] and STABLE.fullmatch(tag.removeprefix('v')):
+        if not row['draft'] and STABLE.fullmatch(tag.removeprefix('v')):
             if version_tuple(tag.removeprefix('v')) >= target:
-                raise ValueError('Release is not newer than the published stable channel')
+                raise ValueError('Release is not newer than the published release sequence')
 
 
 def check_remote_assets(remote, directory, names):
@@ -332,13 +345,32 @@ def check_remote_assets(remote, directory, names):
             raise ValueError(f'GitHub upload digest/state mismatch: {path.name}')
 
 
-def publish(directory, version, repo, commit):
-    names = metadata(directory, version, repo, commit, required_env('NL_UPDATER_PUBLIC_KEY'))
+def channel_key(channel):
+    feed_name(channel)
+    stable = required_env('NL_UPDATER_PUBLIC_KEY')
+    beta = os.environ.get('NL_UPDATER_BETA_PUBLIC_KEY', '').strip()
+    if beta:
+        # Compare actual Ed25519 public material, not editable key comments or IDs.
+        def material(key):
+            lines = base64.b64decode(key, validate=True).decode().splitlines()
+            raw = base64.b64decode(lines[1], validate=True) if len(lines) == 2 else b''
+            if len(raw) != 42 or raw[:2] != b'Ed':
+                raise ValueError('Malformed updater public key')
+            return raw[10:]
+        if material(stable) == material(beta):
+            raise ValueError('Stable and Beta require distinct signing keys')
+    if channel == 'beta' and not beta:
+        raise ValueError('Beta updater public key is required')
+    return stable if channel == 'stable' else beta
+
+
+def publish(directory, version, repo, commit, channel='stable'):
+    names = metadata(directory, version, repo, commit, channel_key(channel), channel=channel)
     if required_env('GITHUB_REF') != 'refs/heads/main' or required_env('GITHUB_SHA') != commit:
         raise ValueError('Only the exact main workflow commit may publish')
     if gh_json('api', f'repos/{repo}')['visibility'] != 'public':
         raise ValueError('Native updater requires a public release repository')
-    check_release_order(releases(repo), version)
+    check_release_order(releases(repo), version, channel=channel)
     tag = 'v'+version
     ref = 'refs/tags/'+tag
     matching = gh_json('api', f'repos/{repo}/git/matching-refs/tags/{tag}')
@@ -346,20 +378,96 @@ def publish(directory, version, repo, commit):
         run('gh', 'api', '--method', 'POST', f'repos/{repo}/git/refs', '-f', f'ref={ref}', '-f', f'sha={commit}')
     if gh_json('api', f'repos/{repo}/commits/{tag}')['sha'] != commit:
         raise ValueError('Existing release tag points to different source')
-    run('gh', 'release', 'create', tag, '--repo', repo, '--verify-tag', '--draft', '--title', f'NeverLauncher {version}', '--notes', json.loads((directory / 'latest.json').read_text(encoding='utf-8'))['notes'])
+    run('gh', 'release', 'create', tag, '--repo', repo, '--verify-tag', '--draft', *(['--prerelease'] if channel == 'beta' else []), '--title', f'NeverLauncher {version}' + (' Beta' if channel == 'beta' else ''), '--notes', json.loads((directory / feed_name(channel)).read_text(encoding='utf-8'))['notes'])
     # Never clobber an asset. Any error leaves a draft, not a broken public feed.
     run('gh', 'release', 'upload', tag, '--repo', repo, *[directory / n for n in names])
     rows = releases(repo)
-    check_release_order(rows, version, allow_draft=True)
+    check_release_order(rows, version, allow_draft=True, channel=channel)
     draft = [row for row in rows if row['tag_name'] == tag and row['draft']]
-    if len(draft) != 1:
+    if len(draft) != 1 or draft[0]['prerelease'] != (channel == 'beta'):
         raise ValueError('Expected exactly one unpublished draft')
     remote = [a for page in gh_json('api', '--paginate', '--slurp', f'repos/{repo}/releases/{draft[0]["id"]}/assets?per_page=100') for a in page]
     check_remote_assets(remote, directory, names)
     if gh_json('api', f'repos/{repo}/commits/{tag}')['sha'] != commit:
         raise ValueError('Release tag changed during upload')
-    check_release_order(releases(repo), version, allow_draft=True)
-    run('gh', 'release', 'edit', tag, '--repo', repo, '--draft=false', '--latest')
+    check_release_order(releases(repo), version, allow_draft=True, channel=channel)
+    run('gh', 'release', 'edit', tag, '--repo', repo, '--draft=false', '--prerelease=' + ('true' if channel == 'beta' else 'false'), '--latest=false' if channel == 'beta' else '--latest')
+
+
+class HttpsRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        target = urlsplit(newurl)
+        if target.scheme != 'https' or target.username is not None or target.password is not None:
+            raise ValueError('Unsafe release download redirect')
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def public_read(url, limit, *, missing_ok=False, hash_only=False):
+    """Read from the actual public delivery URL without GitHub credentials."""
+    if urlsplit(url).scheme != 'https':
+        raise ValueError('Public delivery requires HTTPS')
+    opener = build_opener(HttpsRedirect())
+    for attempt in range(4):
+        try:
+            request = Request(url, headers={'User-Agent': 'NeverLauncher-release-verification', 'Accept-Encoding': 'identity'})
+            with opener.open(request, timeout=60) as response:
+                size = 0
+                sha = hashlib.sha256()
+                body = bytearray()
+                while chunk := response.read(1024 * 1024):
+                    size += len(chunk)
+                    if size > limit:
+                        raise ValueError(f'Public delivery exceeds expected size: {url}')
+                    if hash_only:
+                        sha.update(chunk)
+                    else:
+                        body.extend(chunk)
+                return (size, sha.hexdigest()) if hash_only else bytes(body)
+        except HTTPError as error:
+            if error.code == 404 and missing_ok:
+                return None
+            if error.code not in (404, 429, 500, 502, 503, 504) or attempt == 3:
+                raise
+        except (URLError, TimeoutError, OSError):
+            if attempt == 3:
+                raise
+        time.sleep(2 ** attempt)
+    raise RuntimeError('Public delivery verification exhausted')
+
+
+def verify_public(directory, version, repo, commit, channel='stable'):
+    """Verify the published channel and all six actual public updater downloads."""
+    names = metadata(directory, version, repo, commit, channel_key(channel), channel=channel)
+    tag = 'v'+version
+    api = f'https://api.github.com/repos/{repo}/releases'
+    release = json.loads(public_read(f'{api}/tags/{tag}', 2 * 1024 * 1024))
+    if (release.get('tag_name') != tag or release.get('draft') is not False or
+            release.get('prerelease') is not (channel == 'beta')):
+        raise ValueError('Published release channel is incorrect')
+    check_remote_assets(release['assets'], directory, names)
+    latest_raw = public_read(f'{api}/latest', 2 * 1024 * 1024, missing_ok=channel == 'beta')
+    latest = json.loads(latest_raw) if latest_raw is not None else None
+    if channel == 'stable':
+        if latest is None or latest.get('tag_name') != tag or latest.get('prerelease') is not False or latest.get('draft') is not False:
+            raise ValueError('Stable release is not GitHub Latest')
+    elif latest is not None and (latest.get('tag_name') == tag or latest.get('prerelease') is not False):
+        raise ValueError('Beta release leaked into GitHub Latest')
+    feed_file = feed_name(channel)
+    local_feed = (directory / feed_file).read_bytes()
+    endpoint = asset_url(repo, version) + '/' + feed_file
+    if public_read(endpoint, len(local_feed)) != local_feed:
+        raise ValueError('Public versioned feed differs from verified feed')
+    if channel == 'stable':
+        stable_endpoint = f'https://github.com/{repo}/releases/latest/download/latest.json'
+        if public_read(stable_endpoint, len(local_feed)) != local_feed:
+            raise ValueError('Stable public feed differs from verified feed')
+    feed = json.loads(local_feed)
+    for (platform, arch), target in TARGETS.items():
+        path = directory / package_name(version, platform, arch)
+        expected = (path.stat().st_size, digest(path))
+        if public_read(feed['platforms'][target]['url'], expected[0], hash_only=True) != expected:
+            raise ValueError(f'Public package bytes do not match signed {target} delivery')
+        print(f'Verified public download: {target}', flush=True)
 
 
 def main():
@@ -375,12 +483,13 @@ def main():
     p.add_argument('--source', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--version', required=True)
-    for command in ('sign', 'verify', 'publish'):
+    for command in ('sign', 'verify', 'publish', 'verify-public'):
         p = sub.add_parser(command)
         p.add_argument('--directory', type=Path, required=True)
         p.add_argument('--version', required=True)
         p.add_argument('--repo', required=True)
         p.add_argument('--commit', required=True)
+        p.add_argument('--channel', choices=['stable', 'beta'], default='stable')
     args = parser.parse_args()
     if args.command == 'prepare-trust':
         prepare_trust()
@@ -391,11 +500,13 @@ def main():
     elif args.command == 'collect':
         collect(args.source, args.output, args.version)
     elif args.command == 'sign':
-        sign(args.directory, args.version, args.repo, args.commit)
+        sign(args.directory, args.version, args.repo, args.commit, args.channel)
     elif args.command == 'verify':
-        metadata(args.directory, args.version, args.repo, args.commit, required_env('NL_UPDATER_PUBLIC_KEY'))
+        metadata(args.directory, args.version, args.repo, args.commit, channel_key(args.channel), channel=args.channel)
+    elif args.command == 'verify-public':
+        verify_public(args.directory, args.version, args.repo, args.commit, args.channel)
     else:
-        publish(args.directory, args.version, args.repo, args.commit)
+        publish(args.directory, args.version, args.repo, args.commit, args.channel)
 
 
 if __name__ == '__main__':

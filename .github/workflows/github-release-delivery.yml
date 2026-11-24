@@ -3,6 +3,12 @@ name: GitHub Release Delivery
 on:
   workflow_dispatch:
     inputs:
+      channel:
+        description: 'Stable release or opt-in Beta prerelease (unique numeric VERSION)'
+        type: choice
+        options: [stable, beta]
+        default: stable
+        required: true
       publish:
         description: 'Publish verified signed release to public GitHub Releases (false = retain signed CI artifacts only)'
         type: boolean
@@ -13,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: neverlauncher-stable-github-release
+  group: neverlauncher-github-release
   cancel-in-progress: false
 
 env:
@@ -43,6 +49,8 @@ jobs:
       - run: python scripts/version/manage.py check
       - run: python -m unittest discover -s scripts/release -p 'test_native_updater_feed.py' -v
       - run: python -m unittest discover -s scripts/release -p 'test_github_release_delivery.py' -v
+  native-tests:
+    uses: ./.github/workflows/native-updater.yml
   windows:
     name: Authenticode для Windows x64 и ARM64
     needs: preflight
@@ -50,6 +58,9 @@ jobs:
     runs-on: windows-2022
     env:
       NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+      NL_UPDATER_BETA_PUBLIC_KEY: ${{ vars.NL_UPDATER_BETA_PUBLIC_KEY }}
+      NL_UPDATER_GITHUB_REPOSITORY: ${{ github.repository }}
+      NL_REQUIRE_BETA_UPDATER: '1'
       NL_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
       NL_REQUIRE_NATIVE_UPDATER: '1'
       LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ vars.NL_COMPONENT_SET_PUBLIC_KEY }}
@@ -200,6 +211,9 @@ jobs:
     runs-on: macos-15
     env:
       NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+      NL_UPDATER_BETA_PUBLIC_KEY: ${{ vars.NL_UPDATER_BETA_PUBLIC_KEY }}
+      NL_UPDATER_GITHUB_REPOSITORY: ${{ github.repository }}
+      NL_REQUIRE_BETA_UPDATER: '1'
       NL_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
       NL_REQUIRE_NATIVE_UPDATER: '1'
       LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ vars.NL_COMPONENT_SET_PUBLIC_KEY }}
@@ -359,6 +373,9 @@ jobs:
     timeout-minutes: 75
     env:
       NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+      NL_UPDATER_BETA_PUBLIC_KEY: ${{ vars.NL_UPDATER_BETA_PUBLIC_KEY }}
+      NL_UPDATER_GITHUB_REPOSITORY: ${{ github.repository }}
+      NL_REQUIRE_BETA_UPDATER: '1'
       NL_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
       NL_REQUIRE_NATIVE_UPDATER: '1'
       LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ vars.NL_COMPONENT_SET_PUBLIC_KEY }}
@@ -423,7 +440,7 @@ jobs:
           compression-level: 0
 
   sign-and-verify:
-    needs: [windows, macos, linux]
+    needs: [windows, macos, linux, native-tests]
     runs-on: ubuntu-24.04
     environment: production-release
     timeout-minutes: 60
@@ -444,12 +461,24 @@ jobs:
           merge-multiple: false
       - name: Collect all six complete native deliveries
         run: python scripts/release/github_release_delivery.py collect --source release-input --output release-final --version "$(cat VERSION)"
-      - name: Sign exact final bytes, verify all signatures and generate update feed
+      - name: Sign Stable delivery
+        if: inputs.channel == 'stable'
         env:
           NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+          NL_UPDATER_BETA_PUBLIC_KEY: ${{ vars.NL_UPDATER_BETA_PUBLIC_KEY }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
           NL_UPDATER_PRIVATE_KEY_BASE64: ${{ secrets.NL_UPDATER_PRIVATE_KEY_BASE64 }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: python scripts/release/github_release_delivery.py sign --directory release-final --version "$(cat VERSION)" --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA"
+        run: python scripts/release/github_release_delivery.py sign --directory release-final --version "$(cat VERSION)" --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" --channel "$RELEASE_CHANNEL"
+      - name: Sign Beta delivery
+        if: inputs.channel == 'beta'
+        env:
+          NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+          NL_UPDATER_BETA_PUBLIC_KEY: ${{ vars.NL_UPDATER_BETA_PUBLIC_KEY }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          NL_UPDATER_PRIVATE_KEY_BASE64: ${{ secrets.NL_UPDATER_BETA_PRIVATE_KEY_BASE64 }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.NL_UPDATER_BETA_KEY_PASSWORD }}
+        run: python scripts/release/github_release_delivery.py sign --directory release-final --version "$(cat VERSION)" --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" --channel "$RELEASE_CHANNEL"
       - uses: actions/upload-artifact@v4
         with:
           name: nl-github-final-${{ github.run_id }}-${{ github.run_attempt }}
@@ -481,5 +510,13 @@ jobs:
       - name: Independently verify release and publish only complete verified draft
         env:
           NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+          NL_UPDATER_BETA_PUBLIC_KEY: ${{ vars.NL_UPDATER_BETA_PUBLIC_KEY }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/release/github_release_delivery.py publish --directory release-final --version "$(cat VERSION)" --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA"
+        run: python scripts/release/github_release_delivery.py publish --directory release-final --version "$(cat VERSION)" --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" --channel "$RELEASE_CHANNEL"
+      - name: Verify the public feed and all six downloads without credentials
+        env:
+          NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+          NL_UPDATER_BETA_PUBLIC_KEY: ${{ vars.NL_UPDATER_BETA_PUBLIC_KEY }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+        run: python scripts/release/github_release_delivery.py verify-public --directory release-final --version "$(cat VERSION)" --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" --channel "$RELEASE_CHANNEL"
