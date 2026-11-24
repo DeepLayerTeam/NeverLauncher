@@ -1308,3 +1308,24 @@ button {
 .nativeUpdatePreferences input[type="checkbox"] { width: auto; }
 .nativeUpdatePanel progress { width: min(100%, 24rem); }
 .nativeUpdateNotes { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow-y: auto; margin: 0.75rem 0; }
+
+/* AI chat workspace: use the existing theme and never render provider text as HTML. */
+.aiChat122 { min-width: 0; }
+.aiChatHeader122, .aiUsage122 { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.aiUsage122 { border: 1px solid currentColor; border-radius: 10px; padding: 10px; font-size: .9rem; }
+.aiLayout122 { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.aiHistory122, .aiConversation122, .aiComposer122 { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.aiHistory122 { max-height: 76vh; overflow-y: auto; }
+.aiHistory122 button { text-align: left; overflow-wrap: anywhere; }
+.aiHistory122 button small { display: block; font-size: .75rem; }
+.aiMessages122 { max-height: 50vh; min-height: 180px; overflow-y: auto; overflow-anchor: none; border: 1px solid rgba(148, 163, 184, .35); padding: 12px; border-radius: 12px; }
+.aiTurn122 { display: grid; gap: 8px; margin-bottom: 12px; }
+.aiMessage122 { padding: 12px; border: 1px solid rgba(148, 163, 184, .28); border-radius: 10px; background: rgba(148,163,184,.08); }
+.aiMessage122 div { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
+.aiAnswer122 { background: transparent; }
+.aiAnswer122 button { display: block; margin-top: 8px; }
+.aiComposer122 textarea { width: 100%; min-height: 84px; resize: vertical; font: inherit; color: inherit; background: rgba(148,163,184,.1); border: 1px solid currentColor; border-radius: 8px; padding: 10px; }
+.aiComposer122 label { display: block; }
+.aiComposer122 input[type=checkbox] { width: auto; }
+.aiComposer122 pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
+@media (max-width: 1100px) { .aiLayout122 { grid-template-columns: 1fr; } .aiHistory122 { max-height: 220px; } }

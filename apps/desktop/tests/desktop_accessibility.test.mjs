@@ -28,7 +28,7 @@ test('Навигация стрелками зациклена, клавиши H
  assert.equal(rovingNav0357('Enter',3,12),null);
 });
 test('Навигация переведена для каждого экрана на оба языка',()=>{
- assert.equal(SCREENS0357.length,12);
+ assert.equal(SCREENS0357.length,13);
  for (const lang of ['ru','en']) {
   assert.equal(STRINGS0357[lang].sections.length,SCREENS0357.length);
   assert.ok(STRINGS0357[lang].sections.every(s=>s.length));

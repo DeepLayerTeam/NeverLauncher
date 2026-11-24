@@ -21,6 +21,7 @@ export const SCREENS0357 = [
   "extensions",
   "logs",
   "diagnostics",
+  "aiChat",
 ] as const;
 export type Screen0357 = (typeof SCREENS0357)[number];
 
@@ -161,6 +162,7 @@ export const STRINGS0357 = {
       "Расширения",
       "История и логи",
       "Диагностика",
+      "AI-чат",
     ],
     desktop: "Игровой лаунчер",
     subtitle:
@@ -294,6 +296,7 @@ export const STRINGS0357 = {
       "Extensions",
       "History & logs",
       "Diagnostics",
+      "AI chat",
     ],
     desktop: "Game launcher",
     subtitle:

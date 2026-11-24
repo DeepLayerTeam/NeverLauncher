@@ -50,6 +50,9 @@ fn claims(session: &SecureAuthSession) -> Result<Claims, String> {
     if parsed.sub.is_empty() || parsed.sid.is_empty() || parsed.sid != session.session_id || (!session.user_id.is_empty() && parsed.sub != session.user_id) || parsed.exp <= 0 { return Err("Несовпадение пользователя или сессии Launcher".into()); }
     Ok(parsed)
 }
+pub(super) fn session_matches(session: &SecureAuthSession, expected_session: &str, expected_user: &str) -> bool {
+    claims(session).is_ok_and(|c| c.sid == expected_session && c.sub == expected_user)
+}
 pub(super) fn view(session: &SecureAuthSession) -> Result<SessionView, String> {
     let c = claims(session)?;
     Ok(SessionView { access_token: session.access_token.clone(), session_id: session.session_id.clone(), email: session.email.clone(), user_id: c.sub, expires_at_unix: c.exp })

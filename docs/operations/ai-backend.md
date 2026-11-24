@@ -1,6 +1,6 @@
 # AI Backend Integration — 1.2.1
 
-AI is an opt-in, text-only server-side OpenAI Responses API integration. Desktop or Admin clients call the Launcher API with the usual local Bearer access token (including sessions created through SkiF4er ID). The OpenAI project key never needs to leave the Backend. There is no proxy for arbitrary upstream URLs, models, tools, files, images, prior response IDs or arbitrary provider parameters. No chat UI is included in this Backend release.
+AI is an opt-in, text-only server-side OpenAI Responses API integration. Desktop or Admin clients call the Launcher API with the usual local Bearer access token (including sessions created through SkiF4er ID). The OpenAI project key never needs to leave the Backend. There is no proxy for arbitrary upstream URLs, models, tools, files, images, prior response IDs or arbitrary provider parameters. The Desktop chat UI added in 1.2.2 uses this same API; see [AI Chat Workspace](ai-chat-workspace.md).
 
 ## Enable on the Backend
 

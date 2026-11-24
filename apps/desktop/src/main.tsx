@@ -1,3 +1,5 @@
+import AIChatWorkspace from "./AIChatWorkspace";
+import { projectContext } from "./ai_chat";
 import NativeUpdaterPanel from "./NativeUpdaterPanel";
 import Skif4erIdentities from "./Skif4erIdentities";
 import { browserErrorRu, statusRuDesktop, httpStatusRu } from "./status-ru";
@@ -1039,7 +1041,12 @@ function App() {
   const [firstRunBusy0352, setFirstRunBusy0352] = useState(false);
   const [firstRunError0352, setFirstRunError0352] = useState("");
   const [stage, setStage] = useState<Stage>("idle");
-  const [manifest, setManifest] = useState<Manifest | null>(null);
+  // Preserve provenance for AI context: late responses from another backend/account must not be shared.
+  const [manifestState, setManifestState] = useState<{value: Manifest; backend: string; userId: string; publicKey: string} | null>(null);
+  const manifest = manifestState?.value ?? null;
+  function setManifest(value: Manifest | null) {
+    setManifestState(value ? {value, backend: settings.backendUrl, userId: authSession?.userId ?? "", publicKey: settings.pinnedPublicKey} : null);
+  }
   const [requirements0359, setRequirements0359] =
     useState<ReleaseRequirements0359 | null>(null);
   const [requirementsApproved0359, setRequirementsApproved0359] = useState("");
@@ -5664,6 +5671,24 @@ function App() {
                 refreshLaunchHistory={refreshLaunchHistory}
                 stopRuntimeProcess={stopRuntimeProcess}
               />
+            )}
+            {screen === "aiChat" && (
+              authSession?.accessToken && authSession.userId && authSession.sessionId ? (
+                <AIChatWorkspace
+                  key={JSON.stringify([settings.backendUrl, authSession.userId, authSession.sessionId, selectedProject, selectedProfile])}
+                  backendUrl={settings.backendUrl}
+                  userId={authSession.userId}
+                  sessionId={authSession.sessionId}
+                  token={authSession.accessToken}
+                  projectId={selectedProject}
+                  profileId={selectedProfile}
+                  context={projectContext(selectedProject, selectedProfile, settings.channel,
+                    manifestState?.backend === settings.backendUrl && manifestState.userId === authSession.userId && manifestState.publicKey === settings.pinnedPublicKey ? manifest : null)}
+                  locale={ui0357.locale}
+                />
+              ) : (
+                <section className="panel"><h2>AI</h2><p>{ui0357.locale === "en" ? "Sign in to use AI chat." : "Войдите в аккаунт для использования AI-чата."}</p><button onClick={() => setScreen("auth")}>{translate0357.signIn}</button></section>
+              )
             )}
             {screen === "diagnostics" && (
               <DiagnosticsPanel
