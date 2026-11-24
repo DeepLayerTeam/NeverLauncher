@@ -77,6 +77,11 @@ jobs:
     needs: [validate-release-ref]
     uses: ./.github/workflows/ci.yml
 
+  unified-integration:
+    name: Unified Integration GA — SkiF4er ID, AI and signed updates
+    needs: [validate-release-ref]
+    uses: ./.github/workflows/unified-integration.yml
+
   native-game-acceptance:
     name: Обязательные успешные и негативные сквозные тесты Minecraft на шести нативных платформах
     needs: [staged-package-runtime-0342]
@@ -398,7 +403,7 @@ jobs:
 
   release-bundle:
     name: Пакет кандидата в релиз
-    needs: [base-ci, extensions-acceptance, native-game-acceptance, production-rc-03216, current-source-rc-03514, protected-isolated-dr-03514, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
+    needs: [base-ci, unified-integration, extensions-acceptance, native-game-acceptance, production-rc-03216, current-source-rc-03514, protected-isolated-dr-03514, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
       actions: read
@@ -1083,7 +1088,7 @@ jobs:
   required-production-ci:
     name: ОБЯЗАТЕЛЬНЫЙ выпускной конвейер — без пропущенных, отменённых или отсутствующих заданий
     if: ${{ always() }}
-    needs: [validate-release-ref, base-ci, extensions-acceptance, native-game-acceptance, auth-platform-protection-ga, server-control-ga, windows-production-signed, macos-production-notarized, admin-ga-certification, profile-ga-certification, certify-platform-signing, current-source-rc-03514, protected-isolated-dr-03514, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, release-bundle]
+    needs: [validate-release-ref, base-ci, unified-integration, extensions-acceptance, native-game-acceptance, auth-platform-protection-ga, server-control-ga, windows-production-signed, macos-production-notarized, admin-ga-certification, profile-ga-certification, certify-platform-signing, current-source-rc-03514, protected-isolated-dr-03514, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, release-bundle]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

@@ -166,8 +166,12 @@ pub(super) async fn skif4er_login(app: tauri::AppHandle, backend_url: String) ->
 
 #[tauri::command]
 pub async fn skif4er_link(backend_url: String, expected_session_id: String) -> Result<(), String> {
+    let _update = super::native_updater::operation()?;
     let base = backend(&backend_url)?;
-    let session = super::load_auth_session(backend_url.clone()).await?.ok_or("Сначала войдите в Launcher")?;
+    let session = {
+        let _session = lock_session().await?;
+        super::load_auth_session(backend_url.clone()).await?.ok_or("Сначала войдите в Launcher")?
+    };
     if session.session_id != expected_session_id { return Err("Сессия Launcher изменилась".into()); }
     let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 8765)).await.map_err(|_| "Порт 8765 занят")?;
     let client = Client::builder().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(30)).build().map_err(|_| "Не удалось создать HTTP-клиент")?;
@@ -179,6 +183,9 @@ pub async fn skif4er_link(backend_url: String, expected_session_id: String) -> R
     super::open_external_https_0356(url.to_string()).await?;
     let (_cancel, rx) = watch::channel(false);
     let code = official_browser_0263::receive_callback_for(listener, &tx.state, rx, "127.0.0.1", "/callback").await?;
+    // Refresh may rotate the access token while the system browser is open.
+    // Serialize the final read/commit with refresh and logout.
+    let _session = lock_session().await?;
     let current = super::load_auth_session(backend_url).await?.ok_or("Сессия Launcher завершена")?;
     if current.session_id != expected_session_id || current.user_id != session.user_id { return Err("Сессия Launcher изменилась".into()); }
     let result = client.post(base.join("/api/v1/auth/providers/skif4er-id/link/complete").map_err(|_| "Некорректный Backend")?).bearer_auth(&current.access_token).json(&json!({"code":code.as_str(),"state":tx.state,"transaction":tx.transaction})).send().await.map_err(|_| "Не удалось завершить привязку")?;
@@ -199,6 +206,7 @@ async fn management_session(backend_url: &str, expected: &str) -> Result<(Url, C
 
 #[tauri::command]
 pub async fn skif4er_identities(backend_url: String, expected_session_id: String) -> Result<Vec<serde_json::Value>, String> {
+    let _session = lock_session().await?;
     let (base, client, session) = management_session(&backend_url, &expected_session_id).await?;
     let response = client.get(base.join("/api/v1/auth/identities").map_err(|_| "Некорректный Backend")?).bearer_auth(&session.access_token).send().await.map_err(|_| "Backend недоступен")?;
     if !response.status().is_success() { return Err(format!("Не удалось загрузить идентичности (HTTP {})", response.status().as_u16())); }
@@ -210,6 +218,7 @@ pub async fn skif4er_identities(backend_url: String, expected_session_id: String
 
 #[tauri::command]
 pub async fn skif4er_unlink(backend_url: String, expected_session_id: String, identity_id: String) -> Result<(), String> {
+    let _session = lock_session().await?;
     if identity_id.is_empty() || identity_id.len() > 200 || !identity_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_') { return Err("Некорректный идентификатор".into()); }
     let (base, client, session) = management_session(&backend_url, &expected_session_id).await?;
     let url = base.join(&format!("/api/v1/auth/identities/{identity_id}")).map_err(|_| "Некорректный Backend")?;

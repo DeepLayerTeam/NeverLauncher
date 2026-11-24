@@ -14,24 +14,37 @@ const MAX_USAGE: usize = 64 * 1024;
 const BEGIN_TTL: Duration = Duration::from_secs(15);
 const STREAM_TIMEOUT: Duration = Duration::from_secs(105);
 
-struct Job { id: String, created: Instant, started: bool, cancel: watch::Sender<bool> }
+struct Job { id: String, created: Instant, started: bool, scope: Option<(String, String)>, cancel: watch::Sender<bool> }
 static ACTIVE: Mutex<Option<Job>> = Mutex::new(None);
 fn valid_id(id: &str) -> bool { id.len() == 32 && id.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) }
 fn reserve(slot: &mut Option<Job>, id: String) -> Result<(), String> {
     if !valid_id(&id) { return Err("invalid".into()); }
     if slot.as_ref().is_some_and(|job| job.started || job.created.elapsed() < BEGIN_TTL) { return Err("limit".into()); }
     let (cancel, _) = watch::channel(false);
-    *slot = Some(Job { id, created: Instant::now(), started: false, cancel });
+    *slot = Some(Job { id, created: Instant::now(), started: false, scope: None, cancel });
     Ok(())
 }
-fn claim(slot: &mut Option<Job>, id: &str) -> Result<watch::Receiver<bool>, String> {
+fn claim(slot: &mut Option<Job>, id: &str, scope: (String, String)) -> Result<watch::Receiver<bool>, String> {
     let job = slot.as_mut().filter(|job| job.id == id && !job.started && job.created.elapsed() < BEGIN_TTL).ok_or("cancelled")?;
+    job.scope = Some(scope);
     job.started = true;
     Ok(job.cancel.subscribe())
 }
 fn stop(slot: &mut Option<Job>, id: &str) {
     if let Some(job) = slot.as_ref().filter(|job| job.id == id) {
         if job.started { let _ = job.cancel.send(true); } else { *slot = None; }
+    }
+}
+// A logout must cancel local provider traffic even if the server is unreachable.
+// Match the exact OS keyring namespace and session, not a display name or token.
+fn stop_session(slot: &mut Option<Job>, namespace: &str, session: &str) {
+    if let Some(job) = slot.as_ref().filter(|job| job.scope.as_ref().is_some_and(|(n, s)| n == namespace && s == session)) {
+        let _ = job.cancel.send(true);
+    }
+}
+pub(super) fn cancel_session(backend: &str, session: &str) {
+    if let (Ok(namespace), Ok(mut slot)) = (super::auth_keyring_username(backend), ACTIVE.lock()) {
+        stop_session(&mut slot, &namespace, session);
     }
 }
 struct Guard(String);
@@ -44,6 +57,7 @@ impl Drop for Guard {
 }
 #[tauri::command]
 pub(super) fn desktop_ai_begin(request_id: String) -> Result<(), String> {
+    let _update = super::native_updater::operation().map_err(|_| "unavailable")?;
     let mut slot = ACTIVE.lock().map_err(|_| "unavailable")?;
     reserve(&mut slot, request_id)
 }
@@ -85,6 +99,7 @@ fn content_type(response: &Response, expected: &str) -> bool {
 }
 #[tauri::command]
 pub(super) async fn desktop_ai_usage(backend_url: String, expected_session_id: String, expected_user_id: String) -> Result<Value, String> {
+    let _update = super::native_updater::operation().map_err(|_| "unavailable")?;
     let base = base(&backend_url)?;
     let token = token(&backend_url, &expected_session_id, &expected_user_id).await?;
     let mut response = client(Duration::from_secs(14))?.get(base.join("/api/v1/ai/usage").map_err(|_| "invalid")?)
@@ -127,11 +142,14 @@ async fn transfer(backend_url: &str, expected_session_id: &str, expected_user_id
 }
 #[tauri::command]
 pub(super) async fn desktop_ai_stream(request_id: String, backend_url: String, expected_session_id: String, expected_user_id: String, prompt: String, channel: Channel<Packet>) -> Result<(), String> {
+    let scope = (super::auth_keyring_username(&backend_url).map_err(|_| "invalid")?, expected_session_id.clone());
     let mut cancel = {
         let mut slot = ACTIVE.lock().map_err(|_| "unavailable")?;
-        claim(&mut slot, &request_id)?
+        claim(&mut slot, &request_id, scope)?
     };
     let _guard = Guard(request_id);
+    // Hold the same read gate as game operations until the stream is closed.
+    let _update = super::native_updater::operation().map_err(|_| "unavailable")?;
     // The future is dropped on cancellation/timeout, closing reqwest's response and upstream request.
     tokio::select! {
         biased;
@@ -152,11 +170,14 @@ mod tests {
         stop(&mut slot, &b); // another operation cannot cancel this one
         assert!(slot.is_some());
         stop(&mut slot, &a); // cancellation before dispatch
-        assert!(claim(&mut slot, &a).is_err());
+        assert!(claim(&mut slot, &a, ("backend".into(), "session".into())).is_err());
         reserve(&mut slot, a.clone()).unwrap();
-        let rx = claim(&mut slot, &a).unwrap();
-        assert!(claim(&mut slot, &a).is_err());
-        stop(&mut slot, &a);
+        let rx = claim(&mut slot, &a, ("backend".into(), "session".into())).unwrap();
+        assert!(claim(&mut slot, &a, ("backend".into(), "session".into())).is_err());
+        stop_session(&mut slot, "other-backend", "session");
+        stop_session(&mut slot, "backend", "other-session");
+        assert!(!*rx.borrow());
+        stop_session(&mut slot, "backend", "session");
         assert!(*rx.borrow());
     }
     #[test]
@@ -164,7 +185,7 @@ mod tests {
         let mut slot = None; let a = "a".repeat(32);
         reserve(&mut slot, a.clone()).unwrap();
         slot.as_mut().unwrap().created = Instant::now() - BEGIN_TTL;
-        assert!(claim(&mut slot, &a).is_err());
+        assert!(claim(&mut slot, &a, ("backend".into(), "session".into())).is_err());
         reserve(&mut slot, "b".repeat(32)).unwrap();
         assert!(base("https://launcher.example.com").is_ok());
         assert!(base("http://localhost:8080").is_err());

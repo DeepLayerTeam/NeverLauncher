@@ -1,0 +1,53 @@
+name: Unified Integration GA
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths: ['apps/**', 'services/api/**', 'cli/**', 'runtime/**', 'schemas/**', 'scripts/release/**', 'scripts/version/**', 'e2e/scripts/skif4er-admin-e2e.py', 'e2e/scripts/*unified_ai_smoke.py', 'scripts/ci/**', 'deploy/production/**', '.github/workflows/**', 'VERSION']
+  push:
+    branches: [main]
+    paths: ['apps/**', 'services/api/**', 'cli/**', 'runtime/**', 'schemas/**', 'scripts/release/**', 'scripts/version/**', 'e2e/scripts/skif4er-admin-e2e.py', 'e2e/scripts/*unified_ai_smoke.py', 'scripts/ci/**', 'deploy/production/**', '.github/workflows/**', 'VERSION']
+permissions:
+  contents: read
+jobs:
+  identity:
+    uses: ./.github/workflows/skif4er-authentication-security.yml
+  gateway:
+    uses: ./.github/workflows/ai-backend.yml
+  copilot:
+    uses: ./.github/workflows/ai-admin-copilot.yml
+  desktop-and-delivery:
+    uses: ./.github/workflows/native-updater.yml
+  acceptance:
+    name: Require every subsystem on the exact source revision
+    if: ${{ always() }}
+    needs: [identity, gateway, copilot, desktop-and-delivery]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 scripts/version/manage.py check
+      - run: python3 -m unittest discover -s e2e/scripts -p test_unified_ai_smoke.py -v
+      - run: python3 -m unittest discover -s scripts/ci -p test_required_jobs.py -v
+      - name: Fail closed on absent, skipped, cancelled or failed checks
+        shell: bash
+        env:
+          CI_NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$CI_NEEDS_JSON" > "$RUNNER_TEMP/unified-needs.json"
+          python3 scripts/ci/required_jobs.py \
+            --workflow .github/workflows/unified-integration.yml \
+            --gate acceptance --needs-json "$RUNNER_TEMP/unified-needs.json" \
+            --source-sha "$GITHUB_SHA" --version-file VERSION \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --output unified-integration-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: unified-integration-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: unified-integration-evidence.json
+          if-no-files-found: error
+          retention-days: 30

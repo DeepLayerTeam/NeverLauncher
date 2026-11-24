@@ -5,6 +5,7 @@ on:
   push:
     paths: ['services/api/**', 'apps/desktop/**', 'apps/admin/**', 'e2e/scripts/skif4er-admin-e2e.py', 'schemas/**', 'VERSION', '.github/workflows/skif4er-authentication-security.yml']
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:

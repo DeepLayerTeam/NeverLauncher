@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths: ['services/api/**', 'schemas/openapi.yaml', 'deploy/production/**', '.github/workflows/ai-backend.yml']
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -39,7 +40,7 @@ jobs:
         run: go test -race -count=1 ./internal/aigateway
       - name: Durable budgets and access enforcement
         working-directory: services/api
-        run: go test -race -count=1 ./internal/repository ./internal/httpapi ./internal/dbmigrate -run 'TestAIGateway|TestEvaluateAppliedSealedCatalog'
+        run: go test -race -count=1 ./internal/repository ./internal/httpapi ./internal/dbmigrate -run 'TestAIGateway|TestEvaluateAppliedSealedCatalog|TestUnifiedIntegration130'
       - name: Build Backend
         working-directory: services/api
         run: go build ./cmd/launcher-api

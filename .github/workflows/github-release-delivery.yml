@@ -47,13 +47,15 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install 'cryptography==46.0.4'
       - run: python scripts/version/manage.py check
+      - run: python -m unittest discover -s scripts/ci -p test_required_jobs.py -v
+      - run: python -m unittest discover -s e2e/scripts -p test_unified_ai_smoke.py -v
       - run: python -m unittest discover -s scripts/release -p 'test_native_updater_feed.py' -v
       - run: python -m unittest discover -s scripts/release -p 'test_github_release_delivery.py' -v
-  native-tests:
-    uses: ./.github/workflows/native-updater.yml
+  unified-tests:
+    uses: ./.github/workflows/unified-integration.yml
   windows:
     name: Authenticode для Windows x64 и ARM64
-    needs: preflight
+    needs: [preflight, unified-tests]
     environment: production-release
     runs-on: windows-2022
     env:
@@ -206,7 +208,7 @@ jobs:
 
   macos:
     name: Developer ID и нотариально заверенная сборка macOS x64/ARM64
-    needs: preflight
+    needs: [preflight, unified-tests]
     environment: production-release
     runs-on: macos-15
     env:
@@ -361,7 +363,7 @@ jobs:
           compression-level: 0
 
   linux:
-    needs: preflight
+    needs: [preflight, unified-tests]
     environment: production-release
     strategy:
       fail-fast: false
@@ -440,7 +442,7 @@ jobs:
           compression-level: 0
 
   sign-and-verify:
-    needs: [windows, macos, linux, native-tests]
+    needs: [windows, macos, linux, unified-tests]
     runs-on: ubuntu-24.04
     environment: production-release
     timeout-minutes: 60
@@ -487,9 +489,42 @@ jobs:
           retention-days: 30
           compression-level: 0
 
+  live-acceptance:
+    name: Real SkiF4er ID and OpenAI on exact staging Backend
+    if: inputs.publish == true
+    needs: [preflight, unified-tests, sign-and-verify]
+    environment: unified-staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.58.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Authenticate, rotate, settle one paid request and revoke
+        env:
+          SKIF4ER_E2E_ADMIN_URL: ${{ vars.SKIF4ER_E2E_ADMIN_URL }}
+          SKIF4ER_E2E_BACKEND_URL: ${{ vars.SKIF4ER_E2E_BACKEND_URL }}
+          SKIF4ER_E2E_CANONICAL_USER_ID: ${{ vars.SKIF4ER_E2E_CANONICAL_USER_ID }}
+          SKIF4ER_E2E_USERNAME: ${{ secrets.SKIF4ER_E2E_USERNAME }}
+          SKIF4ER_E2E_PASSWORD: ${{ secrets.SKIF4ER_E2E_PASSWORD }}
+          SKIF4ER_E2E_RECOVERY_CODE: ${{ secrets.SKIF4ER_E2E_RECOVERY_CODE }}
+          SKIF4ER_E2E_SOURCE_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in SKIF4ER_E2E_ADMIN_URL SKIF4ER_E2E_BACKEND_URL SKIF4ER_E2E_CANONICAL_USER_ID SKIF4ER_E2E_USERNAME SKIF4ER_E2E_PASSWORD; do
+            test -n "${!name}" || { echo "Missing staging setting: $name" >&2; exit 2; }
+          done
+          python e2e/scripts/skif4er-admin-e2e.py --live --live-ai
+
   publish:
     if: inputs.publish == true
-    needs: sign-and-verify
+    needs: [sign-and-verify, live-acceptance]
     runs-on: ubuntu-24.04
     environment: production-publish
     timeout-minutes: 45

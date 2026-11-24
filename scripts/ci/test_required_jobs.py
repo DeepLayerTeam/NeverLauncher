@@ -123,6 +123,39 @@ class RequiredJobsTests(unittest.TestCase):
                     self.assertIn("needs: [required-production-ci]", txt)
                     self.assertIn("if: ${{ inputs.publish_release == true }}", txt)
 
+    def test_unified_gate_blocks_missing_or_unsuccessful_subsystem(self):
+        workflow = HERE.parents[1] / ".github/workflows/unified-integration.yml"
+        jobs = mod.declared_jobs(str(workflow)) - {"acceptance"}
+        self.assertEqual(jobs, {"identity", "gateway", "copilot", "desktop-and-delivery"})
+        results = {j: {"result": "success"} for j in jobs}
+        def verify(needs):
+            return mod.verify(workflow=str(workflow), gate="acceptance", needs=needs, source_sha="a" * 40, checked_out_sha="a" * 40, run_id="12", run_attempt="1", version="1.3.0")
+        self.assertEqual(verify(results)["status"], "passed")
+        for j in jobs:
+            for outcome in ("skipped", "failure", "cancelled"):
+                with self.subTest(job=j, outcome=outcome):
+                    self.assertEqual(verify({**results, j: {"result": outcome}})["status"], "blocked")
+            self.assertEqual(verify({k: v for k, v in results.items() if k != j})["status"], "blocked")
+
+    def test_both_production_release_paths_require_unified_gate(self):
+        import re
+        root = HERE.parents[1] / ".github/workflows"
+        release = (root / "github-release-delivery.yml").read_text(encoding="utf-8")
+        self.assertIn("unified-tests:\n    uses: ./.github/workflows/unified-integration.yml", release)
+        for job in ("windows", "macos", "linux", "sign-and-verify"):
+            body = re.search(r"(?ms)^  " + job + r":\n(.*?)(?=^  [A-Za-z][\w-]*:\s*$|\Z)", release).group(1)
+            self.assertRegex(body, r"(?m)^    needs: \[.*\bunified-tests\b.*\]")
+        self.assertRegex(release, r"(?m)^    needs: \[sign-and-verify, live-acceptance\]$")
+        live = re.search(r"(?ms)^  live-acceptance:\n(.*?)(?=^  [A-Za-z][\w-]*:\s*$|\Z)", release).group(1)
+        self.assertIn("environment: unified-staging", live)
+        self.assertIn("if: inputs.publish == true", live)
+        self.assertIn("--live --live-ai", live)
+        rc = (root / "production-release-candidate.yml").read_text(encoding="utf-8")
+        self.assertIn("uses: ./.github/workflows/unified-integration.yml", rc)
+        for job in ("release-bundle", "required-production-ci"):
+            body = re.search(r"(?ms)^  " + job + r":\n(.*?)(?=^  [A-Za-z][\w-]*:\s*$|\Z)", rc).group(1)
+            self.assertRegex(body, r"(?m)^    needs: \[.*\bunified-integration\b.*\]")
+
 
 
 if __name__ == "__main__":

@@ -42,6 +42,13 @@ func New(c Config, l *Ledger) *Gateway {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.ResponseHeaderTimeout = 30 * time.Second
 	tr.MaxConnsPerHost = c.MaxConcurrent
+	return NewWithTransport(c, l, tr)
+}
+
+// NewWithTransport permits a transport supplied by trusted Go code (including HTTP
+// integration tests). The upstream URL and no-redirect policy remain fixed.
+// No client request or environment setting can select this transport.
+func NewWithTransport(c Config, l *Ledger, tr http.RoundTripper) *Gateway {
 	return &Gateway{cfg: c, ledger: l, client: &http.Client{Transport: tr, Timeout: c.Timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, slots: make(chan struct{}, c.MaxConcurrent)}
 }
 func (g *Gateway) Allowed(role string) bool { return g.cfg.Roles[role] }

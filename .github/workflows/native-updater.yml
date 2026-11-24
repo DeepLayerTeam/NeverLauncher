@@ -57,7 +57,17 @@ jobs:
         working-directory: apps/desktop
       - run: npm run test:native-update
         working-directory: apps/desktop
+      - name: Authentication, AI and update UX in the same Desktop build
+        working-directory: apps/desktop
+        run: |
+          npm run test:auth-experience
+          npm run test:ai-chat
+          npm run test:ai-diagnostics
+          npm run test:accessibility
       - run: npm run build
         working-directory: apps/desktop
       - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml native_updater --no-default-features
+      - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml desktop_auth --no-default-features
+      - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml skif4er_login --no-default-features
+      - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml ai_chat --no-default-features
       - run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml --features custom-protocol

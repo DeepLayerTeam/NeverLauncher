@@ -50,9 +50,10 @@ fn take_prepared(prepared: &mut Option<Prepared>, version: &str, track: UpdateTr
 }
 
 
-pub(super) fn operation() -> Result<RwLockReadGuard<'static, ()>, String> {
-    OPERATIONS.try_read().map_err(|_| "Выполняется обновление Launcher".into())
+fn operation_gate(gate: &RwLock<()>) -> Result<RwLockReadGuard<'_, ()>, String> {
+    gate.try_read().map_err(|_| "Выполняется обновление Launcher".into())
 }
+pub(super) fn operation() -> Result<RwLockReadGuard<'static, ()>, String> { operation_gate(&OPERATIONS) }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -368,7 +369,7 @@ pub(super) async fn native_update_download(version: String, channel: UpdateTrack
 #[tauri::command]
 pub(super) async fn native_update_install(app: AppHandle, version: String, channel: UpdateTrack, supervisor: State<'_, runtime::ProcessSupervisor>, guard: State<'_, runtime::GuardSupervisor>) -> Result<super::LauncherUpdateScheduleResult, String> {
     let _updater = UPDATER.try_lock().map_err(|_| "Обновление уже выполняется")?;
-    let gate = OPERATIONS.try_write().map_err(|_| "Завершите текущие операции Launcher перед обновлением")?;
+    let gate = OPERATIONS.try_write().map_err(|_| "Завершите вход, AI-генерацию и другие активные операции Launcher перед обновлением")?;
     if supervisor.list().await.iter().any(|p| p.finished_at.is_none()) { return Err("Завершите Minecraft перед обновлением".into()); }
     let prepared = {
         let mut slot = PREPARED.lock().map_err(|_| "Ошибка состояния обновления")?;
@@ -401,6 +402,19 @@ pub(super) fn native_update_ready(version: String, channel: UpdateTrack) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn unified_auth_ai_update_exclusion() {
+        let gate = RwLock::new(());
+        let auth = operation_gate(&gate).unwrap();
+        let ai = operation_gate(&gate).unwrap();
+        assert!(gate.try_write().is_err());
+        drop(auth);
+        assert!(gate.try_write().is_err());
+        drop(ai);
+        let installation = gate.try_write().unwrap();
+        assert!(operation_gate(&gate).is_err());
+        drop(installation);
+        assert!(operation_gate(&gate).is_ok());
+    }
     #[test] fn installation_consumes_only_exact_verified_version() {
         let version = "99.0.0";
         let mut slot = Some(Prepared { track: UpdateTrack::Stable, version: version.into(), bytes: vec![1, 2, 3], suffix: "zip" });

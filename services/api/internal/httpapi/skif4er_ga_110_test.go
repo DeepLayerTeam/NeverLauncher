@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
@@ -19,6 +20,14 @@ import (
 // Real HTTP transport and canonical repositories/session machinery. Only the upstream
 // IdP is a fixture; real Keycloak acceptance is separate.
 func TestSkif4erGA110CrossClientLifecycle(t *testing.T) {
+	exerciseSkif4erCrossClientLifecycle(t, false)
+}
+
+func TestUnifiedIntegration130CrossClientLifecycle(t *testing.T) {
+	exerciseSkif4erCrossClientLifecycle(t, true)
+}
+
+func exerciseSkif4erCrossClientLifecycle(t *testing.T, unified bool) {
 	cfg := config.Config{PublicURL: "https://launcher.example.test", Environment: "test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), AuthTokenSecret: strings.Repeat("x", 48)}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	core := federation.New(repo)
@@ -30,8 +39,15 @@ func TestSkif4erGA110CrossClientLifecycle(t *testing.T) {
 	}
 	s := Server{Version: "1.1.0", Config: cfg, Repo: repo, State: NewRuntimeState(), Federation: core, Storage: storage.NewLocalStorage(cfg.StorageLocalPath)}
 	s.State.RateLimitEnabled = false
+	var fixture *unifiedAIFixture130
+	if unified {
+		s.Version = "1.3.0"
+		fixture = newUnifiedAIFixture130(t)
+		s.AI = fixture.gateway
+	}
 	api := httptest.NewServer(s.Handler())
 	defer api.Close()
+	api.Client().Timeout = 30 * time.Second
 	call := func(method, path, bearer string, body any, want int) map[string]any {
 		t.Helper()
 		raw, err := json.Marshal(body)
@@ -111,17 +127,58 @@ func TestSkif4erGA110CrossClientLifecycle(t *testing.T) {
 	dt := login(desktop, "desktop-client")
 	at := login(web, "admin-browser")
 	access := at["accessToken"].(string)
+	if unified {
+		fixture.complete(t, api, dt["accessToken"].(string))
+		call("GET", "/api/v1/ai/usage", other, nil, 403)
+		usage := call("GET", "/api/v1/ai/usage", access, nil, 200)["usage"].(map[string]any)
+		if usage["requests"] != float64(1) || usage["chargedMicroUsd"] != float64(18) {
+			t.Fatalf("desktop usage not visible to same canonical account: %v", usage)
+		}
+	}
 	me := call("GET", "/api/v1/admin/me", access, nil, 200)
 	if me["user"].(map[string]any)["roleId"] != admin.RoleID {
 		t.Fatal("local role changed")
 	}
 	rotated := call("POST", "/api/v1/auth/refresh", "", map[string]any{"refreshToken": at["refreshToken"]}, 200)["tokens"].(map[string]any)
 	access = rotated["accessToken"].(string)
+	if unified {
+		fixture.complete(t, api, access)
+		usage := call("GET", "/api/v1/ai/usage", dt["accessToken"].(string), nil, 200)["usage"].(map[string]any)
+		if usage["requests"] != float64(2) || usage["chargedMicroUsd"] != float64(36) {
+			t.Fatalf("rotation changed canonical AI budget: %v", usage)
+		}
+	}
 	call("POST", "/api/v1/auth/logout", access, nil, 200)
 	call("GET", "/api/v1/admin/me", access, nil, 401)
 	call("POST", "/api/v1/auth/refresh", "", map[string]any{"refreshToken": rotated["refreshToken"]}, 401)
 	call("DELETE", "/api/v1/auth/identities/"+id, other, nil, 404)
+	var stalled *http.Response
+	if unified {
+		call("POST", "/api/v1/ai/responses", access, map[string]string{"prompt": "hello"}, 401)
+		stalled = fixture.stream(t, api, dt["accessToken"].(string))
+		defer stalled.Body.Close()
+		select {
+		case <-fixture.stalled:
+		case <-time.After(10 * time.Second):
+			t.Fatal("provider was not reached")
+		}
+	}
 	call("DELETE", "/api/v1/auth/identities/"+id, local, nil, 200)
+	if unified {
+		body, err := io.ReadAll(stalled.Body)
+		if err != nil || !strings.Contains(string(body), `"code":"access_revoked"`) || strings.Contains(string(body), "event: done") {
+			t.Fatalf("unlink did not terminate active AI stream: %s %v", body, err)
+		}
+		call("POST", "/api/v1/ai/responses", dt["accessToken"].(string), map[string]string{"prompt": "hello"}, 401)
+		usage := call("GET", "/api/v1/ai/usage", local, nil, 200)["usage"].(map[string]any)
+		if usage["requests"] != float64(3) || usage["chargedMicroUsd"] != float64(4388) || usage["uncertainRequests"] != float64(1) {
+			t.Fatalf("interrupted generation lost reservation: %v", usage)
+		}
+		call("POST", "/api/v1/ai/responses", local, map[string]string{"prompt": "hello"}, 429)
+		if fixture.calls.Load() != 3 {
+			t.Fatal("rejected request reached provider")
+		}
+	}
 	call("GET", "/api/v1/auth/identities", dt["accessToken"].(string), nil, 401)
 	call("POST", "/api/v1/auth/refresh", "", map[string]any{"refreshToken": dt["refreshToken"]}, 401)
 	call("GET", "/api/v1/admin/me", local, nil, 200)

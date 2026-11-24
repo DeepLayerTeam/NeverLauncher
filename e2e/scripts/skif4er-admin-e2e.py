@@ -12,6 +12,7 @@ from pathlib import Path
 import time
 from urllib.parse import parse_qs, urlencode, urlsplit
 from playwright.sync_api import sync_playwright, expect
+from unified_ai_smoke import paid_smoke, verify_stage
 
 ROOT = Path(__file__).resolve().parents[2]
 ISSUER = 'https://id.skif4er.ru/realms/skif4er'
@@ -127,14 +128,25 @@ def fixture(browser):
     print('Admin browser E2E (fixture): PASS')
 
 
-def live(browser):
+def live(browser, ai=False):
     # Dedicated staging user, pre-linked to an existing Launcher account. No automatic
     # provisioning or destructive account edits in the live smoke.
     origin=os.environ['SKIF4ER_E2E_ADMIN_URL'].rstrip('/')
     backend=os.environ['SKIF4ER_E2E_BACKEND_URL'].rstrip('/')
     assert origin.startswith('https://') and backend.startswith('https://')
+    for raw in (origin, backend):
+        parsed = urlsplit(raw)
+        if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+            raise ValueError('Staging requires HTTPS URLs without credentials')
     ctx=browser.new_context(); page=ctx.new_page()
+    access = None
+    logged_out = False
     try:
+        if ai:
+            status = ctx.request.get(backend+'/api/v1/status', max_redirects=0, timeout=15000)
+            if status.status != 200:
+                raise ValueError('Staging Backend status unavailable')
+            verify_stage(status.json(), (ROOT/'VERSION').read_text().strip(), os.environ['SKIF4ER_E2E_SOURCE_COMMIT'])
         page.goto(origin)
         page.get_by_text('URL серверной части',exact=True).locator('..').locator('input').fill(backend)
         page.get_by_role('button',name='Войти через SkiF4er ID',exact=True).click(timeout=30000)
@@ -158,16 +170,28 @@ def live(browser):
         page.get_by_role('button',name='Обновить сессию',exact=True).click()
         expect(page.get_by_text('Сессия обновлена.',exact=True)).to_be_visible(timeout=30000)
         access=page.evaluate(f'sessionStorage.getItem({json.dumps(TOKEN)})')
+        if ai:
+            paid_smoke(ctx.request, backend, access)
         page.get_by_role('button',name='Выйти',exact=True).click()
         expect(page.get_by_text('Сессия завершена на сервере.',exact=True)).to_be_visible(timeout=30000)
+        logged_out = True
         assert ctx.request.get(backend+'/api/v1/admin/me',headers={'Authorization':'Bearer '+access}).status==401
-        print('Admin browser E2E (real Keycloak): PASS')
+        if ai:
+            assert ctx.request.get(backend+'/api/v1/ai/usage', headers={'Authorization':'Bearer '+access}, max_redirects=0, timeout=15000).status == 401
+        print('Unified staging E2E (real Keycloak + one OpenAI request): PASS' if ai else 'Admin browser E2E (real Keycloak): PASS')
     finally:
+        if access and not logged_out:
+            # Best effort revoke only this dedicated staging session on failure.
+            try:
+                ctx.request.post(backend+'/api/v1/auth/logout', headers={'Authorization':'Bearer '+access}, max_redirects=0, timeout=15000)
+            except Exception:
+                pass
         ctx.close()
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(); parser.add_argument('--live',action='store_true'); args=parser.parse_args()
+    parser=argparse.ArgumentParser(); parser.add_argument('--live',action='store_true'); parser.add_argument('--live-ai',action='store_true'); args=parser.parse_args()
+    if args.live_ai and not args.live: parser.error('--live-ai requires --live and explicitly authorizes one paid request')
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True)
-        try: (live if args.live else fixture)(browser)
+        try: live(browser, ai=args.live_ai) if args.live else fixture(browser)
         finally: browser.close()

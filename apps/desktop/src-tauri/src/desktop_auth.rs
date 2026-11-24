@@ -11,8 +11,10 @@ use fs2::FileExt;
 static SESSION_LOCK: Mutex<()> = Mutex::const_new(());
 // The file contains no credentials. Its OS lock also serializes different desktop processes
 // sharing a configuration directory. Closing/crashing the process releases the lock.
-pub(super) struct SessionGuard { _local: MutexGuard<'static, ()>, _file: std::fs::File }
+pub(super) struct SessionGuard { _local: MutexGuard<'static, ()>, _file: std::fs::File, _update: tokio::sync::RwLockReadGuard<'static, ()> }
 pub(super) async fn lock_session() -> Result<SessionGuard, String> {
+    // Installation must not interrupt credential rotation or browser MFA.
+    let update = super::native_updater::operation()?;
     let local = SESSION_LOCK.lock().await;
     let file = tokio::task::spawn_blocking(|| {
         let dir = super::desktop_config_dir()?;
@@ -24,7 +26,7 @@ pub(super) async fn lock_session() -> Result<SessionGuard, String> {
         FileExt::try_lock_exclusive(&file).map_err(|_| "Сессия занята другим процессом Launcher")?;
         Ok::<_, String>(file)
     }).await.map_err(|_| "Ошибка блокировки сессии")??;
-    Ok(SessionGuard { _local: local, _file: file })
+    Ok(SessionGuard { _local: local, _file: file, _update: update })
 }
 
 #[derive(Serialize)]
@@ -143,6 +145,7 @@ pub(super) async fn desktop_delete_session(backend_url: String, expected_session
     let _lock = lock_session().await?;
     if let Some(session) = load_auth_session(backend_url.clone()).await? {
         if session.session_id != expected_session_id { return Err("Сессия изменилась".into()); }
+        super::ai_chat::cancel_session(&backend_url, &session.session_id);
         delete_auth_session(backend_url).await?;
     }
     Ok(())
@@ -179,10 +182,15 @@ pub(super) async fn desktop_restore_session(backend_url: String, expected_sessio
     let c = match claims(&session) { Ok(c) => c, Err(e) => { delete_auth_session(backend_url).await?; return Err(e); } };
     let status = check(&client, &base, &session).await?;
     match restore_action(status, c.exp, now(), force_refresh) {
-        RestoreAction::Remove => { delete_auth_session(backend_url).await?; Ok(None) },
+        RestoreAction::Remove => { super::ai_chat::cancel_session(&backend_url, &session.session_id); delete_auth_session(backend_url).await?; Ok(None) },
         RestoreAction::Unavailable => Err(format!("Проверка сессии недоступна (HTTP {})", status.as_u16())),
         RestoreAction::Keep => view(&session).map(Some),
-        RestoreAction::Rotate => rotate(&backend_url, &client, &base, session, true).await?.as_ref().map(view).transpose(),
+        RestoreAction::Rotate => {
+            let sid = session.session_id.clone();
+            let result = rotate(&backend_url, &client, &base, session, true).await;
+            if !matches!(&result, Ok(Some(_))) { super::ai_chat::cancel_session(&backend_url, &sid); }
+            result?.as_ref().map(view).transpose()
+        },
     }
 }
 
@@ -206,6 +214,7 @@ pub(super) async fn desktop_logout_session(backend_url: String, expected_session
     let client = client()?;
     let Some(session) = load_auth_session(backend_url.clone()).await? else { return Ok(false) };
     if expected_session_id.as_ref().is_some_and(|id| id != &session.session_id) { return Err("Сессия Launcher изменилась".into()); }
+    super::ai_chat::cancel_session(&backend_url, &session.session_id);
     // Commit local logout before network I/O; never restore credentials after logout.
     delete_auth_session(backend_url.clone()).await?;
     if claims(&session).is_ok_and(|c| c.exp <= now()) {

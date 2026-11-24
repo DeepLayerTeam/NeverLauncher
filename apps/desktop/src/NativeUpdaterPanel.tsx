@@ -135,6 +135,7 @@ export default function NativeUpdaterPanel({ settingsVisible, enabled }: { setti
     <div className="actions">
       <button type="button" disabled={busy || !enabled || !isTauri()} onClick={() => void check()}>{phase === 'ready' ? 'Проверить заново (сбросить скачанный пакет)' : 'Проверить обновления'}</button>
       {(phase === 'available' || phase === 'retry') && offer?.version && <button type="button" disabled={!enabled} onClick={() => void downloadSelected()}>{phase === 'retry' ? 'Повторить скачивание' : 'Скачать'} {offer?.version}</button>}
+      {phase === 'ready' && <p>Перед установкой завершите Minecraft, вход или привязку аккаунта и текущую AI-генерацию. Скачивание не прерывает эти операции.</p>}
       {phase === 'ready' && <button type="button" className="primary" disabled={!enabled} onClick={() => void install()}>Установить {offer?.version} и перезапустить</button>}
     </div>
     <p role="status" aria-live="polite">{message}</p>

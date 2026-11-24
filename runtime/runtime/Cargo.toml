@@ -1,6 +1,6 @@
 [package]
 name = "runtime"
-version = "1.2.5"
+version = "1.3.0"
 description = "Основная библиотека Runtime для Launcher"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
