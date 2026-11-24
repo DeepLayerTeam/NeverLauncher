@@ -14,6 +14,7 @@ export const sections: Section[] = [
   { id: "migration-center", title: "Центр миграции" },
   { id: "backend-operations", title: "Операции серверной части" },
   { id: "release-workspace", title: "Мастер релизов" },
+  { id: "ai-copilot", title: "AI Admin Copilot" },
   { id: "job-monitor", title: "Монитор задач" },
   { id: "devices", title: "Устройства" },
   { id: "audit", title: "Аудит" },
@@ -42,6 +43,8 @@ export function endpointForSection(
       return `/api/v1/admin/migration-runs?projectId=${encodeURIComponent(projectId)}`;
     case "release-workspace":
       return "/api/v1/release-drafts";
+    case "ai-copilot":
+      return "/api/v1/ai/usage";
     case "job-monitor":
       return "/api/v1/operations";
     case "branding-studio":

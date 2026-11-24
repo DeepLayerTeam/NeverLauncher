@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/launcher/services/api/internal/copilotproof"
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
@@ -34,13 +35,14 @@ var operationRegistry0217 = map[string]operationSpec0217{
 }
 
 type operationRequest0217 struct {
-	Kind           string `json:"kind"`
-	ProjectID      string `json:"projectId"`
-	ResourceID     string `json:"resourceId,omitempty"`
-	ProfileID      string `json:"profileId,omitempty"`
-	Channel        string `json:"channel,omitempty"`
-	ToVersion      string `json:"toVersion,omitempty"`
-	IdempotencyKey string `json:"idempotencyKey,omitempty"`
+	Kind                string `json:"kind"`
+	ProjectID           string `json:"projectId"`
+	ResourceID          string `json:"resourceId,omitempty"`
+	ProfileID           string `json:"profileId,omitempty"`
+	Channel             string `json:"channel,omitempty"`
+	ToVersion           string `json:"toVersion,omitempty"`
+	IdempotencyKey      string `json:"idempotencyKey,omitempty"`
+	CopilotConfirmation string `json:"copilotConfirmation,omitempty"`
 }
 type rollbackPayload0217 struct {
 	ProjectID            string `json:"projectId"`
@@ -169,7 +171,7 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		}
 		expected := head.Revision
 		b, _ := json.Marshal(model.DurablePublishPayload{PackageID: resourceID, ExpectedManifestDigest: digest, ExpectedArtifactDigest: files, ExpectedStatus: lookup.Release.Status, ExpectedHeadRevision: &expected})
-		return spec, b, map[string]any{"packageId": resourceID, "version": lookup.Release.Version, "channel": lookup.Release.Channel, "effect": "Опубликовать неизменяемый пакет и обновить указатель канала"}, nil
+		return spec, b, map[string]any{"packageId": resourceID, "version": lookup.Release.Version, "profileId": lookup.Release.ProfileID, "headRevision": head.Revision, "channel": lookup.Release.Channel, "effect": "Опубликовать неизменяемый пакет и обновить указатель канала"}, nil
 	}
 	if req.Channel == "" || req.ToVersion == "" {
 		return spec, nil, nil, errors.New("Необходимо указать канал и toVersion")
@@ -217,7 +219,7 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 	expectedHead := head.Revision
 	payload := rollbackPayload0217{ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: req.Channel, ToVersion: req.ToVersion, TargetID: target.ID, TargetManifestDigest: md, TargetArtifactDigest: fd, ExpectedHeadRevision: &expectedHead}
 	raw, _ := json.Marshal(payload)
-	return spec, raw, map[string]any{"targetPackageId": target.ID, "targetVersion": target.Version, "projectId": req.ProjectID, "channel": req.Channel, "effect": "Создать новый подписанный неизменяемый релиз из целевого состояния, проверить целостность и опубликовать согласно политике проекта"}, nil
+	return spec, raw, map[string]any{"targetPackageId": target.ID, "targetVersion": target.Version, "projectId": req.ProjectID, "profileId": req.ProfileID, "headRevision": head.Revision, "channel": req.Channel, "effect": "Создать новый подписанный неизменяемый релиз из целевого состояния, проверить целостность и опубликовать согласно политике проекта"}, nil
 }
 func (s Server) operationValidate0217(w http.ResponseWriter, r *http.Request) {
 	req, err := readOperationRequest0217(r)
@@ -230,12 +232,27 @@ func (s Server) operationValidate0217(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 401, err.Error())
 		return
 	}
-	spec, _, effect, err := s.validateOperation0217(r.Context(), r, claims, req)
+	if strings.HasPrefix(req.IdempotencyKey, copilotproof.Prefix) && (!s.copilotAccess124(r, claims, req) || r.Header.Get("Idempotency-Key") != "" || req.CopilotConfirmation != "") {
+		writeError(w, 403, "Copilot: доступ запрещён")
+		return
+	}
+	spec, raw, effect, err := s.validateOperation0217(r.Context(), r, claims, req)
 	if err != nil {
 		writeOperationError0217(w, err)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"kind": spec.Kind, "permission": spec.Action, "dangerous": spec.Dangerous, "valid": true, "effect": effect}})
+	data := map[string]any{"kind": spec.Kind, "permission": spec.Action, "dangerous": spec.Dangerous, "valid": true, "effect": effect}
+	if strings.HasPrefix(req.IdempotencyKey, copilotproof.Prefix) {
+		ticket, ok := copilotproof.Issue(s.Config.AuthTokenSecret, copilotBinding124(claims, req), raw, time.Now())
+		if !ok {
+			writeError(w, 503, "Copilot: подтверждение недоступно")
+			return
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		data["copilotConfirmation"] = ticket
+		data["expiresInSeconds"] = int(copilotproof.TTL / time.Second)
+	}
+	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": data})
 }
 
 // Ошибки операций имеют стабильные машинные коды и рекомендации по восстановлению, общие
@@ -294,6 +311,10 @@ func (s Server) enqueueOperation0217(r *http.Request, claims authClaims, req ope
 	if key == "" {
 		key = strings.TrimSpace(req.IdempotencyKey)
 	}
+	copilot := strings.HasPrefix(key, copilotproof.Prefix) || strings.HasPrefix(req.IdempotencyKey, copilotproof.Prefix) || req.CopilotConfirmation != ""
+	if copilot && (key != req.IdempotencyKey || r.Header.Get("Idempotency-Key") != "" || !s.copilotAccess124(r, claims, req) || req.CopilotConfirmation == "") {
+		return model.DurableJob{}, false, errors.New("authorization-denied:copilot-confirmation-required")
+	}
 	if len(key) > 240 {
 		return model.DurableJob{}, false, errors.New("Заголовок Idempotency-Key слишком длинный")
 	}
@@ -317,6 +338,9 @@ func (s Server) enqueueOperation0217(r *http.Request, claims authClaims, req ope
 				if !s.authorizeClaims(r, claims, existing.Action, existing.ProjectID, existing.ResourceType, existing.ResourceID).Allowed {
 					return model.DurableJob{}, false, errors.New("authorization-denied:project-access-revoked")
 				}
+				if copilot && !copilotproof.Verify(s.Config.AuthTokenSecret, copilotBinding124(claims, req), existing.Payload, req.CopilotConfirmation, time.Now()) {
+					return model.DurableJob{}, false, repository.ErrConflict
+				}
 				return existing, false, nil
 			}
 			if !errors.Is(findErr, repository.ErrNotFound) {
@@ -327,6 +351,9 @@ func (s Server) enqueueOperation0217(r *http.Request, claims authClaims, req ope
 	spec, raw, _, err := s.validateOperation0217(r.Context(), r, claims, req)
 	if err != nil {
 		return model.DurableJob{}, false, err
+	}
+	if copilot && !copilotproof.Verify(s.Config.AuthTokenSecret, copilotBinding124(claims, req), raw, req.CopilotConfirmation, time.Now()) {
+		return model.DurableJob{}, false, repository.ErrConflict
 	}
 	if req.Kind == "package-publish" {
 		lookup, e := s.lookupPackage(req.ResourceID)
@@ -386,7 +413,7 @@ func (s Server) operationExecute0217(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	job, _, err := s.enqueueOperation0217(r, claims, req)
+	job, created, err := s.enqueueOperation0217(r, claims, req)
 	if err != nil {
 		writeOperationError0217(w, err)
 		return
@@ -394,6 +421,9 @@ func (s Server) operationExecute0217(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", "/api/v1/operations/"+job.ID)
 	w.Header().Set("X-Correlation-ID", job.ID)
 	s.audit(r, claims.Sub, "operation:enqueue", job.ID)
+	if created && strings.HasPrefix(req.IdempotencyKey, copilotproof.Prefix) {
+		s.audit(r, claims.Sub, "copilot:confirmed:"+job.Kind, job.ID)
+	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"apiVersion": apiContractVersion, "data": publicOperation0217(job)})
 }
 func (s Server) readVisibleOperation0217(w http.ResponseWriter, r *http.Request) (model.DurableJob, bool) {
@@ -580,4 +610,15 @@ func (s Server) workerAuthorized0217(ctx context.Context, job model.DurableJob) 
 		return fmt.Errorf("authorization-revoked:%s", d.ReasonCode)
 	}
 	return nil
+}
+
+func copilotBinding124(claims authClaims, req operationRequest0217) copilotproof.Binding {
+	resource := req.ResourceID
+	if req.Kind == durableRollbackKind0217 {
+		resource = req.Channel
+	}
+	return copilotproof.Binding{User: claims.Sub, Session: claims.SessionID, Kind: req.Kind, Project: req.ProjectID, Resource: resource, Key: req.IdempotencyKey}
+}
+func (s Server) copilotAccess124(r *http.Request, claims authClaims, req operationRequest0217) bool {
+	return s.AI != nil && s.AI.Allowed(claims.RoleID) && claims.SessionID != "" && strings.HasPrefix(req.IdempotencyKey, copilotproof.Prefix) && len(req.IdempotencyKey) == len(copilotproof.Prefix)+36 && s.authorizeClaims(r, claims, "project:read", req.ProjectID, "project", req.ProjectID).Allowed
 }

@@ -32,6 +32,7 @@ export function canSeeSection(identity: AdminIdentity | null, section: string, p
   if (section === 'dashboard' || section === 'devices') return !!identity;
   if (section === 'server-bridge') return can(identity, 'project:read', projectId);
   if (section === 'release-workspace') return can(identity, 'release:prepare', projectId);
+  if (section === 'ai-copilot') return !!projectId && can(identity, 'project:read', projectId);
   if (section === 'job-monitor') return can(identity, 'project:read', projectId);
   const global = globalPermissionForSection[section];
   if (global) {

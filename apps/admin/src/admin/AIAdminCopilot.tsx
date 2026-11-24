@@ -1,0 +1,41 @@
+import React, {useEffect,useRef,useState} from 'react';
+import {requestJSON,networkErrorRu} from '../api/client';
+import {streamChat,type Receipt} from '../api/ai-stream';
+import {secureBackend} from './skif4er-auth';
+import {buildCopilotPrompt,parseAdvice,makeIntent,verifyPreview,verifyJob,readPending,recoveryPath,type Proposal,type Intent,type Preview,type Job} from './copilot';
+
+type Props={backendUrl:string;token:string;userId:string;projectId:string;canPublish:boolean};
+const actionTitle=(p:Proposal)=>p.kind==='package-publish'?'Публикация пакета':'Откат канала';
+const target=(p:Proposal)=>p.kind==='package-publish'?p.resourceId:`${p.profileId} / ${p.channel} / ${p.toVersion}`;
+export function AIAdminCopilot({backendUrl,token,userId,projectId,canPublish}:Props){
+ const [question,setQuestion]=useState(''),[answer,setAnswer]=useState(''),[suggestion,setSuggestion]=useState<Proposal|null>(null),[receipt,setReceipt]=useState<Receipt|null>(null);
+ const [consent,setConsent]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[intent,setIntent]=useState<Intent|null>(null),[preview,setPreview]=useState<Preview|null>(null),[confirmed,setConfirmed]=useState(false),[expires,setExpires]=useState(0),[clock,setClock]=useState(Date.now());
+ const [pending,setPending]=useState<Intent|null>(null),[job,setJob]=useState<Job|null>(null),[storageBroken,setStorageBroken]=useState(false);
+ const gate=useRef(false),alive=useRef(true),controller=useRef<AbortController|null>(null);
+ const storeKey='launcher.admin.copilot.124:'+JSON.stringify([backendUrl.replace(/\/$/,''),userId,projectId]);
+ useEffect(()=>{alive.current=true;try{setPending(readPending(localStorage.getItem(storeKey),projectId));}catch(e){setStorageBroken(true);setError(networkErrorRu(e));}return()=>{alive.current=false;controller.current?.abort();};},[storeKey,projectId]);
+ useEffect(()=>{if(!preview)return;const timer=window.setInterval(()=>setClock(Date.now()),500);return()=>window.clearInterval(timer);},[preview]);
+ const reset=()=>{setIntent(null);setPreview(null);setConfirmed(false);};
+ async function run(fn:(signal:AbortSignal)=>Promise<void>){if(gate.current)return;gate.current=true;setBusy(true);setError('');const c=new AbortController();controller.current=c;const timer=window.setTimeout(()=>c.abort(),110000);try{await fn(c.signal);}catch(e){if(alive.current)setError(c.signal.aborted?'Запрос прерван. Платный запрос или операция не повторяются автоматически; проверьте журнал.':networkErrorRu(e));}finally{window.clearTimeout(timer);gate.current=false;if(controller.current===c)controller.current=null;if(alive.current)setBusy(false);}}
+ const api=<T,>(path:string,signal:AbortSignal,body?:unknown)=>requestJSON<T>(secureBackend(backendUrl),path,token,{signal,...(body!==undefined?{method:'POST',body:JSON.stringify(body)}:{})});
+ const ask=()=>void run(async signal=>{if(!consent)throw Error('Подтвердите передачу вопроса и ID проекта в OpenAI.');reset();setSuggestion(null);setAnswer('');setReceipt(null);const prompt=buildCopilotPrompt(question,projectId,canPublish);let text='';const result=await streamChat(secureBackend(backendUrl),token,prompt,signal,delta=>{text+=delta;if(alive.current)setAnswer(text);});if(!alive.current||signal.aborted)return;const advice=parseAdvice(text);setReceipt(result);setAnswer(advice?.advice??text);setSuggestion(canPublish?advice?.action??null:null);});
+ const validate=()=>void run(async signal=>{if(!suggestion||!canPublish||pending||storageBroken)throw Error('Операция недоступна.');reset();const p=makeIntent(suggestion,projectId,crypto.randomUUID());const v=verifyPreview(await api<unknown>('/api/v1/operations/validate',signal,p),p);if(!alive.current||signal.aborted)return;setIntent(p);setPreview(v);const now=Date.now();setClock(now);setExpires(now+v.expiresInSeconds*1000);});
+ const execute=()=>void run(async signal=>{if(!intent||!preview||!confirmed||!canPublish||Date.now()>=expires||pending||storageBroken)throw Error('Требуется новый подтверждённый план.');if(localStorage.getItem(storeKey)!==null)throw Error('Сначала восстановите прежнюю операцию.');if(!window.confirm(`${actionTitle(intent)}\nПроект: ${projectId}\nЦель: ${target(intent)}\nПоставить проверенное действие в очередь?`))return;
+ // Persist before dispatch. The proof and credentials never enter storage.
+ localStorage.setItem(storeKey,JSON.stringify(intent));setPending(intent);setPreview(null);setConfirmed(false);setJob(null);
+ const j=verifyJob(await api<unknown>('/api/v1/operations/execute',signal,{...intent,copilotConfirmation:preview.copilotConfirmation}),intent);if(alive.current)setJob(j);
+ });
+ const recover=()=>void run(async signal=>{if(!pending)return;const j=verifyJob(await api<unknown>(recoveryPath(pending),signal),pending);if(alive.current)setJob(j);});
+ const clear=()=>{if(gate.current||!pending)return;if(!window.confirm(job?'Закрыть запись восстановления? Задание останется в журнале.':'Результат неизвестен. Проверьте журнал задач и аудит перед закрытием записи. Не создавайте дубликат. Закрыть запись?'))return;try{localStorage.removeItem(storeKey);setPending(null);setJob(null);reset();}catch(e){setError(networkErrorRu(e));}};
+ return <section className="card wide" aria-label="AI Admin Copilot">
+ <h2>AI Admin Copilot</h2><p>Проект: <strong>{projectId}</strong>. Ответ AI — рекомендация, а не выполненная операция. Разрешены только проверяемые публикация пакета и откат канала. Для изменений требуется актуальная MFA.</p>
+ <label className="field">Вопрос администратору AI<textarea rows={5} value={question} maxLength={8192} disabled={busy} onChange={e=>{setQuestion(e.target.value);setConsent(false);reset();setSuggestion(null);}} placeholder="Например, как безопасно опубликовать пакет с ID …?"/></label>
+ <label><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/> Отправить текст вопроса и ID проекта через AI Gateway. Не вводите пароли, ключи, токены или персональные данные.</label>
+ <div className="actions"><button disabled={busy||!consent||!question.trim()} onClick={ask}>Спросить AI</button><button disabled={!busy} onClick={()=>controller.current?.abort()}>Остановить запрос</button></div>
+ {error&&<p role="alert">{error}</p>}
+ {answer&&<article><h3>Ответ AI (непроверенные рекомендации)</h3><pre className="copilot-answer">{answer}</pre>{receipt&&<p>Запрос {receipt.requestId} · учтено {receipt.chargedMicroUsd} мкUSD</p>}</article>}
+ {suggestion&&canPublish&&<article><h3>Предложение — ещё не подтверждено</h3><p>{actionTitle(suggestion)}: {target(suggestion)}</p><button disabled={busy||!!pending||storageBroken} onClick={validate}>Проверить на Backend</button></article>}
+ {preview&&intent&&canPublish&&<article><h3>Проверенный план Backend</h3><p>{actionTitle(intent)} · проект {projectId} · право {preview.permission}</p><dl>{Object.entries(preview.effect).map(([k,v])=><React.Fragment key={k}><dt>{k}</dt><dd>{typeof v==='string'||typeof v==='number'?v:'—'}</dd></React.Fragment>)}</dl><p>Подтверждение действует ещё {Math.max(0,Math.ceil((expires-clock)/1000))} с. Изменение состояния аннулирует план. При необходимости выполните дополнительную проверку MFA в панели входа и запросите новый план.</p><label><input type="checkbox" checked={confirmed} disabled={busy||clock>=expires} onChange={e=>setConfirmed(e.target.checked)}/> Проверил цель и последствия. Подтверждаю постановку задачи.</label><div className="actions"><button disabled={busy||!confirmed||clock>=expires||!!pending} onClick={execute}>Выполнить подтверждённое действие</button><button disabled={busy} onClick={reset}>Отменить план</button></div></article>}
+ {pending&&<article><h3>Журнал подтверждённого запроса</h3><p>{actionTitle(pending)}: {target(pending)} · {pending.idempotencyKey}</p>{job?<p role="status">Задание {job.id} · {job.status} · попыток: {job.attemptCount}</p>:<p>Результат пока не подтверждён. Повторная отправка заблокирована.</p>}<div className="actions"><button disabled={busy} onClick={recover}>Проверить состояние в журнале</button><a href={'#/job-monitor?'+new URLSearchParams({project:projectId,...(job?{job:job.id}:{})})}>Монитор задач</a><button disabled={busy} onClick={clear}>Закрыть запись восстановления</button></div></article>}
+ </section>;
+}

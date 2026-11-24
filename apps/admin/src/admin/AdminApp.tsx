@@ -13,6 +13,7 @@ import {
 import { ProfileManagementWorkspace } from "./ProfileManagementWorkspace";
 import { ProfileEditor0382 } from "./ProfileEditor";
 import { ProjectAccessWorkspace0387 } from "./ProjectAccessWorkspace";
+import { AIAdminCopilot } from "./AIAdminCopilot";
 import { JobMonitor } from "./JobMonitor";
 import { MigrationCenter0331 } from "./MigrationCenter";
 import { BackupWorkspace } from "./BackupWorkspace";
@@ -1066,6 +1067,7 @@ export function AdminApp() {
       [
         "release-workspace",
         "job-monitor",
+        "ai-copilot",
         "migration-center",
         "backup-restore",
         "devices",
@@ -1175,6 +1177,7 @@ export function AdminApp() {
       [
         "release-workspace",
         "job-monitor",
+        "ai-copilot",
         "migration-center",
         "backup-restore",
         "devices",
@@ -2208,6 +2211,9 @@ export function AdminApp() {
             projectId={selectedProjectId}
           />
         )}
+        {token && identity && mayRead && active === "ai-copilot" && (
+          <AIAdminCopilot key={JSON.stringify([backendUrl,sessionId,identity.user.id,selectedProjectId,canPublish])} backendUrl={backendUrl} token={token} userId={identity.user.id} projectId={selectedProjectId} canPublish={canPublish} />
+        )}
         {token && mayRead && active === "job-monitor" && (
           <JobMonitor
             backendUrl={backendUrl}
@@ -2307,6 +2313,7 @@ export function AdminApp() {
             "operations",
             "release-workspace",
             "job-monitor",
+            "ai-copilot",
             "migration-center",
             "server-bridge",
             "texture-management",

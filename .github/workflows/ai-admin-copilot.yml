@@ -1,0 +1,43 @@
+name: AI Admin Copilot
+on:
+  pull_request:
+    paths: ['apps/admin/**', 'services/api/**', 'schemas/openapi.yaml', '.github/workflows/ai-admin-copilot.yml']
+  push:
+    branches: [main]
+    paths: ['apps/admin/**', 'services/api/**', 'schemas/openapi.yaml', '.github/workflows/ai-admin-copilot.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Confirmation and real authenticated operation routes
+        working-directory: services/api
+        run: |
+          go test -race -count=1 ./internal/copilotproof
+          go test -race -count=1 ./internal/httpapi -run 'TestCopilot|TestRecoverOriginalOperation0388|TestRollbackOperationIdempotency0217|TestOperationRoutesRequireAuthentication0217|TestPublishPreviewRejectsWrongChannel0386'
+          go build ./cmd/launcher-api
+      - run: python3 scripts/contracts/validate-openapi.py
+  admin:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - working-directory: apps/admin
+        run: |
+          npm ci --ignore-scripts
+          npm test
+          npm run build
+      - run: python3 scripts/version/manage.py check

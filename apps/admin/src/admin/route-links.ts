@@ -1,5 +1,5 @@
 import type { ProjectContext } from './project-context';
-export const routeIds = ['dashboard','branding-studio','projects','profiles','channels','packages','releases','users','roles','devices','audit','config','official-provider','auth-provider-wizard','storage','extension-registry','extensions-manager','server-bridge','texture-management','diagnostics','backup-restore','operations','backend-operations','release-workspace','job-monitor','migration-center'] as const;
+export const routeIds = ['dashboard','branding-studio','projects','profiles','channels','packages','releases','users','roles','devices','audit','config','official-provider','auth-provider-wizard','storage','extension-registry','extensions-manager','server-bridge','texture-management','diagnostics','backup-restore','operations','backend-operations','release-workspace','job-monitor','ai-copilot','migration-center'] as const;
 export type SectionId = typeof routeIds[number];
 const ids: ReadonlySet<string> = new Set(routeIds);
 export type AdminRoute = { section: SectionId } & Partial<ProjectContext>;

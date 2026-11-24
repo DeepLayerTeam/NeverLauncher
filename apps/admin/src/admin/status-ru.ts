@@ -13,6 +13,8 @@ export function statusRu(value: string | null | undefined): string {
     "admin:login:passkey-required": "Для входа администратора требуется ключ доступа",
     "admin:login:rate-limited": "Ограничена частота попыток входа администратора",
     "admin:logout": "Выход администратора",
+    "copilot:confirmed:package-publish": "Copilot: подтверждена публикация пакета",
+    "copilot:confirmed:channel-rollback": "Copilot: подтверждён откат канала",
     "auth:mfa-disabled": "Двухфакторная аутентификация отключена",
     "auth:mfa-enabled": "Двухфакторная аутентификация включена",
     "auth:mfa-start": "Начата настройка двухфакторной аутентификации",

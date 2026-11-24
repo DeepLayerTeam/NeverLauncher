@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -78,7 +79,12 @@ func normalizeDurableJob0213(job model.DurableJob) (model.DurableJob, error) {
 		job.Payload = json.RawMessage(`{}`)
 	}
 	var canonical any
-	if err := json.Unmarshal(job.Payload, &canonical); err != nil {
+	if !json.Valid(job.Payload) {
+		return model.DurableJob{}, errors.New("Некорректные данные устойчивого задания")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(job.Payload))
+	decoder.UseNumber()
+	if err := decoder.Decode(&canonical); err != nil {
 		return model.DurableJob{}, fmt.Errorf("Некорректное значение: «данные устойчивого задания»: %w", err)
 	}
 	payload, err := json.Marshal(canonical)
