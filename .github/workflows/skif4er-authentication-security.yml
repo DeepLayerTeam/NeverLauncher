@@ -1,9 +1,9 @@
 name: SkiF4er ID authentication security
 on:
   pull_request:
-    paths: ['services/api/**', 'apps/desktop/**', 'schemas/**', 'VERSION', '.github/workflows/skif4er-authentication-security.yml']
+    paths: ['services/api/**', 'apps/desktop/**', 'apps/admin/**', 'e2e/scripts/skif4er-admin-e2e.py', 'schemas/**', 'VERSION', '.github/workflows/skif4er-authentication-security.yml']
   push:
-    paths: ['services/api/**', 'apps/desktop/**', 'schemas/**', 'VERSION', '.github/workflows/skif4er-authentication-security.yml']
+    paths: ['services/api/**', 'apps/desktop/**', 'apps/admin/**', 'e2e/scripts/skif4er-admin-e2e.py', 'schemas/**', 'VERSION', '.github/workflows/skif4er-authentication-security.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,5 +20,25 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - run: go test -race ./internal/httpapi -run 'TestSkif4erMFA104|TestBrowserReplayAcrossAPIReplicas0525|TestOIDC|TestProviderRuntimeParity0296' -count=1
+      - run: go test -race ./internal/httpapi -run 'TestSkif4erGA110|TestSkif4erMFA104|TestBrowserReplayAcrossAPIReplicas0525|TestOIDC|TestProviderRuntimeParity0296' -count=1
       - run: go test ./internal/oidcconnector ./internal/federation ./internal/repository
+  admin-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci --ignore-scripts
+        working-directory: apps/admin
+      - run: npm test && npm run build
+        working-directory: apps/admin
+      - run: python -m pip install playwright==1.58.0
+      - run: python -m playwright install --with-deps chromium
+      - run: python e2e/scripts/skif4er-admin-e2e.py

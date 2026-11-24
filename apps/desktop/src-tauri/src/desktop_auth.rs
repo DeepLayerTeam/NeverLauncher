@@ -148,7 +148,7 @@ pub(super) async fn desktop_delete_session(backend_url: String, expected_session
 pub(super) async fn persist_login(raw: String, session: SecureAuthSession) -> Result<SessionView, String> {
     let base = super::skif4er_login::backend(&raw)?;
     let client = client()?;
-    let result = view(&session)?;
+    let result = match view(&session) { Ok(result) => result, Err(e) => { revoke(&client, &base, &session).await; return Err(e); } };
     if let Err(e) = store_auth_session(raw, session.clone()).await { revoke(&client, &base, &session).await; return Err(e); }
     Ok(result)
 }

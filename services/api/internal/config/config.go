@@ -110,6 +110,7 @@ type Config struct {
 	AuthHTTPProvidersJSON                        string
 	AuthHTTPProvidersFile                        string
 	Skif4erIDClientID                            string
+	Skif4erIDAdminRedirectURI                    string
 	AuthOIDCProvidersJSON                        string
 	AuthOIDCProvidersFile                        string
 	AuthMicrosoftProvidersJSON                   string
@@ -313,6 +314,7 @@ func Load() Config {
 		AuthHTTPProvidersJSON:                        env("LAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
 		AuthHTTPProvidersFile:                        env("LAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
 		Skif4erIDClientID:                            env("LAUNCHER_SKIF4ER_ID_CLIENT_ID", ""),
+		Skif4erIDAdminRedirectURI:                    env("LAUNCHER_SKIF4ER_ID_ADMIN_REDIRECT_URI", ""),
 		AuthOIDCProvidersJSON:                        env("LAUNCHER_AUTH_OIDC_PROVIDERS_JSON", ""),
 		AuthOIDCProvidersFile:                        env("LAUNCHER_AUTH_OIDC_PROVIDERS_FILE", ""),
 		AuthMicrosoftProvidersJSON:                   env("LAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON", ""),

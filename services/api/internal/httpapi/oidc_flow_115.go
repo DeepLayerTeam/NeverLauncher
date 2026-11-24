@@ -222,7 +222,7 @@ func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, 
 			mfaErr = errors.New("MFA policy changed")
 		}
 		for _, method := range mfa.Methods {
-			if method == "totp" {
+			if method == "totp" && mfaErr == nil {
 				mfaErr = s.claimTOTP104(r, user.ID, totp)
 				break
 			}

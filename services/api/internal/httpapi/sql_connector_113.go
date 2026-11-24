@@ -98,7 +98,7 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		_ = core.Close()
 		return nil, err
 	}
-	oidcConfigs, err = oidcconnector.WithSkif4erID(oidcConfigs, cfg.Skif4erIDClientID)
+	oidcConfigs, err = oidcconnector.WithSkif4erID(oidcConfigs, cfg.Skif4erIDClientID, cfg.Skif4erIDAdminRedirectURI)
 	if err != nil {
 		_ = core.Close()
 		return nil, err

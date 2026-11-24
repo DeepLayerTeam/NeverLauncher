@@ -1,4 +1,4 @@
-# SkiF4er ID — NeverLauncher 1.0.4
+# SkiF4er ID — NeverLauncher 1.1.0
 
 1. В realm `skif4er` зарегистрируйте отдельный public OIDC client (например `neverlauncher-desktop`). Standard flow включён, implicit/direct access grants выключены, PKCE S256 обязателен. Redirect URI: строго `http://127.0.0.1:8765/callback`. Scopes: openid profile email. Подтвердите email пользователя.
 2. Установите `LAUNCHER_SKIF4ER_ID_CLIENT_ID` в Backend и перезапустите его. Пустая настройка отключает интеграцию. Не добавляйте одновременно generic OIDC provider с ID `skif4er-id`. Секрет не требуется.
@@ -38,3 +38,30 @@ Backend выполняет discovery, обмен кода, проверку RS25
 - PostgreSQL использует существующие транзакционные хранилища challenge и nonce; SQLite — существующее шифрованное runtime-хранилище и durable nonce; Memory предназначен для разработки. Новый формат БД не требуется.
 - Не сохраняйте query string OIDC callback в access-логах reverse proxy. Backend не должен логировать тела auth-запросов. Аудит фиксирует отказ, повтор callback, MFA challenge, успешный вход, refresh и отзыв без кода, пароля, state или токена.
 - Приёмка: `go test ./internal/httpapi -run 'TestSkif4erMFA104|TestBrowserReplayAcrossAPIReplicas0525'` из `services/api`. Дополнительно проверьте нативный `cargo test ... skif4er_login`, реальную платформу, Keycloak, правильный и неверный TOTP, повтор TOTP, одноразовый recovery, отмену и истечение challenge, passkey RP/origin, отвязку между callback и MFA, ротацию и отзыв refresh. Обязателен запуск на фактическом Go/Rust/Tauri toolchain; тестовая фикстура OIDC не заменяет реальный Keycloak.
+
+
+## Additional Auth — Admin Panel (1.1.0)
+
+В том же public OIDC client добавьте **точный** URI `https://admin.example.com/auth/skif4er/callback` (подставьте фактический HTTPS origin Admin Panel). Сохраните desktop loopback URI. Использование того же провайдера и realm сохраняет каноническую идентичность `(provider, issuer, subject)` для двух клиентов. Не добавляйте wildcard, HTTP callback для Admin или второй generic provider.
+
+```env
+LAUNCHER_SKIF4ER_ID_CLIENT_ID=neverlauncher-desktop
+LAUNCHER_SKIF4ER_ID_ADMIN_REDIRECT_URI=https://admin.example.com/auth/skif4er/callback
+```
+
+В production Compose обе переменные передаются Backend. Если Admin и API имеют разные origins, настройте `LAUNCHER_CORS_ALLOWED_ORIGINS` на точный origin Admin; для passkey установите корректные WebAuthn RP ID и origins. Настройте reverse proxy на выдачу Admin SPA для `/auth/skif4er/callback` и исключите этот путь из журналов запросов на всех внешних прокси/CDN. Nginx внутри Admin уже отключает access log callback; внешние прокси требуют отдельной настройки.
+
+В Admin Panel задайте HTTPS URL Backend и нажмите «Войти через SkiF4er ID». При необходимости завершите локальную MFA (TOTP, recovery или WebAuthn). Keycloak claims не повышают роль: доступ к операциям определяется существующими серверными RBAC/ACL. Новая внешняя учётная запись получает player; для сохранения существующего admin/owner сначала войдите в него локально и выполните привязку через «Связанные идентичности». Привязка требует свежей сессии, отвязка — свежего локального входа с паролем. После отвязки внешний вход без повторной привязки может создать отдельную player-учётную запись при включённом JIT.
+
+Браузер хранит зашифрованную транзакцию только в sessionStorage текущей вкладки до callback. Проверяются точный state, issuer (если передан), redirect URI, PKCE и исходный Backend; для привязки также ID текущей сессии. Callback поглощается до сетевого обмена и удаляется из адресной строки. MFA challenge хранится только в памяти. Admin использует существующее browser sessionStorage для локальных токенов, а не OS keyring (это ограничение браузера: защита от XSS и доверенный origin обязательны). При обновлении до 1.1.0 старые browser-сессии без привязки к Backend требуют повторного входа. Не дублируйте вкладку с refresh-токеном; сервер обнаружит повторную ротацию и отзовёт семейство. При сетевом сбое после передачи refresh требуется новый вход; автоматического повторного использования нет. Выход локальный даже при недоступности Backend, подтверждение отзыва сообщается отдельно. Keycloak SSO глобально не завершается.
+
+### Приёмка 1.1.0
+
+- Admin unit: `cd apps/admin && npm ci --ignore-scripts && npm test && npm run build`.
+- Backend: `cd services/api && go test -race ./internal/httpapi -run 'TestSkif4erGA110|TestSkif4erMFA104|TestBrowserReplayAcrossAPIReplicas0525' -count=1 && go test ./internal/oidcconnector ./internal/federation ./internal/repository`.
+- Native Desktop (на каждой поддерживаемой ОС): `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml skif4er_login`, `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml desktop_auth`, `npm run build` из `apps/desktop` и сборка установщика.
+- Chromium + собранный Admin + детерминированные IdP/API fixtures: из корня `python -m pip install playwright==1.58.0`, `python -m playwright install chromium`, `python e2e/scripts/skif4er-admin-e2e.py`. Этот тест проверяет браузерную навигацию, MFA, восстановление, ротацию, выход, привязку/отвязку и replay callback, но не заменяет серверные интеграционные тесты.
+- Staging E2E с настоящим Keycloak: используйте отдельную заранее привязанную тестовую учётную запись, задайте `SKIF4ER_E2E_ADMIN_URL`, `SKIF4ER_E2E_BACKEND_URL`, `SKIF4ER_E2E_USERNAME`, `SKIF4ER_E2E_PASSWORD`, `SKIF4ER_E2E_CANONICAL_USER_ID` и при локальном MFA одноразовый `SKIF4ER_E2E_RECOVERY_CODE` в окружении (не в репозитории). Запустите `python e2e/scripts/skif4er-admin-e2e.py --live`. Требуется стандартная форма Keycloak username/password; дополнительные upstream MFA/нестандартные темы и WebAuthn проходят отдельную интерактивную приёмку. Smoke проверяет канонический ID, ротацию и серверный отзыв. Не используйте production-аккаунт.
+- Ручная межклиентская приёмка: привязать тестовый существующий аккаунт в Admin, войти тем же SkiF4er ID в Desktop, сверить канонический ID и права, перезапустить Desktop, подтвердить восстановление из keyring, проверить MFA и отзыв в обоих клиентах, отвязать через свежий локальный пароль. Убедиться, что ранее выданные access/refresh токены не принимаются. Запустить PostgreSQL E2E и проверить конкурентный replay в HA.
+
+Наличие тестов и кода не означает успешную приёмку. Версия 1.1.0 может считаться GA только после фактического прохождения этих проверок в целевой инфраструктуре.

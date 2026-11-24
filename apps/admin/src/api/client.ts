@@ -90,7 +90,7 @@ export async function requestJSON<T>(backendUrl: string, path: string, token?: s
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   let response: Response;
   try {
-    response = await fetch(`${backendUrl.replace(/\/$/, '')}${path}`, { ...init, headers, cache: 'no-store' });
+    response = await fetch(`${backendUrl.replace(/\/$/, '')}${path}`, { ...init, headers, cache: 'no-store', redirect: token || mutation ? 'error' : init.redirect });
   } catch (cause) {
     if (init.signal?.aborted) throw cause;
     const message = networkErrorRu(cause);

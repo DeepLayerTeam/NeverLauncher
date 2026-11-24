@@ -1,5 +1,5 @@
 import { networkErrorRu } from "../api/client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AdminExtensions } from "../admin_extensions";
 import { RegistryWorkspace } from "./RegistryWorkspace";
 import { OperationsWorkspace } from "./OperationsWorkspace";
@@ -63,6 +63,19 @@ import {
   type PasskeyBegin,
   type PasskeySessionResponse,
 } from "./passkeys";
+
+import { accessExpired, callbackPath, consume, linkPath, oidcPath, pendingKey, prepare, secureBackend, type Begin, type Mode } from "./skif4er-auth";
+
+type SkiResponse = PasskeySessionResponse & { provider?: string; method?: string; transactionToken?: string; publicKey?: PublicKeyCredentialRequestOptionsJSON; expiresInSeconds?: number };
+type LinkedIdentity = { id: string; provider: string; email?: string; displayName?: string; username?: string };
+// Capture and scrub the callback before any effect, route navigation or API call.
+const skiCallback = window.location.pathname === callbackPath ? window.location.href : null;
+if (skiCallback) window.history.replaceState(window.history.state, '', '/' + window.location.hash);
+const savedBackend = localStorage.getItem("launcher.backendUrl") ?? window.location.origin;
+const restoredBackend = sessionStorage.getItem("launcher.admin.backend");
+function restoredCredential(key: string) {
+  return restoredBackend === savedBackend ? sessionStorage.getItem(key) ?? "" : "";
+}
 
 type LoginResponse = {
   token?: string;
@@ -140,17 +153,25 @@ const TOOL_VERSION = __LAUNCHER_VERSION__;
 
 export function AdminApp() {
   const [backendUrl, setBackendUrl] = useState(
-    localStorage.getItem("launcher.backendUrl") ?? window.location.origin,
+    savedBackend,
   );
   const [token, setToken] = useState(
-    sessionStorage.getItem("launcher.admin.token") ?? "",
+    restoredCredential("launcher.admin.token"),
   );
   const [refreshToken, setRefreshToken] = useState(
-    sessionStorage.getItem("launcher.admin.refreshToken") ?? "",
+    restoredCredential("launcher.admin.refreshToken"),
   );
   const [sessionId, setSessionId] = useState(
-    sessionStorage.getItem("launcher.admin.sessionId") ?? "",
+    restoredCredential("launcher.admin.sessionId"),
   );
+  const [skiBusy, setSkiBusy] = useState(false);
+  const authLock = useRef(false);
+  const callbackHandled = useRef(false);
+  const [skiMfa, setSkiMfa] = useState<SkiResponse | null>(null);
+  const [skiAvailable, setSkiAvailable] = useState(false);
+  const [linked, setLinked] = useState<LinkedIdentity[] | null>(null);
+  const linkedGeneration = useRef(0);
+  const [unlinkConfirm, setUnlinkConfirm] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
@@ -539,10 +560,12 @@ export function AdminApp() {
     localStorage.setItem("launcher.backendUrl", backendUrl);
   }, [backendUrl]);
   useEffect(() => {
+    if (token) sessionStorage.setItem("launcher.admin.backend", backendUrl);
+    else sessionStorage.removeItem("launcher.admin.backend");
     token
       ? sessionStorage.setItem("launcher.admin.token", token)
       : sessionStorage.removeItem("launcher.admin.token");
-  }, [token]);
+  }, [token, backendUrl]);
   useEffect(() => {
     refreshToken
       ? sessionStorage.setItem("launcher.admin.refreshToken", refreshToken)
@@ -592,6 +615,101 @@ export function AdminApp() {
     setMessage(
       "Вход завершён с многофакторной проверкой ключом доступа. Сессия защищена аутентификацией, устойчивой к фишингу.",
     );
+  }
+
+  async function authOperation(action: () => Promise<void>) {
+    if (authLock.current) return;
+    authLock.current = true; setSkiBusy(true); setError(null); setMessage(null);
+    try { await action(); }
+    catch (err) { setError(networkErrorRu(err)); }
+    finally { authLock.current = false; setSkiBusy(false); }
+  }
+
+  async function acceptSkiSession(data: SkiResponse) {
+    if (data.status !== "authenticated" || data.provider !== "skif4er-id" || !data.tokens?.accessToken || !data.tokens.refreshToken || !data.session?.id) throw new Error("Неполный ответ сессии SkiF4er ID.");
+    // Never infer administrator rights from Keycloak claims; existing live Launcher RBAC applies.
+    try { await new AdminApi(backendUrl, data.tokens.accessToken).me(); }
+    catch (err) {
+      await requestJSON(backendUrl, "/api/v1/auth/logout", data.tokens.accessToken, { method: "POST" }).catch(() => undefined);
+      throw err;
+    }
+    applyPasskeySession(data);
+    setMessage("Вход через SkiF4er ID выполнен.");
+  }
+
+  async function startSki(mode: Mode) {
+    const backend = secureBackend(backendUrl);
+    if (window.location.protocol !== "https:") throw new Error("Для SkiF4er ID требуется HTTPS Admin Panel.");
+    if (mode === "link" && (!token || !sessionId)) throw new Error("Требуется действующая сессия Launcher.");
+    if (mode === "login" && token) throw new Error("Сначала завершите текущую сессию.");
+    sessionStorage.removeItem(pendingKey);
+    const begin = await requestJSON<Begin>(backend, (mode === "link" ? linkPath : oidcPath) + "/begin", mode === "link" ? token : undefined, {
+      method: "POST", redirect: "error", body: JSON.stringify({ redirectUri: window.location.origin + callbackPath, deviceId: "admin-browser" }),
+    });
+    const next = prepare(begin, backend, mode, mode === "link" ? sessionId : "", window.location.origin);
+    // Persist only the sealed, expiring transaction in the same tab across navigation.
+    sessionStorage.setItem(pendingKey, JSON.stringify(next.pending));
+    window.location.assign(next.url);
+  }
+
+  useEffect(() => {
+    if (!skiCallback || callbackHandled.current) return;
+    callbackHandled.current = true;
+    void authOperation(async () => {
+      const next = consume(sessionStorage, skiCallback, backendUrl, sessionId);
+      if (!next) return;
+      const backend = secureBackend(backendUrl);
+      if (next.mode === "link") {
+        if (!token) throw new Error("Сессия привязки отсутствует.");
+        const result = await requestJSON<{ status: string }>(backend, linkPath + "/complete", token, { method: "POST", redirect: "error", body: JSON.stringify(next.body) });
+        if (result.status !== "linked") throw new Error("Привязка не подтверждена сервером.");
+        await reloadLinked(token);
+        setMessage("SkiF4er ID привязан.");
+      } else {
+        const data = await requestJSON<SkiResponse>(backend, oidcPath + "/complete", undefined, { method: "POST", redirect: "error", body: JSON.stringify(next.body) });
+        if (data.status === "mfa-required") {
+          if (!data.transactionToken || !["totp-or-recovery", "passkey"].includes(data.method ?? "")) throw new Error("Неизвестный MFA challenge.");
+          setTotp(""); setRecoveryCode(""); setSkiMfa(data);
+        } else await acceptSkiSession(data);
+      }
+    });
+  }, []);
+
+  async function finishSkiMfa() {
+    const pending = skiMfa;
+    if (!pending?.transactionToken || (pending.method === "passkey" && !pending.publicKey)) throw new Error("Начните вход заново.");
+    if (pending.method === "totp-or-recovery" && (!!totp.trim() === !!recoveryCode.trim())) throw new Error("Укажите TOTP или код восстановления, но не оба.");
+    if (pending.method === "totp-or-recovery" && totp.trim() && !/^\d{6}$/.test(totp.trim())) throw new Error("Введите шестизначный TOTP.");
+    setSkiMfa(null); // a submitted challenge is never retried, even after a lost response
+    const body = pending.method === "passkey" ? { transactionToken: pending.transactionToken, deviceId: "admin-browser", credential: await getPasskeyAssertion(pending.publicKey!) } : { transactionToken: pending.transactionToken, totp: totp.trim() || undefined, recoveryCode: recoveryCode.trim() || undefined };
+    setTotp(""); setRecoveryCode("");
+    const result = await requestJSON<SkiResponse>(secureBackend(backendUrl), pending.method === "passkey" ? "/api/v1/auth/passkeys/mfa/complete" : oidcPath + "/mfa/complete", undefined, { method: "POST", redirect: "error", body: JSON.stringify(body) });
+    await acceptSkiSession(result);
+  }
+
+  async function reloadLinked(currentToken: string) {
+    const generation = ++linkedGeneration.current;
+    const data = await requestJSON<{ items: LinkedIdentity[] }>(backendUrl, "/api/v1/auth/identities", currentToken, { redirect: "error" });
+    if (generation === linkedGeneration.current) setLinked(data.items);
+  }
+
+  useEffect(() => {
+    let live = true;
+    const generation = ++linkedGeneration.current;
+    setSkiAvailable(false); setLinked(null); setUnlinkConfirm("");
+    let backend: string;
+    try { backend = secureBackend(backendUrl); } catch { return; }
+    requestJSON<{items: {id: string; healthy: boolean}[]}>(backend, "/api/v1/auth/providers", undefined, {redirect: "error"}).then(data => {
+      if (live) setSkiAvailable(data.items.some(i => i.id === "skif4er-id" && i.healthy));
+    }).catch(() => undefined);
+    if (token) requestJSON<{items: LinkedIdentity[]}>(backend, "/api/v1/auth/identities", token, {redirect: "error"}).then(data => { if (live && generation === linkedGeneration.current) setLinked(data.items); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [backendUrl, token]);
+
+  async function unlinkSki(id: string) {
+    if (!token) throw new Error("Требуется сессия Launcher.");
+    await requestJSON(secureBackend(backendUrl), "/api/v1/auth/identities/" + encodeURIComponent(id), token, {method: "DELETE", redirect: "error"});
+    setUnlinkConfirm(""); setLinked(null); await reloadLinked(token); setMessage("SkiF4er ID отвязан; связанные сессии отозваны.");
   }
 
   async function login() {
@@ -728,25 +846,44 @@ export function AdminApp() {
   }
 
   async function refreshSession() {
-    if (!refreshToken)
-      throw new Error("refreshToken отсутствует: выполните вход заново");
-    const data = await requestJSON<any>(
-      backendUrl,
-      "/api/v1/auth/refresh",
-      undefined,
-      { method: "POST", body: JSON.stringify({ refreshToken }) },
-    );
-    setToken(data.tokens.accessToken);
-    setRefreshToken(data.tokens.refreshToken);
-    setSessionId(data.session.id);
-    setMessage("Сессия обновлена, токен обновления заменён сервером.");
+    if (!refreshToken) throw new Error("Выполните вход заново.");
+    const previous = refreshToken;
+    // Remove the old credential before transmission: a lost response is indeterminate.
+    sessionStorage.removeItem("launcher.admin.refreshToken");
+    setRefreshToken("");
+    try {
+      const data = await requestJSON<PasskeySessionResponse>(backendUrl, "/api/v1/auth/refresh", undefined, { method: "POST", redirect: "error", body: JSON.stringify({ refreshToken: previous }) });
+      if (!data.tokens?.accessToken || !data.tokens.refreshToken || data.session?.id !== sessionId) throw new Error("Некорректная ротация сессии.");
+      applyPasskeySession(data);
+      setMessage("Сессия обновлена.");
+    } catch (err) {
+      clearSession();
+      throw err;
+    }
+  }
+
+  function clearSession() {
+    for (const key of ["token", "refreshToken", "sessionId", "backend"]) sessionStorage.removeItem("launcher.admin." + key);
+    sessionStorage.removeItem(pendingKey);
+    ++linkedGeneration.current;
+    setToken(""); setRefreshToken(""); setSessionId(""); setIdentity(null); setLinked(null); setSkiMfa(null); setDashboard(null); setPayload(null); setSessions([]); setDevices([]); setStatus("offline");
   }
 
   async function logout() {
-    if (token)
-      await requestJSON<any>(backendUrl, "/api/v1/admin/logout", token, {
-        method: "POST",
-      }).catch(() => undefined);
+    let confirmed = false;
+    const access = token, refresh = refreshToken;
+    clearSession();
+    try {
+      if (access) {
+        try { const result = await requestJSON<{status: string; sessionId: string}>(backendUrl, "/api/v1/auth/logout", access, { method: "POST", redirect: "error" }); confirmed = result.status === "logged-out" && result.sessionId === sessionId; }
+        catch (err) {
+          if (!(err instanceof ApiError) || err.status !== 401 || !refresh || !accessExpired(access)) throw err;
+          const rotated = await requestJSON<PasskeySessionResponse>(backendUrl, "/api/v1/auth/refresh", undefined, { method: "POST", redirect: "error", body: JSON.stringify({refreshToken: refresh}) });
+          if (!rotated.tokens?.accessToken || rotated.session?.id !== sessionId) throw new Error("Сессия не подтверждена.");
+          const result = await requestJSON<{status: string; sessionId: string}>(backendUrl, "/api/v1/auth/logout", rotated.tokens.accessToken, { method: "POST", redirect: "error" }); confirmed = result.status === "logged-out" && result.sessionId === sessionId;
+        }
+      }
+    } catch { /* local logout always succeeds; remote revocation is explicitly unconfirmed */ }
     // После выхода из учётной записи не должны оставаться ожидающие изменения игроков
     // и серверов, доступные другому пользователю того же профиля браузера.
     for (const key of Object.keys(sessionStorage)) {
@@ -765,8 +902,27 @@ export function AdminApp() {
     setPayload(null);
     setSessions([]);
     setDevices([]);
-    setMessage("Сессия завершена.");
+    setMessage(confirmed ? "Сессия завершена на сервере." : "Локальный выход выполнен; серверный отзыв не подтверждён.");
   }
+
+  useEffect(() => {
+    if (!token) return;
+    let live = true;
+    const check = async () => {
+      if (!live || authLock.current) return;
+      try { const me = await new AdminApi(backendUrl, token).me(); if (live && !authLock.current) { setIdentity(me); setStatus("online"); } }
+      catch (err) {
+        if (!live || authLock.current) return;
+        if (err instanceof ApiError && err.status === 401) {
+          if (refreshToken && accessExpired(token)) await authOperation(refreshSession);
+          else { clearSession(); setError("Сессия истекла или отозвана."); }
+        } else { setIdentity(null); setStatus("offline"); }
+      }
+    };
+    const timer = window.setInterval(() => void check(), 30_000);
+    if (accessExpired(token)) void check();
+    return () => { live = false; window.clearInterval(timer); };
+  }, [backendUrl, token, refreshToken, sessionId]);
 
   async function loadSessions(currentToken = token) {
     if (!currentToken) {
@@ -1687,11 +1843,9 @@ export function AdminApp() {
             <span>URL серверной части</span>
             <input
               value={backendUrl}
+              disabled={skiBusy || !!skiMfa || !!token}
               onChange={(event) => {
-                setToken("");
-                setRefreshToken("");
-                setSessionId("");
-                setIdentity(null);
+                clearSession();
                 setBackendUrl(event.target.value);
               }}
             />
@@ -1847,7 +2001,7 @@ export function AdminApp() {
             <summary>API и технические сведения</summary>
             <code>{activeEndpoint}</code>
           </details>
-          {!token && (
+          {!token && !skiMfa && (
             <div className="loginRow">
               <label className="field">
                 Email администратора
@@ -1887,57 +2041,55 @@ export function AdminApp() {
                   placeholder="код восстановления (необязательно)"
                 />
               </label>
-              <button
+              <button disabled={skiBusy}
                 onClick={() =>
-                  login().catch((err: Error) => setError(networkErrorRu(err)))
+                  void authOperation(login)
                 }
               >
                 {token ? "Войти заново" : "Войти"}
               </button>
-              <button
+              <button disabled={skiBusy}
                 onClick={() =>
-                  passwordlessPasskeyLogin().catch((err: Error) =>
-                    setError(networkErrorRu(err)),
-                  )
+                  void authOperation(passwordlessPasskeyLogin)
                 }
               >
                 Войти с ключом доступа
               </button>
+              <button disabled={skiBusy || !skiAvailable} onClick={() => void authOperation(() => startSki("login"))}>Войти через SkiF4er ID</button>
             </div>
           )}
+          {skiMfa && !token && <section className="card" aria-label="MFA SkiF4er ID">
+            <h2>Подтвердите вход SkiF4er ID</h2>
+            {skiMfa.method === "totp-or-recovery" && <><label>TOTP<input autoComplete="one-time-code" inputMode="numeric" value={totp} onChange={e => setTotp(e.target.value)} /></label><label>Код восстановления<input type="password" autoComplete="off" value={recoveryCode} onChange={e => setRecoveryCode(e.target.value)} /></label></>}
+            <button disabled={skiBusy} onClick={() => void authOperation(finishSkiMfa)}>Подтвердить MFA</button>
+            <button disabled={skiBusy} onClick={() => { setSkiMfa(null); setTotp(""); setRecoveryCode(""); }}>Отмена</button>
+          </section>}
+          {token && identity && <details className="advanced" open>
+            <summary>Связанные идентичности</summary>
+            <p>Для привязки необходим недавний вход; для отвязки — свежий локальный вход с паролем.</p>
+            {linked === null ? <p>Список не загружен.</p> : <ul>{linked.map(item => <li key={item.id}>{item.provider === "skif4er-id" ? "SkiF4er ID" : item.provider} — {item.displayName || item.username || item.email || "Подключено"}
+              {item.provider === "skif4er-id" && (unlinkConfirm === item.id ? <><button disabled={skiBusy} onClick={() => void authOperation(() => unlinkSki(item.id))}>Подтвердить отвязку</button><button onClick={() => setUnlinkConfirm("")}>Отмена</button></> : <button disabled={skiBusy || !linked.some(i => i.provider === "local")} onClick={() => setUnlinkConfirm(item.id)}>Отвязать SkiF4er ID</button>)}
+            </li>)}</ul>}
+            <button disabled={skiBusy} onClick={() => void authOperation(() => reloadLinked(token))}>Обновить идентичности</button>
+            <button disabled={skiBusy || !skiAvailable || !linked || linked.some(i => i.provider === "skif4er-id")} onClick={() => void authOperation(() => startSki("link"))}>Привязать SkiF4er ID</button>
+          </details>}
           {token && (
             <details className="advanced">
               <summary>Безопасность сеанса и ключи доступа</summary>
               <div className="passkeyRow">
-                <button
-                  onClick={() =>
-                    refreshSession().catch((err: Error) =>
-                      setError(networkErrorRu(err)),
-                    )
-                  }
+                <button disabled={skiBusy} onClick={() => void authOperation(refreshSession)}
                 >
                   Обновить сессию
                 </button>
-                <button
-                  onClick={() =>
-                    logout().catch((err: Error) => setError(networkErrorRu(err)))
-                  }
+                <button disabled={skiBusy} onClick={() => void authOperation(logout)}
                 >
                   Выйти
                 </button>
-                <button
-                  onClick={() =>
-                    registerPasskey().catch((err: Error) =>
-                      setError(networkErrorRu(err)),
-                    )
-                  }
+                <button disabled={skiBusy} onClick={() => void authOperation(registerPasskey)}
                 >
                   Добавить ключ доступа
                 </button>
-                <button
-                  onClick={() =>
-                    stepUpPasskey().catch((err: Error) => setError(networkErrorRu(err)))
-                  }
+                <button disabled={skiBusy} onClick={() => void authOperation(stepUpPasskey)}
                 >
                   Подтвердить ключ доступа
                 </button>
@@ -1952,10 +2104,7 @@ export function AdminApp() {
                   <option value="required">Многофакторная аутентификация обязательна</option>
                   <option value="phishing-resistant">Защита от фишинга</option>
                 </select>
-                <button
-                  onClick={() =>
-                    saveMfaPolicy().catch((err: Error) => setError(networkErrorRu(err)))
-                  }
+                <button disabled={skiBusy} onClick={() => void authOperation(saveMfaPolicy)}
                 >
                   Сохранить политику многофакторной аутентификации
                 </button>

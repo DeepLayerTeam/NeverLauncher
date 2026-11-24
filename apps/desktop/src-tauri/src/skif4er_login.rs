@@ -131,6 +131,7 @@ pub(super) async fn skif4er_login(app: tauri::AppHandle, backend_url: String) ->
     let _lock = lock_session().await?;
     if *rx.borrow() { return Err("Вход отменён".into()); }
     let base = backend(&backend_url)?;
+    if super::load_auth_session(backend_url.clone()).await?.is_some() { return Err("Сначала завершите или восстановите существующую сессию Launcher".into()); }
     // Fixed port is part of the registered redirect. Binding also prevents concurrent attempts.
     let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 8765)).await.map_err(|_| "Порт 8765 занят; завершите предыдущий вход")?;
     let client = Client::builder().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(30)).build().map_err(|_| "Не удалось создать HTTP-клиент")?;
@@ -236,6 +237,25 @@ mod tests {
         assert!(skif4er_submit_mfa("123456".into(), false).is_ok());
         assert!(skif4er_submit_mfa("123456".into(), false).is_err());
         assert!(matches!(rx.try_recv().unwrap(), MfaInput::Code(code, false) if code.as_str()=="123456"));
+    }
+    #[tokio::test]
+    async fn ski_callback_real_socket_rejects_mismatch_then_consumes_once() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let state = "abcdefghijklmnopqrstuvwxyz1234567890";
+        let (_tx, rx) = watch::channel(false);
+        let task = tokio::spawn(official_browser_0263::receive_callback_for(listener, state, rx, "127.0.0.1", "/callback"));
+        for (query, expected) in [(format!("state={state}&code=private-code&iss=https%3A%2F%2Fevil.test"), "400 Bad Request"), (format!("state={state}&code=private-code&iss=https%3A%2F%2Fid.skif4er.ru%2Frealms%2Fskif4er"), "200 OK")] {
+            let mut socket = tokio::net::TcpStream::connect((std::net::Ipv4Addr::LOCALHOST, port)).await.unwrap();
+            socket.write_all(format!("GET /callback?{query} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n\r\n").as_bytes()).await.unwrap();
+            let mut response = String::new();
+            socket.read_to_string(&mut response).await.unwrap();
+            assert!(response.contains(expected));
+            assert!(!response.contains("private-code"));
+        }
+        assert_eq!(task.await.unwrap().unwrap().as_str(), "private-code");
+        assert!(tokio::net::TcpStream::connect((std::net::Ipv4Addr::LOCALHOST, port)).await.is_err());
     }
     #[test] fn validates_origin_and_callback() {
         let state = "abcdefghijklmnopqrstuvwxyz1234567890";
