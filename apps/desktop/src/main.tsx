@@ -2604,6 +2604,33 @@ function App() {
     await loadManagedDevices(authSession);
   }
 
+  const [skif4erBusy, setSkif4erBusy] = useState(false);
+  const skif4erPending = useRef(false);
+  async function loginSkif4er() {
+    if (skif4erPending.current || authSession) return;
+    skif4erPending.current = true;
+    setSkif4erBusy(true);
+    setAuthProviderError0293("");
+    setStage("session");
+    try {
+      const next = await callTauri<AuthSession>("skif4er_login", { backendUrl: settings.backendUrl });
+      setAuthSession(next);
+      setPassword("");
+      if (recoveryLogin0435) {
+        setDeviceTrustStatus("восстановление · ожидает новый ключ");
+        await loadManagedDevices(next);
+      } else {
+        const trusted = await ensureDesktopDeviceTrust(next);
+        await loadManagedDevices(trusted);
+      }
+    } catch (error) {
+      setAuthProviderError0293(browserErrorRu(error));
+    } finally {
+      skif4erPending.current = false;
+      setSkif4erBusy(false);
+    }
+  }
+
   async function loginDesktop() {
     setStage("session");
     const response = await fetch(endpoint("/api/v1/auth/login"), {
@@ -5266,6 +5293,8 @@ function App() {
                 setRecoveryLogin0435={setRecoveryLogin0435}
                 checkBackend={checkBackend}
                 loginDesktop={loginDesktop}
+                loginSkif4er={loginSkif4er}
+                skif4erBusy={skif4erBusy}
                 refreshDesktopSession={refreshDesktopSession}
                 logoutDesktop={logoutDesktop}
                 restoreSession={restoreSession}
@@ -6021,6 +6050,8 @@ function AuthPanel({
   setRecoveryLogin0435,
   checkBackend,
   loginDesktop,
+  loginSkif4er,
+  skif4erBusy,
   refreshDesktopSession,
   logoutDesktop,
   restoreSession,
@@ -6121,7 +6152,13 @@ function AuthPanel({
       </label>
       <div className="toolbar inline">
         <button onClick={checkBackend}>Проверить Backend</button>
+        {authProviders0293.some((item: AuthProvider0293) => item.id === "skif4er-id" && item.capabilities.includes("browser-auth")) && (
+          <button disabled={skif4erBusy || !!session || !authProviders0293.some((item: AuthProvider0293) => item.id === "skif4er-id" && item.healthy)} onClick={loginSkif4er}>
+            {skif4erBusy ? "Ожидание браузера SkiF4er ID…" : "Войти через SkiF4er ID"}
+          </button>
+        )}
         <button
+          disabled={skif4erBusy}
           onClick={() =>
             loginDesktop().catch((error: Error) => {
               setAuthProviderError0293(browserErrorRu(error));

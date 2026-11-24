@@ -1,6 +1,6 @@
 [package]
 name = "guard-sensor"
-version = "1.0.0"
+version = "1.0.1"
 description = "Датчик Guard для ранней проверки JVM в Windows"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

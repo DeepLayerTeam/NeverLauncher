@@ -98,6 +98,11 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 		_ = core.Close()
 		return nil, err
 	}
+	oidcConfigs, err = oidcconnector.WithSkif4erID(oidcConfigs, cfg.Skif4erIDClientID)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
 	for _, providerConfig := range oidcConfigs {
 		connector, err := oidcconnector.New(ctx, providerConfig)
 		if err != nil {

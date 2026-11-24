@@ -1,0 +1,9 @@
+# SkiF4er ID — NeverLauncher 1.0.1
+
+1. В realm `skif4er` зарегистрируйте отдельный public OIDC client (например `neverlauncher-desktop`). Standard flow включён, implicit/direct access grants выключены, PKCE S256 обязателен. Redirect URI: строго `http://127.0.0.1:8765/callback`. Scopes: openid profile email. Подтвердите email пользователя.
+2. Установите `LAUNCHER_SKIF4ER_ID_CLIENT_ID` в Backend и перезапустите его. Пустая настройка отключает интеграцию. Не добавляйте одновременно generic OIDC provider с ID `skif4er-id`. Секрет не требуется.
+3. Обновите Backend и Desktop вместе. Используйте HTTPS Backend (HTTP допускается только на localhost для разработки). На экране входа нажмите «Войти через SkiF4er ID». Вернитесь в Desktop после callback.
+
+Backend выполняет discovery, обмен кода, проверку RS256/JWKS, issuer, audience, nonce, срока действия, подтверждённого email и соответствия sub в UserInfo. Создание аккаунта осуществляется существующей федерацией по identity, с ролью player, без автоматической привязки по совпадению email. Применяются существующие политики MFA, ограничения входа, device trust, аудит и локальная ротация сессии. Desktop сохраняет локальные токены в keyring ОС. Keycloak-токены не передаются renderer. Истечение ожидания callback — 5 минут. Если локальная политика требует отдельного MFA continuation, Desktop отказывает во входе; данный экран не реализует отдельный passkey/TOTP challenge. Выход Desktop отзывает локальную сессию, не завершает глобальный SSO Keycloak.
+
+Проверки: `go test ./internal/oidcconnector ./internal/httpapi` из services/api; `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml skif4er_login`; `npm run build` из apps/desktop. Реальная приёмка требует зарегистрированного клиента, доступного Keycloak и платформенного keyring. Проверить успешный вход, отказ, неверный state, повтор callback, занятый порт, восстановление сессии и локальный выход.

@@ -62,6 +62,10 @@ pub enum Callback {
 }
 
 pub fn parse_callback(request: &str, port: u16, state: &str) -> Callback {
+    parse_callback_for(request, port, state, "localhost", CALLBACK_PATH)
+}
+
+pub fn parse_callback_for(request: &str, port: u16, state: &str, host: &str, path: &str) -> Callback {
     let mut lines = request.split("\r\n");
     let Some(line) = lines.next() else { return Callback::Reject };
     let parts: Vec<&str> = line.split(' ').collect();
@@ -73,17 +77,17 @@ pub fn parse_callback(request: &str, port: u16, state: &str) -> Callback {
         if let Some((header, value)) = line.split_once(':') {
             if header.eq_ignore_ascii_case("host") {
                 if host_ok { return Callback::Reject; }
-                host_ok = value.trim().eq_ignore_ascii_case(&format!("localhost:{port}"));
+                host_ok = value.trim().eq_ignore_ascii_case(&format!("{host}:{port}"));
                 if !host_ok { return Callback::Reject; }
             }
         }
     }
     if !host_ok || !parts[1].starts_with('/') || parts[1].starts_with("//") { return Callback::Reject; }
-    let Ok(url) = Url::parse(&format!("http://localhost:{port}{}", parts[1])) else { return Callback::Reject };
+    let Ok(url) = Url::parse(&format!("http://{host}:{port}{}", parts[1])) else { return Callback::Reject };
     // Отклоняйте нормализацию парсера, меняющую адрес назначения, например
     // URL с обратными косыми чертами при разборе специальных схем.
-    if url.host_str() != Some("localhost") || url.port() != Some(port) { return Callback::Reject; }
-    if url.path() != CALLBACK_PATH || url.fragment().is_some() { return Callback::Irrelevant; }
+    if url.host_str() != Some(host) || url.port() != Some(port) { return Callback::Reject; }
+    if url.path() != path || url.fragment().is_some() { return Callback::Irrelevant; }
     let mut values = std::collections::HashMap::<String,String>::new();
     for (k,v) in url.query_pairs() {
         if !matches!(k.as_ref(),"state"|"code"|"error"|"error_description"|"session_state") { continue; }
@@ -96,7 +100,7 @@ pub fn parse_callback(request: &str, port: u16, state: &str) -> Callback {
     Callback::Code(code)
 }
 
-async fn handle_connection(mut stream: TcpStream, port: u16, state: &str) -> Callback {
+async fn handle_connection(mut stream: TcpStream, port: u16, state: &str, host: &str, path: &str) -> Callback {
     let mut buf = Vec::with_capacity(1024);
     let result = timeout(Duration::from_secs(5), async {
         loop {
@@ -109,11 +113,11 @@ async fn handle_connection(mut stream: TcpStream, port: u16, state: &str) -> Cal
         Ok::<(),std::io::Error>(())
     }).await;
     let callback = if result.is_ok() && buf.windows(4).any(|v| v == b"\r\n\r\n") {
-        std::str::from_utf8(&buf).map(|request| parse_callback(request,port,state)).unwrap_or(Callback::Reject)
+        std::str::from_utf8(&buf).map(|request| parse_callback_for(request,port,state,host,path)).unwrap_or(Callback::Reject)
     } else { Callback::Reject };
     let (status,message) = match &callback {
-        Callback::Code(_) => ("200 OK", "Вход через Microsoft выполнен. Вернитесь в лаунчер."),
-        Callback::Declined => ("200 OK", "Вход через Microsoft отклонён. Вернитесь в лаунчер."),
+        Callback::Code(_) => ("200 OK", "Ответ авторизации принят. Вернитесь в лаунчер."),
+        Callback::Declined => ("200 OK", "Вход отклонён. Вернитесь в лаунчер."),
         Callback::Irrelevant => ("404 Not Found", "Страница не найдена"),
         Callback::Reject => ("400 Bad Request", "Некорректный ответ при входе"),
     };
@@ -126,21 +130,25 @@ pub async fn bind_loopback() -> Result<TcpListener,String> {
     TcpListener::bind((Ipv4Addr::LOCALHOST,0)).await.map_err(|_| "Не удалось открыть локальный адрес обратного вызова OAuth".to_string())
 }
 
-pub async fn receive_callback(listener: TcpListener, state: &str, mut cancelled: watch::Receiver<bool>) -> Result<Zeroizing<String>,String> {
+pub async fn receive_callback(listener: TcpListener, state: &str, cancelled: watch::Receiver<bool>) -> Result<Zeroizing<String>,String> {
+    receive_callback_for(listener, state, cancelled, "localhost", CALLBACK_PATH).await
+}
+
+pub async fn receive_callback_for(listener: TcpListener, state: &str, mut cancelled: watch::Receiver<bool>, host: &str, path: &str) -> Result<Zeroizing<String>,String> {
     let port = listener.local_addr().map_err(|_| "В адресе обратного вызова OAuth отсутствует локальный порт")?.port();
     let deadline = Instant::now() + Duration::from_secs(300);
     let mut ignored = 0;
     loop {
-        if *cancelled.borrow() { return Err("Вход через Microsoft отменён".into()); }
+        if *cancelled.borrow() { return Err("Вход отменён".into()); }
         let accepted = tokio::select! {
-            conn = listener.accept() => conn.map_err(|_| "Ошибка локального обратного вызова Microsoft")?,
-            _ = cancelled.changed() => return Err("Вход через Microsoft отменён".into()),
-            _ = tokio::time::sleep_until(deadline) => return Err("Время Microsoft-авторизации истекло".into()),
+            conn = listener.accept() => conn.map_err(|_| "Ошибка локального обратного вызова OAuth")?,
+            _ = cancelled.changed() => return Err("Вход отменён".into()),
+            _ = tokio::time::sleep_until(deadline) => return Err("Время авторизации истекло".into()),
         };
         if !accepted.1.ip().is_loopback() { continue; }
-        match handle_connection(accepted.0,port,state).await {
+        match handle_connection(accepted.0,port,state,host,path).await {
             Callback::Code(code) => return Ok(Zeroizing::new(code)),
-            Callback::Declined => return Err("Вход через Microsoft отклонён".into()),
+            Callback::Declined => return Err("Вход отклонён".into()),
             Callback::Irrelevant | Callback::Reject => { ignored += 1; if ignored >= 32 { return Err("Слишком много некорректных запросов обратного вызова OAuth".into()); } }
         }
     }
