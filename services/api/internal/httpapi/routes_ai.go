@@ -108,6 +108,11 @@ func (s Server) aiResponses121(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case errors.Is(err, aigateway.ErrSensitive):
+		writeError(w, 422, "Удалите возможные секреты из запроса AI")
+	case errors.Is(err, aigateway.ErrCoolingDown):
+		w.Header().Set("Retry-After", "30")
+		writeError(w, 503, "AI временно недоступен")
 	case errors.Is(err, aigateway.ErrInvalid):
 		writeError(w, 400, "Prompt превышает допустимый размер")
 	case errors.Is(err, aigateway.ErrAccess):

@@ -76,7 +76,7 @@ async fn token(backend: &str, expected_session_id: &str, expected_user_id: &str)
 fn status(response: &Response) -> Result<(), String> {
     match response.status().as_u16() {
         200 => Ok(()), 400 => Err("invalid".into()), 401 => Err("unauthorized".into()),
-        403 => Err("forbidden".into()), 429 => Err("limit".into()), _ => Err("unavailable".into()),
+        403 => Err("forbidden".into()), 422 => Err("sensitive".into()), 429 => Err("limit".into()), _ => Err("unavailable".into()),
     }
 }
 fn content_type(response: &Response, expected: &str) -> bool {

@@ -13,6 +13,7 @@ import (
 	"mime"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 )
@@ -34,6 +35,7 @@ type Gateway struct {
 	ledger accounting
 	client *http.Client
 	slots  chan struct{}
+	gate   providerGate
 }
 
 func New(c Config, l *Ledger) *Gateway {
@@ -61,11 +63,28 @@ type Request struct {
 func DecodeRequest(r io.Reader) (Request, error) {
 	var p Request
 	d := json.NewDecoder(r)
-	d.DisallowUnknownFields()
-	if err := d.Decode(&p); err != nil {
+	t, err := d.Token()
+	if err != nil || t != json.Delim('{') {
+		return p, errors.New("expected object")
+	}
+	if !d.More() {
+		return p, errors.New("missing prompt")
+	}
+	t, err = d.Token()
+	if err != nil || t != "prompt" {
+		return p, errors.New("unexpected field")
+	}
+	if err = d.Decode(&p.Prompt); err != nil {
 		return p, err
 	}
-	if err := d.Decode(new(any)); err != io.EOF {
+	if d.More() {
+		return p, errors.New("unexpected or duplicate field")
+	}
+	t, err = d.Token()
+	if err != nil || t != json.Delim('}') {
+		return p, errors.New("expected object end")
+	}
+	if err = d.Decode(new(any)); err != io.EOF {
 		return p, errors.New("expected one JSON object")
 	}
 	if !utf8.ValidString(p.Prompt) || strings.TrimSpace(p.Prompt) == "" || len(p.Prompt) > MaxPromptBytes {
@@ -99,8 +118,11 @@ var ErrAccounting = errors.New("AI accounting unavailable")
 // Stream returns errors before the first event as HTTP errors; after admission,
 // emits a sanitized terminal SSE event only after accounting is persisted.
 func (g *Gateway) Stream(ctx context.Context, user string, p Request, check func() bool, emit Emit) (err error) {
-	if user == "" || strings.TrimSpace(p.Prompt) == "" || len(p.Prompt) > MaxPromptBytes || int64(len(p.Prompt))+256 > g.cfg.InputCeiling {
+	if user == "" || !utf8.ValidString(p.Prompt) || strings.TrimSpace(p.Prompt) == "" || len(p.Prompt) > MaxPromptBytes || int64(len(p.Prompt))+256 > g.cfg.InputCeiling {
 		return ErrInvalid
+	}
+	if sensitivePrompt(p.Prompt, g.cfg.Key) {
+		return ErrSensitive
 	}
 	select {
 	case g.slots <- struct{}{}:
@@ -111,6 +133,16 @@ func (g *Gateway) Stream(ctx context.Context, user string, p Request, check func
 	if !check() {
 		return ErrAccess
 	}
+	allowed, probe := g.gate.enter(time.Now())
+	if !allowed {
+		return ErrCoolingDown
+	}
+	providerCalled := false
+	defer func() {
+		if !providerCalled {
+			g.gate.abandon(probe)
+		}
+	}()
 	ctx, cancel := context.WithTimeout(ctx, g.cfg.Timeout)
 	defer cancel()
 	var id [16]byte
@@ -155,7 +187,13 @@ func (g *Gateway) Stream(ctx context.Context, user string, p Request, check func
 		return emit("error", Event{Code: "access_revoked", State: outcome.State})
 	}
 	outcome = Outcome{State: "uncertain"}
-	outcome, err = g.call(ctx, p, check, emit)
+	providerCalled = true
+	outcome, err = g.call(ctx, p, check, emit, probe)
+	// A completed provider response can still arrive after a session was revoked.
+	if err == nil && !check() {
+		err = ErrAccess
+		outcome.State = "incomplete"
+	}
 	if e := finish(); e != nil {
 		_ = emit("error", Event{Code: "accounting_unavailable", State: "uncertain"})
 		return e
@@ -163,6 +201,9 @@ func (g *Gateway) Stream(ctx context.Context, user string, p Request, check func
 	terminal := Event{RequestID: r.ID, InputTokens: outcome.Input, OutputTokens: outcome.Output, ChargedMicroUSD: charge, State: outcome.State}
 	if err != nil || outcome.State != "completed" {
 		terminal.Code = "provider_incomplete"
+		if errors.Is(err, ErrUpstreamRate) {
+			terminal.Code = "provider_rate_limited"
+		}
 		if errors.Is(err, ErrAccess) {
 			terminal.Code = "access_revoked"
 		}
@@ -174,9 +215,71 @@ func (g *Gateway) Stream(ctx context.Context, user string, p Request, check func
 	return emit("done", terminal)
 }
 
-func (g *Gateway) call(ctx context.Context, p Request, check func() bool, emit Emit) (Outcome, error) {
+func (g *Gateway) call(ctx context.Context, p Request, check func() bool, emit Emit, probe bool) (out Outcome, resultErr error) {
+	var delay time.Duration
+	parent := ctx
+	defer func() {
+		gateErr := resultErr
+		if errors.Is(parent.Err(), context.DeadlineExceeded) {
+			gateErr = ErrProvider
+		} else if parent.Err() != nil {
+			gateErr = parent.Err()
+		}
+		g.gate.result(time.Now(), probe, gateErr, delay)
+	}()
+	// Check authorization even during an upstream stall, without concurrent
+	// calls to the session verifier. Cancellation interrupts the HTTP read.
+	ctx, stop := context.WithCancel(ctx)
+	defer stop()
+	var mu sync.Mutex
+	lastCheck := time.Now().Add(-5 * time.Second)
+	revoked := false
+	verify := func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		if revoked {
+			return false
+		}
+		if time.Since(lastCheck) >= 5*time.Second {
+			lastCheck = time.Now()
+			if !check() {
+				revoked = true
+				stop()
+			}
+		}
+		return !revoked
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if !verify() {
+					return
+				}
+			}
+		}
+	}()
+	defer func() {
+		stop()
+		<-done
+		mu.Lock()
+		defer mu.Unlock()
+		if revoked && parent.Err() == nil {
+			resultErr = ErrAccess
+			out.State = "incomplete"
+			if !out.Known {
+				out.State = "uncertain"
+			}
+		}
+	}()
 	unknown := Outcome{State: "uncertain"}
-	body, err := json.Marshal(map[string]any{"model": g.cfg.Model, "input": p.Prompt, "stream": true, "store": false, "max_output_tokens": g.cfg.OutputLimit, "service_tier": "default"})
+	body, err := json.Marshal(map[string]any{"model": g.cfg.Model, "input": p.Prompt, "stream": true, "store": false, "max_output_tokens": g.cfg.OutputLimit, "service_tier": "default", "tools": []any{}, "tool_choice": "none"})
 	if err != nil {
 		return unknown, ErrProvider
 	}
@@ -194,33 +297,39 @@ func (g *Gateway) call(ctx context.Context, p Request, check func() bool, emit E
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
+		delay = retryDelay(res.Header.Get("Retry-After"), time.Now())
+		if res.StatusCode == http.StatusTooManyRequests {
+			return unknown, ErrUpstreamRate
+		}
 		return unknown, ErrProvider
 	}
 	typ, _, err := mime.ParseMediaType(res.Header.Get("Content-Type"))
 	if err != nil || typ != "text/event-stream" {
 		return unknown, ErrProvider
 	}
-	lastCheck := time.Now().Add(-5 * time.Second)
 	return parseStream(res.Body, func(name string, e Event) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if time.Since(lastCheck) >= 5*time.Second {
-			if !check() {
-				return ErrAccess
-			}
-			lastCheck = time.Now()
+		if !verify() {
+			return ErrAccess
 		}
 		return emit(name, e)
 	})
 }
 
 type providerEvent struct {
-	Type     string `json:"type"`
+	Type string `json:"type"`
+	Item *struct {
+		Type string `json:"type"`
+	} `json:"item"`
 	Delta    string `json:"delta"`
 	Response *struct {
 		Status string `json:"status"`
-		Usage  *struct {
+		Output []struct {
+			Type string `json:"type"`
+		} `json:"output"`
+		Usage *struct {
 			Input  *int64 `json:"input_tokens"`
 			Output *int64 `json:"output_tokens"`
 		} `json:"usage"`
@@ -233,6 +342,7 @@ func parseStream(r io.Reader, emit Emit) (Outcome, error) {
 	scan.Buffer(make([]byte, 4096), maxEventBytes)
 	var data strings.Builder
 	total := 0
+	outputBytes := 0
 	for scan.Scan() {
 		line := scan.Text()
 		total += len(line) + 1
@@ -262,12 +372,20 @@ func parseStream(r io.Reader, emit Emit) (Outcome, error) {
 			return unknown, ErrProvider
 		} // Never infer completion without usage.
 		var e providerEvent
-		if json.Unmarshal([]byte(payload), &e) != nil || e.Type == "" {
+		if !utf8.ValidString(payload) || json.Unmarshal([]byte(payload), &e) != nil || e.Type == "" {
 			return unknown, ErrProvider
 		}
 		switch e.Type {
+		case "response.output_item.added", "response.output_item.done":
+			if e.Item == nil || (e.Item.Type != "message" && e.Item.Type != "reasoning") {
+				return unknown, ErrProvider
+			}
 		case "response.output_text.delta", "response.refusal.delta":
 			if e.Delta != "" {
+				outputBytes += len(e.Delta)
+				if outputBytes > 131072 {
+					return unknown, ErrProvider
+				}
 				if err := emit("delta", Event{Delta: e.Delta}); err != nil {
 					return unknown, err
 				}
@@ -275,6 +393,11 @@ func parseStream(r io.Reader, emit Emit) (Outcome, error) {
 		case "response.completed", "response.incomplete", "response.failed":
 			if e.Response == nil || e.Response.Usage == nil || e.Response.Usage.Input == nil || e.Response.Usage.Output == nil {
 				return unknown, ErrProvider
+			}
+			for _, item := range e.Response.Output {
+				if item.Type != "message" && item.Type != "reasoning" {
+					return unknown, ErrProvider
+				}
 			}
 			in, out := *e.Response.Usage.Input, *e.Response.Usage.Output
 			if in < 0 || out < 0 || in > 100_000_000 || out > 100_000_000 {
@@ -284,9 +407,20 @@ func parseStream(r io.Reader, emit Emit) (Outcome, error) {
 			if e.Type == "response.completed" && e.Response.Status == "completed" {
 				state = "completed"
 			}
-			return Outcome{State: state, Input: in, Output: out, Known: true}, nil
+			result := Outcome{State: state, Input: in, Output: out, Known: true}
+			if e.Type == "response.failed" {
+				return result, ErrProvider
+			}
+			return result, nil
 		case "error":
 			return unknown, ErrProvider
+		default:
+			// Only text, message lifecycle and reasoning metadata are allowed.
+			switch e.Type {
+			case "response.created", "response.in_progress", "response.queued", "response.content_part.added", "response.content_part.done", "response.output_text.done", "response.output_text.annotation.added", "response.refusal.done", "response.reasoning_summary_part.added", "response.reasoning_summary_part.done", "response.reasoning_summary_text.delta", "response.reasoning_summary_text.done", "response.reasoning_text.delta", "response.reasoning_text.done":
+			default:
+				return unknown, ErrProvider
+			}
 		}
 	}
 	return unknown, fmt.Errorf("%w: missing terminal usage", ErrProvider)

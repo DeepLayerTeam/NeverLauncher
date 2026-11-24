@@ -5,8 +5,16 @@ export const MAX_ANSWER_BYTES = 131_072;
 const encoder = new TextEncoder();
 export const byteLength = (text: string) => encoder.encode(text).length;
 export type Receipt = {requestId: string; inputTokens: number; outputTokens: number; chargedMicroUsd: number};
-export type ChatErrorCode = 'invalid' | 'unauthorized' | 'forbidden' | 'limit' | 'unavailable' | 'network' | 'protocol' | 'interrupted' | 'provider' | 'accounting' | 'revoked' | 'cancelled' | 'storage' | 'too_large';
+export type ChatErrorCode = 'invalid' | 'unauthorized' | 'forbidden' | 'limit' | 'unavailable' | 'network' | 'protocol' | 'interrupted' | 'provider' | 'accounting' | 'revoked' | 'cancelled' | 'storage' | 'too_large' | 'sensitive';
 export class ChatError extends Error { readonly code: ChatErrorCode; constructor(code: ChatErrorCode) {super(code); this.code=code;} }
+// Best-effort preflight: avoid sending or persisting recognizable credentials.
+// Backend repeats this check; arbitrary personal data still requires user care.
+export function containsCredential(text: string): boolean {
+  return [ /\b(?:sk-(?:proj-|svcacct-)?[a-z0-9_-]{16,}|gh[pousr]_[a-z0-9]{20,}|github_pat_[a-z0-9_]{20,}|AKIA[A-Z0-9]{16})\b/i,
+    /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/,
+    /-----BEGIN [A-Z ]*PRIVATE KEY-----/, /\bBearer\s+[a-z0-9._~+/=-]{12,}/i,
+    /\b(?:password|passwd|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret)\\?["']?\s*[:=]\s*\\?["']?[^\s"'\\,;}{]{8,}/i ].some(pattern => pattern.test(text));
+}
 const object = (v: unknown): Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
 const validInt = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0;
 const shortText = (v: unknown, max: number): v is string => typeof v === 'string' && byteLength(v) <= max;
@@ -24,7 +32,7 @@ function receipt(v: unknown): Receipt | undefined {
   if (!validId(x.requestId) || !validInt(inputTokens) || !validInt(outputTokens) || !validInt(chargedMicroUsd)) return undefined;
   return {requestId: x.requestId, inputTokens, outputTokens, chargedMicroUsd};
 }
-function statusError(status: number): ChatError {return new ChatError(status === 401 ? 'unauthorized' : status === 403 ? 'forbidden' : status === 429 ? 'limit' : status === 400 ? 'invalid' : 'unavailable');}
+function statusError(status: number): ChatError {return new ChatError(status === 401 ? 'unauthorized' : status === 403 ? 'forbidden' : status === 429 ? 'limit' : status === 422 ? 'sensitive' : status === 400 ? 'invalid' : 'unavailable');}
 function requestOptions(token: string, signal: AbortSignal): RequestInit {
   if (!token) throw new ChatError('unauthorized');
   return {headers: {Authorization: `Bearer ${token}`}, signal, credentials: 'omit', redirect: 'error', cache: 'no-store', referrerPolicy: 'no-referrer'};
@@ -54,7 +62,7 @@ export async function readChatStream(body: ReadableStream<Uint8Array>, onDelta: 
         return result;
       } else if (name === 'error') {
         if (!requestId || (x.requestId !== undefined && x.requestId !== requestId)) throw new ChatError('protocol');
-        throw new ChatError(x.code === 'access_revoked' ? 'revoked' : x.code === 'accounting_unavailable' ? 'accounting' : x.code === 'stream_cancelled' ? 'cancelled' : 'provider');
+        throw new ChatError(x.code === 'provider_rate_limited' ? 'limit' : x.code === 'access_revoked' ? 'revoked' : x.code === 'accounting_unavailable' ? 'accounting' : x.code === 'stream_cancelled' ? 'cancelled' : 'provider');
       } else throw new ChatError('protocol');
       return;
     }
@@ -83,6 +91,7 @@ export async function readChatStream(body: ReadableStream<Uint8Array>, onDelta: 
 }
 export async function streamChat(base: string, token: string, prompt: string, signal: AbortSignal, onDelta: (delta: string) => void, fetcher: typeof fetch = fetch): Promise<Receipt> {
   if (!prompt.trim() || byteLength(prompt) > MAX_PROMPT_BYTES) throw new ChatError('too_large');
+  if (containsCredential(prompt)) throw new ChatError('sensitive');
   const options = requestOptions(token, signal);
   const response = await fetcher(gatewayBase(base) + '/api/v1/ai/responses', {...options, method: 'POST', headers: {...options.headers, 'Content-Type': 'application/json', Accept: 'text/event-stream'}, body: JSON.stringify({prompt})});
   if (!response.ok) throw statusError(response.status);

@@ -70,7 +70,7 @@ func TestStreamRealHTTPAndSettlement(t *testing.T) {
 			t.Error("missing provider auth")
 		}
 		var p map[string]any
-		if json.NewDecoder(r.Body).Decode(&p) != nil || p["model"] != "test-model" || p["input"] != "hi" || p["store"] != false || p["stream"] != true || p["max_output_tokens"] != float64(128) || p["service_tier"] != "default" || len(p) != 6 {
+		if json.NewDecoder(r.Body).Decode(&p) != nil || p["model"] != "test-model" || p["input"] != "hi" || p["store"] != false || p["stream"] != true || p["max_output_tokens"] != float64(128) || p["service_tier"] != "default" || len(p) != 8 || p["tool_choice"] != "none" || len(p["tools"].([]any)) != 0 {
 			t.Errorf("unexpected provider payload %#v", p)
 		}
 		w.Header().Set("Content-Type", "text/event-stream")

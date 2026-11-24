@@ -7,6 +7,7 @@ import type {Locale0357} from './desktop_accessibility';
 
 type Props = {backendUrl: string; userId: string; sessionId: string; token: string; projectId: string; profileId: string; context: ProjectContext | null; locale: Locale0357; diagnostics: LocalSnapshot; initialDiagnosticQuestion?: string; onConsumeDiagnosticQuestion?: () => void};
 const messages: Record<ChatErrorCode, [string, string]> = {
+  sensitive: ['Удалите возможные ключи, токены или пароли из вопроса.', 'Remove possible keys, tokens or passwords from the question.'],
   invalid: ['Некорректный запрос или адрес Backend (требуется HTTPS).', 'Invalid request or Backend address (HTTPS required).'],
   unauthorized: ['Сессия недействительна. Войдите заново.', 'Session invalid. Sign in again.'],
   forbidden: ['Ваша роль не имеет доступа к AI.', 'Your role has no AI access.'],

@@ -155,3 +155,9 @@ test('native cancellation after a delta, channel truncation, invalid packet and 
   await assert.rejects(nativeUsage({...defaults,usage:async()=>{throw 'unauthorized';}},signal),expectCode('unauthorized'));
   const usageAbort=new AbortController();const pending=nativeUsage({...defaults,usage:()=>new Promise(()=>{})},usageAbort.signal);usageAbort.abort();await assert.rejects(pending,expectCode('cancelled'));
 });
+test('Credential preflight rejects new secrets and excludes contaminated previous turns',async()=>{
+ assert.throws(()=>buildPrompt('password=example-secret',[],null),expectCode('sensitive'));
+ const result=buildPrompt('normal question',[complete('password=example-secret','old')],null);assert.equal(result.included,0);assert.equal(result.prompt,'normal question');
+ let calls=0;await assert.rejects(streamChat(base,'session','sk-proj-'+ 'x'.repeat(32),new AbortController().signal,()=>{},async()=>{calls++;throw Error('unexpected');}),expectCode('sensitive'));assert.equal(calls,0);
+ await assert.rejects(parse(start+event('error',{requestId:ID,code:'provider_rate_limited'})),expectCode('limit'));
+});
