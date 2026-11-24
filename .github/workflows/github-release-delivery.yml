@@ -1,0 +1,485 @@
+name: GitHub Release Delivery
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish verified signed release to public GitHub Releases (false = retain signed CI artifacts only)'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neverlauncher-stable-github-release
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: '1'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Require exact protected main revision and public repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(gh api "repos/$GITHUB_REPOSITORY" --jq .visibility)" = public
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography==46.0.4'
+      - run: python scripts/version/manage.py check
+      - run: python -m unittest discover -s scripts/release -p 'test_native_updater_feed.py' -v
+      - run: python -m unittest discover -s scripts/release -p 'test_github_release_delivery.py' -v
+  windows:
+    name: Authenticode для Windows x64 и ARM64
+    needs: preflight
+    environment: production-release
+    runs-on: windows-2022
+    env:
+      NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+      NL_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
+      NL_REQUIRE_NATIVE_UPDATER: '1'
+      LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ vars.NL_COMPONENT_SET_PUBLIC_KEY }}
+      LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY: ${{ vars.NL_COMPONENT_TRUST_ROOT_PUBLIC_KEY }}
+      LAUNCHER_COMPONENT_SECURITY_GENERATION: ${{ vars.NL_COMPONENT_SECURITY_GENERATION }}
+      LAUNCHER_COMPONENT_DELEGATED_KEY_ID: ${{ vars.NL_COMPONENT_DELEGATED_KEY_ID }}
+      NL_COMPONENT_TRUST_POLICY_BASE64: ${{ vars.NL_COMPONENT_TRUST_POLICY_BASE64 }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
+      - name: Подготовить code-signing сертификат
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) { throw "Необходим секрет WINDOWS_CODESIGN_PFX_BASE64" }
+          $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\launcher-codesign.pfx", $bytes)
+      - name: Установка зависимости для подписи набора компонентов
+        shell: pwsh
+        run: python -m pip install 'cryptography==46.0.4'
+      - name: Verify and prepare pinned component trust
+        run: python scripts/release/github_release_delivery.py prepare-trust
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+      - name: Install WiX CLI for MSI
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 4.0.6
+          if ($LASTEXITCODE -ne 0) { throw 'WiX installation failed' }
+          Add-Content $env:GITHUB_PATH "$env:USERPROFILE\.dotnet\tools"
+      - name: Собрать пакет и подписать обе архитектуры через Authenticode
+        shell: pwsh
+        env:
+          LAUNCHER_WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+          LAUNCHER_COMPONENT_SET_ED25519_SEED: ${{ secrets.COMPONENT_SET_ED25519_SEED }}
+          LAUNCHER_COMPONENT_DELEGATED_ED25519_SEED: ${{ secrets.NL_COMPONENT_DELEGATED_ED25519_SEED }}
+          LAUNCHER_WINDOWS_TIMESTAMP_URL: http://timestamp.digicert.com
+        run: |
+          ./scripts/release/build-windows-desktop.ps1 `
+            -RequireCodeSigning `
+            -CodeSigningCertificatePath "$env:RUNNER_TEMP\launcher-codesign.pfx"
+      - name: Сгенерировать доставка манифест и Проверить промышленные подписание свидетельства
+        shell: pwsh
+        run: |
+          $Version = (Get-Content VERSION -Raw).Trim()
+          $Dir = "dist/release-$Version"
+          Push-Location cli
+          try {
+            go build -trimpath -ldflags "-s -w -X main.version=$Version" -o "$env:RUNNER_TEMP\nl.exe" .\cmd\launcher
+            if ($LASTEXITCODE -ne 0) { throw 'CLI build failed' }
+          } finally {
+            Pop-Location
+          }
+          & "$env:RUNNER_TEMP\nl.exe" delivery manifest --bundle $Dir --version $Version
+          if ($LASTEXITCODE -ne 0) { throw 'Delivery manifest failed' }
+          & "$env:RUNNER_TEMP\nl.exe" delivery verify-windows --bundle $Dir --version $Version --production
+          if ($LASTEXITCODE -ne 0) { throw 'Windows delivery verification failed' }
+      - name: Проверить настоящую системную подпись Authenticode для упакованных файлов Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Version = (Get-Content VERSION -Raw).Trim()
+          $Dir = "dist/release-$Version"
+          foreach ($Arch in @('x64','arm64')) {
+            $Zip = Join-Path $Dir "launcher-desktop-$Version-windows-$Arch.zip"
+            if (-not (Test-Path -PathType Leaf $Zip)) { throw "Не найден окончательный пакет для архитектуры $Arch" }
+            $Extract = Join-Path $env:RUNNER_TEMP "nl-verified-$Arch"
+            if (Test-Path $Extract) { Remove-Item $Extract -Recurse -Force }
+            Expand-Archive -LiteralPath $Zip -DestinationPath $Extract -Force
+            $Executable = @(Get-ChildItem -LiteralPath $Extract -Recurse -File | Where-Object { $_.Extension -in @('.exe', '.dll') })
+            if (@($Executable | Where-Object Name -eq 'launcher-desktop.exe').Count -ne 1) { throw "В архиве $Zip отсутствует окончательный подписанный PE-файл Desktop" }
+            if ($Executable.Count -lt 4) { throw "В архиве $Zip отсутствуют необходимые подписанные компоненты установщика" }
+            foreach ($Exe in $Executable) {
+              $Signature = Get-AuthenticodeSignature -LiteralPath $Exe.FullName
+              if ($Signature.Status -ne 'Valid' -or -not $Signature.SignerCertificate) {
+                throw "Недопустимая цепочка сертификатов Authenticode для $($Exe.FullName): $($Signature.Status)"
+              }
+              Write-Host "Проверен исполняемый файл окончательного подписанного пакета: $($Exe.Name) $Arch"
+            }
+          }
+      - name: Build and timestamp Authenticode-signed MSI installers
+        shell: pwsh
+        env:
+          PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Version = (Get-Content VERSION -Raw).Trim()
+          $Dir = "dist/release-$Version"
+          $Pfx = "$env:RUNNER_TEMP\launcher-codesign.pfx"
+          $Pass = ConvertTo-SecureString $env:PFX_PASSWORD -AsPlainText -Force
+          $Cert = Import-PfxCertificate -FilePath $Pfx -CertStoreLocation Cert:\CurrentUser\My -Password $Pass | Where-Object HasPrivateKey | Select-Object -First 1
+          if (!$Cert) { throw 'Missing signing certificate' }
+          $SignTool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Filter signtool.exe -Recurse -File | Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          if (!$SignTool) { throw 'Missing signtool' }
+          try {
+            foreach ($Arch in @('x64','arm64')) {
+              python scripts/release/github_release_delivery.py installer --bundle $Dir --version $Version --platform windows --arch $Arch
+              if ($LASTEXITCODE -ne 0) { throw 'MSI build failed' }
+              $Msi = Join-Path $Dir "NeverLauncher-$Version-windows-$Arch.msi"
+              & $SignTool sign /sha1 $Cert.Thumbprint /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $Msi
+              if ($LASTEXITCODE -ne 0) { throw 'MSI signing failed' }
+              & $SignTool verify /pa /all /v $Msi
+              if ($LASTEXITCODE -ne 0) { throw 'MSI signature verification failed' }
+              $Signature = Get-AuthenticodeSignature $Msi
+              if ($Signature.Status -ne 'Valid' -or $Signature.SignerCertificate.Thumbprint -ne $Cert.Thumbprint -or !$Signature.TimeStamperCertificate) { throw 'MSI signer or timestamp mismatch' }
+            }
+          } finally {
+            Remove-Item "Cert:\CurrentUser\My\$($Cert.Thumbprint)" -Force -ErrorAction SilentlyContinue
+          }
+      - name: Удалить файл с учётными данными для подписи
+        if: always()
+        shell: pwsh
+        run: Remove-Item "$env:RUNNER_TEMP\launcher-codesign.pfx" -Force -ErrorAction SilentlyContinue
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nl-github-windows-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            dist/release-*/launcher-desktop-*-windows-x64.zip
+            dist/release-*/launcher-desktop-*-windows-arm64.zip
+            dist/release-*/NeverLauncher-*-windows-*.msi
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  macos:
+    name: Developer ID и нотариально заверенная сборка macOS x64/ARM64
+    needs: preflight
+    environment: production-release
+    runs-on: macos-15
+    env:
+      NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+      NL_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
+      NL_REQUIRE_NATIVE_UPDATER: '1'
+      LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ vars.NL_COMPONENT_SET_PUBLIC_KEY }}
+      LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY: ${{ vars.NL_COMPONENT_TRUST_ROOT_PUBLIC_KEY }}
+      LAUNCHER_COMPONENT_SECURITY_GENERATION: ${{ vars.NL_COMPONENT_SECURITY_GENERATION }}
+      LAUNCHER_COMPONENT_DELEGATED_KEY_ID: ${{ vars.NL_COMPONENT_DELEGATED_KEY_ID }}
+      NL_COMPONENT_TRUST_POLICY_BASE64: ${{ vars.NL_COMPONENT_TRUST_POLICY_BASE64 }}
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Проверить обязательные секреты для подписания
+        shell: bash
+        env:
+          MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
+          MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
+          MACOS_DEVELOPER_ID_APPLICATION: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
+          MACOS_TEAM_ID: ${{ secrets.MACOS_TEAM_ID }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          APPLE_NOTARY_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_NOTARY_PRIVATE_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          for name in MACOS_DEVELOPER_ID_P12_BASE64 MACOS_DEVELOPER_ID_P12_PASSWORD MACOS_DEVELOPER_ID_APPLICATION MACOS_TEAM_ID APPLE_NOTARY_KEY_ID APPLE_NOTARY_ISSUER_ID APPLE_NOTARY_PRIVATE_KEY_BASE64; do
+            test -n "${!name:-}" || { echo "отсутствует обязательный секрет: ${name}" >&2; exit 2; }
+          done
+
+      - name: Импортировать сертификат Developer ID и настроить notarytool
+        shell: bash
+        env:
+          MACOS_DEVELOPER_ID_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12_BASE64 }}
+          MACOS_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          APPLE_NOTARY_PRIVATE_KEY_BASE64: ${{ secrets.APPLE_NOTARY_PRIVATE_KEY_BASE64 }}
+          INSTALLER_P12_BASE64: ${{ secrets.NL_MACOS_INSTALLER_P12_BASE64 }}
+          INSTALLER_P12_PASSWORD: ${{ secrets.NL_MACOS_INSTALLER_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$INSTALLER_P12_BASE64" && test -n "$INSTALLER_P12_PASSWORD"
+          umask 077
+          KEYCHAIN="$RUNNER_TEMP/launcher-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          printf '%s' "$MACOS_DEVELOPER_ID_P12_BASE64" | /usr/bin/base64 -D > "$RUNNER_TEMP/launcher-developer-id.p12"
+          printf '%s' "$APPLE_NOTARY_PRIVATE_KEY_BASE64" | /usr/bin/base64 -D > "$RUNNER_TEMP/AuthKey_${APPLE_NOTARY_KEY_ID}.p8"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/launcher-developer-id.p12" -k "$KEYCHAIN" -P "$MACOS_DEVELOPER_ID_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          printf '%s' "$INSTALLER_P12_BASE64" | /usr/bin/base64 -D > "$RUNNER_TEMP/launcher-installer.p12"
+          security import "$RUNNER_TEMP/launcher-installer.p12" -k "$KEYCHAIN" -P "$INSTALLER_P12_PASSWORD" -T /usr/bin/productbuild -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          xcrun notarytool store-credentials launcher-ci-notary \
+            --key "$RUNNER_TEMP/AuthKey_${APPLE_NOTARY_KEY_ID}.p8" \
+            --key-id "$APPLE_NOTARY_KEY_ID" \
+            --issuer "$APPLE_NOTARY_ISSUER_ID"
+          echo "LAUNCHER_SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+
+      - name: Установка зависимости для подписи набора компонентов
+        run: python3 -m pip install 'cryptography==46.0.4'
+      - name: Verify and prepare pinned component trust
+        run: python scripts/release/github_release_delivery.py prepare-trust
+      - name: "Собрать и подписать пакеты x64 и ARM64, выполнить нотариальное удостоверение и закрепление подписи"
+        shell: bash
+        env:
+          LAUNCHER_MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
+          LAUNCHER_MACOS_TEAM_ID: ${{ secrets.MACOS_TEAM_ID }}
+          LAUNCHER_MACOS_NOTARY_PROFILE: launcher-ci-notary
+          LAUNCHER_COMPONENT_SET_ED25519_SEED: ${{ secrets.COMPONENT_SET_ED25519_SEED }}
+          LAUNCHER_COMPONENT_DELEGATED_ED25519_SEED: ${{ secrets.NL_COMPONENT_DELEGATED_ED25519_SEED }}
+        run: bash scripts/release/build-macos-production.sh
+
+      - name: Проверить промышленные свидетельства и привязку поставки
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          DIR="dist/release-${VERSION}"
+          (cd cli && go build -trimpath -o /tmp/nl ./cmd/launcher)
+          /tmp/nl delivery manifest --bundle "${DIR}" --version "${VERSION}"
+          /tmp/nl delivery verify-macos --bundle "${DIR}" --version "${VERSION}" --production
+          python3 scripts/release/secret-scan.py "${DIR}/launcher-desktop-${VERSION}-macos-x64.zip"
+          python3 scripts/release/secret-scan.py "${DIR}/launcher-desktop-${VERSION}-macos-arm64.zip"
+
+      - name: Проверить итоговый пакет приложения, подпись Developer ID, Gatekeeper и нотариальное заверение
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          for ARCH in x64 arm64; do
+            ZIP="dist/release-${VERSION}/launcher-desktop-${VERSION}-macos-${ARCH}.zip"
+            test -s "$ZIP" || { echo "отсутствует итоговый пакет для архитектуры $ARCH" >&2; exit 2; }
+            EXTRACT="$(mktemp -d)"
+            unzip -q "$ZIP" -d "$EXTRACT"
+            APP="$EXTRACT/Launcher.app"
+            test -d "$APP" || { echo "В итоговом ZIP отсутствует приложение" >&2; exit 2; }
+            codesign --verify --deep --strict --verbose=2 "$APP"
+            spctl --assess --type execute --verbose=2 "$APP"
+            xcrun stapler validate "$APP"
+            rm -rf "$EXTRACT"
+          done
+      - name: Build Developer ID Installer signed and notarized PKGs
+        shell: bash
+        env:
+          NL_MACOS_INSTALLER_IDENTITY: ${{ vars.NL_MACOS_INSTALLER_IDENTITY }}
+        run: |
+          set -euo pipefail
+          VERSION="$(cat VERSION)"
+          for ARCH in x64 arm64; do
+            python scripts/release/github_release_delivery.py installer --bundle "dist/release-$VERSION" --version "$VERSION" --platform macos --arch "$ARCH"
+          done
+      - name: Удалить импортированные данные подписи
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/launcher-developer-id.p12" "$RUNNER_TEMP/launcher-installer.p12" "$RUNNER_TEMP"/AuthKey_*.p8
+          security delete-keychain "$RUNNER_TEMP/launcher-signing.keychain-db" || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nl-github-macos-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            dist/release-*/launcher-desktop-*-macos-*.zip
+            dist/release-*/NeverLauncher-*-macos-*.pkg
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  linux:
+    needs: preflight
+    environment: production-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {arch: x64, runner: ubuntu-24.04}
+          - {arch: arm64, runner: ubuntu-24.04-arm}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 75
+    env:
+      NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+      NL_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
+      NL_REQUIRE_NATIVE_UPDATER: '1'
+      LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ vars.NL_COMPONENT_SET_PUBLIC_KEY }}
+      LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY: ${{ vars.NL_COMPONENT_TRUST_ROOT_PUBLIC_KEY }}
+      LAUNCHER_COMPONENT_SECURITY_GENERATION: ${{ vars.NL_COMPONENT_SECURITY_GENERATION }}
+      LAUNCHER_COMPONENT_DELEGATED_KEY_ID: ${{ vars.NL_COMPONENT_DELEGATED_KEY_ID }}
+      NL_COMPONENT_TRUST_POLICY_BASE64: ${{ vars.NL_COMPONENT_TRUST_POLICY_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev libxdo-dev gnupg dpkg-dev
+          python -m pip install 'cryptography==46.0.4'
+      - name: Verify and prepare pinned component trust
+        run: python scripts/release/github_release_delivery.py prepare-trust
+      - name: Build native component package using permanent release keys
+        env:
+          LAUNCHER_COMPONENT_SET_ED25519_SEED: ${{ secrets.COMPONENT_SET_ED25519_SEED }}
+          LAUNCHER_COMPONENT_DELEGATED_ED25519_SEED: ${{ secrets.NL_COMPONENT_DELEGATED_ED25519_SEED }}
+        run: bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-$(cat VERSION)" --expected-arch "${{ matrix.arch }}"
+      - name: Verify production package and build signed Debian installer
+        shell: bash
+        env:
+          NL_LINUX_GPG_FINGERPRINT: ${{ vars.NL_LINUX_GPG_FINGERPRINT }}
+          GPG_PRIVATE_KEY: ${{ secrets.LINUX_GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME="$(mktemp -d)"
+          trap 'gpgconf --kill all || true; rm -rf "$GNUPGHOME"' EXIT
+          test -n "$GPG_PRIVATE_KEY"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          unset GPG_PRIVATE_KEY
+          VERSION="$(cat VERSION)"
+          DIR="dist/release-$VERSION"
+          ARCH="${{ matrix.arch }}"
+          python scripts/release/secret-scan.py "$DIR/launcher-linux-$ARCH-$VERSION.tar.gz"
+          "$DIR/launcher-cli-linux-$ARCH" update self-test
+          "$DIR/launcher-cli-linux-$ARCH" update component-self-test
+          python scripts/release/github_release_delivery.py installer --bundle "$DIR" --version "$VERSION" --platform linux --arch "$ARCH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nl-github-linux-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            dist/release-*/launcher-linux-${{ matrix.arch }}-*.tar.gz
+            dist/release-*/NeverLauncher-*-linux-${{ matrix.arch }}.deb
+            dist/release-*/NeverLauncher-*-linux-${{ matrix.arch }}.deb.asc
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  sign-and-verify:
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-24.04
+    environment: production-release
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+      - run: python -m pip install 'cryptography==46.0.4'
+      - run: cargo install tauri-cli --version 2.12.0 --locked
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: nl-github-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-input
+          merge-multiple: false
+      - name: Collect all six complete native deliveries
+        run: python scripts/release/github_release_delivery.py collect --source release-input --output release-final --version "$(cat VERSION)"
+      - name: Sign exact final bytes, verify all signatures and generate update feed
+        env:
+          NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+          NL_UPDATER_PRIVATE_KEY_BASE64: ${{ secrets.NL_UPDATER_PRIVATE_KEY_BASE64 }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: python scripts/release/github_release_delivery.py sign --directory release-final --version "$(cat VERSION)" --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nl-github-final-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-final/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  publish:
+    if: inputs.publish == true
+    needs: sign-and-verify
+    runs-on: ubuntu-24.04
+    environment: production-publish
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography==46.0.4'
+      - uses: actions/download-artifact@v4
+        with:
+          name: nl-github-final-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-final
+      - name: Independently verify release and publish only complete verified draft
+        env:
+          NL_UPDATER_PUBLIC_KEY: ${{ vars.NL_UPDATER_PUBLIC_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release/github_release_delivery.py publish --directory release-final --version "$(cat VERSION)" --repo "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA"

@@ -60,7 +60,7 @@ echo "[Launcher ${VERSION}] Linux ${ARCH}: сборка CLI/API"
 )
 
 echo "[Launcher ${VERSION}] Linux ${ARCH}: нативная сборка Desktop/Guard/Runtime"
-cargo build --release --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
+cargo build --release --features custom-protocol --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
 cargo build --release --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml" --bins
 
 install -m 0755 "${ROOT_DIR}/apps/desktop/src-tauri/target/release/launcher-desktop" "${OUT_DIR}/launcher-desktop-linux-${ARCH}"

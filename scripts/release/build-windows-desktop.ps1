@@ -231,7 +231,7 @@ try {
         Invoke-Checked { rustup target add $Target.RustTarget } "rustup target add $($Target.RustTarget)"
         Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $RuntimeManifest --bin guard --bin runtime } "Сборка релиза Guard/Runtime для $Arch"
         Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $SensorManifest } "Сборка релиза Guard Sensor для $Arch"
-        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $DesktopManifest } "Нативная сборка Desktop для $Arch"
+        Invoke-Checked { cargo build --release --features custom-protocol --target $Target.RustTarget --manifest-path $DesktopManifest } "Нативная сборка Desktop для $Arch"
 
         $DesktopSource = Join-Path $Root "apps\desktop\src-tauri\target\$($Target.RustTarget)\release\launcher-desktop.exe"
         $GuardSource = Join-Path $Root "runtime\runtime\target\$($Target.RustTarget)\release\guard.exe"

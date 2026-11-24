@@ -58,7 +58,7 @@ trap cleanup EXIT
 
 rustup target add x86_64-apple-darwin aarch64-apple-darwin
 for target in x86_64-apple-darwin aarch64-apple-darwin; do
-  cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
+  cargo build --release --features custom-protocol --target "${target}" --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
   cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml" --bin guard --bin runtime
 done
 

@@ -6,6 +6,12 @@
 
 ---
 
+## 1.1.2 — GitHub Release Delivery
+
+- GitHub Actions: защищённая сборка шести комплектов Desktop/Guard/Runtime с постоянными ключами доверия; MSI, DEB и PKG создаются из фактических итоговых пакетов, с Authenticode/RFC3161, GPG или Developer ID Installer и нотариальным заверением.
+- Раздельные задания подписи и публикации: Tauri-подписи с привязкой версии и имени, полный `latest.json`, SHA-256 и привязка к коммиту; запрет неполного выпуска, downgrade и перезаписи релиза. Draft публикуется только после проверки загруженных GitHub assets.
+- Исправлена нативная production-сборка Tauri: frontend встраивается через `custom-protocol`. Добавлены регрессии и реальная тестовая сборка DEB с GPG. [Настройка GitHub и приёмка](docs/operations/github-release-delivery.md).
+
 ## 1.1.1 — Native Updater
 
 - Desktop: Tauri Updater 2.14.1, проверка стабильной SemVer, загрузка по HTTPS с ограничением размера, проверка подписи и подписанной версии, проверка состава цели и передача подлинного пакета существующему транзакционному установщику Desktop/Guard/Runtime.

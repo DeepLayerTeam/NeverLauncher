@@ -24,6 +24,10 @@ export NL_REQUIRE_NATIVE_UPDATER=1
 
 On PowerShell, use `$env:NL_UPDATER_PUBLIC_KEY = (Get-Content /secure/neverlauncher-updater.key.pub -Raw).Trim()` and equivalent `$env:` variables for the endpoint and requirement. The endpoint must be your actual HTTPS endpoint. The build embeds the public key and endpoint; runtime environment changes and editable launcher preferences cannot change them. A build with neither variable remains usable but explicitly disables this updater; a build with only one variable or with `NL_REQUIRE_NATIVE_UPDATER=1` and no key fails. Retain existing component trust configuration and signing secrets separately. Never allow untrusted build jobs to access signing secrets.
 
+## GitHub delivery (1.1.2+)
+
+For a public GitHub repository use the protected [GitHub Release Delivery workflow](github-release-delivery.md). It automatically embeds the repository's stable feed URL, builds signed native installers and coordinated updater packages, signs the exact final bytes, verifies all six targets, and publishes a complete draft as Latest. Do not manually overwrite its assets.
+
 ## Sign and publish final artifacts
 
 1. Build native coordinated production packages using the existing release scripts and complete the existing platform and component-set verification. Do not sign incomplete development archives or individual desktop executables as updater payloads.
