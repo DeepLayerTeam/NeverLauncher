@@ -39,6 +39,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libtss2-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev
       - run: npm ci --ignore-scripts
         working-directory: apps/desktop
+      - run: npm run test:native-update
+        working-directory: apps/desktop
       - run: npm run build
         working-directory: apps/desktop
       - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml native_updater --no-default-features

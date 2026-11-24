@@ -63,7 +63,17 @@ def verify_signature(path, signature, public_key, version):
     verifier.verify(global_sig, sig[10:] + trusted.encode())
 
 
-def build_feed(version, base_url, packages, public_key):
+def release_notes(version, changelog):
+    """Extract exactly the requested release section, not the newest section."""
+    sections = re.split(r'^##\s+', changelog, flags=re.MULTILINE)
+    matches = [section.partition('\n')[2].strip() for section in sections[1:]
+               if re.match(rf'^{re.escape(version)}(?:\s|$)', section)]
+    if len(matches) != 1 or not matches[0] or len(matches[0]) > 16000:
+        raise ValueError(f'Missing, duplicate or oversized release notes for {version}')
+    return matches[0]
+
+
+def build_feed(version, base_url, packages, public_key, notes=None):
     if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version):
         raise ValueError('Only stable SemVer is publishable')
     u = urlsplit(base_url)
@@ -88,7 +98,12 @@ def build_feed(version, base_url, packages, public_key):
         platforms[target] = {'url': base_url.rstrip('/') + '/' + quote(path.name, safe=''), 'signature': signature}
     if not platforms:
         raise ValueError('At least one signed platform is required')
-    return {'version': version, 'platforms': platforms}
+    feed = {'version': version, 'platforms': platforms}
+    if notes is not None:
+        if not isinstance(notes, str) or not notes.strip() or len(notes) > 16000:
+            raise ValueError('Invalid release notes')
+        feed['notes'] = notes
+    return feed
 
 
 def main():
@@ -96,12 +111,14 @@ def main():
     parser.add_argument('--version', required=True)
     parser.add_argument('--base-url', required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--changelog', type=Path, default=Path(__file__).resolve().parents[2] / 'CHANGELOG.md')
     parser.add_argument('packages', type=Path, nargs='+')
     args = parser.parse_args()
     public_key = os.environ.get('NL_UPDATER_PUBLIC_KEY', '').strip()
     if not public_key:
         parser.error('NL_UPDATER_PUBLIC_KEY is required')
-    feed = build_feed(args.version, args.base_url, args.packages, public_key)
+    feed = build_feed(args.version, args.base_url, args.packages, public_key,
+                      notes=release_notes(args.version, args.changelog.read_text(encoding='utf-8')))
     tmp = args.output.with_name(args.output.name + '.tmp')
     tmp.write_text(json.dumps(feed, indent=2, sort_keys=True) + '\n', encoding='utf-8')
     os.replace(tmp, args.output)

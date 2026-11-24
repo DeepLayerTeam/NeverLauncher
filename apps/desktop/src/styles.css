@@ -1301,3 +1301,10 @@ button {
 /* Проверенные метрики нативной передачи на подписанном экране запуска и восстановления. */
 .startupTransfer0497 { display: flex; flex: 1 1 220px; gap: .55rem; align-items: center; flex-wrap: wrap; font-size: .85rem; }
 .startupTransfer0497 progress { flex: 1 1 120px; min-width: 90px; accent-color: var(--brand-accent, #22c55e); }
+
+/* Native product updater: notes are plain text, never executable markup. */
+.nativeUpdatePreferences { display: grid; gap: 0.65rem; }
+.nativeUpdatePreferences label { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.nativeUpdatePreferences input[type="checkbox"] { width: auto; }
+.nativeUpdatePanel progress { width: min(100%, 24rem); }
+.nativeUpdateNotes { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow-y: auto; margin: 0.75rem 0; }

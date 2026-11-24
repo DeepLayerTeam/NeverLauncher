@@ -4845,6 +4845,8 @@ function App() {
             </div>
           </header>
 
+          <NativeUpdaterPanel settingsVisible={screen === "settings"} enabled={nativeConfigLoaded0357 && !bootstrapError0352} />
+
           {stage !== "idle" && (
             <section
               className="startupStatus0427"
@@ -6901,7 +6903,6 @@ function SettingsPanel({
   return (
     <section className="panel">
       <h3>{t.settingsTitle}</h3>
-      <NativeUpdaterPanel />
       <div className="settings">
         <label>
           {t.java}

@@ -19,7 +19,7 @@ import tempfile
 import uuid
 import xml.etree.ElementTree as ET
 
-from native_updater_feed import build_feed, read_manifest, verify_signature, TARGETS
+from native_updater_feed import build_feed, read_manifest, verify_signature, release_notes, TARGETS
 from delivery_verify import verify_target, read_archive
 
 STABLE = re.compile(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)')
@@ -255,7 +255,8 @@ def metadata(directory, version, repo, commit, key, write=False):
         manifest = read_manifest(directory / package_name(version, platform, arch))
         if (manifest.get('platform'), manifest.get('architecture')) != (platform, arch):
             raise ValueError('Package filename and signed target disagree')
-    feed = build_feed(version, asset_url(repo, version), [directory / n for n in packages], key)
+    notes = release_notes(version, (Path(__file__).resolve().parents[2] / "CHANGELOG.md").read_text(encoding="utf-8"))
+    feed = build_feed(version, asset_url(repo, version), [directory / n for n in packages], key, notes=notes)
     if set(feed['platforms']) != set(TARGETS.values()):
         raise ValueError('Release does not cover all six targets')
     for name in signed:
@@ -345,7 +346,7 @@ def publish(directory, version, repo, commit):
         run('gh', 'api', '--method', 'POST', f'repos/{repo}/git/refs', '-f', f'ref={ref}', '-f', f'sha={commit}')
     if gh_json('api', f'repos/{repo}/commits/{tag}')['sha'] != commit:
         raise ValueError('Existing release tag points to different source')
-    run('gh', 'release', 'create', tag, '--repo', repo, '--verify-tag', '--draft', '--title', f'NeverLauncher {version}', '--generate-notes')
+    run('gh', 'release', 'create', tag, '--repo', repo, '--verify-tag', '--draft', '--title', f'NeverLauncher {version}', '--notes', json.loads((directory / 'latest.json').read_text(encoding='utf-8'))['notes'])
     # Never clobber an asset. Any error leaves a draft, not a broken public feed.
     run('gh', 'release', 'upload', tag, '--repo', repo, *[directory / n for n in names])
     rows = releases(repo)

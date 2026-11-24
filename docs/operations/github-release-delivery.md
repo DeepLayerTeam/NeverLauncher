@@ -1,4 +1,4 @@
-# GitHub Release Delivery — NeverLauncher 1.1.2
+# GitHub Release Delivery — NeverLauncher 1.1.2+
 
 This workflow builds and publishes the Desktop distribution only. It is not a substitute for the existing whole-platform GA certification, branded project bootstrap publication, or Backend deployment. No production signing key is stored in the repository.
 
@@ -10,7 +10,7 @@ This workflow builds and publishes the Desktop distribution only. It is not a su
 | Linux x64 / ARM64 | `NeverLauncher-<version>-linux-<arch>.deb` and detached `.asc` (GPG) | `launcher-linux-<arch>-<version>.tar.gz` |
 | macOS x64 / ARM64 | `NeverLauncher-<version>-macos-<arch>.pkg` (Developer ID Installer, notarized and stapled) | `launcher-desktop-<version>-macos-<arch>.zip` (Developer ID Application, notarized and stapled) |
 
-Each of the six native installers, six coordinated updater archives and two GPG sidecars has a separate Tauri `.sig`, authenticated with the exact filename and version in the trusted comment. `latest.json` advertises **only** the six coordinated archives, never the system installers. `SHA256SUMS` and `RELEASE_DELIVERY.json` inventory the final files, sizes, hashes, source commit and repository. The file signatures, not the unsigned checksum list alone, establish payload authenticity.
+Each of the six native installers, six coordinated updater archives and two GPG sidecars has a separate Tauri `.sig`, authenticated with the exact filename and version in the trusted comment. `latest.json` advertises **only** the six coordinated archives, never the system installers. `SHA256SUMS` and `RELEASE_DELIVERY.json` inventory the final files, sizes, hashes, source commit and repository. The file signatures, not the unsigned checksum list alone, establish payload authenticity. Since 1.1.3, the version-specific `CHANGELOG.md` section is required and is used verbatim for `latest.json` notes and the GitHub release body; missing, duplicate, or oversized notes fail delivery. Notes are checked during publication but are not covered by the package signature.
 
 MSI installs the exact signed adjacent Windows components into `Program Files/NeverLauncher-<arch>` with Windows Installer upgrade/uninstall registration and Start Menu shortcut. DEB installs the Linux component set under `/opt/neverlauncher`, a desktop entry, and runtime package dependencies. PKG installs the complete notarized `Launcher.app` into `/Applications`. System-managed copies should be updated by the OS installer/package manager, not by elevating the in-app updater. For in-app updates use the corresponding coordinated archive extracted into a user-writable directory (macOS: copy the app bundle to a user-writable Applications directory). Windows requires a supported OS with WebView2 Runtime; Linux DEB is for compatible Debian/Ubuntu distributions. Existing project-specific Prestarter installers remain separate.
 

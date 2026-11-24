@@ -83,6 +83,7 @@ class ReleaseDelivery(unittest.TestCase):
         self.assertEqual(names, self.verify())
         feed = json.loads((self.directory / 'latest.json').read_text())
         self.assertEqual(set(feed['platforms']), set(TARGETS.values()))
+        self.assertIn('GitHub Actions', feed['notes'])
         for (p,a), key in TARGETS.items():
             self.assertEqual(feed['platforms'][key]['url'], f'https://github.com/{REPO}/releases/download/v{VERSION}/'+delivery.package_name(VERSION,p,a))
         receipt = json.loads((self.directory/'RELEASE_DELIVERY.json').read_text())
@@ -139,6 +140,14 @@ class ReleaseDelivery(unittest.TestCase):
         (self.directory/'latest.json').write_text('{}')
         with self.assertRaises(ValueError): self.verify()
 
+    def test_release_notes_tampering(self):
+        self.generate()
+        path = self.directory / 'latest.json'
+        feed = json.loads(path.read_text())
+        feed['notes'] = 'tampered'
+        path.write_text(json.dumps(feed))
+        with self.assertRaisesRegex(ValueError, 'metadata mismatch'): self.verify()
+
     def test_receipt_other_commit(self):
         self.generate()
         with self.assertRaises(ValueError): delivery.metadata(self.directory, VERSION, REPO, 'b'*40, self.public)
@@ -184,7 +193,9 @@ class ReleaseDelivery(unittest.TestCase):
                 else:
                     delivery.publish(self.directory,VERSION,REPO,COMMIT)
                 calls = [c.args for c in command.call_args_list]
-                self.assertTrue(any(c[:3]==('gh','release','create') and '--draft' in c for c in calls))
+                create = next(c for c in calls if c[:3]==('gh','release','create'))
+                self.assertIn('--draft', create)
+                self.assertEqual(create[create.index('--notes') + 1], json.loads((self.directory/'latest.json').read_text())['notes'])
                 self.assertTrue(any(c[:3]==('gh','release','upload') for c in calls))
                 edits = [c for c in calls if c[:3]==('gh','release','edit')]
                 self.assertEqual(len(edits), 0 if broken else 1)

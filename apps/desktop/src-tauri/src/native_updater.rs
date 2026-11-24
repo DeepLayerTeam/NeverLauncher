@@ -12,6 +12,19 @@ const OFFER_TTL: Duration = Duration::from_secs(15 * 60);
 const CURRENT: &str = env!("CARGO_PKG_VERSION");
 static OPERATIONS: RwLock<()> = RwLock::const_new(());
 static OFFER: Mutex<Option<(Instant, Update)>> = Mutex::new(None);
+// Network checks/downloads must not block game operations. Serialize the
+// updater itself, while reserving the existing game gate for installation.
+static UPDATER: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+struct Prepared { version: String, bytes: Vec<u8>, suffix: &'static str }
+static PREPARED: Mutex<Option<Prepared>> = Mutex::new(None);
+fn prepared_matches(prepared: &Option<Prepared>, version: &str) -> bool {
+    prepared.as_ref().is_some_and(|p| p.version == version && newer(CURRENT, &p.version))
+}
+fn take_prepared(prepared: &mut Option<Prepared>, version: &str) -> Result<Prepared, String> {
+    if !prepared_matches(prepared, version) { return Err("Сначала скачайте и проверьте эту версию обновления".into()); }
+    prepared.take().ok_or_else(|| "Пакет не скачан".into())
+}
+
 
 pub(super) fn operation() -> Result<RwLockReadGuard<'static, ()>, String> {
     OPERATIONS.try_read().map_err(|_| "Выполняется обновление Launcher".into())
@@ -23,6 +36,7 @@ pub(super) struct Offer {
     current_version: String,
     status: &'static str,
     version: Option<String>,
+    notes: Option<String>,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,12 +61,13 @@ fn target() -> Result<(&'static str, &'static str, &'static str), String> {
     Ok((os, tauri_os, arch))
 }
 fn response(status: &'static str, version: Option<String>) -> Offer {
-    Offer { current_version: CURRENT.into(), status, version }
+    Offer { current_version: CURRENT.into(), status, version, notes: None }
 }
 
 #[tauri::command]
 pub(super) async fn native_update_check(app: AppHandle) -> Result<Offer, String> {
-    let _gate = OPERATIONS.try_write().map_err(|_| "Завершите текущие операции Launcher и повторите проверку")?;
+    let _updater = UPDATER.try_lock().map_err(|_| "Обновление уже выполняется")?;
+    *PREPARED.lock().map_err(|_| "Ошибка состояния обновления")? = None;
     *OFFER.lock().map_err(|_| "Ошибка состояния обновления")? = None;
     let key = option_env!("NL_UPDATER_PUBLIC_KEY").unwrap_or("").trim();
     let endpoint = option_env!("NL_UPDATER_ENDPOINT").unwrap_or("").trim();
@@ -72,8 +87,10 @@ pub(super) async fn native_update_check(app: AppHandle) -> Result<Offer, String>
     https_url(update.download_url.as_str())?;
     if !newer(CURRENT, &update.version) || update.signature.trim().is_empty() { return Err("Некорректная версия или отсутствует подпись".into()); }
     let version = update.version.clone();
+    // Remote notes are informational only; never render as HTML or trust as a signature.
+    let notes = update.body.as_deref().map(|body| body.chars().take(16000).collect::<String>());
     *OFFER.lock().map_err(|_| "Ошибка состояния обновления")? = Some((Instant::now(), update));
-    Ok(response("available", Some(version)))
+    Ok(Offer { notes, ..response("available", Some(version)) })
 }
 
 #[derive(Deserialize)]
@@ -133,6 +150,7 @@ async fn download(update: &Update, progress: &Channel<Progress>) -> Result<Vec<u
         .map_err(|_| "Не удалось скачать обновление")?.error_for_status().map_err(|_| "Сервер отклонил скачивание обновления")?;
     let total = response.content_length();
     if total.is_some_and(|n| n == 0 || n > MAX_PACKAGE as u64) { return Err("Недопустимый размер обновления".into()); }
+    let _ = progress.send(Progress { stage: "download", downloaded: 0, total });
     let mut bytes = Vec::new();
     let mut last = Instant::now();
     while let Some(chunk) = response.chunk().await.map_err(|_| "Соединение при скачивании прервано")? {
@@ -149,9 +167,9 @@ async fn download(update: &Update, progress: &Channel<Progress>) -> Result<Vec<u
 }
 
 #[tauri::command]
-pub(super) async fn native_update_install(app: AppHandle, version: String, progress: Channel<Progress>, supervisor: State<'_, runtime::ProcessSupervisor>, guard: State<'_, runtime::GuardSupervisor>) -> Result<super::LauncherUpdateScheduleResult, String> {
-    let gate = OPERATIONS.try_write().map_err(|_| "Завершите текущие операции Launcher перед обновлением")?;
-    if supervisor.list().await.iter().any(|p| p.finished_at.is_none()) { return Err("Завершите Minecraft перед обновлением".into()); }
+pub(super) async fn native_update_download(version: String, progress: Channel<Progress>) -> Result<(), String> {
+    let _updater = UPDATER.try_lock().map_err(|_| "Обновление уже выполняется")?;
+    if prepared_matches(&*PREPARED.lock().map_err(|_| "Ошибка состояния обновления")?, &version) { return Ok(()); }
     let update = {
         let mut offer = OFFER.lock().map_err(|_| "Ошибка состояния обновления")?;
         let (when, update) = offer.as_ref().ok_or("Сначала проверьте обновления")?;
@@ -160,23 +178,55 @@ pub(super) async fn native_update_install(app: AppHandle, version: String, progr
     };
     let bytes = download(&update, &progress).await?;
     let (os, _, arch) = target()?;
-    let (bytes, suffix) = tokio::task::spawn_blocking(move || -> Result<(Vec<u8>, &'static str), String> {
+    let prepared = tokio::task::spawn_blocking(move || -> Result<Prepared, String> {
         update.verify(&bytes).map_err(|_| "Подпись пакета или подписанная версия не прошла проверку")?;
         let suffix = validate_package(&bytes, &version, os, arch)?;
-        Ok((bytes, suffix))
+        Ok(Prepared { version, bytes, suffix })
     }).await.map_err(|_| "Ошибка проверки пакета")??;
-    let _ = progress.send(Progress { stage: "install", downloaded: bytes.len() as u64, total: Some(bytes.len() as u64) });
-    let result = super::install_launcher_update(bytes, suffix, guard, app).await?;
-    if let Ok(mut offer) = OFFER.lock() { *offer = None; }
-    // Once the external helper has started, no game or file mutations may
-    // begin in the brief interval before this process terminates.
-    std::mem::forget(gate);
-    Ok(result)
+    *PREPARED.lock().map_err(|_| "Ошибка состояния обновления")? = Some(prepared);
+    Ok(())
+}
+
+#[tauri::command]
+pub(super) async fn native_update_install(app: AppHandle, version: String, supervisor: State<'_, runtime::ProcessSupervisor>, guard: State<'_, runtime::GuardSupervisor>) -> Result<super::LauncherUpdateScheduleResult, String> {
+    let _updater = UPDATER.try_lock().map_err(|_| "Обновление уже выполняется")?;
+    let gate = OPERATIONS.try_write().map_err(|_| "Завершите текущие операции Launcher перед обновлением")?;
+    if supervisor.list().await.iter().any(|p| p.finished_at.is_none()) { return Err("Завершите Minecraft перед обновлением".into()); }
+    let prepared = {
+        let mut slot = PREPARED.lock().map_err(|_| "Ошибка состояния обновления")?;
+        take_prepared(&mut *slot, &version)?
+    };
+    let result = super::install_launcher_update(prepared.bytes, prepared.suffix, guard, app).await;
+    if result.is_ok() {
+        if let Ok(mut offer) = OFFER.lock() { *offer = None; }
+        // No game or file mutations may begin before this process terminates.
+        std::mem::forget(gate);
+        std::mem::forget(_updater);
+    }
+    result
+}
+
+// Allows the UI to distinguish an install blocked by a running game from
+// a scheduling failure that consumed the verified in-memory package.
+#[tauri::command]
+pub(super) fn native_update_ready(version: String) -> Result<bool, String> {
+    Ok(prepared_matches(&*PREPARED.lock().map_err(|_| "Ошибка состояния обновления")?, &version))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn installation_consumes_only_exact_verified_version() {
+        let version = "99.0.0";
+        let mut slot = Some(Prepared { version: version.into(), bytes: vec![1, 2, 3], suffix: "zip" });
+        assert!(!prepared_matches(&slot, "99.0.1"));
+        assert!(take_prepared(&mut slot, "99.0.1").is_err());
+        assert!(prepared_matches(&slot, version));
+        assert_eq!(take_prepared(&mut slot, version).unwrap().bytes, vec![1, 2, 3]);
+        assert!(take_prepared(&mut slot, version).is_err());
+        let mut stale = Some(Prepared { version: CURRENT.into(), bytes: vec![1], suffix: "zip" });
+        assert!(take_prepared(&mut stale, CURRENT).is_err());
+    }
     #[test] fn stable_upgrade_only() {
         assert!(newer("1.1.1", "1.10.0"));
         for invalid in ["1.1.0", "1.1.1", "1.1.1+build", "2.0.0-beta.1", "broken"] { assert!(!newer("1.1.1", invalid)); }

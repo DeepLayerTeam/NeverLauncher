@@ -7,7 +7,7 @@ import unittest
 import zipfile
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from native_updater_feed import build_feed, verify_signature
+from native_updater_feed import build_feed, verify_signature, release_notes
 
 
 def b64(raw):
@@ -41,6 +41,16 @@ class NativeUpdaterFeed(unittest.TestCase):
 
     def test_valid_signature_and_feed(self):
         self.assertEqual(self.feed()['platforms']['windows-x86_64']['signature'], self.signature)
+
+    def test_version_scoped_release_notes(self):
+        changelog = '# History\n## 1.1.10 — Other\nWrong\n## 1.1.1 — Release\n- Correct\n## 1.1.0 — Old\nOld'
+        notes = release_notes('1.1.1', changelog)
+        self.assertEqual(notes, '- Correct')
+        feed = build_feed('1.1.1', 'https://release.example', [self.path], self.public, notes=notes)
+        self.assertEqual(feed['notes'], notes)
+        for bad in ('', '## 1.1.1\n', changelog + '\n## 1.1.1\nDuplicate', '## 1.1.1\n' + 'x'*16001):
+            with self.assertRaises(ValueError): release_notes('1.1.1', bad)
+        with self.assertRaises(ValueError): build_feed('1.1.1', 'https://release.example', [self.path], self.public, notes=' ')
 
     def test_tampered_bytes(self):
         with self.path.open('ab') as f:
