@@ -650,7 +650,7 @@ type SignedProvisioning0352 = {
 };
 type AuthSession = {
   accessToken: string;
-  refreshToken: string;
+  expiresAtUnix: number;
   sessionId: string;
   email: string;
   userId: string;
@@ -1178,7 +1178,23 @@ function App() {
   );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [scopedSession, setScopedSession] = useState<{ backend: string; session: AuthSession } | null>(null);
+  const authSession = scopedSession?.backend === settings.backendUrl ? scopedSession.session : null;
+  function setAuthSession(session: AuthSession | null) {
+    const backend = settings.backendUrl;
+    setScopedSession(current => session ? { backend, session } : current?.backend === backend ? null : current);
+  }
+  const authOperation = useRef(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authRetry, setAuthRetry] = useState(false);
+  function beginAuthOperation() {
+    if (authOperation.current) return false;
+    authOperation.current = true;
+    setAuthBusy(true);
+    return true;
+  }
+  function endAuthOperation() { authOperation.current = false; setAuthBusy(false); }
+
   const [authProviders0293, setAuthProviders0293] = useState<
     AuthProvider0293[]
   >([]);
@@ -1451,9 +1467,17 @@ function App() {
   ]);
 
   useEffect(() => {
-    if (!settings.backendUrl.trim()) return;
+    if (!nativeConfigLoaded0357 || bootstrapError0352 || !settings.backendUrl.trim()) return;
     void restoreSession();
-  }, [settings.backendUrl]);
+  }, [settings.backendUrl, nativeConfigLoaded0357, bootstrapError0352]);
+
+  // Revalidate revocation and rotate shortly before access-token expiry. Never retry
+  // a stale refresh token in the renderer; Rust owns the rotation transaction.
+  useEffect(() => {
+    if ((!authSession && !authRetry) || !nativeConfigLoaded0357 || !settings.backendUrl.trim()) return;
+    const timer = window.setInterval(() => { void restoreSession(!!authSession); }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [settings.backendUrl, authSession?.sessionId, authSession?.accessToken, authRetry, nativeConfigLoaded0357]);
 
   useEffect(() => {
     if (
@@ -1539,6 +1563,12 @@ function App() {
     )
       return;
     if (key === "backendUrl" && value !== settings.backendUrl) {
+      if (authOperation.current) return;
+      setAuthRetry(false);
+      setAuthSession(null);
+      setManagedDevices([]);
+      setDeviceKey(null);
+      setDeviceTrustStatus("не инициализирован");
       officialMinecraftClient.current?.clear();
       setOfficialProfile(null);
       setMinecraftIdentity("local");
@@ -1741,10 +1771,11 @@ function App() {
     session: AuthSession,
     accessToken: string,
   ): Promise<AuthSession> {
-    const next = { ...session, accessToken };
-    await callTauri<void>("store_auth_session", {
+    const next = await callTauri<AuthSession>("desktop_update_access", {
       backendUrl: settings.backendUrl,
-      session: next,
+      sessionId: session.sessionId,
+      previousAccess: session.accessToken,
+      accessToken,
     });
     setAuthSession(next);
     return next;
@@ -2465,11 +2496,7 @@ function App() {
         "Не удалось определить канонический идентификатор пользователя для ключа устройства.",
       );
     const normalized = session.userId ? session : { ...session, userId };
-    if (!session.userId)
-      await callTauri<void>("store_auth_session", {
-        backendUrl: settings.backendUrl,
-        session: normalized,
-      });
+
     setDeviceTrustStatus("проверяется");
     const reconciled = await reconcileStagedReplacement(normalized);
     if (reconciled) return verifyDesktopDeviceKey(normalized, reconciled);
@@ -2568,9 +2595,10 @@ function App() {
           backendUrl: settings.backendUrl,
           userId: authSession.userId,
         }).catch(() => undefined);
-      await callTauri<void>("delete_auth_session", {
+      await callTauri<void>("desktop_delete_session", {
         backendUrl: settings.backendUrl,
-      }).catch(() => undefined);
+        expectedSessionId: authSession.sessionId,
+      }).catch(error => log(`Не удалось удалить сессию из хранилища: ${browserErrorRu(error)}`));
       setAuthSession(null);
       setDeviceKey(null);
       setManagedDevices([]);
@@ -2606,10 +2634,9 @@ function App() {
   }
 
   const [skif4erBusy, setSkif4erBusy] = useState(false);
-  const skif4erPending = useRef(false);
   async function loginSkif4er() {
-    if (skif4erPending.current || authSession) return;
-    skif4erPending.current = true;
+    if (authSession || !beginAuthOperation()) return;
+    setAuthRetry(false);
     setSkif4erBusy(true);
     setAuthProviderError0293("");
     setStage("session");
@@ -2617,6 +2644,7 @@ function App() {
       const next = await callTauri<AuthSession>("skif4er_login", { backendUrl: settings.backendUrl });
       setAuthSession(next);
       setPassword("");
+      setSkif4erBusy(false);
       if (recoveryLogin0435) {
         setDeviceTrustStatus("восстановление · ожидает новый ключ");
         await loadManagedDevices(next);
@@ -2627,43 +2655,20 @@ function App() {
     } catch (error) {
       setAuthProviderError0293(browserErrorRu(error));
     } finally {
-      skif4erPending.current = false;
+      endAuthOperation();
       setSkif4erBusy(false);
     }
   }
 
   async function loginDesktop() {
+    if (authSession || !beginAuthOperation()) return;
+    setAuthRetry(false);
+    try {
     setStage("session");
-    const response = await fetch(endpoint("/api/v1/auth/login"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        password,
-        deviceId: "desktop-client",
-        ...(selectedAuthProvider0293
-          ? { providerId: selectedAuthProvider0293 }
-          : {}),
-      }),
+    const next = await callTauri<AuthSession>("desktop_password_login", {
+      backendUrl: settings.backendUrl, email, password, providerId: selectedAuthProvider0293 || null,
     });
-    if (!response.ok)
-      throw new Error(`${httpStatusRu(response)}`);
-    const payload = await response.json();
-    const next: AuthSession = {
-      accessToken: payload.data.tokens.accessToken,
-      refreshToken: payload.data.tokens.refreshToken,
-      sessionId: payload.data.session.id,
-      email,
-      userId:
-        payload.data.user?.id ||
-        payload.data.session?.userId ||
-        accessTokenSubject(payload.data.tokens.accessToken),
-    };
-    if (!next.userId) throw new Error("Сервер не вернул канонический идентификатор пользователя.");
-    await callTauri<void>("store_auth_session", {
-      backendUrl: settings.backendUrl,
-      session: next,
-    });
+    setPassword("");
     setAuthSession(next);
     log(
       `Вход выполнен. Серверная сессия ${next.sessionId} сохранена в системном хранилище учётных данных; токен обновления не записывается в конфигурацию или локальное хранилище браузера.`,
@@ -2683,6 +2688,7 @@ function App() {
       setDeviceTrustStatus("ошибка");
       log(`Доверие к устройству не активировано: ${browserErrorRu(error)}`);
     }
+    } finally { endAuthOperation(); }
   }
 
   async function linkPasswordProvider0293(): Promise<void> {
@@ -2730,102 +2736,49 @@ function App() {
     );
   }
 
-  async function rotateDesktopSession(
-    session: AuthSession,
-  ): Promise<AuthSession> {
-    if (!session.refreshToken)
-      throw new Error("нет токена обновления сессии: выполните вход заново");
-    const userId = session.userId || accessTokenSubject(session.accessToken);
-    const body: Record<string, unknown> = {
-      refreshToken: session.refreshToken,
-    };
-    const tokenDeviceId = accessTokenDeviceId(session.accessToken);
-    if (userId && tokenDeviceId) {
-      const key = await callTauri<DeviceKeyInfo | null>("device_key_status", {
-        backendUrl: settings.backendUrl,
-        userId,
-      });
-      if (!key?.deviceId || key.deviceId !== tokenDeviceId) {
-        throw new Error(
-          "сеанс привязан к доверенному устройству, но соответствующий ключ устройства отсутствует в защищённом хранилище ОС",
-        );
-      }
-      const proof = await callTauri<DeviceSignatureResult>(
-        "sign_session_refresh",
-        {
-          backendUrl: settings.backendUrl,
-          userId,
-          sessionId: session.sessionId,
-          deviceId: tokenDeviceId,
-          bindingEpoch: accessTokenBindingEpoch(session.accessToken),
-          refreshToken: session.refreshToken,
-        },
-      );
-      if (proof.fingerprint !== key.fingerprint)
-        throw new Error("Подтверждение обновления токена подписано другим ключом устройства");
-      body.deviceId = tokenDeviceId;
-      body.deviceSignature = proof.signature;
-      setDeviceKey(key);
-    }
-    const response = await fetch(endpoint("/api/v1/auth/refresh"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const errorPayload = await response.json().catch(() => null);
-      const message =
-        errorPayload?.error?.message ||
-        `${httpStatusRu(response)}`;
-      throw new Error(message);
-    }
-    const payload = await response.json();
-    const next: AuthSession = {
-      ...session,
-      accessToken: payload.data.tokens.accessToken,
-      refreshToken: payload.data.tokens.refreshToken,
-      sessionId: payload.data.session.id,
-      userId: userId || accessTokenSubject(payload.data.tokens.accessToken),
-    };
-    await callTauri<void>("store_auth_session", {
-      backendUrl: settings.backendUrl,
-      session: next,
-    });
-    setAuthSession(next);
-    return next;
-  }
-
-  async function refreshDesktopSession() {
-    if (!authSession)
-      throw new Error("нет сохранённой сессии: выполните вход заново");
-    await rotateDesktopSession(authSession);
-    log(
-      "Сессия обновлена: токен обновления заменён сервером и атомарно заменён в системном хранилище учётных данных.",
-    );
-  }
-
-  async function logoutDesktop() {
-    if (authSession?.accessToken) {
-      await fetch(endpoint("/api/v1/auth/logout"), {
-        method: "POST",
-        headers: { Authorization: `Bearer ${authSession.accessToken}` },
-      }).catch(() => undefined);
-    }
-    await callTauri<void>("delete_auth_session", {
-      backendUrl: settings.backendUrl,
-    });
+  function clearDesktopSession() {
     setAuthSession(null);
     officialMinecraftClient.current?.clear();
     officialMinecraftClient.current = null;
     setOfficialProfile(null);
     setMinecraftIdentity("local");
     setManagedDevices([]);
-    setDeviceTrustStatus(
-      deviceKey ? "ключ сохранён локально" : "не инициализирован",
-    );
-    log(
-      "Сессия отозвана на сервере и удалена из системного хранилища учётных данных. Ключ устройства сохранён в защищённом хранилище ОС для следующего входа.",
-    );
+    setDeviceKey(null);
+    setDeviceTrustStatus("не инициализирован");
+  }
+
+  async function refreshDesktopSession() {
+    if (!authSession || !beginAuthOperation()) return;
+    try {
+      const next = await callTauri<AuthSession | null>("desktop_restore_session", {
+        backendUrl: settings.backendUrl, expectedSessionId: authSession.sessionId, forceRefresh: true,
+      });
+      if (!next) { clearDesktopSession(); setAuthProviderError0293("Сессия завершена. Войдите заново."); return; }
+      setAuthSession(next);
+      setAuthProviderError0293("");
+      log("Сессия обновлена в защищённом хранилище ОС.");
+    } catch (error) {
+      clearDesktopSession();
+      setAuthRetry(true);
+      setAuthProviderError0293(browserErrorRu(error));
+    } finally { endAuthOperation(); }
+  }
+
+  async function logoutDesktop() {
+    if (!beginAuthOperation()) return;
+    setAuthRetry(false);
+    try {
+      const confirmed = await callTauri<boolean>("desktop_logout_session", {
+        backendUrl: settings.backendUrl, expectedSessionId: authSession?.sessionId ?? null,
+      });
+      clearDesktopSession();
+      setPassword("");
+      setAuthProviderError0293(confirmed ? "" : "Локальный выход выполнен. Серверный отзыв не подтверждён.");
+      log(confirmed ? "Сессия отозвана на сервере и удалена из хранилища ОС." : "Локальный выход выполнен; серверный отзыв не подтверждён.");
+    } catch (error) {
+      clearDesktopSession();
+      setAuthProviderError0293(`Выход не подтверждён: ${browserErrorRu(error)}. Повторите выход для удаления сохранённой сессии.`);
+    } finally { endAuthOperation(); }
   }
 
   async function checkBackend() {
@@ -2868,70 +2821,37 @@ function App() {
     }
   }
 
-  async function restoreSession() {
-    setStage("session");
+  async function restoreSession(periodic = false) {
+    if (!beginAuthOperation()) return;
+    if (!periodic) setStage("session");
     try {
-      const stored = await callTauri<AuthSession | null>("load_auth_session", {
-        backendUrl: settings.backendUrl,
+      const next = await callTauri<AuthSession | null>("desktop_restore_session", {
+        backendUrl: settings.backendUrl, expectedSessionId: periodic ? authSession?.sessionId ?? null : null, forceRefresh: false,
       });
-      if (!stored) {
-        setAuthSession(null);
-        log(
-          "Сохранённая сессия в системном хранилище учётных данных отсутствует.",
-        );
+      setAuthRetry(false);
+      if (!next) {
+        clearDesktopSession();
+        if (authSession) setAuthProviderError0293("Сессия завершена. Войдите заново.");
         return;
       }
-      try {
-        const payload = await fetchBackendJson(
-          "/api/v1/auth/accounts",
-          stored.accessToken,
-        );
-        const normalized = {
-          ...stored,
-          userId: stored.userId || accessTokenSubject(stored.accessToken),
-        };
-        setAuthSession(normalized);
-        if (normalized.userId)
-          await callTauri<void>("store_auth_session", {
-            backendUrl: settings.backendUrl,
-            session: normalized,
-          });
-        log(
-          `Сессия восстановлена из системного хранилища учётных данных. Учётных записей: ${Array.isArray(payload?.data?.items) ? payload.data.items.length : "неизвестно"}.`,
-        );
-        if (normalized.userId) {
-          try {
-            const trusted = await ensureDesktopDeviceTrust(normalized);
-            await loadManagedDevices(trusted);
-          } catch (error) {
-            setDeviceTrustStatus("ошибка");
-            log(
-              `Доверие к устройству не подтверждено при восстановлении: ${browserErrorRu(error)}`,
-            );
-          }
-        }
-      } catch {
-        const rotated = await rotateDesktopSession({
-          ...stored,
-          userId: stored.userId || accessTokenSubject(stored.accessToken),
-        });
-        log(
-          "Срок действия токена доступа истёк; сессия восстановлена через ротацию токена обновления из системного хранилища учётных данных.",
-        );
-        if (rotated.userId) {
-          try {
-            const trusted = await ensureDesktopDeviceTrust(rotated);
-            await loadManagedDevices(trusted);
-          } catch (error) {
-            setDeviceTrustStatus("ошибка");
-            log(`Доверие к устройству не подтверждено после обновления: ${browserErrorRu(error)}`);
-          }
+      setAuthSession(next);
+      setAuthProviderError0293("");
+      if (!periodic) {
+        log("Сессия проверена Backend и восстановлена из защищённого хранилища ОС.");
+        try {
+          const trusted = await ensureDesktopDeviceTrust(next);
+          await loadManagedDevices(trusted);
+        } catch (error) {
+          setDeviceTrustStatus("ошибка");
+          log(`Доверие к устройству не подтверждено: ${browserErrorRu(error)}`);
         }
       }
     } catch (error) {
-      setAuthSession(null);
+      clearDesktopSession();
+      setAuthRetry(true);
+      setAuthProviderError0293(browserErrorRu(error));
       log(`Сессию восстановить не удалось: ${browserErrorRu(error)}`);
-    }
+    } finally { endAuthOperation(); }
   }
 
   async function loadProjects(): Promise<string> {
@@ -5296,6 +5216,8 @@ function App() {
                 loginDesktop={loginDesktop}
                 loginSkif4er={loginSkif4er}
                 skif4erBusy={skif4erBusy}
+                authBusy={authBusy}
+                cancelSkif4er={() => callTauri<void>("skif4er_cancel_login").catch(error => setAuthProviderError0293(browserErrorRu(error)))}
                 refreshDesktopSession={refreshDesktopSession}
                 logoutDesktop={logoutDesktop}
                 restoreSession={restoreSession}
@@ -6056,6 +5978,8 @@ function AuthPanel({
   loginDesktop,
   loginSkif4er,
   skif4erBusy,
+  authBusy,
+  cancelSkif4er,
   refreshDesktopSession,
   logoutDesktop,
   restoreSession,
@@ -6157,12 +6081,13 @@ function AuthPanel({
       <div className="toolbar inline">
         <button onClick={checkBackend}>Проверить Backend</button>
         {authProviders0293.some((item: AuthProvider0293) => item.id === "skif4er-id" && item.capabilities.includes("browser-auth")) && (
-          <button disabled={skif4erBusy || !!session || !authProviders0293.some((item: AuthProvider0293) => item.id === "skif4er-id" && item.healthy)} onClick={loginSkif4er}>
+          <button disabled={authBusy || !!session || !authProviders0293.some((item: AuthProvider0293) => item.id === "skif4er-id" && item.healthy)} onClick={loginSkif4er}>
             {skif4erBusy ? "Ожидание браузера SkiF4er ID…" : "Войти через SkiF4er ID"}
           </button>
         )}
+        {skif4erBusy && <button onClick={cancelSkif4er}>Отменить вход</button>}
         <button
-          disabled={skif4erBusy}
+          disabled={authBusy || !!session}
           onClick={() =>
             loginDesktop().catch((error: Error) => {
               setAuthProviderError0293(browserErrorRu(error));
@@ -6173,6 +6098,7 @@ function AuthPanel({
           Войти
         </button>
         <button
+          disabled={authBusy || !session}
           onClick={() =>
             refreshDesktopSession().catch((error: Error) =>
               console.error(error),
@@ -6182,13 +6108,14 @@ function AuthPanel({
           Обновить сессию
         </button>
         <button
+          disabled={authBusy}
           onClick={() =>
             logoutDesktop().catch((error: Error) => console.error(error))
           }
         >
           Выйти
         </button>
-        <button onClick={restoreSession}>
+        <button disabled={authBusy} onClick={() => restoreSession()}>
           Проверить восстановление сессии
         </button>
         <button
@@ -6327,7 +6254,7 @@ function AuthPanel({
                   userId: session.userId,
                   sessionId: session.sessionId,
                   status: "активна",
-                  refreshToken: "скрыт",
+                  refreshToken: "хранилище ОС (Rust)",
                 }
               : null,
             deviceTrust: deviceTrustStatus,

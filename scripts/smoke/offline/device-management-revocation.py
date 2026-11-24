@@ -67,7 +67,7 @@ need('apps/desktop/src/main.tsx', [
     'revokeManagedDevice',
     'revokeOtherManagedDevices',
     'callTauri<void>("delete_device_key"',
-    'callTauri<void>("delete_auth_session"',
+    'callTauri<void>("desktop_delete_session"',
     '/auth/devices/revoke-others',
     '/revoke`,\n      authSession.accessToken',
     'revoke необратим для старого ключа',

@@ -5,6 +5,19 @@ use serde_json::json;
 use reqwest::{Client, Url};
 use std::time::Duration;
 use tokio::{net::TcpListener, sync::watch};
+use super::desktop_auth::{self, SessionView, lock_session};
+use std::sync::Mutex;
+
+static LOGIN_CANCEL: Mutex<Option<watch::Sender<bool>>> = Mutex::new(None);
+struct LoginAttempt;
+impl Drop for LoginAttempt { fn drop(&mut self) { if let Ok(mut pending) = LOGIN_CANCEL.lock() { *pending = None; } } }
+
+#[tauri::command]
+pub fn skif4er_cancel_login() -> Result<(), String> {
+    let pending = LOGIN_CANCEL.lock().map_err(|_| "Ошибка состояния входа")?;
+    if let Some(tx) = pending.as_ref() { let _ = tx.send(true); }
+    Ok(())
+}
 
 const REDIRECT: &str = "http://127.0.0.1:8765/callback";
 const AUTH_PATH: &str = "/realms/skif4er/protocol/openid-connect/auth";
@@ -23,7 +36,7 @@ struct Session { id: String }
 #[serde(rename_all = "camelCase")]
 struct Tokens { access_token: String, refresh_token: String }
 
-fn backend(raw: &str) -> Result<Url, String> {
+pub(super) fn backend(raw: &str) -> Result<Url, String> {
     let url = Url::parse(raw.trim()).map_err(|_| "Некорректный URL Backend")?;
     if (url.scheme() != "https" && !(url.scheme() == "http" && matches!(url.host_str(), Some("127.0.0.1" | "localhost")))) || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() || url.query().is_some() || url.fragment().is_some() || url.path() != "/" {
         return Err("Для SkiF4er ID необходим HTTPS Backend (HTTP только для локальной разработки)".into());
@@ -38,14 +51,24 @@ fn authorization_url(raw: &str, state: &str) -> Result<Url, String> {
     }
     let pairs: Vec<_> = url.query_pairs().collect();
     let exact = |key: &str, value: &str| pairs.iter().filter(|(k, _)| k == key).count() == 1 && pairs.iter().any(|(k,v)| k == key && v == value);
-    if state.len() < 32 || !exact("state", state) || !exact("redirect_uri", REDIRECT) || !exact("response_type", "code") || !exact("code_challenge_method", "S256") {
+    let single = |key: &str, min: usize| pairs.iter().filter(|(k, _)| k == key).count() == 1 && pairs.iter().any(|(k,v)| k == key && v.len() >= min);
+    if !single("client_id", 1) || !single("nonce", 32) || !single("code_challenge", 43) || state.len() < 32 || !exact("state", state) || !exact("redirect_uri", REDIRECT) || !exact("response_type", "code") || !exact("code_challenge_method", "S256") {
         return Err("Некорректные параметры SkiF4er ID".into());
     }
     Ok(url)
 }
 
 #[tauri::command]
-pub async fn skif4er_login(backend_url: String) -> Result<SecureAuthSession, String> {
+pub(super) async fn skif4er_login(backend_url: String) -> Result<SessionView, String> {
+    let (tx_cancel, rx) = watch::channel(false);
+    {
+        let mut pending = LOGIN_CANCEL.lock().map_err(|_| "Ошибка состояния входа")?;
+        if pending.is_some() { return Err("Вход уже выполняется".into()); }
+        *pending = Some(tx_cancel);
+    }
+    let _attempt = LoginAttempt;
+    let _lock = lock_session().await?;
+    if *rx.borrow() { return Err("Вход отменён".into()); }
     let base = backend(&backend_url)?;
     // Fixed port is part of the registered redirect. Binding also prevents concurrent attempts.
     let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 8765)).await.map_err(|_| "Порт 8765 занят; завершите предыдущий вход")?;
@@ -54,17 +77,28 @@ pub async fn skif4er_login(backend_url: String) -> Result<SecureAuthSession, Str
     if !begin.status().is_success() { return Err(format!("SkiF4er ID недоступен (HTTP {})", begin.status().as_u16())); }
     let tx = begin.json::<Envelope<Begin>>().await.map_err(|_| "Некорректный ответ Backend")?.data;
     let url = authorization_url(&tx.authorization_url, &tx.state)?;
+    if *rx.borrow() { return Err("Вход отменён".into()); }
     super::open_external_https_0356(url.to_string()).await?;
-    let (_cancel, rx) = watch::channel(false);
-    let code = official_browser_0263::receive_callback_for(listener, &tx.state, rx, "127.0.0.1", "/callback").await?;
+    let code = official_browser_0263::receive_callback_for(listener, &tx.state, rx.clone(), "127.0.0.1", "/callback").await?;
+    if *rx.borrow() { return Err("Вход отменён".into()); }
     let result = client.post(base.join("/api/v1/auth/oidc/skif4er-id/complete").map_err(|_| "Некорректный Backend")?).json(&json!({"code":code.as_str(),"state":tx.state,"transaction":tx.transaction,"deviceId":"desktop-client"})).send().await.map_err(|_| "Не удалось завершить вход")?;
     if result.status().as_u16() == 202 { return Err("Требуется дополнительная локальная проверка MFA; сессия не создана".into()); }
     if !result.status().is_success() { return Err(format!("Авторизация отклонена (HTTP {})", result.status().as_u16())); }
     let data = result.json::<Envelope<Complete>>().await.map_err(|_| "Некорректная сессия Backend")?.data;
     if data.status != "authenticated" || data.provider != "skif4er-id" || data.user.id.is_empty() || data.session.id.is_empty() || data.tokens.access_token.is_empty() || data.tokens.refresh_token.is_empty() { return Err("Backend не подтвердил сессию SkiF4er ID".into()); }
     let session = SecureAuthSession { access_token:data.tokens.access_token, refresh_token:data.tokens.refresh_token, session_id:data.session.id, email:data.user.email, user_id:data.user.id, expires_at:None };
-    super::store_auth_session(backend_url, session.clone()).await?;
-    Ok(session)
+    // Once code exchange starts, finish it and revoke if cancellation arrived.
+    if *rx.borrow() {
+        let _ = client.post(base.join("/api/v1/auth/logout").map_err(|_| "Некорректный Backend")?).bearer_auth(&session.access_token).send().await;
+        return Err("Вход отменён".into());
+    }
+    let result = desktop_auth::persist_login(backend_url.clone(), session.clone()).await?;
+    if *rx.borrow() {
+        super::delete_auth_session(backend_url).await?;
+        let _ = client.post(base.join("/api/v1/auth/logout").map_err(|_| "Некорректный Backend")?).bearer_auth(&session.access_token).send().await;
+        return Err("Вход отменён".into());
+    }
+    Ok(result)
 }
 
 #[tauri::command]
@@ -134,7 +168,7 @@ mod tests {
     use super::*;
     #[test] fn validates_origin_and_callback() {
         let state = "abcdefghijklmnopqrstuvwxyz1234567890";
-        let url = format!("https://id.skif4er.ru{AUTH_PATH}?state={state}&redirect_uri=http%3A%2F%2F127.0.0.1%3A8765%2Fcallback&response_type=code&code_challenge_method=S256");
+        let url = format!("https://id.skif4er.ru{AUTH_PATH}?state={state}&redirect_uri=http%3A%2F%2F127.0.0.1%3A8765%2Fcallback&response_type=code&code_challenge_method=S256&client_id=desktop&nonce=abcdefghijklmnopqrstuvwxyz1234567890&code_challenge=abcdefghijklmnopqrstuvwxyz1234567890ABCDEFG");
         assert!(authorization_url(&url,state).is_ok());
         assert!(authorization_url(&url.replace("id.skif4er.ru", "evil.test"),state).is_err());
         assert!(authorization_url(&format!("{url}&state={state}"),state).is_err());
