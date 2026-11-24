@@ -27,6 +27,7 @@ jobs:
           cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci
       - run: npm run test:diagnostics-support
+      - run: npm run test:ai-diagnostics
       - run: npm run test:sentry
       - run: npm run build
   operator-admin:

@@ -1,9 +1,11 @@
+import AIDiagnostics from './AIDiagnostics';
+import type {LocalSnapshot} from './ai_diagnostics';
 import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {Channel, invoke, isTauri} from '@tauri-apps/api/core';
 import {byteLength, buildPrompt, ChatError, emptyHistory, fetchUsage, historyKey, loadHistory, MAX_DIALOGS, MAX_QUESTION_BYTES, MAX_TURNS, newId, saveHistory, streamChat, nativeStream, nativeUsage, type NativeBridge, type NativePacket, type ChatErrorCode, type History, type ProjectContext, type Turn, type Usage} from './ai_chat';
 import type {Locale0357} from './desktop_accessibility';
 
-type Props = {backendUrl: string; userId: string; sessionId: string; token: string; projectId: string; profileId: string; context: ProjectContext | null; locale: Locale0357};
+type Props = {backendUrl: string; userId: string; sessionId: string; token: string; projectId: string; profileId: string; context: ProjectContext | null; locale: Locale0357; diagnostics: LocalSnapshot; initialDiagnosticQuestion?: string; onConsumeDiagnosticQuestion?: () => void};
 const messages: Record<ChatErrorCode, [string, string]> = {
   invalid: ['Некорректный запрос или адрес Backend (требуется HTTPS).', 'Invalid request or Backend address (HTTPS required).'],
   unauthorized: ['Сессия недействительна. Войдите заново.', 'Session invalid. Sign in again.'],
@@ -48,8 +50,8 @@ export default function AIChatWorkspace(props: Props) {
   });
   const [history, setHistory] = useState(initial.history);
   const historyRef = useRef(initial.history);
-  const [active, setActive] = useState(initial.history.dialogs[0]?.id ?? '');
-  const [question, setQuestion] = useState('');
+  const [active, setActive] = useState(props.initialDiagnosticQuestion ? '' : initial.history.dialogs[0]?.id ?? '');
+  const [question, setQuestion] = useState(props.initialDiagnosticQuestion ?? '');
   const [attach, setAttach] = useState(false);
   const [consent, setConsent] = useState(false);
   const [storageError, setStorageError] = useState<ChatErrorCode | null>(initial.error);
@@ -103,7 +105,7 @@ export default function AIChatWorkspace(props: Props) {
       }
     };
   }, []);
-  useEffect(() => {void refreshUsage();}, []);
+  useEffect(() => {if(props.initialDiagnosticQuestion) props.onConsumeDiagnosticQuestion?.(); void refreshUsage();}, []);
   useEffect(() => {
     if (followRef.current && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [live, history, active]);
@@ -169,6 +171,9 @@ export default function AIChatWorkspace(props: Props) {
   return <section className="panel aiChat122" aria-label={tr('AI-чат','AI chat')}>
     <header className="aiChatHeader122"><div><h2>{tr('AI-чат','AI chat')}</h2><p>{tr('Помощник по текущему Minecraft-проекту','Assistant for the current Minecraft project')}</p></div><button disabled={usageBusy || busy} onClick={() => void refreshUsage()}>{tr('Обновить бюджет','Refresh budget')}</button></header>
     <p>{tr('Сообщения и включённый контекст отправляются в OpenAI через Backend. Не отправляйте пароли, ключи, персональные данные и приватные логи. Ответы AI могут содержать ошибки.', 'Messages and enabled context are sent to OpenAI via the Backend. Do not send passwords, keys, personal data or private logs. AI answers may be incorrect.')}</p>
+    <details className="aiDiagnosticsContainer123"><summary>{tr('Анализ ошибок и журналов','Analyze errors and logs')}</summary>
+      <AIDiagnostics snapshot={props.diagnostics} locale={locale} disabled={busy} hasDraft={!!question.trim()} onDraft={text=>{if(pending.current||question.trim())return;setActive('');setQuestion(text);setConsent(false);setAttach(false);setError(null);}}/>
+    </details>
     {usage && <div className="aiUsage122" role="status"><strong>{usage.model}</strong><span>{tr('Бюджет','Budget')} ({usage.month} UTC): {usd(usage.usage.chargedMicroUsd)} / {usd(usage.budgetMicroUsd)}</span><span>{tr('Запросы','Requests')}: {usage.usage.requests} · {tr('Неопределённые','Uncertain')}: {usage.usage.uncertainRequests}</span></div>}
     {usageBusy && <p role="status">{tr('Проверка доступа и бюджета…','Checking access and budget…')}</p>}
     {usageError && <p role="alert">{messages[usageError][en ? 1 : 0]}</p>}

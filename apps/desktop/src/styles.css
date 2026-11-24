@@ -1329,3 +1329,15 @@ button {
 .aiComposer122 input[type=checkbox] { width: auto; }
 .aiComposer122 pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
 @media (max-width: 1100px) { .aiLayout122 { grid-template-columns: 1fr; } .aiHistory122 { max-height: 220px; } }
+
+/* AI Diagnostics 1.2.3: local results and review before transfer. */
+.aiDiagnostics123 { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.aiDiagnostics123 h3, .aiDiagnostics123 p { margin: 0; }
+.aiDiagnostics123 pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; }
+.aiDiagnostics123 input[type=file] { max-width: 100%; }
+.aiDiagnostics123 input[type=checkbox] { width: auto; }
+.aiDiagnosticSource123 { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.aiDiagnosticFindings123 { margin: 0; padding-inline-start: 20px; }
+.aiDiagnosticFindings123 li { margin-bottom: 10px; overflow-wrap: anywhere; }
+.aiDiagnosticsContainer123 { border: 1px solid rgba(148,163,184,.3); border-radius: 8px; padding: 12px; }
+.aiDiagnosticsContainer123[open] > summary { margin-bottom: 12px; }

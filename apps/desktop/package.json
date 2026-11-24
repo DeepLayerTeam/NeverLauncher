@@ -1,6 +1,6 @@
 {
   "name": "launcher-desktop",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -23,7 +23,8 @@
     "test:diagnostics-support": "tsc --ignoreConfig src/diagnostics_support.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/diagnostics_support.test.mjs",
     "test:workspace": "tsc --ignoreConfig src/desktop_navigation.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/desktop_navigation.test.mjs tests/desktop_workspace.test.mjs",
     "test:native-update": "tsc --ignoreConfig src/native_update_experience.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/native_update_experience.test.mjs",
-    "test:ai-chat": "tsc --ignoreConfig src/ai_chat.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/ai_chat.test.mjs"
+    "test:ai-chat": "tsc --ignoreConfig src/ai_chat.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/ai_chat.test.mjs",
+    "test:ai-diagnostics": "tsc --ignoreConfig src/ai_diagnostics.ts src/ai_chat.ts --module es2020 --moduleResolution bundler --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/ai_diagnostics.test.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.5.0",

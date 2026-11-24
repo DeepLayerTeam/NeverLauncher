@@ -28,6 +28,7 @@ jobs:
           cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci --ignore-scripts
       - run: npm run test:ai-chat
+      - run: npm run test:ai-diagnostics
       - run: npm run test:accessibility
       - run: npm run build
   native:

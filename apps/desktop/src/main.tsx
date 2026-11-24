@@ -1,3 +1,4 @@
+import AIDiagnostics from "./AIDiagnostics";
 import AIChatWorkspace from "./AIChatWorkspace";
 import { projectContext } from "./ai_chat";
 import NativeUpdaterPanel from "./NativeUpdaterPanel";
@@ -1188,6 +1189,9 @@ function App() {
   const [password, setPassword] = useState("");
   const [scopedSession, setScopedSession] = useState<{ backend: string; session: AuthSession } | null>(null);
   const authSession = scopedSession?.backend === settings.backendUrl ? scopedSession.session : null;
+  const diagnosticScope123=JSON.stringify([settings.backendUrl,authSession?.userId,authSession?.sessionId,selectedProject,selectedProfile,settings.channel,settings.gameDirectory]);
+  const [diagnosticDraft123,setDiagnosticDraft123]=useState<{scope:string; text:string}|null>(null);
+  useEffect(()=>{setDiagnosticDraft123(old=>old?.scope===diagnosticScope123?old:null);},[diagnosticScope123]);
   function setAuthSession(session: AuthSession | null) {
     const backend = settings.backendUrl;
     setScopedSession(current => session ? { backend, session } : current?.backend === backend ? null : current);
@@ -5675,7 +5679,7 @@ function App() {
             {screen === "aiChat" && (
               authSession?.accessToken && authSession.userId && authSession.sessionId ? (
                 <AIChatWorkspace
-                  key={JSON.stringify([settings.backendUrl, authSession.userId, authSession.sessionId, selectedProject, selectedProfile])}
+                  key={diagnosticScope123}
                   backendUrl={settings.backendUrl}
                   userId={authSession.userId}
                   sessionId={authSession.sessionId}
@@ -5685,12 +5689,17 @@ function App() {
                   context={projectContext(selectedProject, selectedProfile, settings.channel,
                     manifestState?.backend === settings.backendUrl && manifestState.userId === authSession.userId && manifestState.publicKey === settings.pinnedPublicKey ? manifest : null)}
                   locale={ui0357.locale}
+                  diagnostics={{stage,logs,java:javaInfo,download,transfer:downloadProgress,launch:launchResult,files}}
+                  initialDiagnosticQuestion={diagnosticDraft123?.scope===diagnosticScope123?diagnosticDraft123.text:undefined}
+                  onConsumeDiagnosticQuestion={()=>setDiagnosticDraft123(null)}
                 />
               ) : (
                 <section className="panel"><h2>AI</h2><p>{ui0357.locale === "en" ? "Sign in to use AI chat." : "Войдите в аккаунт для использования AI-чата."}</p><button onClick={() => setScreen("auth")}>{translate0357.signIn}</button></section>
               )
             )}
             {screen === "diagnostics" && (
+              <>
+              <section className="panel"><AIDiagnostics key={diagnosticScope123} snapshot={{stage,logs,java:javaInfo,download,transfer:downloadProgress,launch:launchResult,files}} locale={ui0357.locale} onDraft={authSession?.accessToken&&authSession.userId&&authSession.sessionId?text=>{setDiagnosticDraft123({scope:diagnosticScope123,text});setScreen("aiChat");}:undefined}/></section>
               <DiagnosticsPanel
                 previewDiagnostics={previewDiagnostics03510}
                 exportDiagnostics={exportDiagnostics03510}
@@ -5702,6 +5711,7 @@ function App() {
                 status={diagnosticStatus03510}
                 signedIn={!!authSession?.accessToken}
               />
+              </>
             )}
           </React.Suspense>
         </section>

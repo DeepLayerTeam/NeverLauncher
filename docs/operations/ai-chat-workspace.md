@@ -29,3 +29,7 @@ npm run build
 ```
 
 The client tests exercise the actual HTTP client against a loopback fixture (test adapter only, no paid requests), the same SSE parser fed by the native IPC protocol, fragmented UTF-8, cancellation before and after dispatch, terminal event handling, role/budget failures, prompt bounds, and history isolation/recovery. The CI matrix also builds the frontend and runs Rust tests for native job reservation and cancellation. For live acceptance, configure the Backend with a restricted key and low budget, build/run Tauri, sign in as an allowed user, send a question with and without project context, follow up in the same conversation, stop mid-stream, restart Desktop, change project/profile and sign in as another user. Verify usage, history isolation, explicit deletion, revoked/denied roles and exhausted budgets. Repeat on each supported WebView platform. Live provider and native acceptance are separate from the automated fixture tests.
+
+## AI Diagnostics (1.2.3)
+
+Локальный анализ ошибок и подготовка обезличенного запроса доступны из раздела диагностики и из AI-чата. См. [инструкцию](ai-diagnostics.md).

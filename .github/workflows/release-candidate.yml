@@ -133,6 +133,7 @@ jobs:
           npm run test:offline
           npm run test:update-migration
           npm run test:diagnostics-support
+          npm run test:ai-diagnostics
           npm run test:accessibility
       - name: "Сборка и модульное тестирование нативного Tauri с текущим Runtime"
         run: |
