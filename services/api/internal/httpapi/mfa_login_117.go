@@ -40,9 +40,11 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 	// не создаёт привилегированную authStrength Launcher.
 	methods := mergeAuthMethods117(authconnector.SafeUpstreamAuthMethods(baseMethods))
 	strength := authMethodStrength117(methods)
-	policy := s.State.Passkeys.policy(user.ID)
+	policy, totpEnabled, err := s.loginMFAPolicy104(user.ID)
+	if err != nil {
+		return loginMFAResult117{}, err
+	}
 	passkeys := s.State.Passkeys.countByUser(user.ID)
-	totpEnabled := s.State.Security.totpEnabled(user.ID)
 	suppliedSecondFactor := strings.TrimSpace(totp) != "" || strings.TrimSpace(recovery) != ""
 
 	// PHISHING_RESISTANT специально контролируется локальной политикой. Заявление

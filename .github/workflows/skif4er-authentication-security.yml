@@ -1,0 +1,24 @@
+name: SkiF4er ID authentication security
+on:
+  pull_request:
+    paths: ['services/api/**', 'apps/desktop/**', 'schemas/**', 'VERSION', '.github/workflows/skif4er-authentication-security.yml']
+  push:
+    paths: ['services/api/**', 'apps/desktop/**', 'schemas/**', 'VERSION', '.github/workflows/skif4er-authentication-security.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - run: go test -race ./internal/httpapi -run 'TestSkif4erMFA104|TestBrowserReplayAcrossAPIReplicas0525|TestOIDC|TestProviderRuntimeParity0296' -count=1
+      - run: go test ./internal/oidcconnector ./internal/federation ./internal/repository

@@ -46,6 +46,7 @@ type oidcTransaction115 struct {
 }
 
 func (s Server) authOIDCBegin115(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	var req oidcBeginRequest115
 	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
@@ -59,6 +60,8 @@ func (s Server) authOIDCBegin115(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authOIDCStart115(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Referrer-Policy", "no-referrer")
 	provider := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	redirectURI := strings.TrimSpace(r.URL.Query().Get("redirectUri"))
 	if redirectURI == "" {
@@ -74,6 +77,7 @@ func (s Server) authOIDCStart115(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authOIDCComplete115(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	var req oidcCompleteRequest115
 	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
@@ -91,7 +95,20 @@ func (s Server) authOIDCComplete115(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authOIDCCallback115(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	query, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil || len(query["state"]) != 1 || len(query["code"]) > 1 || len(query["error"]) > 1 || len(query["iss"]) > 1 || (len(query["code"]) > 0 && len(query["error"]) > 0) {
+		s.audit(r, "unknown", "auth:oidc:callback-rejected", "ambiguous-query")
+		writeError(w, http.StatusUnauthorized, "Некорректные параметры callback")
+		return
+	}
 	provider := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
+	if provider == "skif4er-id" && len(query["iss"]) == 1 && query.Get("iss") != "https://id.skif4er.ru/realms/skif4er" {
+		s.audit(r, "unknown", "auth:oidc:callback-rejected", "issuer-mismatch")
+		writeError(w, http.StatusUnauthorized, "Некорректный issuer callback")
+		return
+	}
 	cookie, err := r.Cookie(oidcCookieName115(provider))
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "Отсутствует файл cookie транзакции OIDC")
@@ -156,6 +173,7 @@ func (s Server) beginOIDC115(r *http.Request, providerID, redirectURI, deviceID 
 func (s Server) completeOIDC115(w http.ResponseWriter, r *http.Request, tx oidcTransaction115, code, state, totp, recovery string) {
 	provider := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
 	if provider == "" || provider != tx.ProviderID || tx.LinkUserID != "" || state == "" || state != tx.State || strings.TrimSpace(code) == "" {
+		s.audit(r, "unknown", "auth:oidc:callback-rejected", "context-mismatch")
 		writeError(w, http.StatusUnauthorized, "Ответ авторизации OIDC недействителен")
 		return
 	}
@@ -178,15 +196,42 @@ func (s Server) completeOIDC115(w http.ResponseWriter, r *http.Request, tx oidcT
 }
 
 func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, result federation.Result, deviceID, totp, recoveryCode, rateKey string) {
-	user := result.User
+	user, err := s.Repo.GetUser(result.User.ID)
+	if err != nil || user.Status != "active" {
+		writeError(w, http.StatusUnauthorized, "Учётная запись недоступна")
+		return
+	}
+	result.User = user
 	if !s.enforceProtection0298(w, r, protection.BeforeAuth, user.ID, "", deviceID, user.RoleID) {
 		return
 	}
+	if result.Provider.ID == "skif4er-id" && strings.TrimSpace(totp) == "" && strings.TrimSpace(recoveryCode) == "" {
+		policy, enabled, err := s.loginMFAPolicy104(user.ID)
+		if err != nil {
+			writeError(w, http.StatusServiceUnavailable, "Политика MFA недоступна")
+			return
+		}
+		if enabled && policy != mfaPhishingResistant117 {
+			s.startOIDCMFA104(w, r, result, deviceID)
+			return
+		}
+	}
 	mfa, mfaErr := s.evaluateLoginMFA117(user, result.AuthMethods, totp, recoveryCode)
+	if mfaErr == nil && result.Provider.ID == "skif4er-id" && !mfa.NeedPasskey {
+		if (strings.TrimSpace(totp) != "" || strings.TrimSpace(recoveryCode) != "") && authStrengthLevel117(mfa.Strength) < authStrengthLevel117("mfa") {
+			mfaErr = errors.New("MFA policy changed")
+		}
+		for _, method := range mfa.Methods {
+			if method == "totp" {
+				mfaErr = s.claimTOTP104(r, user.ID, totp)
+				break
+			}
+		}
+	}
 	if mfaErr != nil {
 		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
 		_ = s.flushPersistenceState950("auth-mfa-failed")
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-mfa-failed-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:mfa:failed", Target: mfaErr.Error(), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		s.audit(r, user.ID, "auth:mfa:failed", result.Provider.ID)
 		writeError(w, http.StatusUnauthorized, "требуется действительный настроенный метод MFA")
 		return
 	}

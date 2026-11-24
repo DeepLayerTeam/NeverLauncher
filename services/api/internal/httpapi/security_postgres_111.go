@@ -249,6 +249,23 @@ func stringsToUpperReplaceUnderscore111(value string) string {
 	return strings.ToUpper(value)
 }
 
+func (p *securityPostgres111) totpEnabledChecked104(userID string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	var status, cipher string
+	err := p.db.QueryRowContext(ctx, `SELECT status,active_secret_ciphertext FROM mfa_methods WHERE user_id=$1 AND method_type='totp'`, userID).Scan(&status, &cipher)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if status == "enabled" && decryptString950(p.secret, cipher) == "" {
+		return false, errors.New("MFA secret unavailable")
+	}
+	return status == "enabled", nil
+}
+
 func (p *securityPostgres111) totpEnabled(userID string) bool {
 	rec, err := p.loadMFA(userID)
 	return err == nil && rec.Enabled

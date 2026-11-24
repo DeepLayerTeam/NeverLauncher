@@ -90,10 +90,12 @@ pub fn parse_callback_for(request: &str, port: u16, state: &str, host: &str, pat
     if url.path() != path || url.fragment().is_some() { return Callback::Irrelevant; }
     let mut values = std::collections::HashMap::<String,String>::new();
     for (k,v) in url.query_pairs() {
-        if !matches!(k.as_ref(),"state"|"code"|"error"|"error_description"|"session_state") { continue; }
+        if !matches!(k.as_ref(),"state"|"code"|"error"|"error_description"|"session_state"|"iss") { continue; }
         if values.insert(k.into_owned(),v.into_owned()).is_some() { return Callback::Reject; }
     }
     if !values.get("state").is_some_and(|value| equals_secret(state,value)) { return Callback::Reject; }
+    // RFC 9207 issuer, when supplied by Keycloak, must match the dedicated realm.
+    if host == "127.0.0.1" && path == "/callback" && values.get("iss").is_some_and(|issuer| issuer != "https://id.skif4er.ru/realms/skif4er") { return Callback::Reject; }
     if values.contains_key("error") { return Callback::Declined; }
     let Some(code) = values.remove("code") else { return Callback::Reject };
     if code.is_empty() || code.len() > 4096 || code.bytes().any(|c| !(0x21..=0x7e).contains(&c)) { return Callback::Reject; }

@@ -202,6 +202,7 @@ func (s Server) authPasskeyLoginComplete117(w http.ResponseWriter, r *http.Reque
 }
 
 func (s Server) authPasskeyMFALoginComplete117(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	var req webauthnAssertionComplete117
 	if err := decodeJSONLimited117(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "некорректный WebAuthn JSON")
@@ -209,16 +210,18 @@ func (s Server) authPasskeyMFALoginComplete117(w http.ResponseWriter, r *http.Re
 	}
 	tx, err := s.State.Passkeys.consumeChallenge(req.TransactionToken, "passkey-mfa-login")
 	if err != nil {
+		s.audit(r, "unknown", "auth:passkey:mfa-rejected", "invalid-or-used-challenge")
 		writeError(w, http.StatusUnauthorized, "Транзакция многофакторной аутентификации недействительна или истекла")
 		return
 	}
 	credential, result, err := s.verifyPasskeyAssertion117(req.Credential, tx.Challenge, tx.UserID)
 	if err != nil {
+		s.audit(r, tx.UserID, "auth:passkey:mfa-rejected", "assertion-invalid")
 		writeError(w, http.StatusUnauthorized, "Проверка MFA с ключом доступа завершилась ошибкой")
 		return
 	}
 	user, err := s.Repo.GetUser(tx.UserID)
-	if err != nil || user.Status == "disabled" || credential.UserID != user.ID {
+	if err != nil || user.Status != "active" || credential.UserID != user.ID {
 		writeError(w, http.StatusUnauthorized, "пользователь недоступен")
 		return
 	}
@@ -229,7 +232,11 @@ func (s Server) authPasskeyMFALoginComplete117(w http.ResponseWriter, r *http.Re
 	methods := metadataStrings117(tx.Metadata, "authMethods")
 	provider := metadataString117(tx.Metadata, "provider")
 	identityID := metadataString117(tx.Metadata, "identityId")
-	device := firstNonEmpty(req.DeviceID, metadataString117(tx.Metadata, "deviceId"), "desktop-client")
+	device := firstNonEmpty(metadataString117(tx.Metadata, "deviceId"), "desktop-client")
+	if req.DeviceID != "" && req.DeviceID != device {
+		writeError(w, http.StatusUnauthorized, "Контекст MFA изменился")
+		return
+	}
 	s.issuePasskeyLogin117(w, r, user, device, provider, identityID, methods, metadataString117(tx.Metadata, "sealedProviderCredential"))
 }
 
@@ -452,7 +459,7 @@ func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, use
 	}
 	s.State.Security.recordLoginSuccess("passkey:"+user.ID, clientIP(r))
 	s.audit(r, user.Email, "auth:passkey:login", session.ID)
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "authenticated", "authMethods": methods, "authStrength": "phishing-resistant", "user": sanitizeUserAccount(user), "session": sanitizeSessionRecord(session), "tokens": map[string]any{"accessToken": access, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refresh, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "authenticated", "provider": firstNonEmpty(provider, "passkey"), "authMethods": methods, "authStrength": "phishing-resistant", "user": sanitizeUserAccount(user), "session": sanitizeSessionRecord(session), "tokens": map[string]any{"accessToken": access, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refresh, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true}}})
 }
 
 func (s Server) startPasskeyMFAContinuation117(user model.User, provider, identityID, deviceID string, methods []string, providerToken ...string) (map[string]any, error) {

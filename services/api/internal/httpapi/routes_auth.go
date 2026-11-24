@@ -12,6 +12,7 @@ func (s Server) registerAuthRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/passkeys/mfa/complete", s.authPasskeyMFALoginComplete117)
 	mux.HandleFunc("POST /api/v1/auth/oidc/{providerId}/begin", s.authOIDCBegin115)
 	mux.HandleFunc("POST /api/v1/auth/oidc/{providerId}/complete", s.authOIDCComplete115)
+	mux.HandleFunc("POST /api/v1/auth/oidc/{providerId}/mfa/complete", s.authOIDCMFAComplete104)
 	mux.HandleFunc("GET /api/v1/auth/oidc/{providerId}/start", s.authOIDCStart115)
 	mux.HandleFunc("GET /api/v1/auth/oidc/{providerId}/callback", s.authOIDCCallback115)
 	mux.HandleFunc("POST /api/v1/auth/microsoft/{providerId}/link/begin", s.authMicrosoftLinkBegin116)

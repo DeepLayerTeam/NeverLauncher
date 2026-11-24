@@ -684,7 +684,7 @@ func verifyTOTPCode902(secret, code string, now time.Time) bool {
 		return false
 	}
 	for offset := -1; offset <= 1; offset++ {
-		if currentTOTPCode902(secret, now.Add(time.Duration(offset*totpStepSeconds)*time.Second)) == code {
+		if hmac.Equal([]byte(currentTOTPCode902(secret, now.Add(time.Duration(offset*totpStepSeconds)*time.Second))), []byte(code)) {
 			return true
 		}
 	}
@@ -694,8 +694,8 @@ func verifyTOTPCode902(secret, code string, now time.Time) bool {
 func currentTOTPCode902(secret string, now time.Time) string {
 	secret = strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(secret), " ", ""))
 	key, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(secret)
-	if err != nil {
-		return "000000"
+	if err != nil || len(key) == 0 {
+		return ""
 	}
 	counter := uint64(now.Unix() / totpStepSeconds)
 	buf := make([]byte, 8)

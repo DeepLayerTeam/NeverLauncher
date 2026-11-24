@@ -3,7 +3,7 @@
   "info": {
     "title": "Launcher API",
     "version": "1.0.0",
-    "description": "Канонический production API Launcher 1.0.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API Launcher 1.0.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -11741,6 +11741,44 @@
               }
             }
           },
+          "202": {
+            "description": "Локальная MFA обязательна; access и refresh токены ещё не выдаются.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "method",
+                        "transactionToken",
+                        "expiresInSeconds"
+                      ],
+                      "properties": {
+                        "status": {
+                          "const": "mfa-required"
+                        },
+                        "method": {
+                          "enum": [
+                            "totp-or-recovery",
+                            "passkey"
+                          ]
+                        },
+                        "transactionToken": {
+                          "type": "string"
+                        },
+                        "expiresInSeconds": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/BadRequest"
           }
@@ -11763,6 +11801,53 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/OIDCCompleteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/oidc/{providerId}/mfa/complete": {
+      "post": {
+        "operationId": "post_auth_oidc_by_providerId_mfa_complete",
+        "tags": [
+          "auth"
+        ],
+        "summary": "POST /api/v1/auth/oidc/{providerId}/mfa/complete",
+        "responses": {
+          "200": {
+            "description": "Успешно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "providerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OIDCMFACompleteRequest104"
               }
             }
           }
@@ -22970,6 +23055,38 @@
             "type": "string"
           }
         }
+      },
+      "OIDCMFACompleteRequest104": {
+        "type": "object",
+        "required": [
+          "transactionToken"
+        ],
+        "properties": {
+          "transactionToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "totp": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          },
+          "recoveryCode": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "totp"
+            ]
+          },
+          {
+            "required": [
+              "recoveryCode"
+            ]
+          }
+        ]
       },
       "BootstrapAdminRequest": {
         "type": "object",

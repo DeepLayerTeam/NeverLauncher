@@ -4,13 +4,74 @@ use serde::Deserialize;
 use serde_json::json;
 use reqwest::{Client, Url};
 use std::time::Duration;
-use tokio::{net::TcpListener, sync::watch};
+use tokio::{net::TcpListener, sync::{watch, oneshot}};
+use tauri::Emitter;
+use zeroize::Zeroizing;
 use super::desktop_auth::{self, SessionView, lock_session};
 use std::sync::Mutex;
 
 static LOGIN_CANCEL: Mutex<Option<watch::Sender<bool>>> = Mutex::new(None);
+enum MfaInput { Code(Zeroizing<String>, bool), Passkey(serde_json::Value) }
+struct PendingMfa { sender: oneshot::Sender<MfaInput>, passkey: bool }
+static MFA_INPUT: Mutex<Option<PendingMfa>> = Mutex::new(None);
+fn submit_mfa(input: MfaInput, passkey: bool) -> Result<(), String> {
+    let mut pending = MFA_INPUT.lock().map_err(|_| "Ошибка состояния MFA")?;
+    if pending.as_ref().map(|p| p.passkey) != Some(passkey) { return Err("Нет ожидающего MFA challenge данного типа".into()); }
+    let sender = pending.take().ok_or("Нет ожидающего MFA challenge")?.sender;
+    sender.send(input).map_err(|_| "Срок действия MFA истёк".into())
+}
 struct LoginAttempt;
-impl Drop for LoginAttempt { fn drop(&mut self) { if let Ok(mut pending) = LOGIN_CANCEL.lock() { *pending = None; } } }
+impl Drop for LoginAttempt {
+    fn drop(&mut self) {
+        if let Ok(mut input) = MFA_INPUT.lock() { *input = None; }
+        if let Ok(mut pending) = LOGIN_CANCEL.lock() { *pending = None; }
+    }
+}
+
+#[tauri::command]
+pub fn skif4er_submit_mfa(code: String, recovery: bool) -> Result<(), String> {
+    let code = Zeroizing::new(code);
+    if code.trim().is_empty() || code.len() > 256 || (!recovery && (code.len() != 6 || !code.bytes().all(|b| b.is_ascii_digit()))) {
+        return Err("Некорректный формат второго фактора".into());
+    }
+    submit_mfa(MfaInput::Code(code, recovery), false)
+}
+
+#[tauri::command]
+pub fn skif4er_submit_passkey(credential: serde_json::Value) -> Result<(), String> {
+    if !credential.is_object() || credential["type"] != "public-key" || credential.to_string().len() > 128 * 1024 { return Err("Некорректное подтверждение WebAuthn".into()); }
+    submit_mfa(MfaInput::Passkey(credential), true)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MfaChallenge { status: String, method: String, transaction_token: String, expires_in_seconds: u64, #[serde(default)] public_key: serde_json::Value }
+
+async fn complete_mfa(app: &tauri::AppHandle, client: &Client, base: &Url, response: reqwest::Response, mut cancel: watch::Receiver<bool>) -> Result<reqwest::Response, String> {
+    let challenge = response.json::<Envelope<MfaChallenge>>().await.map_err(|_| "Некорректный ответ MFA")?.data;
+    let passkey = challenge.method == "passkey";
+    if challenge.status != "mfa-required" || (!passkey && challenge.method != "totp-or-recovery") || (passkey && !challenge.public_key["challenge"].is_string()) {
+        return Err("Backend вернул неподдерживаемый метод MFA".into());
+    }
+    if challenge.transaction_token.is_empty() || challenge.expires_in_seconds == 0 || *cancel.borrow() { return Err("MFA challenge недействителен или отменён".into()); }
+    let token = Zeroizing::new(challenge.transaction_token);
+    let (tx, rx) = oneshot::channel();
+    *MFA_INPUT.lock().map_err(|_| "Ошибка состояния MFA")? = Some(PendingMfa { sender: tx, passkey });
+    // The transaction token remains native; only WebAuthn public options reach the renderer.
+    app.emit("skif4er-mfa-required", json!({"method":challenge.method,"publicKey":challenge.public_key})).map_err(|_| "Не удалось открыть форму MFA")?;
+    let input = tokio::select! {
+        biased;
+        _ = cancel.changed() => return Err("Вход отменён".into()),
+        input = tokio::time::timeout(Duration::from_secs(challenge.expires_in_seconds.min(300)), rx) => input.map_err(|_| "Срок действия MFA истёк")?.map_err(|_| "MFA отменена")?,
+    };
+    if *cancel.borrow() { return Err("Вход отменён".into()); }
+    let (path, body) = match input {
+        MfaInput::Code(code, recovery) if !passkey => ("/api/v1/auth/oidc/skif4er-id/mfa/complete", if recovery { json!({"transactionToken":token.as_str(),"recoveryCode":code.trim()}) } else { json!({"transactionToken":token.as_str(),"totp":code.trim()}) }),
+        MfaInput::Passkey(credential) if passkey => ("/api/v1/auth/passkeys/mfa/complete", json!({"transactionToken":token.as_str(),"credential":credential})),
+        _ => return Err("Тип MFA challenge изменился".into()),
+    };
+    client.post(base.join(path).map_err(|_| "Некорректный Backend")?).json(&body).send().await.map_err(|_| "Ответ MFA не получен; начните новый вход".into())
+}
 
 #[tauri::command]
 pub fn skif4er_cancel_login() -> Result<(), String> {
@@ -59,7 +120,7 @@ fn authorization_url(raw: &str, state: &str) -> Result<Url, String> {
 }
 
 #[tauri::command]
-pub(super) async fn skif4er_login(backend_url: String) -> Result<SessionView, String> {
+pub(super) async fn skif4er_login(app: tauri::AppHandle, backend_url: String) -> Result<SessionView, String> {
     let (tx_cancel, rx) = watch::channel(false);
     {
         let mut pending = LOGIN_CANCEL.lock().map_err(|_| "Ошибка состояния входа")?;
@@ -81,8 +142,9 @@ pub(super) async fn skif4er_login(backend_url: String) -> Result<SessionView, St
     super::open_external_https_0356(url.to_string()).await?;
     let code = official_browser_0263::receive_callback_for(listener, &tx.state, rx.clone(), "127.0.0.1", "/callback").await?;
     if *rx.borrow() { return Err("Вход отменён".into()); }
-    let result = client.post(base.join("/api/v1/auth/oidc/skif4er-id/complete").map_err(|_| "Некорректный Backend")?).json(&json!({"code":code.as_str(),"state":tx.state,"transaction":tx.transaction,"deviceId":"desktop-client"})).send().await.map_err(|_| "Не удалось завершить вход")?;
-    if result.status().as_u16() == 202 { return Err("Требуется дополнительная локальная проверка MFA; сессия не создана".into()); }
+    let mut result = client.post(base.join("/api/v1/auth/oidc/skif4er-id/complete").map_err(|_| "Некорректный Backend")?).json(&json!({"code":code.as_str(),"state":tx.state,"transaction":tx.transaction,"deviceId":"desktop-client"})).send().await.map_err(|_| "Не удалось завершить вход")?;
+    if result.status().as_u16() == 202 { result = complete_mfa(&app, &client, &base, result, rx.clone()).await?; }
+    if result.status().as_u16() == 202 { return Err("Политика MFA изменилась; начните новый вход".into()); }
     if !result.status().is_success() { return Err(format!("Авторизация отклонена (HTTP {})", result.status().as_u16())); }
     let data = result.json::<Envelope<Complete>>().await.map_err(|_| "Некорректная сессия Backend")?.data;
     if data.status != "authenticated" || data.provider != "skif4er-id" || data.user.id.is_empty() || data.session.id.is_empty() || data.tokens.access_token.is_empty() || data.tokens.refresh_token.is_empty() { return Err("Backend не подтвердил сессию SkiF4er ID".into()); }
@@ -166,6 +228,15 @@ pub async fn skif4er_unlink(backend_url: String, expected_session_id: String, id
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn mfa_accepts_only_one_expected_submission() {
+        let (tx, mut rx) = oneshot::channel();
+        *MFA_INPUT.lock().unwrap() = Some(PendingMfa { sender: tx, passkey: false });
+        assert!(skif4er_submit_passkey(json!({"type":"public-key"})).is_err());
+        assert!(skif4er_submit_mfa("bad".into(), false).is_err());
+        assert!(skif4er_submit_mfa("123456".into(), false).is_ok());
+        assert!(skif4er_submit_mfa("123456".into(), false).is_err());
+        assert!(matches!(rx.try_recv().unwrap(), MfaInput::Code(code, false) if code.as_str()=="123456"));
+    }
     #[test] fn validates_origin_and_callback() {
         let state = "abcdefghijklmnopqrstuvwxyz1234567890";
         let url = format!("https://id.skif4er.ru{AUTH_PATH}?state={state}&redirect_uri=http%3A%2F%2F127.0.0.1%3A8765%2Fcallback&response_type=code&code_challenge_method=S256&client_id=desktop&nonce=abcdefghijklmnopqrstuvwxyz1234567890&code_challenge=abcdefghijklmnopqrstuvwxyz1234567890ABCDEFG");
@@ -176,5 +247,9 @@ mod tests {
         assert!(backend("https://example.com").is_ok());
         let request = format!("GET /callback?state={state}&code=abc HTTP/1.1\r\nHost: 127.0.0.1:8765\r\n\r\n");
         assert_eq!(official_browser_0263::parse_callback_for(&request,8765,state,"127.0.0.1","/callback"), official_browser_0263::Callback::Code("abc".into()));
+        let wrong_issuer = request.replace("&code=abc", "&code=abc&iss=https%3A%2F%2Fevil.test");
+        assert_eq!(official_browser_0263::parse_callback_for(&wrong_issuer,8765,state,"127.0.0.1","/callback"), official_browser_0263::Callback::Reject);
+        let duplicate = request.replace("&code=abc", "&code=abc&iss=x&iss=y");
+        assert_eq!(official_browser_0263::parse_callback_for(&duplicate,8765,state,"127.0.0.1","/callback"), official_browser_0263::Callback::Reject);
     }
 }

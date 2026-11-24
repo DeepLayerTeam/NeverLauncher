@@ -2634,13 +2634,41 @@ function App() {
   }
 
   const [skif4erBusy, setSkif4erBusy] = useState(false);
+  const [skif4erMfa, setSkif4erMfa] = useState(false);
+  const [skif4erPasskeyOptions, setSkif4erPasskeyOptions] = useState<any>(null);
+  const skif4erPasskeyAbort = useRef<AbortController | null>(null);
+  const [skif4erMfaCode, setSkif4erMfaCode] = useState("");
+  const [skif4erRecovery, setSkif4erRecovery] = useState(false);
+  const [skif4erMfaSending, setSkif4erMfaSending] = useState(false);
+  async function submitSkif4erMfa() {
+    if (!skif4erMfa || skif4erMfaSending) return;
+    setSkif4erMfaSending(true);
+    try {
+      if (skif4erPasskeyOptions) {
+        if (!navigator.credentials?.get) throw new Error("WebAuthn недоступен в этом WebView. Требуется поддерживаемая платформа и настроенный RP ID.");
+        const abort = new AbortController();
+        skif4erPasskeyAbort.current = abort;
+        const credential = await navigator.credentials.get({publicKey: decodeWebAuthnRequestOptions(skif4erPasskeyOptions), signal: abort.signal}) as PublicKeyCredential | null;
+        if (!credential || abort.signal.aborted) throw new Error("Подтверждение ключом доступа отменено.");
+        const assertion = credential.response as AuthenticatorAssertionResponse;
+        await callTauri<void>("skif4er_submit_passkey", {credential: {id:credential.id, rawId:bytesToBase64Url(credential.rawId), type:credential.type, response:{clientDataJSON:bytesToBase64Url(assertion.clientDataJSON), authenticatorData:bytesToBase64Url(assertion.authenticatorData), signature:bytesToBase64Url(assertion.signature), userHandle: assertion.userHandle ? bytesToBase64Url(assertion.userHandle) : undefined}}});
+      } else {
+        await callTauri<void>("skif4er_submit_mfa", {code: skif4erMfaCode.trim(), recovery: skif4erRecovery});
+      }
+      setSkif4erMfaCode("");
+      setSkif4erMfa(false);
+    } catch (error) { setAuthProviderError0293(browserErrorRu(error)); }
+    finally { skif4erPasskeyAbort.current = null; setSkif4erMfaSending(false); }
+  }
   async function loginSkif4er() {
     if (authSession || !beginAuthOperation()) return;
     setAuthRetry(false);
     setSkif4erBusy(true);
     setAuthProviderError0293("");
     setStage("session");
+    let unlistenMfa: (() => void) | undefined;
     try {
+      unlistenMfa = await listen<{method: string; publicKey?: any}>("skif4er-mfa-required", ({payload}) => { setSkif4erPasskeyOptions(payload.method === "passkey" ? payload.publicKey : null); setSkif4erMfa(true); setSkif4erMfaCode(""); setSkif4erRecovery(false); });
       const next = await callTauri<AuthSession>("skif4er_login", { backendUrl: settings.backendUrl });
       setAuthSession(next);
       setPassword("");
@@ -2655,18 +2683,25 @@ function App() {
     } catch (error) {
       setAuthProviderError0293(browserErrorRu(error));
     } finally {
+      unlistenMfa?.();
+      skif4erPasskeyAbort.current?.abort();
+      setSkif4erPasskeyOptions(null);
+      setSkif4erMfa(false);
+      setSkif4erMfaCode("");
+      setSkif4erRecovery(false);
+      setSkif4erMfaSending(false);
       endAuthOperation();
       setSkif4erBusy(false);
     }
   }
 
-  async function loginDesktop() {
+  async function loginDesktop(totp?: string, recoveryCode?: string) {
     if (authSession || !beginAuthOperation()) return;
     setAuthRetry(false);
     try {
     setStage("session");
     const next = await callTauri<AuthSession>("desktop_password_login", {
-      backendUrl: settings.backendUrl, email, password, providerId: selectedAuthProvider0293 || null,
+      backendUrl: settings.backendUrl, email, password, providerId: selectedAuthProvider0293 || null, totp: totp || null, recoveryCode: recoveryCode || null,
     });
     setPassword("");
     setAuthSession(next);
@@ -5216,8 +5251,16 @@ function App() {
                 loginDesktop={loginDesktop}
                 loginSkif4er={loginSkif4er}
                 skif4erBusy={skif4erBusy}
+                skif4erMfa={skif4erMfa}
+                skif4erPasskeyOptions={skif4erPasskeyOptions}
+                skif4erMfaCode={skif4erMfaCode}
+                setSkif4erMfaCode={setSkif4erMfaCode}
+                skif4erRecovery={skif4erRecovery}
+                setSkif4erRecovery={setSkif4erRecovery}
+                skif4erMfaSending={skif4erMfaSending}
+                submitSkif4erMfa={submitSkif4erMfa}
                 authBusy={authBusy}
-                cancelSkif4er={() => callTauri<void>("skif4er_cancel_login").catch(error => setAuthProviderError0293(browserErrorRu(error)))}
+                cancelSkif4er={() => { skif4erPasskeyAbort.current?.abort(); return callTauri<void>("skif4er_cancel_login").catch(error => setAuthProviderError0293(browserErrorRu(error))); }}
                 refreshDesktopSession={refreshDesktopSession}
                 logoutDesktop={logoutDesktop}
                 restoreSession={restoreSession}
@@ -5978,6 +6021,14 @@ function AuthPanel({
   loginDesktop,
   loginSkif4er,
   skif4erBusy,
+  skif4erMfa,
+  skif4erPasskeyOptions,
+  skif4erMfaCode,
+  setSkif4erMfaCode,
+  skif4erRecovery,
+  setSkif4erRecovery,
+  skif4erMfaSending,
+  submitSkif4erMfa,
   authBusy,
   cancelSkif4er,
   refreshDesktopSession,
@@ -6006,6 +6057,8 @@ function AuthPanel({
   setLinkFeedback0293,
   linkPasswordProvider0293,
 }: any) {
+  const [localMfaCode, setLocalMfaCode] = useState("");
+  const [localMfaRecovery, setLocalMfaRecovery] = useState(false);
   return (
     <section className="panel">
       <h3>Вход, сеанс и управление устройствами</h3>
@@ -6078,6 +6131,10 @@ function AuthPanel({
         />
         Войти для восстановления отозванного устройства (не привязывать текущую сессию автоматически)
       </label>
+      {!session && !skif4erBusy && <div>
+        <label><input type="checkbox" checked={localMfaRecovery} disabled={authBusy} onChange={event => {setLocalMfaRecovery(event.target.checked); setLocalMfaCode("");}} /> Для входа с паролем использовать код восстановления</label>
+        <label>{localMfaRecovery ? "Код восстановления" : "TOTP (если включён)"}<input type="password" autoComplete="one-time-code" inputMode={localMfaRecovery ? "text" : "numeric"} maxLength={localMfaRecovery ? 256 : 6} disabled={authBusy} value={localMfaCode} onChange={event => setLocalMfaCode(event.target.value)} /></label>
+      </div>}
       <div className="toolbar inline">
         <button onClick={checkBackend}>Проверить Backend</button>
         {authProviders0293.some((item: AuthProvider0293) => item.id === "skif4er-id" && item.capabilities.includes("browser-auth")) && (
@@ -6086,14 +6143,24 @@ function AuthPanel({
           </button>
         )}
         {skif4erBusy && <button onClick={cancelSkif4er}>Отменить вход</button>}
+        {skif4erBusy && skif4erMfa && <form onSubmit={event => { event.preventDefault(); void submitSkif4erMfa(); }}>
+          <p role="status">SkiF4er ID подтверждён. Введите второй фактор NeverLauncher. При ошибке потребуется начать вход заново.</p>
+          {skif4erPasskeyOptions ? <p>Подтвердите зарегистрированный локальный ключ доступа WebAuthn.</p> : <>
+          <label><input type="checkbox" checked={skif4erRecovery} disabled={skif4erMfaSending} onChange={event => {setSkif4erRecovery(event.target.checked); setSkif4erMfaCode("");}} /> Использовать код восстановления</label>
+          <label>{skif4erRecovery ? "Код восстановления" : "Шестизначный TOTP"}
+            <input type="password" autoComplete="one-time-code" inputMode={skif4erRecovery ? "text" : "numeric"} maxLength={skif4erRecovery ? 256 : 6} value={skif4erMfaCode} disabled={skif4erMfaSending} onChange={event => setSkif4erMfaCode(event.target.value)} required />
+          </label></>}
+          <button type="submit" disabled={skif4erMfaSending || (!skif4erPasskeyOptions && !(skif4erRecovery ? skif4erMfaCode.trim() : /^\d{6}$/.test(skif4erMfaCode)))}>{skif4erPasskeyOptions ? "Подтвердить ключ доступа" : "Подтвердить MFA"}</button>
+        </form>}
         <button
           disabled={authBusy || !!session}
-          onClick={() =>
-            loginDesktop().catch((error: Error) => {
+          onClick={() => {
+            const code = localMfaCode.trim();
+            setLocalMfaCode("");
+            void loginDesktop(localMfaRecovery ? undefined : code, localMfaRecovery ? code : undefined).catch((error: Error) => {
               setAuthProviderError0293(browserErrorRu(error));
-              console.error(error);
-            })
-          }
+            });
+          }}
         >
           Войти
         </button>

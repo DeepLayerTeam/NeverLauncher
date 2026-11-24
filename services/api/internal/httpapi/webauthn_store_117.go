@@ -443,14 +443,28 @@ func (p *passkeyPostgres117) revoke(id, userID string) error {
 	return tx.Commit()
 }
 func (p *passkeyPostgres117) policy(userID string) string {
+	value, err := p.policyChecked104(userID)
+	if err != nil {
+		return mfaPhishingResistant117
+	}
+	return value
+}
+func (p *passkeyPostgres117) policyChecked104(userID string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	var v string
 	err := p.db.QueryRowContext(ctx, `SELECT requirement FROM mfa_policies WHERE user_id=$1`, userID).Scan(&v)
-	if err != nil {
-		return mfaOptional117
+	if errors.Is(err, sql.ErrNoRows) {
+		return mfaOptional117, nil
 	}
-	return normalizeMFARequirement117(v)
+	if err != nil {
+		return "", err
+	}
+	value := normalizeMFARequirement117(v)
+	if value == "" {
+		return "", errors.New("invalid MFA policy")
+	}
+	return value, nil
 }
 func (p *passkeyPostgres117) setPolicy(userID, req string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

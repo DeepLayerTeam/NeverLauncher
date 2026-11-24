@@ -685,6 +685,7 @@ def body_schema(path):
         "/api/v1/auth/refresh": "RefreshRequest",
         "/api/v1/auth/oidc/{providerId}/begin": "OIDCBeginRequest",
         "/api/v1/auth/oidc/{providerId}/complete": "OIDCCompleteRequest",
+        "/api/v1/auth/oidc/{providerId}/mfa/complete": "OIDCMFACompleteRequest104",
         "/api/v1/auth/providers/{providerId}/link/begin": "OIDCBeginRequest",
         "/api/v1/auth/providers/{providerId}/link/complete": "OIDCCompleteRequest",
         "/api/v1/auth/sessions/revoke": "RevokeSessionsRequest",
@@ -1172,6 +1173,11 @@ for method, path in routes:
                     )
                 }
             },
+        }
+    if path == "/api/v1/auth/oidc/{providerId}/complete" and method == "post":
+        op["responses"]["202"] = {
+            "description": "Локальная MFA обязательна; access и refresh токены ещё не выдаются.",
+            "content": {"application/json": {"schema": {"type": "object", "properties": {"data": {"type": "object", "required": ["status", "method", "transactionToken", "expiresInSeconds"], "properties": {"status": {"const": "mfa-required"}, "method": {"enum": ["totp-or-recovery", "passkey"]}, "transactionToken": {"type": "string"}, "expiresInSeconds": {"type": "integer"}}}}}}},
         }
     if path == "/api/v1/minecraft/official/device/poll" and method == "post":
         op["responses"]["202"] = {
@@ -1724,6 +1730,15 @@ schemas = {
             "totp": {"type": "string"},
             "recoveryCode": {"type": "string"},
         },
+    },
+    "OIDCMFACompleteRequest104": {
+        "type": "object", "required": ["transactionToken"],
+        "properties": {
+            "transactionToken": {"type": "string", "minLength": 1},
+            "totp": {"type": "string", "pattern": "^[0-9]{6}$"},
+            "recoveryCode": {"type": "string", "minLength": 1},
+        },
+        "oneOf": [{"required": ["totp"]}, {"required": ["recoveryCode"]}],
     },
     "BootstrapAdminRequest": {
         "type": "object",

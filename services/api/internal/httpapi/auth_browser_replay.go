@@ -49,6 +49,7 @@ func (s Server) claimBrowserTransaction0525(w http.ResponseWriter, r *http.Reque
 		return true
 	}
 	if errors.Is(err, repository.ErrConflict) {
+		s.audit(r, "unknown", "auth:oidc:callback-replay", tx.ProviderID)
 		writeError(w, http.StatusUnauthorized, "Браузерная транзакция уже использована")
 	} else {
 		writeError(w, http.StatusServiceUnavailable, "Хранилище защиты от повторного выполнения браузерной транзакции недоступно")

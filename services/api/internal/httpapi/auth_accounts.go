@@ -72,6 +72,7 @@ func (s Server) authLoginAudit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	var req authLoginRequest
 	if err := authrequest.Decode(r.Body, &req); err != nil {
 		if errors.Is(err, authrequest.ErrTooLarge) {
@@ -181,6 +182,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	var req authRefreshRequest
 	if err := authrequest.Decode(r.Body, &req); err != nil {
 		if errors.Is(err, authrequest.ErrTooLarge) {
@@ -206,6 +208,11 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-reuse-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: "unknown", Action: "auth:refresh:reuse-detected", Target: "refresh-token-family", IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		}
 		writeError(w, http.StatusUnauthorized, "Токен обновления недействителен или отозван")
+		return
+	}
+	if !s.skif4erSessionMFA104(preview) {
+		s.audit(r, preview.UserID, "auth:refresh:mfa-rejected", preview.ID)
+		writeError(w, http.StatusUnauthorized, "Требуется новый вход с действующей политикой MFA")
 		return
 	}
 	if !s.skif4erSessionLinked102(preview) {
@@ -247,7 +254,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, err := s.Repo.GetUser(session.UserID)
-	if err != nil || user.Status != "active" {
+	if err != nil || user.Status != "active" || user.RoleID != session.RoleID {
 		s.State.AuthSessions.revoke(session.ID, "user-inactive-or-missing")
 		writeError(w, http.StatusUnauthorized, "пользователь недоступен")
 		return
@@ -263,7 +270,7 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	// с устаревшими полномочиями устройства. При следующем использовании такой токен
 	// всё равно отклонится; лучше отклонить сам refresh, а не сообщать об успехе.
 	currentBinding, live := s.State.AuthSessions.get(session.ID, session.UserID)
-	if !live || !s.skif4erSessionLinked102(currentBinding) || !sameDeviceBinding0432(currentBinding, session) {
+	if !live || !s.skif4erSessionLinked102(currentBinding) || !s.skif4erSessionMFA104(currentBinding) || !sameDeviceBinding0432(currentBinding, session) {
 		writeError(w, http.StatusUnauthorized, "Привязка устройства изменилась во время обновления")
 		return
 	}
@@ -290,13 +297,21 @@ func (s Server) authRefreshPlan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) authLogout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	claims, err := s.adminClaims(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
 		return
 	}
-	s.State.AuthSessions.revoke(claims.SessionID, "auth-logout")
-	_ = s.flushPersistenceState950("auth-logout")
+	if !s.State.AuthSessions.revoke(claims.SessionID, "auth-logout") {
+		s.audit(r, claims.Sub, "auth:logout:failed", claims.SessionID)
+		writeError(w, http.StatusServiceUnavailable, "Не удалось подтвердить отзыв сессии")
+		return
+	}
+	if err := s.flushPersistenceState950("auth-logout"); err != nil {
+		writeError(w, http.StatusServiceUnavailable, "Не удалось подтвердить сохранение отзыва сессии")
+		return
+	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-logout-" + time.Now().UTC().Format("20060102150405"), Actor: claims.Email, Action: "auth:logout", Target: claims.SessionID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "logged-out", "sessionId": claims.SessionID}})
 }

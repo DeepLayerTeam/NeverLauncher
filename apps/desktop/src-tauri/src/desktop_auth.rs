@@ -102,13 +102,24 @@ async fn rotate(raw: &str, client: &Client, base: &Url, mut session: SecureAuthS
 }
 
 #[tauri::command]
-pub(super) async fn desktop_password_login(backend_url: String, email: String, password: String, provider_id: Option<String>) -> Result<SessionView, String> {
+pub(super) async fn desktop_password_login(backend_url: String, email: String, password: String, provider_id: Option<String>, totp: Option<String>, recovery_code: Option<String>) -> Result<SessionView, String> {
     let _lock = lock_session().await?;
     let base = super::skif4er_login::backend(&backend_url)?;
     let client = client()?;
     let password = zeroize::Zeroizing::new(password);
     let mut body = json!({"email": email, "password": password.as_str(), "deviceId": "desktop-client"});
     if let Some(provider) = provider_id.filter(|s| !s.is_empty()) { body["providerId"] = json!(provider); }
+    let totp = zeroize::Zeroizing::new(totp.unwrap_or_default());
+    let recovery = zeroize::Zeroizing::new(recovery_code.unwrap_or_default());
+    if !totp.is_empty() && !recovery.is_empty() { return Err("Выберите один второй фактор".into()); }
+    if !totp.is_empty() {
+        if totp.len()!=6 || !totp.bytes().all(|b| b.is_ascii_digit()) { return Err("Некорректный TOTP".into()); }
+        body["totp"] = json!(totp.as_str());
+    }
+    if !recovery.is_empty() {
+        if recovery.len()>256 { return Err("Некорректный код восстановления".into()); }
+        body["recoveryCode"] = json!(recovery.as_str());
+    }
     let response = client.post(base.join("/api/v1/auth/login").map_err(|_| "Некорректный Backend")?).json(&body).send().await.map_err(|_| "Backend недоступен")?;
     if response.status() == StatusCode::ACCEPTED { return Err("Требуется дополнительная аутентификация; сессия не создана".into()); }
     if response.status() != StatusCode::OK { return Err(format!("Вход отклонён (HTTP {})", response.status().as_u16())); }
