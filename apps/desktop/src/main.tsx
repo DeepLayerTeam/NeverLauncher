@@ -1,3 +1,4 @@
+import NativeUpdaterPanel from "./NativeUpdaterPanel";
 import Skif4erIdentities from "./Skif4erIdentities";
 import { browserErrorRu, statusRuDesktop, httpStatusRu } from "./status-ru";
 import { serverKindRu } from "./desktop_experience";
@@ -6900,6 +6901,7 @@ function SettingsPanel({
   return (
     <section className="panel">
       <h3>{t.settingsTitle}</h3>
+      <NativeUpdaterPanel />
       <div className="settings">
         <label>
           {t.java}

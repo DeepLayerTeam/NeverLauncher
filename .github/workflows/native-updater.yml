@@ -1,0 +1,44 @@
+name: Native Updater 1.1.1
+on:
+  pull_request:
+    paths: ['apps/desktop/**', 'scripts/release/*native_updater*', 'VERSION', '.github/workflows/native-updater.yml']
+  push:
+    paths: ['apps/desktop/**', 'scripts/release/*native_updater*', 'VERSION', '.github/workflows/native-updater.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  feed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=42,<47'
+      - run: python -m unittest discover -s scripts/release -p test_native_updater_feed.py -v
+      - run: python scripts/version/manage.py check
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libtss2-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev
+      - run: npm ci --ignore-scripts
+        working-directory: apps/desktop
+      - run: npm run build
+        working-directory: apps/desktop
+      - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml native_updater --no-default-features
+      - run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml --features custom-protocol

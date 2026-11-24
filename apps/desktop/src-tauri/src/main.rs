@@ -23,6 +23,7 @@ mod official_identity_0262;
 mod official_browser_0263;
 mod skif4er_login;
 mod desktop_auth;
+mod native_updater;
 #[path = "official_exchange.rs"]
 mod official_exchange_0265;
 #[path = "official_verification.rs"]
@@ -701,6 +702,8 @@ async fn check_files(manifest: Manifest, root: String, preset: Option<String>) -
 }
 #[tauri::command]
 async fn download_missing_files(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<DownloadResult,String> {
+    let _update_guard = native_updater::operation()?;
+
     let mut grants=release_permission_scopes_0393(&root,&pinned_public_key,false).await?;
     grants.insert(0,component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?);
     let result=runtime::component_catalog_0241::with_verified_release_scopes_0393(grants,
@@ -718,6 +721,8 @@ async fn download_missing_files_inner_0392(app: tauri::AppHandle, manifest: Mani
 }
 #[tauri::command]
 async fn repair_client(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<RepairResult,String> {
+    let _update_guard = native_updater::operation()?;
+
     let mut grants=release_permission_scopes_0393(&root,&pinned_public_key,false).await?;
     grants.insert(0,component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?);
     let result=runtime::component_catalog_0241::with_verified_release_scopes_0393(grants,
@@ -747,6 +752,8 @@ async fn control_download_job(root: String, action: String) -> Result<(), String
 }
 #[tauri::command]
 async fn resume_download_job(app: tauri::AppHandle, root: String, pinned_public_key: String) -> Result<DownloadResult, String> {
+    let _update_guard = native_updater::operation()?;
+
     // Пользователь может изменить байты журнала: проверяйте подпись и закреплённый ключ,
     // получайте права на этот точный каталог и перепроверяйте журнал при возобновлении.
     // Подменённый каталог не совпадёт с областью доступа и будет отклонён.
@@ -813,6 +820,8 @@ async fn reconcile_component_preference_0393(root:&str,key:&str)->Result<(),Stri
 }
 #[tauri::command]
 async fn rollback_client_release(root: String, pinned_public_key: String) -> Result<(), String> {
+    let _update_guard = native_updater::operation()?;
+
     let cfg=load_desktop_config().await?;
     if cfg.pinned_public_key!=pinned_public_key || PathBuf::from(&cfg.game_directory).canonicalize().map_err(|e|e.to_string())?!=
         PathBuf::from(&root).canonicalize().map_err(|e|e.to_string())? {
@@ -826,6 +835,8 @@ async fn rollback_client_release(root: String, pinned_public_key: String) -> Res
 }
 #[tauri::command]
 async fn recover_client_release(root: String, pinned_public_key: String) -> Result<(), String> {
+    let _update_guard = native_updater::operation()?;
+
     let grants=release_permission_scopes_0393(&root,&pinned_public_key,false).await?;
     runtime::component_catalog_0241::with_verified_release_scopes_0393(grants,async {
         runtime::transactional_release::recover(&PathBuf::from(&root), &pinned_public_key).await
@@ -833,18 +844,26 @@ async fn recover_client_release(root: String, pinned_public_key: String) -> Resu
     reconcile_component_preference_0393(&root,&pinned_public_key).await
 }
 #[tauri::command]
-async fn clean_unused_files(manifest: Manifest, root: String, pinned_public_key: String) -> Result<CleanUnusedResult, String> { runtime::clean_unused_files(&manifest, &PathBuf::from(root), &pinned_public_key).await }
+async fn clean_unused_files(manifest: Manifest, root: String, pinned_public_key: String) -> Result<CleanUnusedResult, String> {
+    let _update_guard = native_updater::operation()?;
+ runtime::clean_unused_files(&manifest, &PathBuf::from(root), &pinned_public_key).await }
 #[tauri::command]
-async fn prepare_profile_directory(base_dir: String, project_id: String, profile_id: String) -> Result<String, String> { Ok(runtime::prepare_profile_directory(&PathBuf::from(base_dir), &project_id, &profile_id).await?.to_string_lossy().to_string()) }
+async fn prepare_profile_directory(base_dir: String, project_id: String, profile_id: String) -> Result<String, String> {
+    let _update_guard = native_updater::operation()?;
+ Ok(runtime::prepare_profile_directory(&PathBuf::from(base_dir), &project_id, &profile_id).await?.to_string_lossy().to_string()) }
 #[tauri::command]
 async fn check_java(java_path: Option<String>, required_major_version: Option<u32>) -> Result<JavaInfoResult, String> { runtime::check_java(java_path, required_major_version).await }
 #[tauri::command]
 async fn ensure_managed_java(required_major_version: u32, distribution: String) -> Result<ManagedJavaResult, String> {
+    let _update_guard = native_updater::operation()?;
+
     // Явная административная операция в стиле CLI остаётся доступной.
     runtime::ensure_managed_java(required_major_version, &distribution, None).await
 }
 #[tauri::command]
 async fn ensure_profile_managed_java(manifest: Manifest, pinned_public_key: String) -> Result<ManagedJavaResult, String> {
+    let _update_guard = native_updater::operation()?;
+
     runtime::verify_manifest_signature(&manifest, &pinned_public_key)?;
     let java = &manifest.runtime.java;
     if java.major_version == 0 || (java.minimum_major_version > 0 && java.major_version < java.minimum_major_version)
@@ -1460,6 +1479,8 @@ async fn launch_minecraft(
     guard: tauri::State<'_, GuardSupervisor>,
     official_manager: tauri::State<'_, official_identity_0262::IdentityManager>,
 ) -> Result<ProcessStatus, String> {
+    let _update_guard = native_updater::operation()?;
+
     let auth=component_permissions_for_manifest_0392(&request.manifest,&request.pinned_public_key).await?;
     runtime::component_catalog_0241::with_verified_component_scope_0392(auth,
         launch_minecraft_inner_0392(request,supervisor,guard,official_manager)).await
@@ -1617,6 +1638,8 @@ async fn guard_guard_attestation(
     request: GuardAttestationRequest,
     guard: tauri::State<'_, GuardSupervisor>,
 ) -> Result<GuardAttestationSubmission, String> {
+    let _update_guard = native_updater::operation()?;
+
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     {
         let _ = (request, guard);
@@ -1676,6 +1699,8 @@ async fn guard_guard_attestation_v2(
     guard: tauri::State<'_, GuardSupervisor>,
     supervisor: tauri::State<'_, ProcessSupervisor>,
 ) -> Result<GuardAttestationV2Submission, String> {
+    let _update_guard = native_updater::operation()?;
+
     #[cfg(not(windows))]
     {
         let _ = (request, guard, supervisor);
@@ -1765,7 +1790,7 @@ fn create_staged_updater_helper02310(helper: &std::path::Path) -> Result<PathBuf
     for entry in std::fs::read_dir(&helper_stage_root).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         let ty = entry.file_type().map_err(|e| e.to_string())?;
-        if ty.is_dir() {
+        if ty.is_dir() && entry.metadata().ok().and_then(|m| m.modified().ok()).and_then(|t| t.elapsed().ok()).is_some_and(|age| age > Duration::from_secs(7 * 86400)) {
             // Неудачная очистка не должна останавливать текущее обновление (блокировки файлов Windows).
             let _ = std::fs::remove_dir_all(entry.path());
         }
@@ -1774,7 +1799,10 @@ fn create_staged_updater_helper02310(helper: &std::path::Path) -> Result<PathBuf
     let mut nonce = [0u8; 16];
     rand::rngs::OsRng.fill_bytes(&mut nonce);
     let helper_stage_dir = helper_stage_root.join(hex::encode(nonce));
-    std::fs::create_dir(&helper_stage_dir).map_err(|e| format!("Подготовка области обновления: {e}"))?;
+    let mut dir = std::fs::DirBuilder::new();
+    #[cfg(unix)]
+    { use std::os::unix::fs::DirBuilderExt; dir.mode(0o700); }
+    dir.create(&helper_stage_dir).map_err(|e| format!("Подготовка области обновления: {e}"))?;
     let staged_helper = helper_stage_dir.join(launcher_update_helper_name());
     std::fs::copy(helper, &staged_helper).map_err(|e| format!("Копирование вспомогательного файла обновления: {e}"))?;
     let copied = std::fs::metadata(&staged_helper).map_err(|e| e.to_string())?;
@@ -1812,30 +1840,14 @@ fn launcher_update_helper_name() -> &'static str {
     if cfg!(target_os = "windows") { "launcher-cli.exe" } else { "launcher-cli" }
 }
 
-fn validate_update_sha256(value: &str) -> Result<String, String> {
-    let value = value.trim().to_ascii_lowercase();
-    if value.len() != 64 || !value.bytes().all(|b| b.is_ascii_hexdigit()) {
-        return Err("expectedSha256 должен быть SHA-256 в hex (64 символа)".into());
-    }
-    Ok(value)
-}
-
-#[tauri::command]
+// Only the verified native updater can call this scheduler; no raw path/hash IPC.
 async fn install_launcher_update(
-    package_path: String,
-    expected_sha256: String,
+    bytes: Vec<u8>,
+    suffix: &'static str,
     guard: tauri::State<'_, GuardSupervisor>,
     app: tauri::AppHandle,
 ) -> Result<LauncherUpdateScheduleResult, String> {
-    let expected_sha256 = validate_update_sha256(&expected_sha256)?;
-    let package = fs::canonicalize(PathBuf::from(package_path.trim()))
-        .await
-        .map_err(|e| format!("Пакет обновления недоступен: {e}"))?;
-    let package_meta = fs::symlink_metadata(&package).await.map_err(|e| e.to_string())?;
-    if !package_meta.file_type().is_file() || package_meta.file_type().is_symlink() || package_meta.len() == 0 {
-        return Err("Пакет обновления должен быть непустым обычным файлом, а не символической ссылкой".into());
-    }
-
+    let expected_sha256 = hex::encode(Sha256::digest(&bytes));
     let current_exe = std::env::current_exe().map_err(|e| format!("Не удалось определить исполняемый файл Desktop: {e}"))?;
     let current_exe = std::fs::canonicalize(&current_exe).map_err(|e| format!("Не удалось получить канонический путь к исполняемому файлу Desktop: {e}"))?;
     let bin_dir = current_exe.parent().ok_or_else(|| "Не найден родительский каталог исполняемого файла Desktop".to_string())?;
@@ -1852,6 +1864,18 @@ async fn install_launcher_update(
     }
 
     let staged_helper = create_staged_updater_helper02310(&helper)?;
+    let package = staged_helper.parent().ok_or("Нет каталога обновления")?.join(format!("verified-update.{suffix}"));
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    { use std::os::unix::fs::OpenOptionsExt; options.mode(0o600); }
+    {
+        use std::io::Write;
+        let mut file = options.open(&package).map_err(|e| e.to_string())?;
+        file.write_all(&bytes).map_err(|e| e.to_string())?;
+        file.sync_all().map_err(|e| e.to_string())?;
+    }
+    drop(bytes);
     // Guard удерживает дескрипторы и IPC, из-за которых Windows может считать исполняемый файл занятым.
     // Остановите его до того, как внешний помощник начнёт ожидание Desktop и выполнение транзакции.
     guard.shutdown().await.map_err(|e| format!("не удалось остановить Guard перед обновлением: {e}"))?;
@@ -1895,14 +1919,20 @@ async fn install_launcher_update(
 
 #[tauri::command]
 async fn guard_status(guard: tauri::State<'_, GuardSupervisor>) -> Result<GuardStatus, String> {
+    let _update_guard = native_updater::operation()?;
+
     guard.status().await
 }
 #[tauri::command]
 async fn guard_integrity_evidence(guard: tauri::State<'_, GuardSupervisor>) -> Result<GuardIntegrityEvidence, String> {
+    let _update_guard = native_updater::operation()?;
+
     guard.integrity_evidence().await
 }
 #[tauri::command]
 async fn guard_process_policy(guard: tauri::State<'_, GuardSupervisor>) -> Result<GuardProcessPolicyReport, String> {
+    let _update_guard = native_updater::operation()?;
+
     guard.process_policy().await
 }
 #[tauri::command]
@@ -2090,13 +2120,14 @@ fn main() {
         std::process::exit(71);
     }
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(official_identity_0262::IdentityManager::new().expect("Не удалось инициализировать нативный HTTP-клиент официальной авторизации"))
         .manage(discord_presence_0308::DiscordPresence::default())
         .manage(diagnostics_bundle_03510::DiagnosticsSession03510::default())
         .manage(ProcessSupervisor::new())
         .manage(GuardSupervisor::new())
         .setup(|app| { println!("Launcher Desktop {} / среда выполнения", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![skif4er_login::skif4er_login,skif4er_login::skif4er_cancel_login,skif4er_login::skif4er_submit_mfa,skif4er_login::skif4er_submit_passkey,skif4er_login::skif4er_link,skif4er_login::skif4er_identities,skif4er_login::skif4er_unlink,benchmark_ui_ready_03511,preview_release_requirements_0359,preview_player_conflicts_0359,preserve_player_conflicts_0359,player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_prepare_join_0397,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,desktop_auth::desktop_password_login,desktop_auth::desktop_restore_session,desktop_auth::desktop_update_access,desktop_auth::desktop_logout_session,desktop_auth::desktop_delete_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,prepare_offline_launch_0358,verify_manifest_signature,check_files,validate_desktop_settings,diagnostics_bundle_03510::preview_diagnostics_bundle_03510,diagnostics_bundle_03510::export_diagnostics_bundle_03510,open_game_directory,open_external_https_0356,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,guard_status,guard_integrity_evidence,guard_process_policy,guard_guard_attestation,guard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,desktop_native_ui_info_0357,desktop_window_action_0357,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
+        .invoke_handler(tauri::generate_handler![native_updater::native_update_check,native_updater::native_update_install,skif4er_login::skif4er_login,skif4er_login::skif4er_cancel_login,skif4er_login::skif4er_submit_mfa,skif4er_login::skif4er_submit_passkey,skif4er_login::skif4er_link,skif4er_login::skif4er_identities,skif4er_login::skif4er_unlink,benchmark_ui_ready_03511,preview_release_requirements_0359,preview_player_conflicts_0359,preserve_player_conflicts_0359,player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_prepare_join_0397,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,desktop_auth::desktop_password_login,desktop_auth::desktop_restore_session,desktop_auth::desktop_update_access,desktop_auth::desktop_logout_session,desktop_auth::desktop_delete_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,prepare_offline_launch_0358,verify_manifest_signature,check_files,validate_desktop_settings,diagnostics_bundle_03510::preview_diagnostics_bundle_03510,diagnostics_bundle_03510::export_diagnostics_bundle_03510,open_game_directory,open_external_https_0356,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,guard_status,guard_integrity_evidence,guard_process_policy,guard_guard_attestation,guard_guard_attestation_v2,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,desktop_native_ui_info_0357,desktop_window_action_0357,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }
 
