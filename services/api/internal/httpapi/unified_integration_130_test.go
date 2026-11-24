@@ -2,12 +2,14 @@ package httpapi
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -31,18 +33,39 @@ type unifiedAIFixture130 struct {
 // substituted, by trusted Go test code; no environment flag enables a fake provider.
 func newUnifiedAIFixture130(t *testing.T) *unifiedAIFixture130 {
 	t.Helper()
-	r, err := repository.OpenSQLiteHTTPRepository0372(context.Background(), filepath.Join(privateSQLiteTempDir(t), "unified.db"), "https://launcher.example.test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if e := r.Close(); e != nil {
-			t.Error(e)
+	ctx := context.Background()
+	var ledger *aigateway.Ledger
+	if runtime.GOOS == "linux" {
+		r, err := repository.OpenSQLiteHTTPRepository0372(ctx, filepath.Join(privateSQLiteTempDir(t), "unified.db"), "https://launcher.example.test")
+		if err != nil {
+			t.Fatal(err)
 		}
-	})
-	ledger, err := r.AILedger(context.Background())
-	if err != nil {
-		t.Fatal(err)
+		t.Cleanup(func() {
+			if e := r.Close(); e != nil {
+				t.Error(e)
+			}
+		})
+		ledger, err = r.AILedger(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		// Exercise the same SQL accounting on all platforms without claiming
+		// durable filesystem certification outside Linux.
+		db, err := sql.Open("sqlite", ":memory:")
+		if err != nil {
+			t.Fatal(err)
+		}
+		db.SetMaxOpenConns(1)
+		t.Cleanup(func() {
+			if e := db.Close(); e != nil {
+				t.Error(e)
+			}
+		})
+		if err := aigateway.InitSchema(ctx, db); err != nil {
+			t.Fatal(err)
+		}
+		ledger = aigateway.NewSQLLedger(db)
 	}
 	fixture := &unifiedAIFixture130{stalled: make(chan struct{})}
 	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

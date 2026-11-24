@@ -35,7 +35,7 @@ DR = ROOT / 'scripts/operations/dr.py'
 CHAOS = ROOT / 'scripts/operations/chaos.py'
 LIVE = ROOT / 'scripts/operations/operator_accept.py'
 VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
-VERSION_RE = re.compile(r'^0\.\d+\.\d+$')
+VERSION_RE = re.compile(r'^(?:0|[1-9][0-9]*)\.\d+\.\d+$')
 USER_RE = re.compile(r'^[a-z_][a-z0-9_.-]{0,63}$')
 MAX_OUTPUT = 256 * 1024
 

@@ -3,8 +3,8 @@
 Этот проект — настоящий **внешний** потребитель SDK Java. Собирайте его после публикации трёх артефактов SDK в `dist/java-sdk/maven` (см. `scripts/java/developer_e2e.py`).
 
 ```sh
-mvn --batch-mode --no-transfer-progress -f examples/extensions/java-developer-04812/pom.xml package
-gradle -p examples/extensions/java-developer-04812 classes
+mvn --batch-mode --no-transfer-progress -f examples/extensions/java-developer/pom.xml -Dlauncher.sdk.version="$(cat VERSION)" package
+gradle -p examples/extensions/java-developer classes
 python3 scripts/java/developer_e2e.py --sdk-repo dist/java-sdk/maven
 ```
 

@@ -99,7 +99,7 @@ def main() -> None:
     jars = verified_repo(repo)
     with tempfile.TemporaryDirectory(prefix='nl-java-e2e-04812-') as tmp:
         work = Path(tmp)
-        fixture = ROOT / 'examples/extensions/java-developer-04812'
+        fixture = ROOT / 'examples/extensions/java-developer'
         sys.path.insert(0, str(ROOT))
         from scripts.java.build_developer_package import build
         package = work / 'package'

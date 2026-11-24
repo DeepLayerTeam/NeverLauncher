@@ -16,6 +16,7 @@ public final class Operations {
     result.put("delete_api_user_profile_by_uuid_by_kind",new Operation("DELETE","/api/user/profile/{uuid}/{kind}"));
     result.put("delete_auth_devices_by_deviceId",new Operation("DELETE","/api/v1/auth/devices/{deviceId}"));
     result.put("delete_auth_hwid",new Operation("DELETE","/api/v1/auth/hwid"));
+    result.put("delete_auth_identities_by_identityId",new Operation("DELETE","/api/v1/auth/identities/{identityId}"));
     result.put("delete_auth_passkeys_by_credentialId",new Operation("DELETE","/api/v1/auth/passkeys/{credentialId}"));
     result.put("delete_auth_providers_by_providerId_credential",new Operation("DELETE","/api/v1/auth/providers/{providerId}/credential"));
     result.put("delete_auth_sessions_by_sessionId",new Operation("DELETE","/api/v1/auth/sessions/{sessionId}"));
@@ -27,6 +28,7 @@ public final class Operations {
     result.put("delete_minecraft_official_link_by_minecraftUuid",new Operation("DELETE","/api/v1/minecraft/official/link/{minecraftUuid}"));
     result.put("delete_minecraft_official_skin",new Operation("DELETE","/api/v1/minecraft/official/skin"));
     result.put("delete_release_drafts_by_draftId",new Operation("DELETE","/api/v1/release-drafts/{draftId}"));
+    result.put("get_admin_ai_usage",new Operation("GET","/api/v1/admin/ai/usage"));
     result.put("get_admin_audit",new Operation("GET","/api/v1/admin/audit"));
     result.put("get_admin_auth_devices",new Operation("GET","/api/v1/admin/auth/devices"));
     result.put("get_admin_auth_federation_status",new Operation("GET","/api/v1/admin/auth/federation/status"));
@@ -88,6 +90,7 @@ public final class Operations {
     result.put("get_admin_textures_policy",new Operation("GET","/api/v1/admin/textures/policy"));
     result.put("get_admin_textures_policy_history",new Operation("GET","/api/v1/admin/textures/policy/history"));
     result.put("get_admin_users",new Operation("GET","/api/v1/admin/users"));
+    result.put("get_ai_usage",new Operation("GET","/api/v1/ai/usage"));
     result.put("get_api_profiles_minecraft_by_username",new Operation("GET","/api/profiles/minecraft/{username}"));
     result.put("get_auth_accounts",new Operation("GET","/api/v1/auth/accounts"));
     result.put("get_auth_capabilities",new Operation("GET","/api/v1/auth/capabilities"));
@@ -314,6 +317,7 @@ public final class Operations {
     result.put("post_admin_users_by_userId_enable",new Operation("POST","/api/v1/admin/users/{userId}/enable"));
     result.put("post_admin_users_by_userId_password",new Operation("POST","/api/v1/admin/users/{userId}/password"));
     result.put("post_admin_validation_attestation_keys_revoke",new Operation("POST","/api/v1/admin/validation-attestation/keys/revoke"));
+    result.put("post_ai_responses",new Operation("POST","/api/v1/ai/responses"));
     result.put("post_api_profiles_minecraft",new Operation("POST","/api/profiles/minecraft"));
     result.put("post_auth_devices_by_deviceId_attest_begin",new Operation("POST","/api/v1/auth/devices/{deviceId}/attest/begin"));
     result.put("post_auth_devices_by_deviceId_attest_complete",new Operation("POST","/api/v1/auth/devices/{deviceId}/attest/complete"));
@@ -348,6 +352,7 @@ public final class Operations {
     result.put("post_auth_microsoft_by_providerId_logout_url",new Operation("POST","/api/v1/auth/microsoft/{providerId}/logout-url"));
     result.put("post_auth_oidc_by_providerId_begin",new Operation("POST","/api/v1/auth/oidc/{providerId}/begin"));
     result.put("post_auth_oidc_by_providerId_complete",new Operation("POST","/api/v1/auth/oidc/{providerId}/complete"));
+    result.put("post_auth_oidc_by_providerId_mfa_complete",new Operation("POST","/api/v1/auth/oidc/{providerId}/mfa/complete"));
     result.put("post_auth_passkeys_login_begin",new Operation("POST","/api/v1/auth/passkeys/login/begin"));
     result.put("post_auth_passkeys_login_complete",new Operation("POST","/api/v1/auth/passkeys/login/complete"));
     result.put("post_auth_passkeys_mfa_complete",new Operation("POST","/api/v1/auth/passkeys/mfa/complete"));
@@ -462,7 +467,7 @@ public final class Operations {
     result.put("put_projects_by_projectId_validation_policy",new Operation("PUT","/api/v1/projects/{projectId}/validation-policy"));
     result.put("put_release_drafts_by_draftId",new Operation("PUT","/api/v1/release-drafts/{draftId}"));
     result.put("put_server_bridge_servers_by_serverId_network_capacity",new Operation("PUT","/api/v1/server-bridge/servers/{serverId}/network-capacity"));
-    if (result.size() != 454) throw new IllegalStateException("Повторяющийся идентификатор операции OpenAPI");
+    if (result.size() != 459) throw new IllegalStateException("Повторяющийся идентификатор операции OpenAPI");
     return Map.copyOf(result);
   }
 }

@@ -218,7 +218,7 @@ public final class Consumer {
             for n in MODULES
         ]
         cp = os.pathsep.join(jars)
-        run("javac", "--release", "17", "-cp", cp, "-d", str(staging), str(smoke))
+        run("javac", "--release", "17", "-encoding", "UTF-8", "-cp", cp, "-d", str(staging), str(smoke))
         run("java", "-cp", os.pathsep.join([str(staging), *jars]), "Consumer")
         # Проверьте каждый выданный дайджест чтением промежуточного репозитория.
         for sidecar in (staging / "maven").rglob("*.sha256"):

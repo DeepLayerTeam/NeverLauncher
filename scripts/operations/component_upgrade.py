@@ -302,7 +302,7 @@ def host_binary(component, source: Path, install: Path, checksum, *, service=Non
     копию рядом с установленным путём (та же ФС).
     """
     must(os.geteuid() == 0, 'Для обновления исполняемого файла хоста требуются права root')
-    must(re.fullmatch(r'0\.\d+\.\d+', source_version) and re.fullmatch(r'0\.\d+\.\d+', target_version),
+    must(re.fullmatch(r'(?:0|[1-9][0-9]*)\.\d+\.\d+', source_version) and re.fullmatch(r'(?:0|[1-9][0-9]*)\.\d+\.\d+', target_version),
          'Недопустимая версия исходного или целевого бинарного файла')
     must(re.fullmatch(r'\d{4}', backup_tag), 'Недопустимая метка резервной копии')
     must(component in COMPONENTS, 'Неподдерживаемый компонент узла')
@@ -381,7 +381,7 @@ def rollback_linux_host(component, install: Path, expected_previous_sha, *, serv
     файл 0.45.8 сохраняется отдельно как `.failed` для анализа инцидента.
     """
     must(os.geteuid() == 0, 'Для отката хоста требуются права root')
-    must(re.fullmatch(r'0\.\d+\.\d+', source_version) and re.fullmatch(r'\d{4}', backup_tag),
+    must(re.fullmatch(r'(?:0|[1-9][0-9]*)\.\d+\.\d+', source_version) and re.fullmatch(r'\d{4}', backup_tag),
          'Недопустимая версия или метка отката')
     must(component in COMPONENTS, 'Неподдерживаемый компонент узла')
     must(install.is_absolute() and install.parent.is_dir()

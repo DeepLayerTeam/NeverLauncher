@@ -7,7 +7,7 @@ on:
       - 'examples/extensions/java-ui/**'
       - 'examples/extensions/java-spi/**'
       - 'examples/extensions/java-content-spi/**'
-      - 'examples/extensions/java-developer-04812/**'
+      - 'examples/extensions/java-developer/**'
       - '.github/workflows/deep-java-platform.yml'
       - 'VERSION'
   pull_request:
@@ -17,7 +17,7 @@ on:
       - 'examples/extensions/java-ui/**'
       - 'examples/extensions/java-spi/**'
       - 'examples/extensions/java-content-spi/**'
-      - 'examples/extensions/java-developer-04812/**'
+      - 'examples/extensions/java-developer/**'
       - '.github/workflows/deep-java-platform.yml'
       - 'VERSION'
   workflow_dispatch:

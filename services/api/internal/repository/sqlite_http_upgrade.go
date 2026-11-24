@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 
+	"gitflic.ru/skif4er/launcher/services/api/internal/aigateway"
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
@@ -209,6 +210,7 @@ func normalizeHTTPDDL0472(text string) string {
 func httpDDL0472() map[string]string {
 	defs := []string{sqliteHTTPDDL0372, sqliteRuntimeDDL0373, sqliteInstallationDDL0375}
 	defs = append(defs, strings.Split(sqliteStablePermitDDL0374, ";")...)
+	defs = append(defs, aigateway.LockDDL, aigateway.RequestDDL, aigateway.IndexDDL, aigateway.RateIndexDDL)
 	expected := map[string]string{}
 	for _, raw := range defs {
 		stmt := strings.TrimSpace(raw)
@@ -260,6 +262,18 @@ func preflightHTTPUpgrade0472(ctx context.Context, store *sqlitedurable.Store, e
 		}
 		if err != nil {
 			return err
+		}
+		// AI ledger initialization is transactional: older databases may have no
+		// ledger, but a partially missing schema must never be silently repaired.
+		aiObjects := []string{"ai_budget_months", "ai_requests", "ai_requests_month_user", "ai_requests_user_started"}
+		aiCount := 0
+		for _, name := range aiObjects {
+			if seen[name] {
+				aiCount++
+			}
+		}
+		if aiCount != 0 && aiCount != len(aiObjects) {
+			return errors.New("Неполная схема журнала AI в SQLite HTTP")
 		}
 		if !seen["http_repository_state_0372"] {
 			return errors.New("Отсутствует: «таблица снимка HTTP в SQLite»")

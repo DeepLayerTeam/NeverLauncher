@@ -8,7 +8,7 @@ on:
       - 'scripts/java/compare_sdk_repos.py'
       - 'scripts/java/developer_e2e.py'
       - 'scripts/java/test_developer_e2e.py'
-      - 'examples/extensions/java-developer-04812/**'
+      - 'examples/extensions/java-developer/**'
       - 'examples/extensions/java-ui/test-runner.py'
       - 'dist/java-sdk/**'
       - 'VERSION'
@@ -21,7 +21,7 @@ on:
       - 'scripts/java/compare_sdk_repos.py'
       - 'scripts/java/developer_e2e.py'
       - 'scripts/java/test_developer_e2e.py'
-      - 'examples/extensions/java-developer-04812/**'
+      - 'examples/extensions/java-developer/**'
       - 'examples/extensions/java-ui/test-runner.py'
       - 'dist/java-sdk/**'
       - '.github/workflows/java-developer-experience.yml'
@@ -68,10 +68,10 @@ jobs:
           python3 scripts/java/developer_e2e.py --sdk-repo dist/java-sdk/maven --report java-developer-evidence.json
       - name: "Скомпилировать тот же клиент публичного SDK с помощью Maven"
         shell: bash
-        run: mvn -B -ntp -f examples/extensions/java-developer-04812/pom.xml -Dlauncher.sdk.version="$(cat VERSION)" package
+        run: mvn -B -ntp -f examples/extensions/java-developer/pom.xml -Dlauncher.sdk.version="$(cat VERSION)" package
       - name: "Скомпилировать тот же клиент публичного SDK с помощью Gradle"
         shell: bash
-        run: gradle --no-daemon -p examples/extensions/java-developer-04812 -PlauncherSdkVersion="$(cat VERSION)" classes
+        run: gradle --no-daemon -p examples/extensions/java-developer -PlauncherSdkVersion="$(cat VERSION)" classes
       - name: Проверить версии кроссплатформенного SDK
         shell: bash
         run: python3 scripts/version/manage.py check

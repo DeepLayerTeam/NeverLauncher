@@ -167,7 +167,7 @@ class OperatorTests(unittest.TestCase):
             root.mkdir()
             self.make_minimal(root)
             report = Path(temporary) / 'acceptance.json'
-            fake = dict(status='ready', version='0.45.13', repository='sqlite', storage='local')
+            fake = dict(status='ready', version=op.VERSION.read_text().strip(), repository='sqlite', storage='local')
             with patch.object(op, 'ready', side_effect=op.AcceptanceError('backend not ready')):
                 self.assertEqual(op.main(['live', '--mode', 'minimal', '--minimal-root', str(root),
                                           '--url', 'https://launcher.example.org', '--report', str(report)]), 1)

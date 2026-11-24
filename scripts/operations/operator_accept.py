@@ -296,7 +296,7 @@ def main(argv=None):
         if args.action == 'docs-check':
             result = {'status': 'passed', 'scope': 'documentation-paths', **verify_docs()}
         else:
-            require(re.fullmatch(r'0\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?', args.version) is not None,
+            require(re.fullmatch(r'(?:0|[1-9][0-9]*)\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?', args.version) is not None,
                     'Недопустимая версия')
             if args.mode == 'minimal':
                 require(args.minimal_root is not None and not args.project and not args.env_file,

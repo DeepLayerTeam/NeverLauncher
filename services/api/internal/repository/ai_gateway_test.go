@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/aigateway"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 // Concurrent callers must not be admitted above the shared budget, even if all
@@ -103,5 +104,37 @@ func TestAIGatewaySQLiteDurability121(t *testing.T) {
 	u, err := l.Usage(ctx, month, "")
 	if err != nil || u.ChargedMicroUSD != 420 || u.UncertainRequests != 4 {
 		t.Fatalf("ledger lost after restart: %+v %v", u, err)
+	}
+}
+
+// The ledger must survive restart, but a missing ledger object must fail closed.
+func TestAIGatewaySQLiteRejectsPartialSchema(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("SQLite durable repository certified on Linux")
+	}
+	ctx := context.Background()
+	path := filepath.Join(privateSQLiteTempDir(t), "ai-partial.db")
+	r, err := OpenSQLiteHTTPRepository0372(ctx, path, "https://example.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = r.AILedger(ctx); err != nil {
+		r.Close()
+		t.Fatal(err)
+	}
+	err = r.store.Write(ctx, func(q sqlitedurable.Executor) error {
+		_, e := q.ExecContext(ctx, "DROP INDEX ai_requests_month_user")
+		return e
+	})
+	closeErr := r.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if reopened, err := OpenSQLiteHTTPRepository0372(ctx, path, "https://example.test"); err == nil {
+		reopened.Close()
+		t.Fatal("incomplete AI ledger unexpectedly accepted")
 	}
 }

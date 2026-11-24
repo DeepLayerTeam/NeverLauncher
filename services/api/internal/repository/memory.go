@@ -181,6 +181,7 @@ type MemoryRepository struct {
 	deviceMu                       sync.Mutex
 	minecraftMu                    sync.Mutex
 	extensionMu                    sync.Mutex
+	auditMu                        sync.RWMutex
 	auditSinkMu                    sync.RWMutex
 	auditSink                      func(model.AuditEvent)
 	durableMu                      sync.Mutex
@@ -937,7 +938,9 @@ func (r *MemoryRepository) ListRoles() []model.Role {
 }
 
 func (r *MemoryRepository) ListAuditEvents() []model.AuditEvent {
+	r.auditMu.RLock()
 	items := append([]model.AuditEvent(nil), r.audit...)
+	r.auditMu.RUnlock()
 	sort.Slice(items, func(i, j int) bool { return items[i].CreatedAt.After(items[j].CreatedAt) })
 	return items
 }
@@ -949,7 +952,9 @@ func (r *MemoryRepository) AddAuditEvent(event model.AuditEvent) {
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = time.Now().UTC()
 	}
+	r.auditMu.Lock()
 	r.audit = append(r.audit, event)
+	r.auditMu.Unlock()
 	r.auditSinkMu.RLock()
 	sink := r.auditSink
 	r.auditSinkMu.RUnlock()

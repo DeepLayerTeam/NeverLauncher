@@ -322,7 +322,7 @@ func signedAssertionBody117(t *testing.T, tx string, challenge []byte, fixture t
 	}
 	return mustJSON117(t, map[string]any{
 		"transactionToken": tx,
-		"deviceId":         "mfa-policy-test",
+		"deviceId":         "policy-test",
 		"credential": map[string]any{
 			"id": base64.RawURLEncoding.EncodeToString(fixture.credential), "rawId": base64.RawURLEncoding.EncodeToString(fixture.credential), "type": "public-key",
 			"response": map[string]any{"clientDataJSON": base64.RawURLEncoding.EncodeToString(client), "authenticatorData": base64.RawURLEncoding.EncodeToString(authData), "signature": base64.RawURLEncoding.EncodeToString(sig), "userHandle": base64.RawURLEncoding.EncodeToString(fixture.userHandle)},

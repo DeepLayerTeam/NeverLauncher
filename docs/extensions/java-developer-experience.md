@@ -26,11 +26,11 @@ python3 scripts/java/compare_sdk_repos.py dist/java-sdk/maven /tmp/java-sdk-0481
 
 ## Независимый потребитель (Maven и Gradle)
 
-Полный пример находится в `examples/extensions/java-developer-04812/`. Maven и Gradle получают координаты SDK из упакованного локального репозитория Maven, **а не** из `build/classes` исходного дерева. Пример реализует жизненный цикл Java-расширения, обработчики действий Admin/Desktop, сохраняемые настройки с проверкой и CLI-команду `status`.
+Полный пример находится в `examples/extensions/java-developer/`. Maven и Gradle получают координаты SDK из упакованного локального репозитория Maven, **а не** из `build/classes` исходного дерева. Пример реализует жизненный цикл Java-расширения, обработчики действий Admin/Desktop, сохраняемые настройки с проверкой и CLI-команду `status`.
 
 ```sh
-mvn -B -ntp -f examples/extensions/java-developer-04812/pom.xml package
-gradle --no-daemon -p examples/extensions/java-developer-04812 classes
+mvn -B -ntp -f examples/extensions/java-developer/pom.xml -Dlauncher.sdk.version="$(cat VERSION)" package
+gradle --no-daemon -p examples/extensions/java-developer classes
 ```
 
 Сами Maven/Gradle и их стандартные плагины компилятора должны быть установлены или доступны в среде сборки. Для локальной публикации и JVM-интеграции достаточно JDK и Python, **без** Maven/Gradle и сети.

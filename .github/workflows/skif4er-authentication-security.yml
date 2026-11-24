@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     defaults:
       run:
@@ -24,7 +24,7 @@ jobs:
       - run: go test -race ./internal/httpapi -run 'TestSkif4erGA110|TestSkif4erMFA104|TestBrowserReplayAcrossAPIReplicas0525|TestOIDC|TestProviderRuntimeParity0296' -count=1
       - run: go test ./internal/oidcconnector ./internal/federation ./internal/repository
   admin-browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4

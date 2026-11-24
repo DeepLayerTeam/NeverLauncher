@@ -189,4 +189,13 @@ func TestBrowserReplayAtomicMemory0525(t *testing.T) {
 	if passed != 1 {
 		t.Fatalf("Один и тот же nonce использован раз: %d", passed)
 	}
+	logged := 0
+	for _, event := range repo.ListAuditEvents() {
+		if event.Action == "auth:oidc:callback-replay" {
+			logged++
+		}
+	}
+	if logged != requests-1 {
+		t.Fatalf("Потеряны события аудита повторов: %d из %d", logged, requests-1)
+	}
 }

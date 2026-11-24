@@ -18,7 +18,7 @@ from scripts.java.developer_e2e import (verified_repo, executable_from_public_sd
 
 
 def build(repository: Path, destination: Path) -> Path:
-    base = ROOT / 'examples/extensions/java-developer-04812'
+    base = ROOT / 'examples/extensions/java-developer'
     manifest = json.loads((base/'launcher-extension.json').read_text())
     allowed = {'backend/workspace.jar', 'cli/workspace.jar', 'admin/index.html', 'desktop/index.html'}
     if {t['entrypoint'] for t in manifest['targets']} != allowed:
